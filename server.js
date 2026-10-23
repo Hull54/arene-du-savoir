@@ -40,7 +40,26 @@ const ITEMS = {
   ombre:        { nom: 'Cape d\'ombre', ico: '🌑' },
 };
 const BONS_OBJETS = ['grandepotion', 'vitesse', 'force', 'bouclier', 'ombre'];
-const OBJETS_CACHES = ['potion', 'potion', 'vitesse', 'force'];
+// Équipement : toujours un bonus, gardé jusqu'à la fin de la manche. 3 niveaux : bronze, argent, or.
+const GEAR = {
+  casque: { nom: 'Casque', ico: '🪖', armure: 5 },
+  armure: { nom: 'Armure', ico: '🥋', armure: 10 },
+  epee:   { nom: 'Épée',   ico: '🗡️', degats: 5 },
+  bottes: { nom: 'Bottes', ico: '🥾', vitesse: 5 },
+};
+const GEAR_KEYS = Object.keys(GEAR);
+const TIERS = ['', 'de bronze', 'd\'argent', 'd\'or'];
+// Familiers : un mini pouvoir sur la touche E (1 chat, 2 chien, 3 bébé dragon, 4 hibou, 5 slime)
+const PETS = {
+  1: { nom: 'Chat', pouvoir: 'Ronron : +25 points de vie', soin: 25 },
+  2: { nom: 'Chien', pouvoir: 'Aboiement : repousse les ennemis proches', radius: 140, push: 90 },
+  3: { nom: 'Bébé dragon', pouvoir: 'Petite boule de feu', atk: { speed: 420, dmg: 8, r: 8, life: 1.2 } },
+  4: { nom: 'Hibou', pouvoir: 'Œil perçant : révèle les joueurs cachés 4 s', radius: 480, dur: 4 },
+  5: { nom: 'Slime', pouvoir: 'Flaque gluante : ralentit les ennemis', r: 90, dur: 4 },
+};
+const PET_CD = 15;
+const BARREL = { r: 20, radius: 120, dmg: 30, back: 30 };   // tonneaux explosifs
+const OBJETS_CACHES = ['potion', 'potion', 'vitesse', 'force', 'equip'];
 
 const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
@@ -60,7 +79,7 @@ const subjects = new Set(NOTIONS.map(n => n.s));
 const stats = {};            // nom -> { notion: {ok, ko} }
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
-let chests = [], items = [], itemTimer = 0;
+let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [];
 let mode = 'libre', nbTeams = 2;
 let boss = null;
 let timer = { dur: 0, left: 0 };   // minuterie de manche (secondes), dur = 0 : sans limite
@@ -94,6 +113,7 @@ function blocked(x, y, r) {
   }
   if (carte.objs.some(o => circleHitsRect(x, y, r, o))) return true;
   if (healCore() && Math.hypot(x - carte.heal.x, y - carte.heal.y) < 30 + r) return true;
+  if (barrels.some(b => !b.t && Math.hypot(x - b.x, y - b.y) < BARREL.r + r - 4)) return true;
   return false;
 }
 // Pour les projectiles : seulement les murs et les objets
@@ -101,7 +121,7 @@ function blockedShot(x, y, r) {
   if (x < 0 || y < 0 || x > W || y > H) return true;
   return WALL.has(tileAt(x, y)) || carte.objs.some(o => circleHitsRect(x, y, r, o));
 }
-const inBush = p => carte.bushes.some(b => Math.hypot(b.x - p.x, b.y - p.y) < b.r);
+const inBush = p => tileAt(p.x, p.y + 8) === 'h' || carte.bushes.some(b => Math.hypot(b.x - p.x, b.y - p.y) < b.r);
 function freeSpot(team = -1) {
   for (let i = 0; i < 500; i++) {
     const x = rand(80, W - 80), y = rand(80, H - 80);
@@ -127,11 +147,12 @@ function setCarte(c) {
   walk = [];
   for (let j = 0; j < c.rows; j++) for (let i = 0; i < c.cols; i++) {
     const t = c.tiles[j][i], x = (i + 0.5) * T, y = (j + 0.5) * T;
-    walk.push(!WALL.has(t) && !WATER.has(t) && !c.objs.some(o => circleHitsRect(x, y, 16, o)));
+    walk.push(!WALL.has(t) && !WATER.has(t) && !c.objs.some(o => circleHitsRect(x, y, 16, o)) && !c.barrels.some(b => Math.hypot(b.x - x, b.y - y) < 30));
   }
   chests = c.chests.map(ch => ({ ...ch, open: 0, by: 0 }));
+  barrels = c.barrels.map(b => ({ ...b, t: 0, fuse: 0, by: null }));
   items = []; itemTimer = 0;
-  projectiles = []; fx = [];
+  projectiles = []; fx = []; puddles = [];
 }
 // Plus court chemin (en tuiles) d'un point à un autre
 function pathTo(x0, y0, x1, y1) {
@@ -180,14 +201,38 @@ function leaderId() {
   for (const p of players.values()) { if (!best || p.kills > best.kills) { second = best ? best.kills : -1; best = p; } else if (p.kills > second) second = p.kills; }
   return best && best.kills >= 3 && best.kills > second ? best.id : 0;
 }
+// apparence : f/m, peau, cheveux, tenue (0-6), accessoire (0-3), familier (0-5), couleur du familier (0-3)
+function cleanLook(l) {
+  l = String(l || '');
+  if (/^[fm][0-3][0-3]$/.test(l)) l += '0000';
+  else if (l.length === 6) l += '0';
+  return /^[fm][0-3][0-3][0-6][0-3][0-5][0-3]$/.test(l) ? l : '';
+}
+const gearCode = p => p.gear.casque + 4 * p.gear.armure + 16 * p.gear.epee + 64 * p.gear.bottes;
+const armorOf = p => Math.min(40, GEAR.casque.armure * p.gear.casque + GEAR.armure.armure * p.gear.armure);   // % de dégâts en moins
+// Donne une pièce d'équipement : une nouvelle pièce, ou une pièce améliorée. false si tout est déjà en or.
+function giveGear(p, src) {
+  const open = GEAR_KEYS.filter(k => p.gear[k] < 3);
+  if (!open.length) return false;
+  const fresh = open.filter(k => p.gear[k] === 0);
+  const k = pick(fresh.length && Math.random() < 0.6 ? fresh : open);
+  const lvl = ++p.gear[k];
+  const g = GEAR[k], bonus = g.armure ? `+${g.armure * lvl} armure` : g.degats ? `+${g.degats * lvl} dégâts` : `+${g.vitesse * lvl} % vitesse`;
+  const nom = `${g.nom} ${TIERS[lvl]}`;
+  fx.push({ k: 'item', x: p.x, y: p.y, t: 0.7, d: 0.7 });
+  send(p.conn, { t: 'item', k, nom, ico: g.ico, src, gear: true, bonus, lvl });
+  if (src === 'coffre') addFeed(`${p.name} trouve : ${g.ico} ${nom}`);
+  return true;
+}
 function createPlayer(name, cls, bot = false, look = '') {
   const c = CLASSES[cls] || CLASSES.guerrier;
   const team = mode === 'equipes' ? smallestTeam() : -1;
   const p = {
     id: nextId++, name: uniqueName(name), cls: CLASSES[cls] ? cls : 'guerrier', bot, team,
     hp: c.hp, maxHp: c.hp, alive: true, angle: 0,
-    look: /^[fm][0-3][0-3]$/.test(look) ? look : (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3),
-    input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, cdD: 0, dash: null, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
+    look: cleanLook(look) || (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3) + (bot ? ri(0, 6) + '' + ri(0, 3) + ri(0, 5) + ri(0, 3) : '0000'),
+    gear: { casque: 0, armure: 0, epee: 0, bottes: 0 }, portalCd: 0,
+    input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, cdD: 0, cdF: 0, slow: 0, dash: null, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
     fast: 0, strong: 0, busy: false, streak: 0, dmgBoss: 0,
     kills: 0, deaths: 0, good: 0, bad: 0, question: null, waitQ: 0, conn: null, botT: 0,
     ...freeSpot(team),
@@ -292,6 +337,11 @@ function answer(p, i) {
     const ch = chests[Q.chest];
     p.question = null; p.busy = false; p.protect = 0.8;
     if (ch) { ch.open = 40; ch.by = 0; }
+    if (ok && Math.random() < 0.6 && GEAR_KEYS.some(k => p.gear[k] < 3)) {
+      send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, explication: '', gear: true });
+      giveGear(p, 'coffre');
+      return;
+    }
     const k = ok ? pick(BONS_OBJETS) : 'potion';
     send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, explication: ok ? '' : Q.q.explication || '', k, nom: ITEMS[k].nom, ico: ITEMS[k].ico });
     giveItem(p, k, 'coffre');
@@ -313,6 +363,7 @@ function damage(target, amount, attacker) {
   if (!target.alive || target.protect > 0 || target.busy || (target.dash && target.dash.inv)) return;
   if (attacker && attacker.strong > 0) amount *= 1.5;
   if (target.shield > 0) amount *= 0.25;
+  amount *= 1 - armorOf(target) / 100;
   target.hp -= amount;
   fx.push({ k: 'hit', x: target.x, y: target.y, t: 0.25, d: 0.25 });
   if (target.hp <= 0) kill(target, attacker);
@@ -326,11 +377,12 @@ function hitBoss(amount, attacker) {
   if (boss.hp <= 0) bossDefeated(attacker);
 }
 
-function shoot(p, angle, a) {
+const sword = p => GEAR.epee.degats * p.gear.epee;   // l'épée ajoute des dégâts aux attaques de base
+function shoot(p, angle, a, bonus = 0) {
   projectiles.push({
     x: p.x + Math.cos(angle) * (R + 4), y: p.y + Math.sin(angle) * (R + 4),
     vx: Math.cos(angle) * a.speed, vy: Math.sin(angle) * a.speed,
-    r: a.r, dmg: a.dmg, life: a.life, owner: p.id, cls: p.cls,
+    r: a.r, dmg: a.dmg + bonus, life: a.life, owner: p.id, cls: p.cls,
   });
 }
 
@@ -341,18 +393,23 @@ function attack(p) {
   p.revealed = 1;                       // attaquer révèle le joueur caché dans un buisson
   const fromShadow = p.stealth > 0;
   p.stealth = 0;
-  if (a.type === 'proj') return shoot(p, p.angle, a);
+  if (a.type === 'proj') return shoot(p, p.angle, a, sword(p));
   fx.push({ k: 'slash', x: p.x, y: p.y, a: p.angle, r: a.range + R, arc: a.arc, t: 0.18, d: 0.18 });
+  const base = a.dmg + sword(p);
   if (boss && boss.hp > 0) {
     const dx = boss.x - p.x, dy = boss.y - p.y;
-    if (Math.hypot(dx, dy) < a.range + R + boss.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.5) hitBoss(a.dmg * (fromShadow ? 1.5 : 1), p);
+    if (Math.hypot(dx, dy) < a.range + R + boss.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.5) hitBoss(base * (fromShadow ? 1.5 : 1), p);
+  }
+  for (const b of barrels) {
+    const dx = b.x - p.x, dy = b.y - p.y;
+    if (!b.t && Math.hypot(dx, dy) < a.range + R + BARREL.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.3) lightBarrel(b, p);
   }
   for (const o of players.values()) {
     if (!canHit(p, o)) continue;
     const dx = o.x - p.x, dy = o.y - p.y, dist = Math.hypot(dx, dy);
     if (dist > a.range + R * 2) continue;
     if (angDiff(Math.atan2(dy, dx), p.angle) > a.arc / 2 + 0.3) continue;
-    let dmg = a.dmg;
+    let dmg = base;
     // Voleur : dégâts doublés si la cible regarde dans la même direction que l'attaque (elle nous tourne le dos)
     if (a.backstab && angDiff(o.angle, Math.atan2(dy, dx)) < 1.2) {
       dmg *= a.backstab;
@@ -381,6 +438,44 @@ function power(p) {
     // Ombre : invisible et plus rapide ; la prochaine attaque fait +50 %
     p.stealth = pw.dur;
     fx.push({ k: 'smoke', x: p.x, y: p.y, t: 0.5, d: 0.5 });
+  }
+}
+
+// ---------- Pouvoir du familier (E) ----------
+function petPower(p) {
+  const k = +p.look[5] || 0, pet = PETS[k];
+  if (!pet || !p.alive || p.cdF > 0 || paused || p.busy) return;
+  p.cdF = PET_CD;
+  if (k === 1) {
+    p.hp = Math.min(p.maxHp, p.hp + pet.soin);
+    fx.push({ k: 'heal', x: p.x, y: p.y, t: 0.9, d: 0.9 });
+  } else if (k === 2) {
+    fx.push({ k: 'bark', x: p.x, y: p.y, r: pet.radius, t: 0.4, d: 0.4 });
+    for (const o of players.values()) {
+      if (!canHit(p, o)) continue;
+      const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy);
+      if (d > pet.radius + R || d < 1) continue;
+      for (let s = pet.push; s > 0; s -= 10) { const nx = o.x + dx / d * s, ny = o.y + dy / d * s; if (!blocked(nx, ny, R)) { o.x = nx; o.y = ny; break; } }
+    }
+  } else if (k === 3) {
+    projectiles.push({ x: p.x + Math.cos(p.angle) * (R + 4), y: p.y + Math.sin(p.angle) * (R + 4) - 20, vx: Math.cos(p.angle) * pet.atk.speed, vy: Math.sin(p.angle) * pet.atk.speed, r: pet.atk.r, dmg: pet.atk.dmg, life: pet.atk.life, owner: p.id, cls: 'pet' });
+  } else if (k === 4) {
+    fx.push({ k: 'owl', x: p.x, y: p.y, r: pet.radius, t: 0.6, d: 0.6 });
+    for (const o of players.values()) if (o !== p && o.alive && Math.hypot(o.x - p.x, o.y - p.y) < pet.radius && (mode !== 'equipes' || o.team !== p.team)) { o.revealed = pet.dur; o.stealth = 0; o.hidden = false; }
+  } else if (k === 5) {
+    puddles.push({ x: Math.round(p.x), y: Math.round(p.y + 14), r: pet.r, t: pet.dur, owner: p.id, team: p.team });
+  }
+}
+function updatePuddles(dt) {
+  puddles = puddles.filter(z => (z.t -= dt) > 0);
+  for (const o of players.values()) {
+    if (o.slow > 0) o.slow -= dt;
+    if (!o.alive) continue;
+    for (const z of puddles) {
+      const owner = players.get(z.owner);
+      if (o.id === z.owner || (owner && !canHit(owner, o)) || (!owner && mode === 'boss')) continue;
+      if (Math.hypot(o.x - z.x, (o.y - z.y) * 1.6) < z.r) o.slow = 1;   // ralenti tant qu'on y marche, et 1 s après
+    }
   }
 }
 
@@ -434,6 +529,56 @@ function dashStep(p, dt) {
   if ((D.t -= dt) <= 0 || (bx && by)) { p.dash = null; if (p.cls !== 'archer') fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.3, d: 0.3 }); }
 }
 
+// ---------- Tonneaux explosifs ----------
+function lightBarrel(b, by, fuse = 0.05) {
+  if (b.t || b.fuse) return;
+  b.fuse = fuse; b.by = by ? by.id : null;
+}
+function explode(b) {
+  b.fuse = 0; b.t = BARREL.back;
+  const by = players.get(b.by) || null;
+  fx.push({ k: 'boom', x: b.x, y: b.y, r: BARREL.radius, t: 0.45, d: 0.45, c: 'feu' });
+  for (const o of players.values()) {
+    if (!o.alive || Math.hypot(o.x - b.x, o.y - b.y) > BARREL.radius + R) continue;
+    if (o === by || (by && !canHit(by, o)) || mode === 'boss') continue;   // jamais soi-même, ni les coéquipiers, ni en mode boss
+    damage(o, BARREL.dmg, by);
+  }
+  if (boss && boss.hp > 0 && Math.hypot(boss.x - b.x, boss.y - b.y) < BARREL.radius + boss.r) hitBoss(BARREL.dmg * 2, by);
+  // réaction en chaîne
+  for (const o of barrels) if (o !== b && !o.t && Math.hypot(o.x - b.x, o.y - b.y) < BARREL.radius + 20) lightBarrel(o, by, 0.25);
+}
+function updateBarrels(dt) {
+  for (const b of barrels) {
+    if (b.fuse && (b.fuse -= dt) <= 0) explode(b);
+    if (b.t && (b.t -= dt) <= 0) {
+      // réapparaît seulement si personne n'est dessus
+      if ([...players.values()].some(p => p.alive && Math.hypot(p.x - b.x, p.y - b.y) < BARREL.r + R + 4)) b.t = 1;
+      else { b.t = 0; fx.push({ k: 'spawn', x: b.x, y: b.y, t: 0.5, d: 0.5 }); }
+    }
+  }
+}
+// ---------- Portails ----------
+function updatePortals(dt) {
+  for (const p of players.values()) {
+    if (p.portalCd > 0) p.portalCd -= dt;
+    if (!p.alive || p.busy || p.dash) continue;
+    // on n'entre dans un portail qu'en y marchant (pas en restant sur celui d'arrivée)
+    const near = carte.portals.flat().some(a => Math.hypot(p.x - a.x, p.y - a.y) < 44);
+    if (!near) p.onPortal = false;
+    if (p.onPortal || p.portalCd > 0) continue;
+    for (const pair of carte.portals) for (let k = 0; k < 2; k++) {
+      const a = pair[k], b = pair[1 - k];
+      if (Math.hypot(p.x - a.x, p.y - a.y) > 26) continue;
+      p.onPortal = true;
+      fx.push({ k: 'tp', x: p.x, y: p.y, t: 0.4, d: 0.4 });
+      p.x = b.x; p.y = b.y + 4; p.portalCd = 3; p.path = null;
+      fx.push({ k: 'tp', x: p.x, y: p.y, t: 0.4, d: 0.4 });
+      send(p.conn, { t: 'portail' });
+      return;
+    }
+  }
+}
+
 // ---------- Coffres et objets cachés ----------
 function updateLoot(dt) {
   for (const ch of chests) if (ch.open > 0) ch.open = Math.max(0, ch.open - dt);
@@ -446,7 +591,7 @@ function updateLoot(dt) {
   for (const p of players.values()) {
     if (!p.alive || p.busy) continue;
     const it = items.find(it => Math.hypot(it.x - p.x, it.y - p.y) < 42);
-    if (it) { items.splice(items.indexOf(it), 1); giveItem(p, it.k, 'cache'); }
+    if (it) { items.splice(items.indexOf(it), 1); if (it.k !== 'equip' || !giveGear(p, 'cache')) giveItem(p, it.k === 'equip' ? 'potion' : it.k, 'cache'); }
     if (p.bot) continue;
     const i = chests.findIndex(ch => !ch.open && !ch.by && Math.hypot(ch.x - p.x, ch.y - p.y) < 50);
     if (i >= 0 && !eclair) {
@@ -538,6 +683,7 @@ function newRound() {
   for (const q of players.values()) {
     q.kills = q.deaths = q.good = q.bad = q.streak = q.dmgBoss = 0;
     q.fast = q.strong = q.shield = q.stealth = 0; q.pending = null;
+    q.gear = { casque: 0, armure: 0, epee: 0, bottes: 0 };
     cancelChest(q);
     if (q.alive) respawn(q); else { q.alive = true; respawn(q); send(q.conn, { t: 'close' }); }
   }
@@ -546,6 +692,8 @@ function newRound() {
   boss = null;
   if (mode === 'boss') spawnBoss();
   chests.forEach(c => { c.open = 0; c.by = 0; });
+  barrels.forEach(b => { b.t = 0; b.fuse = 0; });
+  puddles = [];
   items = [];
   sendAll({ t: 'debut' });
   addFeed('🔄 Nouvelle manche !');
@@ -633,6 +781,7 @@ function botThink(p, dt) {
   p.moveAngle = dir ? (dir > 0 ? ang : ang + Math.PI) : null;
   if (seen && bd < want + 30 && Math.random() < 0.5) attack(p);
   if (seen && bd < 200 && Math.random() < 0.01) power(p);
+  if (seen && bd < 260 && Math.random() < 0.006) petPower(p);
   // habileté : foncer (corps à corps) ou s'éloigner (à distance)
   if (seen && Math.random() < 0.02) {
     if (a.type === 'melee' && bd > 110 && bd < 260) { p.moveAngle = p.angle; dash(p); }
@@ -665,7 +814,7 @@ function step() {
       continue;
     }
     if (p.pending) { giveItem(p, p.pending, 'serie'); p.pending = null; }
-    p.cdA = Math.max(0, p.cdA - dt); p.cdP = Math.max(0, p.cdP - dt); p.cdD = Math.max(0, p.cdD - dt);
+    p.cdA = Math.max(0, p.cdA - dt); p.cdP = Math.max(0, p.cdP - dt); p.cdD = Math.max(0, p.cdD - dt); p.cdF = Math.max(0, p.cdF - dt);
     p.shield = Math.max(0, p.shield - dt); p.protect = Math.max(0, p.protect - dt);
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
     p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt);
@@ -689,6 +838,8 @@ function step() {
     else if (under === 'i') sp *= 1.4;      // glace : on glisse plus vite !
     if (p.stealth > 0) sp *= 1.2;
     if (p.fast > 0) sp *= 1.35;
+    if (p.slow > 0) sp *= 0.5;
+    sp *= 1 + GEAR.bottes.vitesse * p.gear.bottes / 100;
     const bx = blocked(p.x + mx * sp, p.y, R), by = blocked(p.x, p.y + my * sp, R);
     if (!bx) p.x += mx * sp;
     if (!by) p.y += my * sp;
@@ -698,10 +849,15 @@ function step() {
   if (!frozen) {
     bossThink(dt);
     updateLoot(dt);
+    updateBarrels(dt);
+    updatePortals(dt);
+    updatePuddles(dt);
     projectiles = projectiles.filter(b => {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || blockedShot(b.x, b.y, b.r)) return false;
       const owner = players.get(b.owner) || null;
+      const bar = b.owner !== -1 && barrels.find(o => !o.t && Math.hypot(o.x - b.x, o.y - b.y) < BARREL.r + b.r);
+      if (bar) { lightBarrel(bar, owner); return false; }
       if (b.owner !== -1 && boss && boss.hp > 0 && Math.hypot(boss.x - b.x, boss.y - 20 - b.y) < boss.r + b.r) { hitBoss(b.dmg, owner); return false; }
       for (const o of players.values()) {
         if (o.id === b.owner || !o.alive) continue;
@@ -726,12 +882,14 @@ function publicState() {
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0),
-      p.team,
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0),
+      p.team, gearCode(p),
     ]),
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
     fx: fx.map(f => { const o = {}; for (const k in f) o[k] = typeof f[k] === 'number' ? Math.round(f[k] * 100) / 100 : f[k]; return o; }),
     ch: chests.map(c => (c.open > 0 ? 1 : 0)).join(''),
+    tb: barrels.map(b => (b.t ? 0 : b.fuse ? 2 : 1)).join(''),
+    pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1)]),
     it: items.map(it => [it.x, it.y, it.k]),
     boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0] : 0,
     tm: timer.dur ? Math.ceil(timer.left) : -1,
@@ -746,7 +904,7 @@ function broadcast() {
     if (c.role === 'prof') c.send(`{"t":"s","w":${common}}`);
     else if (c.player) {
       const p = c.player;
-      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, team: p.team };
+      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, team: p.team, ar: armorOf(p), ge: p.gear };
       c.send(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
     }
   }
@@ -769,7 +927,7 @@ setInterval(() => {
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
 
-const welcome = () => ({ t: 'welcome', map: carte, classes: CLASSES, teams: TEAMS, items: ITEMS });
+const welcome = () => ({ t: 'welcome', map: carte, classes: CLASSES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
 setCarte(CARTES[0]);
 setInterval(step, TICK);
 
@@ -792,7 +950,9 @@ function onMessage(conn, msg) {
     case 'atk': if (p) attack(p); break;
     case 'dash': if (p) dash(p); break;
     case 'pow': if (p) power(p); break;
+    case 'pet': if (p) petPower(p); break;
     case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i); break;
+    case 'look': if (p && cleanLook(m.look)) p.look = cleanLook(m.look); break;
     case 'prof':
       conn.role = 'prof';
       send(conn, welcome());

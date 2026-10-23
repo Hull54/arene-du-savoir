@@ -2,7 +2,7 @@
 // L'enseignant choisit la carte dans son tableau de bord.
 //
 // Tuiles (un caractère chacune) :
-//   sol     .  herbe   s sable   n neige   d chemin   p pavés   f dalles   w plancher   t tapis   B pont
+//   sol     .  herbe   h hautes herbes (on s'y cache)   s sable   n neige   d chemin   p pavés   f dalles   w plancher   t tapis   B pont
 //   lent    m  boue / sables mouvants   =  gué (eau peu profonde)
 //   rapide  i  glace
 //   eau     ~  eau   v  fosse   L  lave          (bloquent les joueurs, pas les flèches)
@@ -30,7 +30,7 @@ function atelier(id, seed, base) {
   let s = seed;
   const rnd = (a = 0, b = 1) => { s = (s * 16807) % 2147483647; return a + (s / 2147483647) * (b - a); };
   const A = {
-    g, rnd, objs: [], bushes: [], chests: [], spots: [], heal: null,
+    g, rnd, objs: [], bushes: [], chests: [], spots: [], heal: null, barrels: [], portals: [],
     ok: (x, y) => x >= 0 && y >= 0 && x < COLS && y < ROWS,
     get: (x, y) => (A.ok(x, y) ? g[y][x] : 'c'),
     set: (x, y, ch) => { if (A.ok(x, y)) g[y][x] = ch; },
@@ -91,12 +91,38 @@ function atelier(id, seed, base) {
       const cx = (x + 0.5) * T, cy = (y + 0.5) * T;
       if (A.objs.some(o => cx > o.x - T * 1.6 && cx < o.x + o.w + T * 1.6 && cy > o.y - T * 1.6 && cy < o.y + o.h + T * 1.6)) return false;
       if (A.heal && Math.hypot(cx - A.heal.x, cy - A.heal.y) < 200) return false;
+      const near = (l, d) => l.some(o => Math.hypot(o.x - cx, o.y - cy) < d);
+      if (near(A.chests, T * 2) || near(A.barrels, T * 3) || near(A.portals.flat(), T * 3)) return false;
       return true;
     },
     scatter(kind, n, allowed, w, h, pad = 1) {
       for (let i = 0, k = 0; k < n && i < n * 80; i++) {
         const x = Math.floor(rnd(2, COLS - 3)), y = Math.floor(rnd(2, ROWS - 3));
         if (A.free(x, y, pad, allowed)) { A.obj(kind, x + 0.5 - w / 2, y + 0.9 - h, w, h); k++; }
+      }
+    },
+    // tonneaux explosifs, loin les uns des autres
+    scatterBarrels(n, allowed) {
+      for (let i = 0, k = 0; k < n && i < n * 120; i++) {
+        const x = Math.floor(rnd(3, COLS - 4)), y = Math.floor(rnd(3, ROWS - 4));
+        if (A.free(x, y, 1, allowed) && !A.barrels.some(b => Math.hypot(b.x - (x + 0.5) * T, b.y - (y + 0.5) * T) < T * 7)) { A.barrels.push({ x: Math.round((x + 0.5) * T), y: Math.round((y + 0.5) * T) }); k++; }
+      }
+    },
+    // une paire de portails, aux deux bouts de la carte
+    portal(allowed) {
+      for (let i = 0; i < 4000; i++) {
+        const x1 = Math.floor(rnd(3, COLS - 4)), y1 = Math.floor(rnd(3, ROWS - 4)), x2 = Math.floor(rnd(3, COLS - 4)), y2 = Math.floor(rnd(3, ROWS - 4));
+        if (Math.hypot(x2 - x1, y2 - y1) < 30 || !A.free(x1, y1, 1, allowed) || !A.free(x2, y2, 1, allowed)) continue;
+        A.portals.push([{ x: Math.round((x1 + 0.5) * T), y: Math.round((y1 + 0.5) * T) }, { x: Math.round((x2 + 0.5) * T), y: Math.round((y2 + 0.5) * T) }]);
+        return;
+      }
+    },
+    // touffes de hautes herbes où l'on se cache
+    tallGrass(n, r = 1.8) {
+      for (let i = 0, k = 0; k < n && i < n * 80; i++) {
+        const x = Math.floor(rnd(3, COLS - 4)), y = Math.floor(rnd(3, ROWS - 4));
+        if (!A.free(x, y, 1, '.')) continue;
+        A.blob(x + 0.5, y + 0.5, r + rnd(0, 0.8), r * 0.7 + rnd(0, 0.5), 'h', 0.5, '.'); k++;
       }
     },
     scatterBushes(n, allowed) {
@@ -115,6 +141,7 @@ function fin(A, id, nom, theme, desc) {
   return {
     id, nom, theme, desc, T, cols: COLS, rows: ROWS, W: COLS * T, H: ROWS * T,
     tiles: A.g.map(r => r.join('')), objs: A.objs, bushes: A.bushes, chests: A.chests, spots: A.spots, heal: A.heal,
+    barrels: A.barrels, portals: A.portals,
   };
 }
 
@@ -155,6 +182,7 @@ function village() {
   A.chest(10, 26.5);                                                         // sur l'île
   A.obj('well', 21, 6, 1.4, 1.2);
   A.obj('stall', 43, 14, 2, 1); A.obj('barrels', 34.5, 19, 1, 1);
+  A.tallGrass(5); A.portal('.'); A.scatterBarrels(5, '.dp');
   A.scatter('oak', 14, '.', 1, 0.8, 1);
   A.scatter('palm', 5, 's', 0.8, 0.6, 1);
   A.scatter('rock', 4, '.s', 1.1, 0.8, 1);
@@ -186,6 +214,7 @@ function foret() {
   // cercle de champignons et vieille tour
   A.house(30, 29, 6, 5, '#', 'f', ['n', 'w'], false); A.chest(31.5, 31); A.spot(33, 31);
   A.chest(40, 4.5); A.chest(47, 12);
+  A.tallGrass(7); A.portal('.d'); A.scatterBarrels(4, '.d');
   A.scatter('oak', 12, '.', 1, 0.8, 1);
   A.scatter('pine', 10, '.', 0.9, 0.8, 1);
   A.scatter('stump', 4, '.', 0.7, 0.5, 1);
@@ -216,6 +245,7 @@ function desert() {
   // petite cabane de pierre
   A.house(4, 26, 7, 6, 'g', 'p', ['e']);
   A.chest(16, 25); A.chest(47, 32);
+  A.portal('s'); A.scatterBarrels(5, 'sd');
   A.scatter('cactus', 14, 's', 0.6, 0.7, 1);
   A.scatter('rock', 6, 's', 1.1, 0.8, 1);
   A.scatter('palm', 5, '.', 0.8, 0.6, 0);
@@ -252,6 +282,7 @@ function donjon() {
   for (const [x, y] of [[20, 14.5], [31, 14.5], [20, 20.5], [31, 20.5]]) A.obj('dpillar', x, y, 1, 1);
   for (const [x, y] of [[23, 3.5], [28, 3.5], [23, 7], [28, 7], [23, 28], [28, 28], [23, 31], [28, 31]]) A.obj('dpillar', x, y, 1, 1);
   A.obj('crate', 4, 15, 1, 1); A.obj('crate', 11, 21, 1, 1); A.obj('barrels', 47, 3, 1, 1); A.obj('crate', 40, 9, 1, 1);
+  A.portal('f'); A.scatterBarrels(6, 'f');
   A.obj('tomb', 6, 32, 1.4, 1); A.obj('tomb', 47.5, 15, 1.4, 1);
   for (const [x, y] of [[3, 3], [48, 3], [3, 32], [48, 32], [44, 22]]) A.chest(x, y);
   for (const [x, y] of [[12, 9], [21, 9], [40, 15], [12, 24], [30, 33]]) A.spot(x, y);
@@ -277,6 +308,7 @@ function hiver() {
   A.path([[32, 30], [38, 30], [46, 26]], 1.2, 'd', 'n');
   A.path([[32, 30], [33, 18], [38, 9], [44, 9]], 1.2, 'd', 'n');
   A.chest(9, 21); A.chest(30, 4); A.chest(4, 32);
+  A.portal('n'); A.scatterBarrels(4, 'nd');
   A.scatter('snowpine', 16, 'n', 0.9, 0.8, 1);
   A.scatter('snowrock', 5, 'n', 1.1, 0.8, 1);
   A.scatter('snowman', 4, 'n', 0.7, 0.6, 1);
@@ -309,6 +341,7 @@ function colisee() {
   A.house(2, 29, 7, 5, '#', 'f', ['n', 'e'], false); A.chest(3, 31);
   A.house(43, 29, 7, 5, '#', 'f', ['n', 'w'], false); A.chest(47, 31);
   // statues et braseros autour
+  A.portal('s'); A.scatterBarrels(6, 's');
   for (const [x, y] of [[15, 3], [36, 3], [15, 32], [36, 32]]) A.obj('statue', x, y, 1, 1);
   for (const [x, y] of [[3, 12], [3, 23], [48, 12], [48, 23]]) A.obj('brazier', x, y, 0.8, 0.8);
   for (const [x, y] of [[cx, 10.5], [16, 18], [36, 18], [cx, 26]]) A.spot(x, y);
@@ -331,6 +364,7 @@ function marais() {
   A.blob(14, 31, 2, 1.2, 'd', 0.2);
   A.setHeal(14.5, 31.5, 'source');
   A.chest(30, 5); A.chest(4, 4); A.chest(47, 32);
+  A.tallGrass(6); A.portal('.'); A.scatterBarrels(4, '.d');
   A.scatter('deadtree', 10, '.', 0.6, 0.6, 1);
   A.scatter('willow', 5, '.', 1, 0.8, 1);
   A.scatterBushes(12, '.m');

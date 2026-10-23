@@ -27,8 +27,9 @@ Le jeu est hébergé gratuitement sur **Render** à partir de ce dépôt GitHub.
 | Bouger | WASD ou flèches | Glisser le doigt sur l'écran |
 | Viser | Souris (sinon : direction du déplacement) | Direction du déplacement |
 | Attaque | J ou clic gauche | Bouton ⚔️ |
-| Pouvoir spécial | K, E, Maj ou clic droit | Bouton ✨ |
+| Pouvoir spécial | K, Maj ou clic droit | Bouton ✨ |
 | Habileté de déplacement | Espace | Bouton 💨 |
+| Pouvoir du familier | E | Bouton du familier |
 | Répondre à une question | Clic ou touches 1 à 4 | Toucher la réponse |
 
 ## Les héros
@@ -57,12 +58,14 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 | 🟤 Marais Gluant | Boue qui ralentit, passerelles, cabane de la sorcière |
 
 - **L'eau** bloque les joueurs mais pas les flèches ni les boules de feu. On traverse par les ponts ou par les **gués** (eau peu profonde, on y avance plus lentement).
-- **Les buissons** cachent un joueur tant qu'il n'attaque pas.
+- **Les buissons et les hautes herbes** cachent un joueur tant qu'il n'attaque pas (hautes herbes : Village, Forêt, Marais).
+- **Les tonneaux explosifs** (rouges, avec une flamme) explosent quand on les frappe ou qu'on tire dessus : 30 dégâts autour, jamais à celui qui l'a fait exploser ni à ses coéquipiers. Un tonneau peut en faire exploser un autre. Ils reviennent après 30 secondes. En mode boss, ils ne blessent que le Roi Gluant.
+- **Les portails** (un cercle de pierres violet, une paire par carte) envoient à l'autre bout de la carte. Il faut en ressortir avant de pouvoir y rentrer.
 - **Le lieu de soin** (fontaine, source, autel ou feu de camp) redonne de la vie.
 
 ## Coffres et objets cachés
 
-- **Coffres-questions** : en touchant un coffre, l'élève reçoit une question (il est protégé pendant qu'il répond). Bonne réponse : un objet puissant. Mauvaise réponse : une petite potion quand même. Le coffre se referme et se remplit après 40 secondes.
+- **Coffres-questions** : en touchant un coffre, l'élève reçoit une question (il est protégé pendant qu'il répond). Bonne réponse : une pièce d'équipement (6 fois sur 10) ou un objet puissant. Mauvaise réponse : une petite potion quand même. Le coffre se referme et se remplit après 40 secondes.
 - **Objets cachés** : des objets apparaissent dans les buissons, les maisons et les coins secrets. On ne les voit que de près (une petite étincelle de loin).
 - **Séries** : 3 bonnes réponses de suite donnent un objet bonus.
 
@@ -74,6 +77,19 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 | 💪 Potion de force | +50 % de dégâts pendant 10 s |
 | 🛡️ Bouclier magique | −75 % de dégâts pendant 4 s |
 | 🌑 Cape d'ombre | Invisible pendant 5 s |
+
+### Équipement (toujours un bonus)
+
+On le trouve surtout dans les coffres, parfois caché sur la carte. Chaque pièce existe en **bronze, argent et or** : retrouver une pièce qu'on a déjà l'améliore. L'équipement se voit sur le héros et dans les 4 cases en bas à gauche de l'écran. On le garde même après un K.O., jusqu'à la fin de la manche.
+
+| Pièce | Bronze | Argent | Or |
+|---|---|---|---|
+| 🪖 Casque | +5 armure | +10 armure | +15 armure |
+| 🥋 Armure | +10 armure | +20 armure | +30 armure |
+| 🗡️ Épée | +5 dégâts | +10 dégâts | +15 dégâts |
+| 🥾 Bottes | +5 % vitesse | +10 % vitesse | +15 % vitesse |
+
+Chaque point d'armure retire 1 % des dégâts reçus, jusqu'à 40 % au maximum. L'épée ajoute ses dégâts aux attaques de base (épée, dague, boule de feu, flèche).
 
 ## Modes de jeu
 
@@ -126,7 +142,19 @@ Dans `questions.json`, chaque question suit ce modèle :
 
 Si deux élèves choisissent le même prénom, le second devient « Léa 2 » pour que leurs résultats ne se mélangent pas.
 
-Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau et une couleur de cheveux. Tous les dessins sont en pixel art rétro, créés dans le code du jeu (aucune image empruntée).
+Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau, une couleur de cheveux, une **couleur de tenue** (7 choix), un **accessoire** (cape, lunettes ou écharpe) et un **familier** qui le suit partout (4 couleurs au choix pour chaque familier). Le look se change dans le menu et aussi sur l'écran de fin de manche, entre deux manches. Tous les dessins sont en pixel art rétro, créés dans le code du jeu (aucune image empruntée).
+
+## Les familiers
+
+Chaque familier a un mini pouvoir sur la touche **E**, rechargé en 15 secondes.
+
+| Familier | Pouvoir |
+|---|---|
+| 🐱 Chat | Ronron : +25 points de vie |
+| 🐶 Chien | Aboiement : repousse les ennemis proches, sans dégâts |
+| 🐲 Bébé dragon | Crache une petite boule de feu (8 dégâts) |
+| 🦉 Hibou | Œil perçant : révèle pendant 4 s les joueurs cachés (buissons, herbes, ombre) |
+| 🟢 Slime | Flaque gluante : ralentit les ennemis qui marchent dedans |
 
 ## Fichiers
 

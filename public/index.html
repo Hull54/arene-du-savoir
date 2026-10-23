@@ -33,6 +33,16 @@
   .sw { display: flex; align-items: center; gap: 6px; font-size: 15px; }
   .sw b { width: 26px; height: 26px; display: inline-block; cursor: pointer; border: 3px solid #1b1424; }
   .sw b.on { outline: 3px solid #ffd54a; }
+  .sw b.def { background: repeating-linear-gradient(45deg, #c9d1dc 0 5px, #8a94a3 5px 10px); }
+  .seg.small button { font-size: 14px; padding: 4px 8px; }
+  .lrow { display: flex; align-items: center; gap: 6px; font-size: 15px; }
+  #finLook { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  #finLook canvas { width: 96px; height: 120px; image-rendering: pixelated; }
+  #finLook .look { box-shadow: none; border: 0; background: #2e2445; color: #fff; }
+  #gear { position: fixed; left: 12px; bottom: 100px; display: flex; gap: 6px; pointer-events: none; }
+  #gear div { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; position: relative; }
+  #gear div.off { opacity: .35; filter: grayscale(1); }
+  #gear div i { position: absolute; right: 2px; bottom: 0; font-style: normal; font-size: 11px; font-weight: 700; text-shadow: 1px 1px 0 #1b1424; }
   .btn { font: 700 22px "Pixelify Sans", monospace; padding: 10px 30px; border: 4px solid #1b1424; background: #ffd54a; color: #1b1424; cursor: pointer; box-shadow: inset -4px -4px 0 #c99a1e, inset 4px 4px 0 #fff0a8, 4px 4px 0 #0008; }
   .btn:active { transform: translate(2px, 2px); box-shadow: inset -4px -4px 0 #c99a1e, inset 4px 4px 0 #fff0a8; }
   .btn:disabled { opacity: .5; cursor: default; }
@@ -90,9 +100,10 @@
 <div id="zone" class="panel" style="display:none"></div>
 <button id="mute" class="panel" style="display:none">🔊</button>
 <div id="buffs"></div>
+<div id="gear" style="display:none"></div>
 <div id="teams"></div>
 <div id="toast"></div>
-<div id="hidden">🌿 Tu es caché dans un buisson</div>
+<div id="hidden">🌿 Tu es caché</div>
 <div id="loading">Chargement de la carte…</div>
 <div id="feed"></div>
 <div id="pause">⏸ Pause</div>
@@ -101,21 +112,27 @@
   <div class="cd panel"><div class="ico" id="icoA">⚔️</div><span>J</span><div class="fill" id="fillA"></div></div>
   <div class="cd panel"><div class="ico" id="icoP">✨</div><span id="lblP">K</span><div class="fill" id="fillP"></div></div>
   <div class="cd panel"><div class="ico" id="icoD">💨</div><span id="lblD">Espace</span><div class="fill" id="fillD"></div></div>
+  <div class="cd panel" id="cdF" style="display:none"><div class="ico" id="icoF">🐾</div><span id="lblF">E</span><div class="fill" id="fillF"></div></div>
 </div>
-<div id="touch"><button id="tDash" class="btn">💨</button><button id="tAtk" class="btn">⚔️</button><button id="tPow" class="btn">✨</button></div>
+<div id="touch"><button id="tPet" class="btn" style="display:none">🐾</button><button id="tDash" class="btn">💨</button><button id="tAtk" class="btn">⚔️</button><button id="tPow" class="btn">✨</button></div>
 
 <div id="join" class="screen">
   <h1>Arène du Savoir</h1>
   <div class="sub">Choisis ton héros. Si tu tombes, réponds à une question pour revenir !</div>
   <input id="name" maxlength="16" placeholder="Ton prénom" autocomplete="off">
-  <div class="look panel">
+  <div class="look panel" id="lookPanel">
     <div class="seg" id="gender"><button data-g="f">👧 Fille</button><button data-g="m">👦 Garçon</button></div>
     <div class="sw" id="skins"><span>Peau</span></div>
     <div class="sw" id="hairs"><span>Cheveux</span></div>
+    <div class="sw" id="outfits"><span>Tenue</span></div>
+    <div class="lrow"><span>Accessoire</span><div class="seg small" id="accs"></div></div>
+    <div class="lrow"><span>Familier</span><div class="seg small" id="pets"></div></div>
+    <div class="sw" id="petcols"><span>Couleur du familier</span></div>
   </div>
+  <div class="keys" id="petInfo"></div>
   <div class="classes" id="classes"></div>
   <button class="btn" id="go" disabled>Entrer dans l'arène</button>
-  <div class="keys">Bouger : WASD ou flèches · Attaque : J (ou clic) · Pouvoir : K (ou E, clic droit) · Habileté : Espace<br>Sans souris, on vise dans la direction où l'on marche.</div>
+  <div class="keys">Bouger : WASD ou flèches · Attaque : J (ou clic) · Pouvoir : K (ou clic droit) · Habileté : Espace · Familier : E<br>Sans souris, on vise dans la direction où l'on marche.</div>
 </div>
 
 <div id="quiz" class="screen">
@@ -139,15 +156,30 @@ const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '�
 const DASH_ICO = { guerrier: '💨', voleur: '🌀', mage: '✨', archer: '🦘' };
 const ATK_ICO = { guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹' };
 
+// pouvoirs des familiers (affichés avant d'entrer ; le serveur a les mêmes)
+const info0 = [null, 'Ronron : +25 points de vie', 'Aboiement : repousse les ennemis proches', 'Petite boule de feu', 'Œil perçant : révèle les joueurs cachés', 'Flaque gluante : ralentit les ennemis'];
 // ----- Écran de sélection -----
 let chosen = null;
 const $ = id => document.getElementById(id);
-let look = 'f00';
-try { if (/^[fm][0-3][0-3]$/.test(localStorage.getItem('arene-look'))) look = localStorage.getItem('arene-look'); } catch {}
-const setLook = (i, v) => { look = look.slice(0, i) + v + look.slice(i + 1); try { localStorage.setItem('arene-look', look); } catch {} renderLook(); };
+let look = 'f000000';
+try {
+  let l = localStorage.getItem('arene-look') || '';
+  if (/^[fm][0-3][0-3]$/.test(l)) l += '0000'; else if (l.length === 6) l += '0';
+  if (/^[fm][0-3][0-3][0-6][0-3][0-5][0-3]$/.test(l)) look = l;
+} catch {}
+const setLook = (i, v) => {
+  look = look.slice(0, i) + v + look.slice(i + 1);
+  try { localStorage.setItem('arene-look', look); } catch {}
+  renderLook();
+  if (ws && ws.readyState === 1) sendMsg({ t: 'look', look });   // entre les manches : le nouveau look s'applique tout de suite
+};
 document.querySelectorAll('#gender button').forEach(b => b.onclick = () => setLook(0, b.dataset.g));
 SKIN.forEach((c, i) => { const b = document.createElement('b'); b.style.background = c; b.onclick = () => setLook(1, i); $('skins').appendChild(b); });
 HAIR.forEach((c, i) => { const b = document.createElement('b'); b.style.background = c; b.onclick = () => setLook(2, i); $('hairs').appendChild(b); });
+OUTFIT.forEach((c, i) => { const b = document.createElement('b'); if (c) b.style.background = c; else b.className = 'def'; b.title = OUTFIT_NOMS[i]; b.onclick = () => setLook(3, i); $('outfits').appendChild(b); });
+ACCESSOIRES.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => setLook(4, i); $('accs').appendChild(b); });
+FAMILIERS.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => setLook(5, i); $('pets').appendChild(b); });
+for (let i = 0; i < 4; i++) { const b = document.createElement('b'); b.onclick = () => setLook(6, i); $('petcols').appendChild(b); }
 const cards = {};
 for (const [k, c] of Object.entries(CLS)) {
   const d = document.createElement('div');
@@ -162,6 +194,12 @@ function renderLook() {
   document.querySelectorAll('#gender button').forEach(b => b.classList.toggle('on', b.dataset.g === look[0]));
   [...$('skins').querySelectorAll('b')].forEach((b, i) => b.classList.toggle('on', i === +look[1]));
   [...$('hairs').querySelectorAll('b')].forEach((b, i) => b.classList.toggle('on', i === +look[2]));
+  [...$('outfits').querySelectorAll('b')].forEach((b, i) => b.classList.toggle('on', i === +look[3]));
+  [...$('accs').children].forEach((b, i) => b.classList.toggle('on', i === +look[4]));
+  [...$('pets').children].forEach((b, i) => b.classList.toggle('on', i === +look[5]));
+  $('petcols').style.display = +look[5] ? '' : 'none';
+  if (+look[5]) [...$('petcols').querySelectorAll('b')].forEach((b, i) => { b.style.background = PET_COULEURS[+look[5]][i]; b.classList.toggle('on', i === +look[6]); });
+  $('petInfo').textContent = +look[5] && info0[+look[5]] ? `${FAMILIERS[+look[5]]} · touche E : ${info0[+look[5]]}` : '';
   for (const [k, d] of Object.entries(cards)) d.querySelector('b').textContent = nomClasse(k, look);
 }
 function animPreview() {
@@ -174,8 +212,28 @@ function animPreview() {
     // le héros choisi tourne sur lui-même et marche
     const ang = chosen === k ? [Math.PI / 2, 0, -Math.PI / 2, Math.PI][Math.floor(previewT / 1.5) % 4] : Math.PI / 2;
     drawHeroSprite(g, 48, 86, k, look, ang, chosen === k ? previewT * 4 : 0, 4);
+    drawPetPreview(g, 80, 96);
   }
   requestAnimationFrame(animPreview);
+}
+function drawPetPreview(g, x, y) {
+  const pet = +look[5];
+  if (!pet) return;
+  const fly = pet === 3 || pet === 4;
+  const c = petSprite(pet, fly || pet === 5 ? Math.floor(previewT * 3) % 2 : 0, +look[6] || 0), fy = fly ? -26 + Math.sin(previewT * 2) * 3 : 0;
+  g.imageSmoothingEnabled = false;
+  g.drawImage(c, x - c.width, y - c.height * 2 + fy, c.width * 2, c.height * 2);
+}
+// aperçu de mon héros sur l'écran de fin de manche (pour changer de look entre les manches)
+function animFinLook() {
+  const c = $('finHero');
+  if (!c || $('fin').style.display === 'none') return;
+  previewT += 0.05;
+  const g = c.getContext('2d'); g.clearRect(0, 0, 96, 120);
+  g.fillStyle = '#0003'; g.fillRect(28, 104, 40, 8);
+  drawHeroSprite(g, 48, 86, myCls, look, [Math.PI / 2, 0, -Math.PI / 2, Math.PI][Math.floor(previewT / 1.5) % 4], previewT * 4, 4, world && world.p.find(p => p.id === myId)?.g || 0);
+  drawPetPreview(g, 80, 96);
+  requestAnimationFrame(animFinLook);
 }
 renderLook(); animPreview();
 const check = () => $('go').disabled = !(chosen && $('name').value.trim());
@@ -189,7 +247,7 @@ $('go').onclick = () => {
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('go').disabled) $('go').click(); };
 
 // ----- Réseau -----
-let lastHp = null, lastCd = 0;
+let lastHp = null, lastCd = 0, lastGear = null;
 let ws, myId, world = null, me = null, map = null, myCls = null, info = null;
 const MOTS = { cache: 'trouvé', coffre: 'coffre', serie: 'série' };
 function toast(t) {
@@ -213,7 +271,7 @@ function connect(name, cls) {
       map = m.map; mapLayer = null;
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
-      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute'].forEach(id => $(id).style.display = ''); }, 30);
+      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'gear'].forEach(id => $(id).style.display = ''); }, 30);
       if (m.t === 'carte') toast('🗺️ ' + map.nom);
       $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls]; $('icoD').textContent = DASH_ICO[cls];
       if ('ontouchstart' in window) $('touch').style.display = 'flex';
@@ -230,10 +288,11 @@ function connect(name, cls) {
     } else if (m.t === 'q') showQuestion(m);
     else if (m.t === 'res') showResult(m);
     else if (m.t === 'close') { answering = false; $('quiz').style.display = 'none'; }
-    else if (m.t === 'item') { if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play('objet'); }
+    else if (m.t === 'item') { if (m.gear) toast(`${m.ico} ${m.nom} ! (${m.bonus})`); else if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play(m.gear ? 'serie' : 'objet'); }
+    else if (m.t === 'portail') Son.play('tp');
     else if (m.t === 'serie') { toast(`🔥 Série de ${m.n} bonnes réponses ! Bonus : ${m.ico} ${m.nom}`); Son.play('serie'); }
     else if (m.t === 'fin') showFin(m);
-    else if (m.t === 'debut') { $('fin').style.display = 'none'; }
+    else if (m.t === 'debut') { $('fin').style.display = 'none'; $('join').insertBefore($('lookPanel'), $('classes')); }
     else if (m.t === 'kicked') { alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
   };
   ws.onclose = () => { if (map) { alert('Connexion perdue avec le serveur.'); location.reload(); } };
@@ -285,7 +344,7 @@ function showResult(m) {
     else { chosenBtn && chosenBtn.classList.add('bad'); btns[m.bonne] && btns[m.bonne].classList.add('good'); }
     Son.play(m.ok ? 'bon' : 'faux');
     $('qMsg').textContent = m.kind === 'chest'
-      ? (m.ok ? `✅ Bravo ! Tu obtiens : ${m.ico} ${m.nom}` : `❌ Pas tout à fait… Tu obtiens quand même : ${m.ico} ${m.nom}`) + (m.explication ? ' ' + m.explication : '')
+      ? m.gear ? '✅ Bravo ! Tu trouves une pièce d\'équipement !' : (m.ok ? `✅ Bravo ! Tu obtiens : ${m.ico} ${m.nom}` : `❌ Pas tout à fait… Tu obtiens quand même : ${m.ico} ${m.nom}`) + (m.explication ? ' ' + m.explication : '')
       : m.ok ? '✅ Bravo ! Bonus de force à ton retour au combat.' : (m.repondu ? '❌ Pas tout à fait. Regarde la bonne réponse.' : '⏱ Temps écoulé !') + (m.explication ? ' ' + m.explication : '');
     setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.ok ? 1500 : 3000);
     return;
@@ -339,9 +398,16 @@ function showFin(m) {
     c.textContent = '🧠 Meilleurs cerveaux : ' + m.cerveaux.map(p => `${p.n} (${p.v})`).join(', ');
     card.appendChild(c);
   }
-  const w = document.createElement('div'); w.className = 'msg'; w.textContent = 'En attente de la prochaine manche…';
+  const w = document.createElement('div'); w.className = 'msg'; w.textContent = 'En attente de la prochaine manche… Tu peux changer ton look !';
   card.appendChild(w);
+  if (myCls) {
+    const fl = document.createElement('div'); fl.id = 'finLook';
+    const hc = document.createElement('canvas'); hc.id = 'finHero'; hc.width = 96; hc.height = 120;
+    fl.appendChild(hc); fl.appendChild($('lookPanel'));
+    card.appendChild(fl);
+  }
   $('fin').style.display = 'flex';
+  animFinLook();
 }
 
 // ----- Contrôles -----
@@ -355,12 +421,14 @@ addEventListener('keydown', e => {
   Son.unlock();
   if (e.code === 'KeyJ') { attackSound(); sendMsg({ t: 'atk' }); }
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { dashSound(); sendMsg({ t: 'dash' }); } }
-  if (e.code === 'KeyK' || e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
+  if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
+  if (e.code === 'KeyE' && !e.repeat) petPow();
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
 const cv = $('c'), ctx = cv.getContext('2d');
 cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; mouseAim = true; lastMouse = performance.now(); });
 cv.addEventListener('mousedown', e => { Son.unlock(); if (e.button === 2) sendMsg({ t: 'pow' }); else { attackSound(); sendMsg({ t: 'atk' }); } });
+function petPow() { if (me && me.alive && me.pet && me.cdF <= 0.05) Son.play(['', 'miaou', 'ouaf', 'feu', 'hibou', 'slime'][me.pet]); sendMsg({ t: 'pet' }); }
 function dashSound() { if (me && me.alive && me.cdD <= 0.05) Son.play(myCls === 'mage' ? 'tp' : 'dash'); }
 function attackSound() { if (me && me.alive && me.cdA <= 0.05) Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' ? 'tir' : 'atk'); }
 cv.addEventListener('contextmenu', e => e.preventDefault());
@@ -378,6 +446,7 @@ cv.addEventListener('touchmove', e => {
 cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; } });
 $('tAtk').ontouchstart = e => { e.preventDefault(); Son.unlock(); attackSound(); sendMsg({ t: 'atk' }); };
 $('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
+$('tPet').ontouchstart = e => { e.preventDefault(); Son.unlock(); petPow(); };
 $('tDash').ontouchstart = e => { e.preventDefault(); Son.unlock(); dashSound(); sendMsg({ t: 'dash' }); };
 
 setInterval(() => {
@@ -455,8 +524,29 @@ function frame(now) {
     $('lblP').textContent = me.cdP > 0 ? Math.ceil(me.cdP) + ' s' : 'K';
     $('fillD').style.height = ((me.cdD || 0) / c.dash.cd * 100) + '%';
     $('lblD').textContent = me.cdD > 0 ? Math.ceil(me.cdD) + ' s' : 'Espace';
+    $('cdF').style.display = me.pet ? '' : 'none';
+    if ('ontouchstart' in window) $('tPet').style.display = me.pet ? '' : 'none';
+    if (me.pet) {
+      $('icoF').textContent = PET_ICO[me.pet]; $('tPet').textContent = PET_ICO[me.pet];
+      $('fillF').style.height = (me.cdF / (info.petCd || 15) * 100) + '%';
+      $('lblF').textContent = me.cdF > 0 ? Math.ceil(me.cdF) + ' s' : 'E';
+    }
     $('score').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}` + (me.sk >= 2 ? `   🔥 ${me.sk}` : '');
     $('buffs').textContent = [me.st ? `💪 ${me.st}` : '', me.fa ? `👢 ${me.fa}` : ''].filter(Boolean).join('  ');
+    // équipement trouvé : 4 cases, bordure de la couleur du niveau
+    const gk = me.ge ? GEAR_ORDRE.map(k => me.ge[k]).join('') : '';
+    if (gk !== lastGear && info.gear) {
+      lastGear = gk;
+      $('gear').innerHTML = '';
+      for (const k of GEAR_ORDRE) {
+        const lv = me.ge[k], G = info.gear[k], d = document.createElement('div');
+        d.className = 'panel' + (lv ? '' : ' off');
+        if (lv) d.style.borderColor = TIER_C[lv];
+        d.innerHTML = `${G.ico}<i style="color:${TIER_C[lv] || '#fff'}">${lv ? (G.armure ? '+' + G.armure * lv : G.degats ? '+' + G.degats * lv : '+' + G.vitesse * lv + '%') : ''}</i>`;
+        d.title = lv ? `${G.nom} ${TIER_NOMS[lv]}` : G.nom + ' : à trouver dans les coffres';
+        $('gear').appendChild(d);
+      }
+    }
   }
   $('feed').innerHTML = world.feed.map(t => `<div>${t.replace(/</g, '&lt;')}</div>`).join('');
   $('pause').style.display = world.paused ? 'block' : 'none';

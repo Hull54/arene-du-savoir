@@ -12,6 +12,17 @@ const CLS = {
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
 const HAIR = ['#2a1c14', '#7a4422', '#e8b84a', '#c2482e'];
 const nomClasse = (c, look) => CLS[c].nom[look && look[0] === 'f' ? 0 : 1];
+// Personnalisation : couleur de la tenue, accessoire, familier (caractères 4, 5 et 6 du look)
+const OUTFIT = [null, '#d33b3b', '#3a6fd8', '#2f9e55', '#8e4ce0', '#e89a2a', '#e06aa8'];
+const OUTFIT_NOMS = ['Classique', 'Rouge', 'Bleu', 'Vert', 'Violet', 'Orange', 'Rose'];
+const ACCESSOIRES = ['Aucun', 'Cape', 'Lunettes', 'Écharpe'];
+const FAMILIERS = ['Aucun', '🐱 Chat', '🐶 Chien', '🐲 Dragon', '🦉 Hibou', '🟢 Slime'];
+const PET_ICO = [null, '😺', '🐶', '🔥', '🦉', '🟢'];
+// Équipement : niveaux bronze, argent, or
+const TIER_C = [null, '#cd7f32', '#dfe5ee', '#f2c94c'];
+const TIER_NOMS = ['', 'bronze', 'argent', 'or'];
+const GEAR_ORDRE = ['casque', 'armure', 'epee', 'bottes'];
+const gearOf = code => ({ casque: code & 3, armure: (code >> 2) & 3, epee: (code >> 4) & 3, bottes: (code >> 6) & 3 });
 
 // ---------- Outils de couleur ----------
 const rgbCache = {};
@@ -28,7 +39,8 @@ function shade(hex, f) {
 
 // Décode l'état compact envoyé par le serveur
 function unpackWorld(w) {
-  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512) }));
+  w.pz = w.pz || [];
+  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024) }));
   return w;
 }
 
@@ -59,26 +71,41 @@ class Painter {
 // ---------- Héros en pixel art ----------
 // look = "f12" : f/m, teinte de peau (0-3), couleur de cheveux (0-3) ; dir = down | up | side ; frame = 0, 1, 2
 const heroCache = {};
-function heroSprite(cls, look, dir, frame) {
-  const key = cls + look + dir + frame;
+function heroSprite(cls, look, dir, frame, gearCode = 0) {
+  const key = cls + look + dir + frame + 'g' + gearCode;
   if (heroCache[key]) return heroCache[key];
   const P = new Painter(24, 30); P.ox = 4; P.oy = 8;
   const fem = look[0] === 'f', s = SKIN[+look[1]] || SKIN[0], S = shade(s, 0.82), h = HAIR[+look[2]] || HAIR[0], Hd = shade(h, 0.7), Hl = shade(h, 1.35);
-  const E = '#1b1424', boots = '#4a3426';
+  const out = OUTFIT[+look[3] || 0], acc = +look[4] || 0, G = gearOf(gearCode);
+  const E = '#1b1424', boots = G.bottes ? TIER_C[G.bottes] : '#4a3426';
   const C = {
     guerrier: { c: '#c9d1dc', d: '#8a94a3', a: '#3a6fd8', pants: '#5a5f6a' },
     voleur: { c: '#4a4f5a', d: '#33363e', a: '#c23b3b', pants: '#2f3238' },
     mage: { c: '#6a3fc1', d: '#4b2a8f', a: '#f2c94c', pants: '#4b2a8f' },
     archer: { c: '#2f8f4e', d: '#22683a', a: '#8b5a2b', pants: '#5a4030' },
   }[cls];
+  // couleur de tenue choisie : le tabard du guerrier, le foulard du voleur, la robe du mage, la tunique de l'archer
+  let hat = '#5a33a8', hatD = '#4b2a8f', cap = '#2f8f4e', capD = '#22683a';
+  if (out) {
+    if (cls === 'guerrier' || cls === 'voleur') C.a = out;
+    else { C.c = out; C.d = shade(out, 0.72); if (cls === 'mage') { hat = shade(out, 0.85); hatD = shade(out, 0.68); C.pants = C.d; } else { cap = out; capD = shade(out, 0.72); } }
+  }
   const metal = '#e6ebf2', metalD = '#9aa3b0', wood = '#7a4b25', gold = '#f2c94c', red = '#d33b3b';
+  // équipement : lame, orbe et arc prennent la couleur de l'épée ; le casque du guerrier, celle du casque
+  const blade = G.epee ? shade(TIER_C[G.epee], 1.15) : metal, orb = G.epee ? TIER_C[G.epee] : '#b98cff', bow = G.epee ? shade(TIER_C[G.epee], 0.8) : wood;
+  const helm = G.casque ? TIER_C[G.casque] : metal, helmD = G.casque ? shade(TIER_C[G.casque], 0.7) : metalD;
+  const capeC = out || '#c23b3b', scarf = out || '#e04a3a';
   const lA = frame === 1 ? -1 : 0, lB = frame === 2 ? -1 : 0;   // jambes qui bougent
+
+  // cape (derrière tout, sauf de dos)
+  if (acc === 1 && dir === 'down') { P.rect(3, 10, 10, 9, shade(capeC, 0.7)); }
+  if (acc === 1 && dir === 'side') { P.rect(2, 10, 4, 8, capeC); P.rect(2, 17, 4, 1, shade(capeC, 0.7)); }
 
   // armes et objets derrière le corps
   if (dir === 'up') {
-    if (cls === 'guerrier') { P.rect(2, 4, 1, 10, metal); P.px(2, 3, metal); P.rect(1, 14, 3, 1, gold); }
-    if (cls === 'mage') { P.rect(2, 4, 1, 14, wood); P.rect(1, 1, 3, 3, '#b98cff'); }
-    if (cls === 'archer') { P.px(2, 8, wood); P.px(1, 9, wood); P.rect(0, 10, 1, 4, wood); P.px(1, 14, wood); P.px(2, 15, wood); }
+    if (cls === 'guerrier') { P.rect(2, 4, 1, 10, blade); P.px(2, 3, blade); P.rect(1, 14, 3, 1, gold); }
+    if (cls === 'mage') { P.rect(2, 4, 1, 14, wood); P.rect(1, 1, 3, 3, orb); }
+    if (cls === 'archer') { P.px(2, 8, bow); P.px(1, 9, bow); P.rect(0, 10, 1, 4, bow); P.px(1, 14, bow); P.px(2, 15, bow); }
   }
   if (dir === 'side') {
     if (cls === 'guerrier') { P.rect(2, 11, 3, 6, C.a); P.rect(3, 12, 1, 4, gold); }
@@ -116,6 +143,17 @@ function heroSprite(cls, look, dir, frame) {
     if (cls === 'archer' && dir === 'down') { P.px(5, 11, C.a); P.px(6, 12, C.a); P.px(7, 13, C.a); }
     if (cls === 'archer' && dir === 'up') { P.rect(9, 9, 3, 6, '#8b5a2b'); P.px(9, 8, '#ddd'); P.px(10, 7, '#ddd'); P.px(11, 8, '#ddd'); }
   }
+  // armure trouvée : plastron aux couleurs du niveau
+  if (G.armure) {
+    const tc = TIER_C[G.armure], x0 = dir === 'side' ? 6 : 5, w0 = dir === 'side' ? 4 : 6;
+    P.rect(x0, 11, w0, 3, tc); P.rect(x0, 11, w0, 1, shade(tc, 1.3)); P.rect(x0, 13, w0, 1, shade(tc, 0.75));
+    if (dir !== 'up' && G.armure === 3) P.px(x0 + (w0 >> 1), 12, '#e04a5a');
+  }
+  if (acc === 3) {
+    if (dir === 'side') { P.rect(5, 10, 6, 2, scarf); P.rect(3, 11, 2, 3, shade(scarf, 0.8)); }
+    else { P.rect(4, 10, 8, 2, scarf); if (dir === 'down') P.rect(9, 12, 2, 3, shade(scarf, 0.8)); else P.rect(5, 12, 2, 3, shade(scarf, 0.8)); }
+  }
+  if (acc === 1 && dir === 'up') { P.rect(4, 10, 8, 9, capeC); P.rect(4, 18, 8, 1, shade(capeC, 0.7)); P.rect(6, 11, 1, 7, shade(capeC, 0.85)); P.rect(9, 11, 1, 7, shade(capeC, 0.85)); }
   // bras
   if (dir === 'side') {
     P.rect(8, 11, 2, 4, shade(C.c, 0.85)); P.px(9, 15, s);
@@ -139,6 +177,12 @@ function heroSprite(cls, look, dir, frame) {
     }
   }
 
+  // lunettes
+  if (acc === 2) {
+    const lens = '#bfe8ff', rim = '#3a2a2a';
+    if (dir === 'down') { P.rect(5, 6, 2, 2, lens); P.rect(9, 6, 2, 2, lens); P.rect(4, 5, 8, 1, rim); P.px(6, 7, E); P.px(9, 7, E); }
+    else if (dir === 'side') { P.rect(9, 6, 3, 2, lens); P.rect(6, 5, 6, 1, rim); P.px(10, 7, E); }
+  }
   // cheveux
   const hooded = cls === 'voleur';
   if (!hooded) {
@@ -156,37 +200,41 @@ function heroSprite(cls, look, dir, frame) {
 
   // couvre-chefs
   if (cls === 'guerrier') {
-    if (dir === 'side') { P.rect(5, 1, 7, 4, metal); P.rect(6, 0, 5, 1, metal); P.rect(5, 4, 7, 1, metalD); P.rect(6, -3, 2, 3, red); P.px(5, -2, red); }
-    else { P.rect(4, 1, 8, 4, metal); P.rect(5, 0, 6, 1, metal); P.rect(4, 4, 8, 1, metalD); P.rect(7, -3, 2, 3, red); P.px(9, -2, red); if (dir === 'down') P.rect(7, 5, 2, 1, metalD); if (dir === 'up') P.rect(4, 5, 8, 1, metalD); }
+    if (dir === 'side') { P.rect(5, 1, 7, 4, helm); P.rect(6, 0, 5, 1, helm); P.rect(5, 4, 7, 1, helmD); P.rect(6, -3, 2, 3, red); P.px(5, -2, red); }
+    else { P.rect(4, 1, 8, 4, helm); P.rect(5, 0, 6, 1, helm); P.rect(4, 4, 8, 1, helmD); P.rect(7, -3, 2, 3, red); P.px(9, -2, red); if (dir === 'down') P.rect(7, 5, 2, 1, helmD); if (dir === 'up') P.rect(4, 5, 8, 1, helmD); }
   } else if (cls === 'voleur') {
     const hood = '#2e3138';
     if (dir === 'up') { P.rect(3, 1, 10, 10, hood); P.rect(4, 0, 8, 1, hood); P.rect(4, 11, 8, 2, hood); if (fem) { for (let i = 0; i < 6; i++) P.px(7 + (i % 2), 11 + i, i % 2 ? Hd : h); } }
     else if (dir === 'side') { P.rect(4, 1, 8, 4, hood); P.rect(5, 0, 6, 1, hood); P.rect(4, 5, 3, 6, hood); P.rect(6, 9, 6, 2, C.a); if (fem) { for (let i = 0; i < 6; i++) P.px(3 + (i % 2), 8 + i, i % 2 ? Hd : h); } }
     else { P.rect(3, 1, 10, 4, hood); P.rect(4, 0, 8, 1, hood); P.rect(3, 5, 1, 6, hood); P.rect(12, 5, 1, 6, hood); P.rect(4, 8, 8, 2, C.a); if (fem) { P.rect(5, 5, 6, 1, h); for (let i = 0; i < 6; i++) P.px(13, 8 + i, i % 2 ? Hd : h); } }
   } else if (cls === 'mage') {
-    const hat = '#5a33a8', hatD = '#4b2a8f';
     if (dir === 'side') { P.rect(3, 2, 11, 1, hatD); P.rect(5, 0, 7, 2, hat); P.rect(5, -2, 5, 2, hat); P.rect(4, -4, 4, 2, hat); P.rect(3, -6, 3, 2, hat); P.px(2, -7, hat); P.rect(5, 1, 7, 1, gold); }
     else { P.rect(2, 2, 12, 1, hatD); P.rect(4, 0, 8, 2, hat); P.rect(5, -2, 6, 2, hat); P.rect(6, -4, 4, 2, hat); P.rect(7, -6, 2, 2, hat); P.px(9, -7, hat); P.rect(4, 1, 8, 1, gold); if (dir === 'down') P.px(8, -1, gold); }
   } else if (cls === 'archer') {
-    const cap = '#2f8f4e', capD = '#22683a';
     if (dir === 'side') { P.rect(5, 1, 7, 2, cap); P.rect(6, 0, 5, 1, cap); P.rect(11, 3, 2, 1, capD); P.rect(4, -2, 1, 4, '#e04a3a'); P.px(3, -3, '#e04a3a'); }
     else { P.rect(4, 1, 8, 2, cap); P.rect(5, 0, 6, 1, cap); P.rect(4, 3, 8, 1, capD); P.rect(11, -3, 1, 4, '#e04a3a'); P.px(12, -4, '#e04a3a'); }
   }
 
+  // casque trouvé (autres classes) : un bandeau de métal sur le front
+  if (G.casque && cls !== 'guerrier') {
+    const tc = TIER_C[G.casque];
+    if (dir === 'side') { P.rect(5, 3, 7, 2, tc); P.rect(5, 4, 7, 1, shade(tc, 0.7)); }
+    else { P.rect(4, 3, 8, 2, tc); P.rect(4, 4, 8, 1, shade(tc, 0.7)); if (dir === 'down') P.px(7, 3, G.casque === 3 ? '#e04a5a' : shade(tc, 1.3)); }
+  }
   // armes devant
   if (dir === 'down') {
-    if (cls === 'guerrier') { P.rect(13, 4, 1, 10, metal); P.px(13, 3, metal); P.rect(12, 14, 3, 1, gold); P.px(13, 15, '#6b4423'); P.rect(0, 11, 3, 6, C.a); P.rect(1, 12, 1, 4, gold); }
-    if (cls === 'voleur') { P.rect(13, 11, 1, 4, metal); P.rect(12, 15, 3, 1, '#c9a227'); P.rect(2, 12, 1, 3, metal); }
-    if (cls === 'mage') { P.rect(13, 4, 1, 14, wood); P.rect(12, 1, 3, 3, '#b98cff'); P.px(13, 2, '#ffffff'); }
-    if (cls === 'archer') { P.px(13, 8, wood); P.px(14, 9, wood); P.rect(15, 10, 1, 4, wood); P.px(14, 14, wood); P.px(13, 15, wood); P.rect(13, 9, 1, 6, '#e8e8e8'); }
+    if (cls === 'guerrier') { P.rect(13, 4, 1, 10, blade); P.px(13, 3, blade); P.rect(12, 14, 3, 1, gold); P.px(13, 15, '#6b4423'); P.rect(0, 11, 3, 6, C.a); P.rect(1, 12, 1, 4, gold); }
+    if (cls === 'voleur') { P.rect(13, 11, 1, 4, blade); P.rect(12, 15, 3, 1, '#c9a227'); P.rect(2, 12, 1, 3, blade); }
+    if (cls === 'mage') { P.rect(13, 4, 1, 14, wood); P.rect(12, 1, 3, 3, orb); P.px(13, 2, '#ffffff'); }
+    if (cls === 'archer') { P.px(13, 8, bow); P.px(14, 9, bow); P.rect(15, 10, 1, 4, bow); P.px(14, 14, bow); P.px(13, 15, bow); P.rect(13, 9, 1, 6, '#e8e8e8'); }
   } else if (dir === 'up') {
     if (cls === 'guerrier') { P.rect(12, 11, 3, 6, C.a); P.rect(13, 12, 1, 4, gold); }
-    if (cls === 'voleur') { P.rect(2, 11, 1, 4, metal); }
+    if (cls === 'voleur') { P.rect(2, 11, 1, 4, blade); }
   } else {
-    if (cls === 'guerrier') { P.rect(11, 13, 8, 1, metal); P.px(19, 13, metal); P.rect(10, 12, 1, 3, gold); }
-    if (cls === 'voleur') { P.rect(11, 13, 4, 1, metal); P.rect(10, 12, 1, 3, '#c9a227'); }
-    if (cls === 'mage') { P.rect(11, 4, 1, 14, wood); P.rect(10, 1, 3, 3, '#b98cff'); P.px(11, 2, '#ffffff'); }
-    if (cls === 'archer') { P.px(12, 8, wood); P.px(13, 9, wood); P.rect(14, 10, 1, 5, wood); P.px(13, 15, wood); P.px(12, 16, wood); P.rect(12, 9, 1, 7, '#e8e8e8'); P.rect(8, 12, 6, 1, '#5a3a1e'); P.px(14, 12, '#cccccc'); }
+    if (cls === 'guerrier') { P.rect(11, 13, 8, 1, blade); P.px(19, 13, blade); P.rect(10, 12, 1, 3, gold); }
+    if (cls === 'voleur') { P.rect(11, 13, 4, 1, blade); P.rect(10, 12, 1, 3, '#c9a227'); }
+    if (cls === 'mage') { P.rect(11, 4, 1, 14, wood); P.rect(10, 1, 3, 3, orb); P.px(11, 2, '#ffffff'); }
+    if (cls === 'archer') { P.px(12, 8, bow); P.px(13, 9, bow); P.rect(14, 10, 1, 5, bow); P.px(13, 15, bow); P.px(12, 16, bow); P.rect(12, 9, 1, 7, '#e8e8e8'); P.rect(8, 12, 6, 1, '#5a3a1e'); P.px(14, 12, '#cccccc'); }
   }
   P.ox = 0; P.oy = 0;
   return (heroCache[key] = P.outline().canvas());
@@ -197,10 +245,10 @@ function dirFromAngle(a) {
   return s > 0 ? 'down' : 'up';
 }
 // Dessine un héros : (x, y) = centre du joueur dans le monde ; S = taille d'un pixel d'art
-function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX) {
+function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0) {
   const d = dirFromAngle(angle);
   const frame = walk ? 1 + (Math.floor(walk) % 2) : 0;
-  const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame);
+  const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame, gear);
   g.save();
   g.imageSmoothingEnabled = false;
   g.translate(Math.round(x), Math.round(y + 22));
@@ -363,7 +411,7 @@ function spriteFor(o) {
 function gold() { return '#f2c94c'; }
 
 // ---------- La carte (dessinée une seule fois, en tuiles de 16 pixels d'art) ----------
-const WALLS_T = 'b#kcxgT', WATER_T = '~vL', NATURAL_T = '.snmd~=icT';
+const WALLS_T = 'b#kcxgT', WATER_T = '~vL', NATURAL_T = '.hsnmd~=icT';
 const THEMES = {
   village: { herbe: ['#68b36b', '#5ea763', '#76c177', '#4f9455'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#2f7a3f', '#3f9a4a', '#5cb860', '#215a2e'], fond: '#2f7a3f' },
   foret:   { herbe: ['#4f9a4f', '#468d47', '#5aa858', '#3a7a3d'], falaise: ['#a0623a', '#7a4524', '#c07f4c', '#5a3218'], arbres: ['#25603a', '#2f7a44', '#4f9a52', '#183f26'], fond: '#183f26' },
@@ -498,6 +546,7 @@ function buildMapLayers(map) {
     } else {
       // ----- sols -----
       if (t === '.') { const p = noise(x / 18, y / 18, 3); c = p > 0.62 ? TH.herbe[1] : p < 0.3 ? TH.herbe[2] : TH.herbe[0]; if (h < 0.02) c = TH.herbe[3]; }
+      else if (t === 'h') { c = hsh(x, y, 22) < 0.5 ? shade(TH.herbe[0], 0.72) : shade(TH.herbe[3], 0.85); }
       else if (t === 's') { c = noise(x / 16, y / 16, 4) > 0.6 ? '#e2c27c' : '#ecd08f'; if (h < 0.04) c = '#cfa962'; if (Math.sin(x * 0.12 + y * 0.35 + noise(x / 30, y / 30, 5) * 7) > 0.95) c = '#d8b36e'; }
       else if (t === 'n') { c = noise(x / 16, y / 16, 6) > 0.6 ? '#e2ebf4' : '#eef4fa'; if (h < 0.02) c = '#c8d8e8'; if (h > 0.995) c = '#ffffff'; }
       else if (t === 'd') {
@@ -613,6 +662,16 @@ function buildMapLayers(map) {
     if (split > 0) tg.drawImage(s.c, 0, 0, s.c.width, split, sx, sy, s.c.width, split);
     g.drawImage(s.c, 0, split, s.c.width, s.c.height - split, sx, sy + split, s.c.width, s.c.height - split);
   }
+  // hautes herbes : des brins dans la couche du dessus cachent le bas des joueurs
+  const bladeA = shade(TH.herbe[0], 0.7), bladeM = shade(TH.herbe[0], 0.88), bladeB = shade(TH.herbe[2], 1.12), bladeC = shade(TH.herbe[3], 0.8);
+  for (let y = 0; y < AH; y += 2) for (let x = (y >> 1) % 2; x < AW; x += 2) {
+    if (V(x, y) !== 'h') continue;
+    const hgt = 6 + Math.floor(hsh(x, y, 23) * 6), lean = hsh(x, y, 24) < 0.5 ? -1 : 1, lit = hsh(x, y, 25) < 0.4;
+    for (let k = 0; k < hgt; k++) {
+      tg.fillStyle = k >= hgt - 2 ? (lit ? bladeB : bladeM) : k < 2 ? bladeC : bladeA;
+      tg.fillRect(x + (k > hgt * 0.55 ? lean : 0) + (k > hgt * 0.85 ? lean : 0), y - k, 1, 1);
+    }
+  }
   // buissons (cachettes) : dessus, pour couvrir à moitié les joueurs cachés
   for (const b of map.bushes) {
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
@@ -664,6 +723,71 @@ function itemSprite(k) {
   else if (k === 'force') potion('#ff8a1e', '#ffd25a');
   else if (k === 'bouclier') { P.rect(2, 1, 8, 7, '#3a7ae0'); P.rect(3, 8, 6, 2, '#3a7ae0'); P.rect(4, 10, 4, 2, '#3a7ae0'); P.rect(5, 2, 2, 8, '#e3b341'); }
   else if (k === 'ombre') { P.rect(3, 1, 6, 3, '#4a4f5a'); P.rect(2, 4, 8, 8, '#33363e'); P.rect(4, 4, 4, 2, '#1b1424'); }
+  return (dynCache[key] = P.outline().canvas());
+}
+function barrelSprite(lit) {
+  const key = 'barrel' + lit;
+  if (dynCache[key]) return dynCache[key];
+  const P = new Painter(20, 26); P.oy = 3;
+  const body = lit ? '#ff6a4a' : '#c8382a', dark = lit ? '#d04a2a' : '#8e2418', hi = lit ? '#ffb09a' : '#e8604a';
+  P.rect(3, 5, 14, 17, body); P.rect(2, 7, 16, 13, body);
+  P.rect(4, 5, 2, 17, hi); P.rect(14, 5, 2, 17, dark);
+  P.rect(2, 8, 16, 1, '#3a3f4a'); P.rect(2, 18, 16, 1, '#3a3f4a');
+  P.ellipse(10, 5, 7, 2, '#a8a0a0'); P.ellipse(10, 5, 5, 1, '#d8d0d0');
+  // symbole de danger : flamme jaune
+  P.rect(7, 10, 6, 7, '#ffd25a'); P.rect(8, 9, 4, 1, '#ffd25a'); P.rect(9, 12, 2, 4, '#ff8a1e'); P.px(9, 11, '#ff8a1e');
+  P.rect(9, 0, 2, 4, '#4a3426');
+  if (lit) { P.rect(8, -2, 4, 2, '#ffe27a'); P.px(9, -3, '#ffffff'); }
+  return (dynCache[key] = P.outline().canvas());
+}
+// Portail : anneau de pierres runiques autour d'un disque violet
+function portalSprite() {
+  if (dynCache.portal) return dynCache.portal;
+  const P = new Painter(40, 24);
+  P.ellipse(20, 12, 18, 10, '#5a5f6a'); P.ellipse(20, 12, 15, 8, '#3a1f5a'); P.ellipse(20, 12, 12, 6, '#5a2f9a');
+  for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2, x = 20 + Math.round(Math.cos(a) * 17), y = 12 + Math.round(Math.sin(a) * 9); P.rect(x - 1, y - 1, 3, 2, '#8a8f99'); P.px(x, y - 1, i % 2 ? '#c9a0ff' : '#b7bcc6'); }
+  return (dynCache.portal = P.outline().canvas());
+}
+// Familiers : petits compagnons qui suivent leur héros (1 chat, 2 chien, 3 bébé dragon, 4 hibou, 5 slime), 4 couleurs chacun
+const PET_COULEURS = {
+  1: ['#e8923a', '#9aa0ab', '#4a4550', '#f2eee6'],
+  2: ['#b07a45', '#e0b060', '#4a4550', '#f2eee6'],
+  3: ['#4fbf5a', '#e0503a', '#4a8ae0', '#9a5ae0'],
+  4: ['#8b6a45', '#8a8f99', '#ecebe6', '#c0703a'],
+  5: ['#5ac85a', '#4aa8e8', '#f080b8', '#a070e0'],
+};
+function petSprite(k, fr, col = 0) {
+  const key = 'pet' + k + fr + col;
+  if (dynCache[key]) return dynCache[key];
+  const P = new Painter(16, 14), b = fr ? 1 : 0;
+  const c = (PET_COULEURS[k] || ['#888'])[col] || PET_COULEURS[k][0], d = shade(c, 0.75), l = shade(c, 1.35);
+  if (k === 1) {        // chat
+    P.rect(3, 7, 7, 4, c); P.rect(3, 10, 1, 2, d); P.rect(8, 10 - b, 1, 2 + b, d);
+    P.rect(9, 3, 5, 5, c); P.px(9, 2, c); P.px(13, 2, c); P.px(12, 5, col === 2 ? '#f2c94c' : OUT); P.px(14, 6, '#f29a8a');
+    P.rect(1, 4 + b, 1, 4, c); P.px(2, 7, c); P.rect(4, 8, 1, 2, d); P.rect(6, 8, 1, 2, d);
+  } else if (k === 2) { // chien
+    P.rect(2, 6, 8, 5, c); P.rect(2, 10, 1, 2, d); P.rect(8, 10 - b, 1, 2 + b, d); P.rect(4, 11, 1, 1, d);
+    P.rect(9, 2, 5, 5, c); P.rect(13, 5, 2, 2, c); P.px(14, 5, OUT); P.px(11, 4, col === 2 ? '#f2c94c' : OUT); P.rect(9, 2, 2, 4, d);
+    P.rect(0, 4 - b, 2, 1, c); P.px(1, 5, c); P.rect(5, 6, 3, 1, '#d33b3b');
+  } else if (k === 3) { // bébé dragon
+    P.rect(4, 6, 6, 5, c); P.rect(5, 10, 4, 1, '#f2e08a');
+    P.rect(9, 3, 5, 4, c); P.px(10, 2, '#f2e08a'); P.px(12, 2, '#f2e08a'); P.px(12, 4, OUT); P.px(14, 5, d);
+    P.rect(1, 9, 3, 1, c); P.px(0, 8, c);
+    if (b) { P.rect(4, 2, 4, 3, l); P.px(3, 1, l); } else { P.rect(4, 4, 4, 2, l); P.px(3, 6, l); }
+    P.rect(5, 11, 1, 1, d); P.rect(8, 11, 1, 1, d);
+  } else if (k === 4) { // hibou
+    const belly = col === 2 ? '#ffffff' : '#e8d8b8';
+    P.ellipse(8, 7, 4, 5, c); P.ellipse(8, 9, 2, 3, belly);
+    P.rect(5, 4, 2, 2, '#ffffff'); P.rect(9, 4, 2, 2, '#ffffff'); P.px(6, 5, OUT); P.px(10, 5, OUT); P.px(8, 6, '#f2c94c');
+    P.px(4, 2, d); P.px(12, 2, d);
+    if (b) { P.rect(1, 5, 3, 2, d); P.rect(13, 5, 3, 2, d); } else { P.rect(3, 7, 1, 4, d); P.rect(12, 7, 1, 4, d); }
+    P.px(7, 12, '#f2c94c'); P.px(9, 12, '#f2c94c');
+  } else if (k === 5) { // slime qui rebondit
+    const sq = b ? 1 : 0;
+    P.ellipse(8, 9 + sq, 6 + sq, 4 - sq, d); P.ellipse(8, 8 + sq, 6 + sq, 4 - sq, c);
+    P.rect(5, 6 + sq, 2, 1, l); P.px(4, 7 + sq, l);
+    P.rect(6, 8 + sq, 1, 2, OUT); P.rect(10, 8 + sq, 1, 2, OUT);
+  }
   return (dynCache[key] = P.outline().canvas());
 }
 function bossSprite(frame, flash) {
@@ -726,6 +850,33 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     img(itemSprite(k), x, y - 6 + Math.sin(now * 4 + x) * 3);
   }
 
+  // portails : tourbillon animé
+  for (const pair of map.portals || []) for (const [k, P] of pair.entries()) {
+    img(portalSprite(), P.x, P.y + 4);
+    const col = ['#ffffff', '#e2ccff', '#b98cff', '#8e4ce0'], dir = k ? -1 : 1;
+    for (let arm = 0; arm < 3; arm++) for (let i = 0; i < 9; i++) {
+      const a = arm * 2.09 + i * 0.5 + now * 4 * dir, r = 4 + i * 3.4;
+      sq(P.x + Math.cos(a) * r * 1.5, P.y + 4 + Math.sin(a) * r * 0.75, 2, col[Math.min(3, i >> 1)]);
+    }
+    for (let i = 0; i < 3; i++) { const t = (now * 0.7 + i / 3 + k * 0.2) % 1; sq(P.x - 24 + i * 22, P.y - t * 70, 1, '#e2ccff'); }
+  }
+  // flaques gluantes du slime
+  for (const [x, y, r, t] of world.pz) {
+    ctx.save(); ctx.globalAlpha = Math.min(1, t) * 0.75;
+    ctx.fillStyle = '#4fbf5a'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#8af07a'; ctx.beginPath(); ctx.ellipse(x - r * 0.3, y - r * 0.15, r * 0.3, r * 0.14, 0, 0, 7); ctx.fill();
+    for (let i = 0; i < 5; i++) { const a = i * 1.3 + now; sq(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.35 - ((now * 20 + i * 9) % 18), 2, '#b8ffa8'); }
+    ctx.restore();
+  }
+  // tonneaux explosifs
+  (map.barrels || []).forEach((b, i) => {
+    const st = world.tb ? world.tb[i] : '1';
+    if (st === '0') return;
+    ctx.fillStyle = '#00000040'; ctx.fillRect(b.x - 18, b.y + 18, 36, 6);
+    const lit = st === '2';
+    img(barrelSprite(lit ? 1 : 0), b.x + (lit ? Math.sin(now * 60) * 2 : 0), b.y);
+  });
+
   // effets
   for (const f of world.fx) {
     const t = f.t / f.d;
@@ -755,6 +906,13 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + 10 + Math.sin(a) * r * 0.5, 2, '#ffe36b'); }
     } else if (f.k === 'smoke') {
       for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; sq(f.x + Math.cos(a) * (20 + 30 * (1 - t)), f.y + Math.sin(a) * (14 + 20 * (1 - t)), 4, '#6b6878'); }
+    } else if (f.k === 'heal') {
+      for (let i = 0; i < 5; i++) { const x = f.x - 24 + i * 12, y = f.y - 30 - (1 - t) * 50 - (i % 2) * 10; sq(x - 3, y, 2, '#ff5a7a'); sq(x + 3, y, 2, '#ff5a7a'); sq(x - 3, y + 3, 4, '#ff5a7a'); sq(x, y + 9, 2, '#ff5a7a'); }
+    } else if (f.k === 'bark') {
+      for (const m of [1, 0.7]) { const r = f.r * (1.1 - t) * m; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 2, '#fff6c0'); } }
+    } else if (f.k === 'owl') {
+      const r = f.r * (1 - t);
+      for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 2, i % 2 ? '#f2c94c' : '#ffffff'); }
     } else if (f.k === 'crit') {
       ctx.font = '22px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = OUT;
       ctx.strokeText(f.txt, f.x, f.y - 40 - (1 - t) * 30); ctx.fillStyle = '#ffd54a'; ctx.fillText(f.txt, f.x, f.y - 40 - (1 - t) * 30);
@@ -766,6 +924,8 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     if (c === 'mage') {
       sq(x - 6, y - 6, 4, '#ff4a1a'); sq(x - 3, y - 3, 2, '#ffe27a');
       sq(x - Math.cos(a) * 14, y - Math.sin(a) * 14, 2, '#ff8a1e'); sq(x - Math.cos(a) * 24, y - Math.sin(a) * 24, 1, '#ffb347');
+    } else if (c === 'pet') {
+      sq(x - 4, y - 4, 3, '#ff8a1e'); sq(x - 2, y - 2, 1, '#ffe27a'); sq(x - Math.cos(a) * 10, y - Math.sin(a) * 10, 2, '#ffb347');
     } else if (c === 'boss') {
       sq(x - 9, y - 9, 6, '#3a9a44'); sq(x - 6, y - 6, 4, '#5ac85a'); sq(x - 6, y - 6, 1, '#d0ffc0');
     } else {
@@ -804,6 +964,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     else if (isMe) sq(d.x - 3, d.y + 30, 2, '#ffd54a');
     else { ctx.fillStyle = CLS[p.c].color; ctx.fillRect(Math.round(d.x) - 15, Math.round(d.y) + 24, 30, 3); }
     if (p.st) for (let i = 0; i < 4; i++) sq(d.x - 20 + i * 13, d.y + 10 - ((now * 60 + i * 17) % 50), 1, '#ff8a1e');
+    if (p.sl) for (let i = 0; i < 3; i++) sq(d.x - 14 + i * 14, d.y + 6 + ((now * 30 + i * 7) % 16), 2, '#6fd85a');
     if (p.fa) for (let i = 0; i < 3; i++) sq(d.x - 30 - i * 8, d.y + 14 - i * 5, 1, '#9fd6ff');
     if (p.dz) { const dx = d.x - (d.px ?? d.x), dy = d.y - (d.py ?? d.y), l = Math.hypot(dx, dy) || 1; for (let i = 1; i <= 3; i++) sq(d.x - dx / l * i * 16 + (i % 2 ? 8 : -8), d.y - 20 - dy / l * i * 16, 2, '#ffffffaa'); }
     d.px = d.x; d.py = d.y;
@@ -812,7 +973,27 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       const a = mine.aim ?? p.a, ca = Math.cos(a), sa = Math.sin(a);
       for (const [k, w] of [[44, 0], [38, 1], [32, 2]]) for (let j = -w; j <= w; j++) sq(d.x + ca * k - sa * j * 4, d.y + 8 + sa * k + ca * j * 4, 2, '#ffd54ae0');
     }
-    drawHeroSprite(ctx, d.x, d.y, p.c, p.l || 'm00', p.a, d.ph, heroScale);
+    // familier : suit son héros, un peu en retard
+    const pet = p.l ? +p.l[5] || 0 : 0;
+    let drawPet = null;
+    if (pet) {
+      const tx = d.x - Math.cos(p.a) * 38 + (Math.sin(p.a) > 0.7 ? 26 : 0), ty = d.y - Math.sin(p.a) * 22 + 14;
+      if (d.petX === undefined || Math.hypot(tx - d.petX, ty - d.petY) > 400) { d.petX = tx; d.petY = ty; }
+      const vx = (tx - d.petX) * 0.12; d.petX += vx; d.petY += (ty - d.petY) * 0.12;
+      if (Math.abs(vx) > 0.3) d.petDir = vx > 0 ? 1 : -1;
+      const fly = pet === 3 || pet === 4, moving = Math.hypot(tx - d.petX, ty - d.petY) > 4;
+      const fr = fly ? Math.floor(now * 6 + p.id) % 2 : moving || pet === 5 ? Math.floor(now * (pet === 5 ? 4 : 8)) % 2 : 0;
+      const px = d.petX, py = d.petY - (fly ? 34 + Math.sin(now * 4 + p.id) * 5 : 0), S = heroScale * 0.8;
+      drawPet = () => {
+        ctx.fillStyle = '#00000033'; ctx.fillRect(Math.round(px) - 10, Math.round(d.petY) + 14, 20, 4);
+        const c = petSprite(pet, fr, +p.l[6] || 0);
+        ctx.save(); ctx.translate(Math.round(px), Math.round(py)); if ((d.petDir || 1) < 0) ctx.scale(-1, 1);
+        ctx.drawImage(c, -c.width * S / 2, -c.height * S / 2 + 4, c.width * S, c.height * S); ctx.restore();
+      };
+      if (d.petY < d.y) drawPet();
+    }
+    drawHeroSprite(ctx, d.x, d.y, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g);
+    if (drawPet && d.petY >= d.y) drawPet();
     if (p.sh) {
       ctx.globalAlpha = alpha * 0.8;
       for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2 + now * 2; sq(d.x + Math.cos(a) * 36, d.y - 10 + Math.sin(a) * 40, 2, '#7fd3ff'); }
