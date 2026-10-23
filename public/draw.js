@@ -473,8 +473,8 @@ function gold() { return '#f2c94c'; }
 // ---------- La carte (dessinée une seule fois, en tuiles de 16 pixels d'art) ----------
 const WALLS_T = 'b#kcxgT', WATER_T = '~vL', NATURAL_T = '.hsnmd~=icT';
 const THEMES = {
-  village: { herbe: ['#68b36b', '#5ea763', '#76c177', '#4f9455'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#2f7a3f', '#3f9a4a', '#5cb860', '#215a2e'], fond: '#2f7a3f' },
-  foret:   { herbe: ['#4f9a4f', '#468d47', '#5aa858', '#3a7a3d'], falaise: ['#a0623a', '#7a4524', '#c07f4c', '#5a3218'], arbres: ['#25603a', '#2f7a44', '#4f9a52', '#183f26'], fond: '#183f26' },
+  village: { herbe: ['#6a9a55', '#61904e', '#76a660', '#4f7d42'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#2f7a3f', '#3f9a4a', '#5cb860', '#215a2e'], fond: '#2f7a3f' },
+  foret:   { herbe: ['#56884a', '#4d7d43', '#629553', '#3d6a37'], falaise: ['#a0623a', '#7a4524', '#c07f4c', '#5a3218'], arbres: ['#25603a', '#2f7a44', '#4f9a52', '#183f26'], fond: '#183f26' },
   desert:  { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c98f52', '#9e6a38', '#e2ad6e', '#7a4f28'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e6a38' },
   donjon:  { herbe: ['#5a5f6a', '#525763', '#646a75', '#454a55'], falaise: ['#6d6a7a', '#4a4757', '#8a8796', '#33313f'], arbres: ['#2f4a3a', '#3f5a4a', '#5a7a5a', '#1f3328'], fond: '#141019' },
   hiver:   { herbe: ['#eef4fa', '#e2ebf4', '#ffffff', '#c8d8e8'], falaise: ['#b8cde0', '#8aa3be', '#e4eff8', '#6a84a0'], arbres: ['#2f6a4a', '#3f8a5a', '#e8f2fa', '#1f4a35'], fond: '#8aa3be' },
@@ -509,6 +509,18 @@ function buildMapLayers(map) {
   }
   const V = (x, y) => (x < 0 || y < 0 || x >= AW || y >= AH ? vt[Math.max(0, Math.min(AH - 1, y)) * AW + Math.max(0, Math.min(AW - 1, x))] : vt[y * AW + x]);
   const isW = t => t === '~';
+  // distance au rivage pour chaque pixel d'eau (deux passes, rapide) : sert à foncer l'eau profonde
+  const wd = new Uint8Array(AW * AH);
+  for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
+    const k = y * AW + x;
+    if (vt[k] !== '~') { wd[k] = 0; continue; }
+    wd[k] = Math.min(255, 1 + Math.min(x ? wd[k - 1] : 255, y ? wd[k - AW] : 255));
+  }
+  for (let y = AH - 1; y >= 0; y--) for (let x = AW - 1; x >= 0; x--) {
+    const k = y * AW + x;
+    if (!wd[k]) continue;
+    wd[k] = Math.min(wd[k], 1 + Math.min(x < AW - 1 ? wd[k + 1] : 255, y < AH - 1 ? wd[k + AW] : 255));
+  }
   // cellules arrondies (eau, rochers, feuillages)
   function cells(x, y, size, s) {
     const cx = Math.floor(x / size), cy = Math.floor(y / size);
@@ -569,15 +581,18 @@ function buildMapLayers(map) {
         if (edge) c = OUT;
       }
     } else if (t === '~') {
-      // ----- eau : petites cellules claires, bord plus foncé -----
+      // ----- eau : plus profonde au large, reflets discrets -----
       let shore = false;
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = V(x + dx, y + dy); if (n !== '~' && n !== 'B' && n !== '=') shore = true; }
-      if (shore) c = '#4f8fc4';
+      if (shore) c = '#2f5a6e';
       else {
-        const cl = cells(x, y, 7, 21);
-        c = cl.d2 - cl.d1 < 1.1 ? '#c4e5f8' : cl.id < 0.3 ? '#84bfe6' : '#8fc8ec';
-        if (map.theme === 'donjon') c = cl.d2 - cl.d1 < 1.1 ? '#6a9ac8' : '#3d6a9a';
-        if (map.theme === 'marais') c = cl.d2 - cl.d1 < 1.1 ? '#8fb8a0' : '#5a8a78';
+        const u = Math.min(1, wd[y * AW + x] / 16), cl = cells(x, y, 9, 21);
+        const W0 = map.theme === 'marais' ? [88, 128, 104] : map.theme === 'donjon' ? [58, 92, 128] : [92, 158, 176];
+        const W1 = map.theme === 'marais' ? [42, 72, 58] : map.theme === 'donjon' ? [24, 40, 70] : [34, 82, 112];
+        const mix = i => Math.round(W0[i] + (W1[i] - W0[i]) * u);
+        c = '#' + [mix(0), mix(1), mix(2)].map(v => v.toString(16).padStart(2, '0')).join('');
+        if (cl.d2 - cl.d1 < 0.9 && u < 0.6) c = shade(c, 1.18);
+        if (Math.sin(x * 0.21 + Math.sin(y * 0.09) * 3 + noise(x / 20, y / 20, 8) * 6) > 0.975 && hsh(x >> 3, y >> 1, 40) < 0.35) c = shade(c, 1.22);
       }
     } else if (t === '=') {
       const cl = cells(x, y, 6, 33);
@@ -646,8 +661,8 @@ function buildMapLayers(map) {
       if (t !== 'B' && t !== '=' && t !== 'v' && t !== 'L' && t !== 'p' && t !== 'f' && t !== 'w' && t !== 't') {
         let nw = 9;
         for (let k = 1; k <= 3 && nw > 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k], [k, k], [-k, -k], [k, -k], [-k, k]]) if (isW(V(x + dx, y + dy))) { nw = Math.min(nw, k); break; }
-        if (nw <= 2) c = H ? '#d8e6f2' : map.theme === 'donjon' ? '#5a5a6a' : map.theme === 'marais' ? '#8a7a4a' : '#ecd496';
-        else if (nw === 3 && (t === '.' || t === 'n')) c = H ? '#c6d6e6' : map.theme === 'marais' ? '#6a5a32' : '#c9a865';
+        if (nw <= 2) c = H ? '#d8e6f2' : map.theme === 'donjon' ? '#5a5a6a' : map.theme === 'marais' ? '#8a7a4a' : '#c8b27c';
+        else if (nw === 3 && (t === '.' || t === 'n')) c = H ? '#c6d6e6' : map.theme === 'marais' ? '#6a5a32' : '#a8925e';
       }
     }
     const k = (y * AW + x) * 4, col = rgb(c);
@@ -754,6 +769,45 @@ function buildMapLayers(map) {
   }
   for (const o of map.objs) if (o.kind === 'brazier') torches.push([o.x + o.w / 2, o.y - 40]);
   mapAnim = { glints, torches };
+  // ----- finition « plateau de jeu de rôle » (calculée une seule fois au chargement) -----
+  // 1) ombres portées des arbres, toits et buissons, décalées vers le bas à droite
+  const sc = document.createElement('canvas'); sc.width = AW; sc.height = AH;
+  const sg = sc.getContext('2d');
+  sg.drawImage(top, 0, 0); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = 'rgba(16,12,24,0.34)'; sg.fillRect(0, 0, AW, AH);
+  g.drawImage(sc, 4, 6);
+  // 2) quadrillage discret sur les sols praticables (1 case = 1 tuile)
+  const floorT = t => !WALLS_T.includes(t) && !WATER_T.includes(t);
+  g.fillStyle = map.theme === 'hiver' ? 'rgba(60,80,110,0.14)' : 'rgba(20,14,8,0.16)';
+  for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) {
+    if (!floorT(tile(i, j))) continue;
+    if (i > 0 && floorT(tile(i - 1, j))) for (let y = 0; y < TS; y += 2) g.fillRect(i * TS, j * TS + y, 1, 1);
+    if (j > 0 && floorT(tile(i, j - 1))) for (let x = 0; x < TS; x += 2) g.fillRect(i * TS + x, j * TS, 1, 1);
+  }
+  // 3) couleurs plus sobres : moins saturées, plus chaudes, avec des taches de lumière et des bords assombris
+  // taches de lumière précalculées par blocs de 4 pixels (plus rapide)
+  const MW = (AW >> 2) + 1, MH = (AH >> 2) + 1, mot = new Float32Array(MW * MH);
+  for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) mot[j * MW + i] = 0.86 + noise(i / 7.5, j / 7.5, 31) * 0.16 + noise(i / 1.75, j / 1.75, 32) * 0.07;
+  const grade = (cv, mottle) => {
+    const cx = cv.getContext('2d'), im = cx.getImageData(0, 0, AW, AH), d = im.data;
+    const cold = map.theme === 'hiver', sat = cold ? 0.85 : 0.76;
+    for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
+      const k = (y * AW + x) * 4;
+      if (!d[k + 3]) continue;
+      let r = d[k], gg = d[k + 1], b = d[k + 2];
+      const L = r * 0.3 + gg * 0.59 + b * 0.11;
+      r = L + (r - L) * sat; gg = L + (gg - L) * sat; b = L + (b - L) * sat;
+      let m = 1;
+      if (mottle) {
+        m = mot[(y >> 2) * MW + (x >> 2)];
+        const e = Math.min(x, y, AW - 1 - x, AH - 1 - y);
+        if (e < 48) m *= 0.78 + 0.22 * (e / 48);
+      }
+      if (cold) { m = 1 + (m - 1) * 0.35; d[k] = Math.min(255, r * 0.97 * m); d[k + 1] = Math.min(255, gg * m); d[k + 2] = Math.min(255, b * 1.03 * m); }
+      else { d[k] = Math.min(255, r * 1.04 * m); d[k + 1] = Math.min(255, gg * 1.0 * m); d[k + 2] = Math.min(255, b * 0.9 * m); }
+    }
+    cx.putImageData(im, 0, 0);
+  };
+  grade(ground, true); grade(top, false);
   mapLayer = ground; topLayer = top;
 }
 
@@ -1036,7 +1090,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.save();
     ctx.globalAlpha = alpha * (p.pr && Math.floor(now * 8) % 2 ? 0.35 : 1);
     // ombre et marqueur au sol (couleur de l'équipe si équipes)
-    ctx.fillStyle = '#00000044'; ctx.fillRect(Math.round(d.x) - 15, Math.round(d.y) + 18, 30, 6);
+    ctx.fillStyle = '#0000004d'; ctx.beginPath(); ctx.ellipse(Math.round(d.x) + 2, Math.round(d.y) + 21, 17, 6, 0, 0, 7); ctx.fill();
     const tcol = teams && p.tm >= 0 && teams[p.tm] ? teams[p.tm].color : null;
     if (tcol) { ctx.fillStyle = tcol; ctx.fillRect(Math.round(d.x) - 18, Math.round(d.y) + 22, 36, 5); }
     else if (isMe) sq(d.x - 3, d.y + 30, 2, '#ffd54a');
@@ -1070,7 +1124,18 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       };
       if (d.petY < d.y) drawPet();
     }
-    drawHeroSprite(ctx, d.x, d.y, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g);
+    // au repos, le héros respire (1 pixel) ; le cristal du mage luit doucement
+    const breathe = !d.ph && Math.sin(now * 2.6 + p.id) > 0.3 ? -heroScale / 3 : 0;
+    drawHeroSprite(ctx, d.x, d.y + breathe, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g);
+    if (p.c === 'mage') {
+      const dd = dirFromAngle(p.a), S = heroScale, gx = d.x + (dd === 'down' ? 6 * S : dd === 'up' ? 5 * S : dd === 'right' ? 2 * S : -2 * S), gy = d.y + breathe + 22 - (dd === 'up' ? 22 : 21) * S;
+      const pul = 0.18 + Math.sin(now * 3 + p.id) * 0.06;
+      ctx.fillStyle = `rgba(127,224,255,${pul})`; ctx.beginPath(); ctx.arc(gx, gy, 5 * S, 0, 7); ctx.fill();
+      ctx.fillStyle = `rgba(200,245,255,${pul + 0.1})`; ctx.beginPath(); ctx.arc(gx, gy, 2.5 * S, 0, 7); ctx.fill();
+    }
+    if (p.c === 'voleur' && dirFromAngle(p.a) === 'down' && Math.sin(now * 1.7 + p.id) > 0.6) {   // reflet sur les dagues
+      const S = heroScale; sq(d.x + 5 * S, d.y + breathe + 22 - 6 * S + Math.floor((now * 6) % 3) * S, 1, '#ffffff');
+    }
     if (drawPet && d.petY >= d.y) drawPet();
     if (p.sh) {
       ctx.globalAlpha = alpha * 0.8;
