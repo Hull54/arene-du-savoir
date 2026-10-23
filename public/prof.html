@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arène du Savoir – Enseignant</title>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #141b26; color: #fff; font-family: system-ui, "Segoe UI", sans-serif; }
+  html, body { margin: 0; height: 100%; background: #141b26; color: #fff; font-family: "Pixelify Sans", system-ui, sans-serif; }
   .wrap { display: grid; grid-template-columns: 1fr 360px; height: 100%; }
   canvas { width: 100%; height: 100%; display: block; }
   aside { background: #1e2737; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
@@ -60,6 +61,7 @@
     </div>
   </aside>
 </div>
+<script src="monde.js"></script>
 <script src="draw.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -73,7 +75,7 @@ ws.onclose = () => { $('urls').textContent = 'Serveur arrêté – relance « no
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.t === 'welcome') map = m;
-  else if (m.t === 's') world = m.w;
+  else if (m.t === 's') world = unpackWorld(m.w);
   else if (m.t === 'info') info(m);
 };
 $('pause').onclick = () => send({ t: 'pause' });
@@ -150,11 +152,14 @@ function frame() {
   const s = Math.min(r.width / (map.W + 40), r.height / (map.H + 40));
   ctx.translate((r.width - map.W * s) / 2, (r.height - map.H * s) / 2);
   ctx.scale(s, s);
-  drawWorld(ctx, world, map, null, disp);
+  drawWorld(ctx, world, map, null, disp, 7);   // héros plus gros pour être vus de loin au projecteur
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.font = 'bold 16px system-ui'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
-  world.feed.forEach((t, i) => ctx.fillText(t, 14, 26 + i * 22));
-  if (world.paused) { ctx.font = 'bold 48px system-ui'; ctx.textAlign = 'center'; ctx.fillText('⏸ Pause', r.width / 2, r.height / 2); }
+  ctx.font = '18px "Pixelify Sans", monospace'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+  world.feed.forEach((t, i) => {
+    ctx.fillStyle = '#1b1424cc'; ctx.fillRect(8, 8 + i * 26, ctx.measureText(t).width + 14, 24);
+    ctx.fillStyle = '#fff'; ctx.fillText(t, 15, 26 + i * 26);
+  });
+  if (world.paused) { ctx.font = '52px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.fillText('⏸ Pause', r.width / 2, r.height / 2); }
 }
 requestAnimationFrame(frame);
 </script>

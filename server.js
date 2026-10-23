@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
 const QUESTIONS = JSON.parse(fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8'));
 const GENERATEURS = require('./generateurs');
+const Monde = require('./public/monde.js');
 // Liste des notions (cases à cocher de l'enseignant), regroupées par matière
 const NOTIONS = [];
 for (const q of [...QUESTIONS, ...Object.values(GENERATEURS).map(g => g())])
@@ -18,7 +19,7 @@ for (const q of [...QUESTIONS, ...Object.values(GENERATEURS).map(g => g())])
 
 // ---------- Réglages du jeu ----------
 const TICK = 1000 / 30;
-const W = 3200, H = 2200, R = 22;
+const W = Monde.W, H = Monde.H, R = 22;
 const SPAWN_PROTECT = 2.5;
 const WRONG_DELAY = 3;
 
@@ -29,74 +30,89 @@ const CLASSES = {
   archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9 } },
 };
 
-// ---------- La carte : 5 zones ----------
+// ---------- La carte : 6 régions reliées par une rivière et des ponts ----------
+// Les formes (rivière, régions, étangs, boue) viennent de public/monde.js, partagé avec le navigateur.
 // Générateur pseudo-aléatoire fixe : la carte est la même à chaque lancement
-let seed = 42;
+let seed = 20261023;
 const srand = (a, b) => { seed = (seed * 16807) % 2147483647; return a + (seed / 2147483647) * (b - a); };
 
-const ZONES = [
-  { nom: 'Forêt des Murmures', x: 0, y: 0, w: 1250, h: 900, color: '#3f7f3a' },
-  { nom: 'Marais Gluant', x: 1950, y: 0, w: 1250, h: 900, color: '#5e6b3a' },
-  { nom: 'Ruines Anciennes', x: 0, y: 1300, w: 1250, h: 900, color: '#8a7f62' },
-  { nom: 'Lac aux Ponts', x: 1950, y: 1300, w: 1250, h: 900, color: '#4f8f66' },
-  { nom: 'Colisée', x: 1150, y: 650, w: 900, h: 900, color: '#b39a6b', round: true },
-];
-const FOUNTAIN = { x: 1600, y: 1100, r: 90, heal: 10 };
-
+const FOUNTAIN = { x: Monde.PLAZA.x, y: Monde.PLAZA.y, r: 110, heal: 10 };
 const WALLS = [];   // bloquent les joueurs et les projectiles
-const WATER = [];   // bloque les joueurs, mais les flèches passent par-dessus
-const SWAMP = [];   // ralentit
-const BUSHES = [];  // cache les joueurs
-const BRIDGES = [];
+const BUSHES = [];  // cachent les joueurs
+const D = Monde.DONJON;
 
-function overlapsAny(o, pad = 30) {
-  return [...WALLS, ...WATER].some(w => o.x < w.x + w.w + pad && o.x + o.w + pad > w.x && o.y < w.y + w.h + pad && o.y + o.h + pad > w.y);
+const rectsOverlap = (a, b, pad) => a.x < b.x + b.w + pad && a.x + a.w + pad > b.x && a.y < b.y + b.h + pad && a.y + a.h + pad > b.y;
+function terrainOk(o, region, pathPad = 55) {
+  for (const [px, py] of [[o.x, o.y], [o.x + o.w, o.y], [o.x, o.y + o.h], [o.x + o.w, o.y + o.h], [o.x + o.w / 2, o.y + o.h / 2]]) {
+    if (px < 70 || py < 70 || px > W - 70 || py > H - 70) return false;
+    if (Monde.regionAt(px, py) !== region) return false;
+    if (Monde.isWater(px, py) || Monde.inRiver(px, py) || Monde.isIce(px, py) || Monde.pathDist(px, py) < pathPad) return false;
+    if (Math.hypot(px - FOUNTAIN.x, py - FOUNTAIN.y) < Monde.PLAZA.r + 30) return false;
+    if (region !== 'donjon' && px > D.x - 80 && px < D.x + D.w + 80 && py > D.y - 80 && py < D.y + D.h + 80) return false;
+  }
+  return true;
 }
-// Forêt : arbres et buissons
-for (let i = 0, n = 0; n < 28 && i < 500; i++) {
-  const s = srand(40, 60), o = { x: srand(60, 1150), y: srand(60, 820), w: s, h: s, kind: 'tree' };
-  if (!overlapsAny(o, 70)) { WALLS.push(o); n++; }
+function scatter(kind, region, n, w, h, pad = 60) {
+  for (let i = 0, k = 0; k < n && i < n * 60; i++) {
+    const o = { x: srand(0, W), y: srand(0, H), w, h, kind };
+    if (terrainOk(o, region) && !WALLS.some(q => rectsOverlap(o, q, pad))) { WALLS.push(o); k++; }
+  }
 }
-for (let i = 0, n = 0; n < 14 && i < 500; i++) {
-  const b = { x: srand(100, 1150), y: srand(100, 820), r: srand(55, 80) };
-  if (!overlapsAny({ x: b.x - b.r, y: b.y - b.r, w: b.r * 2, h: b.r * 2 }, 0) && !BUSHES.some(o => Math.hypot(o.x - b.x, o.y - b.y) < o.r + b.r)) { BUSHES.push(b); n++; }
+function bushes(region, n, rmin = 50, rmax = 70) {
+  for (let i = 0, k = 0; k < n && i < n * 80; i++) {
+    const b = { x: srand(0, W), y: srand(0, H), r: srand(rmin, rmax) };
+    const box = { x: b.x - b.r, y: b.y - b.r, w: b.r * 2, h: b.r * 2 };
+    if (terrainOk(box, region, 40) && !WALLS.some(q => rectsOverlap(box, q, 10)) && !BUSHES.some(o => Math.hypot(o.x - b.x, o.y - b.y) < o.r + b.r + 20)) { BUSHES.push({ ...b, region }); k++; }
+  }
 }
-// Marais : flaques de boue, arbres morts, quelques buissons
-SWAMP.push({ x: 2050, y: 80, w: 380, h: 260 }, { x: 2600, y: 120, w: 450, h: 220 }, { x: 2150, y: 480, w: 300, h: 330 },
-           { x: 2620, y: 520, w: 480, h: 280 }, { x: 2480, y: 330, w: 160, h: 180 });
-WALLS.push({ x: 2470, y: 150, w: 45, h: 45, kind: 'deadtree' }, { x: 2900, y: 420, w: 45, h: 45, kind: 'deadtree' },
-           { x: 2300, y: 380, w: 45, h: 45, kind: 'deadtree' }, { x: 2540, y: 700, w: 45, h: 45, kind: 'deadtree' },
-           { x: 3060, y: 60, w: 45, h: 45, kind: 'deadtree' }, { x: 2050, y: 820, w: 45, h: 45, kind: 'deadtree' });
-BUSHES.push({ x: 2560, y: 430, r: 60 }, { x: 3050, y: 820, r: 65 });
-// Ruines : un petit labyrinthe de murs
+
+// Village : maisons autour de la place, étals du marché
+const HOUSES = [[1230, 1420, 200, 150], [1860, 1390, 190, 150], [1150, 1840, 190, 150], [1900, 1880, 210, 150], [1380, 2020, 170, 130], [2000, 1610, 150, 120]];
+for (const [x, y, w, h] of HOUSES) WALLS.push({ x, y, w, h, kind: 'house', roof: Math.floor(srand(0, 3)) });
+WALLS.push({ x: 1370, y: 1560, w: 90, h: 50, kind: 'stall' }, { x: 1740, y: 1860, w: 90, h: 50, kind: 'stall' });
+WALLS.push({ x: 1795, y: 1555, w: 44, h: 44, kind: 'barrels' }, { x: 1335, y: 1835, w: 44, h: 44, kind: 'barrels' });
+scatter('oak', 'village', 8, 44, 36, 80);
+bushes('village', 4);
+
+// Donjon : forteresse avec trois portes, des salles et des piliers
+const T = 48;
 WALLS.push(
-  { x: 150, y: 1400, w: 320, h: 40 }, { x: 150, y: 1400, w: 40, h: 260 }, { x: 620, y: 1380, w: 40, h: 300 },
-  { x: 660, y: 1640, w: 260, h: 40 }, { x: 980, y: 1420, w: 40, h: 220 }, { x: 200, y: 1860, w: 340, h: 40 },
-  { x: 500, y: 1900, w: 40, h: 200 }, { x: 760, y: 1900, w: 300, h: 40 }, { x: 1020, y: 1760, w: 40, h: 180 },
-  { x: 320, y: 1620, w: 110, h: 110 }, { x: 820, y: 2060, w: 40, h: 140 }, { x: 1100, y: 1350, w: 120, h: 40 },
+  { x: D.x, y: D.y, w: 440, h: T, kind: 'dwall' }, { x: D.x + 580, y: D.y, w: D.w - 580, h: T, kind: 'dwall' },             // nord (porte)
+  { x: D.x, y: D.y + D.h - T, w: D.w, h: T, kind: 'dwall' },                                                              // sud
+  { x: D.x, y: D.y, w: T, h: 240, kind: 'dwall' }, { x: D.x, y: D.y + 400, w: T, h: D.h - 400, kind: 'dwall' },            // ouest (porte)
+  { x: D.x + D.w - T, y: D.y, w: T, h: 300, kind: 'dwall' }, { x: D.x + D.w - T, y: D.y + 440, w: T, h: D.h - 440, kind: 'dwall' }, // est (porte)
+  { x: D.x + 260, y: D.y + T, w: T, h: 170, kind: 'dwall' }, { x: D.x + 260, y: D.y + 330, w: T, h: 150, kind: 'dwall' },
+  { x: D.x + 520, y: D.y + 340, w: 300 - T, h: T, kind: 'dwall' }, { x: D.x + 520, y: D.y + 340, w: T, h: 170, kind: 'dwall' },
+  { x: D.x + 420, y: D.y + 200, w: 56, h: 56, kind: 'dpillar' }, { x: D.x + 640, y: D.y + 170, w: 56, h: 56, kind: 'dpillar' },
+  { x: D.x + 120, y: D.y + 520, w: 56, h: 56, kind: 'dpillar' }, { x: D.x + 360, y: D.y + 500, w: 56, h: 56, kind: 'dpillar' },
 );
-WALLS.forEach(w => { if (w.y >= 1300 && !w.kind) w.kind = 'ruin'; });
-// Lac : quatre bassins séparés par deux ponts en croix
-WATER.push({ x: 2100, y: 1420, w: 450, h: 280 }, { x: 2650, y: 1420, w: 450, h: 280 },
-           { x: 2100, y: 1800, w: 450, h: 300 }, { x: 2650, y: 1800, w: 450, h: 300 });
-BRIDGES.push({ x: 2100, y: 1700, w: 1000, h: 100 }, { x: 2550, y: 1420, w: 100, h: 680 });
-WALLS.push({ x: 2020, y: 1360, w: 60, h: 60, kind: 'rock' }, { x: 3120, y: 2110, w: 60, h: 60, kind: 'rock' });
-// Colisée : piliers en cercle autour de la fontaine
-for (let i = 0; i < 8; i++) {
-  const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
-  WALLS.push({ x: FOUNTAIN.x + Math.cos(a) * 400 - 35, y: FOUNTAIN.y + Math.sin(a) * 400 - 35, w: 70, h: 70, kind: 'pillar' });
-}
-for (let i = 0; i < 4; i++) {
-  const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
-  WALLS.push({ x: FOUNTAIN.x + Math.cos(a) * 210 - 25, y: FOUNTAIN.y + Math.sin(a) * 210 - 25, w: 50, h: 50, kind: 'pillar' });
-}
-// Plaines entre les zones : quelques rochers
-WALLS.push({ x: 1450, y: 300, w: 120, h: 70, kind: 'rock' }, { x: 1650, y: 1850, w: 120, h: 70, kind: 'rock' },
-           { x: 450, y: 1050, w: 90, h: 90, kind: 'rock' }, { x: 2700, y: 1060, w: 90, h: 90, kind: 'rock' },
-           { x: 1350, y: 1950, w: 70, h: 70, kind: 'rock' }, { x: 1800, y: 180, w: 70, h: 70, kind: 'rock' });
-BUSHES.push({ x: 1100, y: 1080, r: 60 }, { x: 2100, y: 1100, r: 60 }, { x: 1600, y: 2080, r: 60 }, { x: 1600, y: 100, r: 60 });
+scatter('rock', 'donjon', 6, 56, 44, 90);
+scatter('deadtree', 'donjon', 4, 30, 30, 90);
 
-const MAP = { W, H, walls: WALLS, water: WATER, swamp: SWAMP, bushes: BUSHES, bridges: BRIDGES, zones: ZONES, fountain: FOUNTAIN };
+// Toundra glacée
+scatter('snowpine', 'neige', 28, 40, 36, 60);
+scatter('snowrock', 'neige', 7, 56, 44, 80);
+scatter('snowman', 'neige', 3, 34, 34, 120);
+bushes('neige', 3);
+// Forêt
+scatter('oak', 'foret', 26, 44, 36, 55);
+scatter('pine', 'foret', 12, 40, 36, 55);
+scatter('stump', 'foret', 6, 30, 24, 60);
+bushes('foret', 14);
+// Marais
+scatter('deadtree', 'marais', 12, 30, 30, 70);
+scatter('willow', 'marais', 5, 48, 40, 90);
+bushes('marais', 5);
+// Désert : cactus, rochers et palmiers autour de l'oasis
+scatter('cactus', 'desert', 20, 30, 34, 70);
+scatter('rock', 'desert', 8, 56, 44, 90);
+for (let i = 0; i < 5; i++) {
+  const a = i / 5 * Math.PI * 2 + 0.4, P = Monde.PONDS[1];
+  const o = { x: P.x + Math.cos(a) * (P.r + 70) - 17, y: P.y + Math.sin(a) * (P.r + 60) - 15, w: 34, h: 30, kind: 'palm' };
+  if (terrainOk(o, 'desert', 30)) WALLS.push(o);
+}
+
+const MAP = { W, H, walls: WALLS, bushes: BUSHES, fountain: FOUNTAIN };
 
 // ---------- État ----------
 let nextId = 1;
@@ -107,25 +123,25 @@ let fx = [];
 let feed = [];
 let paused = false;
 const subjects = new Set(NOTIONS.map(n => n.s));
-const stats = {};            // nom -> { matiere: {ok, ko} }
+const stats = {};            // nom -> { notion: {ok, ko} }
 
 // ---------- Utilitaires ----------
 const rand = (a, b) => a + Math.random() * (b - a);
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const inRect = (x, y, o) => x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h;
 const angDiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 
 function circleHitsRect(x, y, r, o) {
   const cx = clamp(x, o.x, o.x + o.w), cy = clamp(y, o.y, o.y + o.h);
   return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
 }
-function onBridge(x, y) { return BRIDGES.some(b => inRect(x, y, b)); }
-// Pour les joueurs : murs + eau (sauf sur un pont)
+// Pour les joueurs : murs + eau (rivière hors des ponts, étangs)
 function blocked(x, y, r) {
-  if (x < r || y < r || x > W - r || y > H - r) return true;
+  if (x < r + 20 || y < r + 20 || x > W - r - 20 || y > H - r - 20) return true;
   if (WALLS.some(o => circleHitsRect(x, y, r, o))) return true;
-  return !onBridge(x, y) && WATER.some(o => circleHitsRect(x, y, r * 0.6, o));
+  if (Math.hypot(x - FOUNTAIN.x, y - FOUNTAIN.y) < 34 + r) return true;   // bassin de la fontaine
+  const k = r * 0.55;
+  return Monde.isWater(x, y) || Monde.isWater(x + k, y) || Monde.isWater(x - k, y) || Monde.isWater(x, y + k) || Monde.isWater(x, y - k);
 }
 // Pour les projectiles : seulement les murs
 function blockedShot(x, y, r) {
@@ -134,15 +150,15 @@ function blockedShot(x, y, r) {
 }
 const inBush = p => BUSHES.some(b => Math.hypot(b.x - p.x, b.y - p.y) < b.r);
 function freeSpot() {
-  for (let i = 0; i < 300; i++) {
-    const x = rand(60, W - 60), y = rand(60, H - 60);
-    if (!blocked(x, y, R + 10) && !WATER.some(o => circleHitsRect(x, y, R + 10, o))) {
+  for (let i = 0; i < 400; i++) {
+    const x = rand(80, W - 80), y = rand(80, H - 80);
+    if (!blocked(x, y, R + 10)) {
       let near = false;
       for (const p of players.values()) if (p.alive && Math.hypot(p.x - x, p.y - y) < 250) near = true;
-      if (!near || i > 150) return { x, y };
+      if (!near || i > 200) return { x, y };
     }
   }
-  return { x: W / 2, y: 100 };
+  return { x: FOUNTAIN.x, y: FOUNTAIN.y + 150 };
 }
 function addFeed(text) {
   feed.push({ text, t: 6 });
@@ -352,7 +368,8 @@ function step() {
       const len = Math.hypot(mx, my) || 1; mx /= len; my /= len;
     }
     let sp = CLASSES[p.cls].speed * dt;
-    if (SWAMP.some(o => inRect(p.x, p.y, o))) sp *= 0.55;
+    if (Monde.isMud(p.x, p.y)) sp *= 0.55;          // boue du marais : ralentit
+    else if (Monde.isIce(p.x, p.y)) sp *= 1.35;     // lac gelé : on glisse plus vite !
     if (p.stealth > 0) sp *= 1.2;
     const bx = blocked(p.x + mx * sp, p.y, R), by = blocked(p.x, p.y + my * sp, R);
     if (!bx) p.x += mx * sp;
@@ -382,10 +399,11 @@ function step() {
 
 function publicState() {
   return JSON.stringify({
-    p: [...players.values()].map(p => ({
-      id: p.id, n: p.name, c: p.cls, l: p.look, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2),
-      hp: Math.max(0, Math.round(p.hp)), m: p.maxHp, al: p.alive, sh: p.shield > 0, pr: p.protect > 0, k: p.kills, hd: p.hidden, inv: p.stealth > 0,
-    })),
+    // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
+    p: [...players.values()].map(p => [
+      p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0),
+    ]),
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
     fx: fx.map(f => { const o = {}; for (const k in f) o[k] = typeof f[k] === 'number' ? Math.round(f[k] * 100) / 100 : f[k]; return o; }),
     feed: feed.map(f => f.text), paused,

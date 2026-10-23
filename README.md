@@ -1,6 +1,6 @@
-# ⚔️ Arène du Savoir — prototype
+# ⚔️ Arène du Savoir
 
-Jeu de combat en arène pour toute la classe. Quand un élève tombe, il doit répondre à une question (français, maths, univers social, sciences) pour revenir au combat.
+Jeu de combat en arène pour toute la classe. Quand un élève tombe, il doit répondre à une question de français ou de mathématiques pour revenir au combat.
 
 ## Jouer en ligne (aucune installation)
 
@@ -41,13 +41,16 @@ Le jeu est hébergé gratuitement sur **Render** à partir de ce dépôt GitHub.
 
 ## L'arène (prévue pour environ 20 joueurs)
 
-| Zone | Particularité |
+Une grande carte en pixel art, vue de dessus, traversée par une rivière. L'eau bloque les joueurs mais pas les flèches ni les boules de feu : on traverse par l'un des 5 ponts.
+
+| Région | Particularité |
 |---|---|
+| ❄️ Toundra glacée | Sapins enneigés, bonshommes de neige et un **lac gelé** sur lequel on glisse plus vite |
 | 🌲 Forêt des Murmures | Arbres et buissons : un joueur dans un buisson est invisible tant qu'il n'attaque pas |
-| 🟤 Marais Gluant | La boue ralentit de 45 % |
-| 🏛️ Ruines Anciennes | Labyrinthe de murs, idéal pour les embuscades du Voleur |
-| 🌊 Lac aux Ponts | L'eau bloque les joueurs mais pas les flèches ni les boules de feu ; deux ponts en croix |
-| 🏟️ Colisée (centre) | Piliers et **fontaine de soin** au milieu : la zone que tout le monde se dispute |
+| 🟤 Marais Gluant | Arbres morts, mares, et **boue qui ralentit** |
+| 🌵 Désert Brûlant | Cactus, rochers et une oasis entourée de palmiers |
+| 🏘️ Village de Mirabel | Maisons, étals du marché et **fontaine de soin** sur la place : la zone que tout le monde se dispute |
+| 🏰 Donjon Oublié | Forteresse aux couloirs étroits et piliers éclairés de torches, idéale pour les embuscades du Voleur |
 
 Une mini-carte en haut à droite et le nom de la zone actuelle aident les élèves à s'orienter.
 
@@ -87,13 +90,14 @@ Dans `questions.json`, chaque question suit ce modèle :
 
 ## Les personnages
 
-Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau et une couleur de cheveux.
+Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau et une couleur de cheveux. Tous les dessins sont en pixel art rétro, créés dans le code du jeu (aucune image empruntée).
 
 ## Fichiers
 
 - `server.js` : le serveur de jeu (règles, combats, questions, robots).
 - `public/index.html` : l'écran de l'élève.
 - `public/prof.html` : le tableau de bord de l'enseignant.
-- `public/draw.js` : le dessin de l'arène (partagé par les deux écrans).
+- `public/monde.js` : la carte (régions, rivière, étangs, boue), partagée par le serveur et les écrans.
+- `public/draw.js` : le dessin en pixel art de l'arène et des héros (partagé par les deux écrans).
 - `questions.json` : les questions fixes.
 - `generateurs.js` : les questions générées (verbes, tables, numération, fractions, angles, triangles).
