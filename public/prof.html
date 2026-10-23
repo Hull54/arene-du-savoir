@@ -16,6 +16,8 @@
   button { font-size: 14px; padding: 7px 12px; border-radius: 9px; border: 0; background: #ffd54a; color: #222; font-weight: 700; cursor: pointer; margin: 2px; }
   button.sec { background: #ffffff22; color: #fff; }
   label { display: block; padding: 3px 0; cursor: pointer; }
+  .grp { font-weight: 700; margin-top: 6px; color: #cfd6e6; } .grp:first-child { margin-top: 0; }
+  .grp a { font-weight: 400; font-size: 12px; color: #9ab; margin-left: 6px; cursor: pointer; text-decoration: underline; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   td, th { padding: 4px 3px; text-align: left; }
   th { color: #aab; font-weight: 600; font-size: 12px; }
@@ -41,7 +43,7 @@
       <button class="sec" id="rmbots">Retirer les robots</button>
     </div>
     <div class="box">
-      <h2>Matières des questions</h2>
+      <h2>Notions des questions</h2>
       <div id="subjects"></div>
     </div>
     <div class="box">
@@ -49,7 +51,11 @@
       <table><thead><tr><th>Élève</th><th>🏆</th><th>💀</th><th>✅</th><th>❌</th><th></th></tr></thead><tbody id="board"></tbody></table>
     </div>
     <div class="box">
-      <h2>Réussite par matière</h2>
+      <h2>Réussite du groupe par notion</h2>
+      <table id="statsNotion"></table>
+    </div>
+    <div class="box">
+      <h2>Réussite par élève</h2>
       <table id="stats"></table>
     </div>
   </aside>
@@ -85,27 +91,47 @@ function info(m) {
   if (key !== subjKey) {
     subjKey = key;
     $('subjects').innerHTML = '';
-    for (const { s, on } of m.subjects) {
-      const l = document.createElement('label');
-      l.innerHTML = `<input type="checkbox" ${on ? 'checked' : ''}> ${esc(s)}`;
-      l.querySelector('input').onchange = ev => send({ t: 'subject', s, on: ev.target.checked });
-      $('subjects').appendChild(l);
+    for (const mat of [...new Set(m.subjects.map(x => x.m))]) {
+      const g = document.createElement('div');
+      g.className = 'grp';
+      g.innerHTML = `${esc(mat)} <a data-v="1">tout</a><a data-v="0">aucune</a>`;
+      g.querySelectorAll('a').forEach(a => a.onclick = () => m.subjects.filter(x => x.m === mat).forEach(x => send({ t: 'subject', s: x.s, on: a.dataset.v === '1' })));
+      $('subjects').appendChild(g);
+      for (const { s, on } of m.subjects.filter(x => x.m === mat)) {
+        const l = document.createElement('label');
+        l.innerHTML = `<input type="checkbox" ${on ? 'checked' : ''}> ${esc(s)}`;
+        l.querySelector('input').onchange = ev => send({ t: 'subject', s, on: ev.target.checked });
+        $('subjects').appendChild(l);
+      }
     }
   }
   const ps = [...m.players].sort((a, b) => b.k - a.k || b.g - a.g);
   $('board').innerHTML = ps.map(p => `<tr><td>${CLS[p.c].ico} ${esc(p.n)}${p.bot ? ' 🤖' : ''}</td><td>${p.k}</td><td>${p.d}</td><td>${p.g}</td><td>${p.b}</td>
     <td><button class="x" title="Retirer" data-id="${p.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="6">En attente des élèves…</td></tr>';
   $('board').querySelectorAll('.x').forEach(b => b.onclick = () => send({ t: 'kick', id: +b.dataset.id }));
-  const subs = m.subjects.map(x => x.s);
-  const names = Object.keys(m.stats).filter(n => Object.keys(m.stats[n]).length);
+  const bots = new Set(m.players.filter(p => p.bot).map(p => p.n));
+  const names = Object.keys(m.stats).filter(n => !bots.has(n) && Object.keys(m.stats[n]).length);
+  const pctCell = (ok, tot) => {
+    const pct = Math.round(ok / tot * 100);
+    const col = pct >= 75 ? '#4cd964' : pct >= 50 ? '#ffcc00' : '#ff6b6b';
+    return `<td class="pct" style="color:${col}" title="${ok} bonnes sur ${tot}">${pct} %</td>`;
+  };
+  const rows = m.subjects.map(({ s }) => {
+    let ok = 0, tot = 0;
+    for (const n of names) { const v = m.stats[n][s]; if (v) { ok += v.ok; tot += v.ok + v.ko; } }
+    return tot ? `<tr><td>${esc(s)}</td>${pctCell(ok, tot)}<td style="color:#9ab">${tot} rép.</td></tr>` : '';
+  }).join('');
+  $('statsNotion').innerHTML = rows || '<tr><td>Les résultats apparaîtront dès les premières questions.</td></tr>';
   $('stats').innerHTML = names.length
-    ? `<tr><th>Élève</th>${subs.map(s => `<th>${esc(s.slice(0, 5))}.</th>`).join('')}</tr>` + names.map(n => `<tr><td>${esc(n)}</td>${subs.map(s => {
-        const v = m.stats[n][s];
-        if (!v) return '<td>–</td>';
-        const pct = Math.round(v.ok / (v.ok + v.ko) * 100);
-        const col = pct >= 75 ? '#4cd964' : pct >= 50 ? '#ffcc00' : '#ff6b6b';
-        return `<td class="pct" style="color:${col}" title="${v.ok} bonnes / ${v.ok + v.ko}">${pct}%</td>`;
-      }).join('')}</tr>`).join('')
+    ? '<tr><th>Élève</th><th>Réussite</th><th>À revoir</th></tr>' + names.map(n => {
+        let ok = 0, tot = 0, pire = null, pirePct = 101;
+        for (const [s, v] of Object.entries(m.stats[n])) {
+          ok += v.ok; tot += v.ok + v.ko;
+          const pct = v.ok / (v.ok + v.ko) * 100;
+          if (v.ok + v.ko >= 2 && pct < 75 && pct < pirePct) { pirePct = pct; pire = s; }
+        }
+        return `<tr><td>${esc(n)}</td>${pctCell(ok, tot)}<td style="font-size:12px">${pire ? esc(pire) : '–'}</td></tr>`;
+      }).join('')
     : '<tr><td>Les résultats apparaîtront dès les premières questions.</td></tr>';
 }
 

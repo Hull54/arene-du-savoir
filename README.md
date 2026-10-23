@@ -55,23 +55,39 @@ Une mini-carte en haut à droite et le nom de la zone actuelle aident les élèv
 
 - Vue de toute l'arène pour le projecteur.
 - **Pause** (pour reprendre l'attention du groupe), **Nouvelle manche** (remise à zéro des scores).
-- Choix des **matières** posées.
+- Choix des **notions** posées (par matière, avec « tout » et « aucune »).
 - **Robots** pour tester seul ou compléter un petit groupe.
 - **Classement** et bouton ✕ pour retirer un joueur.
-- **Réussite par matière** pour chaque élève (en vert ≥ 75 %, jaune ≥ 50 %, rouge en dessous) : un portrait rapide des notions à revoir.
+- **Réussite du groupe par notion** et, pour chaque élève, son taux de réussite et la **notion à revoir** (vert ≥ 75 %, jaune ≥ 50 %, rouge en dessous).
 
-## Ajouter ou modifier des questions
+## Les questions
 
-Tout est dans `questions.json`. Chaque question suit ce modèle :
+Les questions portent sur 10 notions, que l'enseignant coche ou décoche pendant la partie :
+
+- **Français** : phrase de base, classes de mots variables, construction du GN, accords dans le GN, accord des verbes (1er et 2e groupe, présent et imparfait).
+- **Mathématiques** : tables de 1 à 12, angles, fractions, triangles, numération.
+
+Il y a deux sortes de questions :
+
+- **Questions fixes**, dans `questions.json` (82 questions).
+- **Questions générées** à l'infini par `generateurs.js` : conjugaisons, multiplications et divisions, valeur de position, arrondis, fractions illustrées, angles et triangles dessinés. Chaque partie propose donc des questions différentes.
+
+### Ajouter ou modifier une question fixe
+
+Dans `questions.json`, chaque question suit ce modèle :
 
 ```json
-{"matiere":"Mathématiques","question":"Combien font 7 × 8 ?","choix":["56","54","48","64"],"reponse":0}
+{"matiere":"Mathématiques","notion":"Angles","question":"Combien de degrés mesure un angle droit ?","choix":["90°","180°","45°","100°"],"reponse":0}
 ```
 
-- `reponse` est la position de la bonne réponse dans `choix`, en commençant à **0**. Les choix sont mélangés automatiquement à l'écran.
-- Une nouvelle `matiere` (ex. « Anglais ») apparaît toute seule dans le tableau de bord.
+- `reponse` est la position de la bonne réponse dans `choix`, en commençant à **0**. Les choix sont mélangés à l'écran.
+- Une nouvelle `notion` apparaît toute seule dans le tableau de bord.
 - Optionnel : `"explication":"..."` s'affiche quand l'élève se trompe.
 - Sur GitHub, modifier le fichier (icône crayon) puis « Commit changes » : Render remet le jeu à jour en 1 à 2 minutes.
+
+## Les personnages
+
+Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau et une couleur de cheveux.
 
 ## Fichiers
 
@@ -79,4 +95,5 @@ Tout est dans `questions.json`. Chaque question suit ce modèle :
 - `public/index.html` : l'écran de l'élève.
 - `public/prof.html` : le tableau de bord de l'enseignant.
 - `public/draw.js` : le dessin de l'arène (partagé par les deux écrans).
-- `questions.json` : la banque de questions.
+- `questions.json` : les questions fixes.
+- `generateurs.js` : les questions générées (verbes, tables, numération, fractions, angles, triangles).

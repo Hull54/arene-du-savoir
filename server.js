@@ -10,6 +10,11 @@ const os = require('os');
 const PORT = process.env.PORT || 3000;
 const PUBLIC = path.join(__dirname, 'public');
 const QUESTIONS = JSON.parse(fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8'));
+const GENERATEURS = require('./generateurs');
+// Liste des notions (cases à cocher de l'enseignant), regroupées par matière
+const NOTIONS = [];
+for (const q of [...QUESTIONS, ...Object.values(GENERATEURS).map(g => g())])
+  if (!NOTIONS.some(n => n.s === q.notion)) NOTIONS.push({ s: q.notion, m: q.matiere });
 
 // ---------- Réglages du jeu ----------
 const TICK = 1000 / 30;
@@ -101,11 +106,12 @@ let projectiles = [];
 let fx = [];
 let feed = [];
 let paused = false;
-const subjects = new Set(QUESTIONS.map(q => q.matiere));
+const subjects = new Set(NOTIONS.map(n => n.s));
 const stats = {};            // nom -> { matiere: {ok, ko} }
 
 // ---------- Utilitaires ----------
 const rand = (a, b) => a + Math.random() * (b - a);
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const inRect = (x, y, o) => x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h;
 const angDiff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
@@ -144,11 +150,12 @@ function addFeed(text) {
 }
 
 // ---------- Joueurs ----------
-function createPlayer(name, cls, bot = false) {
+function createPlayer(name, cls, bot = false, look = '') {
   const c = CLASSES[cls] || CLASSES.guerrier;
   const p = {
     id: nextId++, name: String(name).slice(0, 16) || 'Héros', cls: CLASSES[cls] ? cls : 'guerrier', bot,
     hp: c.hp, maxHp: c.hp, alive: true, angle: 0,
+    look: /^[fm][0-3][0-3]$/.test(look) ? look : (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3),
     input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
     kills: 0, deaths: 0, good: 0, bad: 0, question: null, waitQ: 0, conn: null, botT: 0,
     ...freeSpot(),
@@ -160,20 +167,26 @@ function createPlayer(name, cls, bot = false) {
 }
 
 function pickQuestion(p) {
-  const pool = QUESTIONS.filter(q => subjects.has(q.matiere));
-  const list = pool.length ? pool : QUESTIONS;
+  // On choisit d'abord une notion au hasard (parmi celles cochées), puis une question de cette notion
+  const actives = NOTIONS.filter(n => subjects.has(n.s));
+  const notion = (actives.length ? actives : NOTIONS)[Math.floor(Math.random() * (actives.length || NOTIONS.length))].s;
+  const list = QUESTIONS.filter(q => q.notion === notion);
+  const gen = GENERATEURS[notion];
   p.recent = p.recent || [];
   let q;
-  for (let i = 0; i < 10; i++) {
-    q = list[Math.floor(Math.random() * list.length)];
-    if (!p.recent.includes(q)) break;
+  if (gen && (!list.length || Math.random() < 0.75)) q = gen();
+  else {
+    for (let i = 0; i < 10; i++) {
+      q = list[Math.floor(Math.random() * list.length)];
+      if (!p.recent.includes(q)) break;
+    }
+    p.recent.push(q);
+    if (p.recent.length > 12) p.recent.shift();
   }
-  p.recent.push(q);
-  if (p.recent.length > 8) p.recent.shift();
   // Mélanger les choix
   const order = q.choix.map((_, i) => i).sort(() => Math.random() - 0.5);
   p.question = { q, order, answer: order.indexOf(q.reponse) };
-  send(p.conn, { t: 'q', matiere: q.matiere, question: q.question, choix: order.map(i => q.choix[i]) });
+  send(p.conn, { t: 'q', matiere: q.matiere, notion: q.notion, question: q.question, svg: q.svg || '', choix: order.map(i => q.choix[i]) });
 }
 
 function kill(target, killer) {
@@ -200,7 +213,7 @@ function respawn(p) {
 function answer(p, i) {
   if (!p.question || p.alive) return;
   const { q, answer: good } = p.question;
-  const s = (stats[p.name][q.matiere] = stats[p.name][q.matiere] || { ok: 0, ko: 0 });
+  const s = (stats[p.name][q.notion] = stats[p.name][q.notion] || { ok: 0, ko: 0 });
   if (i === good) {
     p.good++; s.ok++;
     send(p.conn, { t: 'res', ok: true });
@@ -370,7 +383,7 @@ function step() {
 function publicState() {
   return JSON.stringify({
     p: [...players.values()].map(p => ({
-      id: p.id, n: p.name, c: p.cls, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2),
+      id: p.id, n: p.name, c: p.cls, l: p.look, x: Math.round(p.x), y: Math.round(p.y), a: +p.angle.toFixed(2),
       hp: Math.max(0, Math.round(p.hp)), m: p.maxHp, al: p.alive, sh: p.shield > 0, pr: p.protect > 0, k: p.kills, hd: p.hidden, inv: p.stealth > 0,
     })),
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
@@ -398,9 +411,9 @@ function lanAddresses() {
 
 setInterval(() => {
   const info = JSON.stringify({
-    t: 'info', subjects: [...new Set(QUESTIONS.map(q => q.matiere))].map(s => ({ s, on: subjects.has(s) })),
+    t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
-    players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot })),
+    players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot })),
   });
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
@@ -417,7 +430,7 @@ function onMessage(conn, msg) {
   switch (m.t) {
     case 'join':
       if (p) return;
-      conn.player = createPlayer(m.name, m.cls);
+      conn.player = createPlayer(m.name, m.cls, false, String(m.look || ''));
       conn.player.conn = conn;
       send(conn, { t: 'welcome', id: conn.player.id, ...MAP, classes: CLASSES });
       break;
