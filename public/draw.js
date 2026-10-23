@@ -318,27 +318,37 @@ function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0) {
 }
 
 // ---------- Objets du décor ----------
-function spriteFor(o) {
+// Feuillage en touffes rondes, ombré comme la bordure de forêt : clair en haut à gauche, sombre en bas à droite
+function leafBlob(P, cx, cy, r, pal, alt) {
+  for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
+    if (i * i + j * j > r * r + r * 0.6) continue;
+    P.px(cx + i, cy + j, i + j < -r * 0.6 ? pal[2] : i + j > r * 0.7 ? pal[3] : alt ? pal[0] : pal[1]);
+  }
+}
+function spriteFor(o, TH = THEMES.village) {
   const w = Math.round(o.w / PX), h = Math.round(o.h / PX);
   let P, ax, ay;   // ax, ay : où se trouve le coin haut-gauche du rectangle de collision dans le dessin
   const kind = o.kind;
   if (kind === 'oak' || kind === 'willow') {
     P = new Painter(30, 34); ax = 15 - w / 2; ay = 34 - h - 1;
-    P.rect(13, 20, 4, 11, '#6b4423'); P.px(12, 30, '#6b4423'); P.px(17, 30, '#6b4423'); P.rect(15, 21, 1, 9, '#55361b');
-    const base = kind === 'oak' ? '#2f7a32' : '#5d7a3a', dark = kind === 'oak' ? '#225c27' : '#46602b', li = kind === 'oak' ? '#4c9a44' : '#7a9a4a', hi = kind === 'oak' ? '#7cc25a' : '#9ab866';
-    P.disc(15, 12, 11, base); P.disc(9, 15, 6, base); P.disc(21, 15, 6, base);
-    P.disc(17, 16, 7, dark); P.disc(14, 11, 8, base);
-    P.disc(12, 9, 5, li); P.disc(10, 7, 2, hi); P.px(18, 8, li); P.px(19, 9, li); P.px(7, 13, li);
-    if (kind === 'willow') for (let i = 0; i < 6; i++) P.rect(6 + i * 4, 18, 1, 6 + (i % 3) * 2, dark);
-    else for (let i = 0; i < 5; i++) P.px(8 + i * 4, 14 + (i % 2) * 4, '#c9433a');
+    P.rect(13, 20, 4, 11, '#5a3a20'); P.rect(13, 20, 1, 11, '#7a5030'); P.rect(16, 21, 1, 10, '#3e2614'); P.px(12, 30, '#5a3a20'); P.px(17, 30, '#5a3a20');
+    const pal = kind === 'oak' ? TH.arbres : TH.arbres.map(c => shade(c, 1.12));
+    const blobs = [[15, 5, 6], [9, 9, 6], [21, 9, 6], [15, 11, 7], [8, 15, 5], [22, 15, 5], [12, 18, 5], [18, 18, 5]];
+    blobs.forEach(([x, y, r], i) => leafBlob(P, x, y, r, pal, i % 2));
+    if (kind === 'willow') for (let i = 0; i < 7; i++) { P.rect(5 + i * 3, 19, 1, 5 + (i % 3) * 2, pal[3]); P.px(5 + i * 3, 19, pal[1]); }
+    else for (const [x, y] of [[10, 9], [20, 15], [15, 12]]) P.px(x, y, TH === THEMES.hiver ? '#ffffff' : '#c9433a');
   } else if (kind === 'pine' || kind === 'snowpine') {
     P = new Painter(26, 36); ax = 13 - w / 2; ay = 36 - h - 1;
-    P.rect(11, 27, 4, 7, '#5a3a1e');
-    const g1 = '#1f5a3a', g2 = '#2e7a4a', g3 = '#3f9a5a';
-    const tiers = [[3, 10, 12], [9, 8, 10], [15, 6, 9], [21, 4, 7]];
-    for (const [ty, , hw] of tiers) { for (let j = 0; j < 8; j++) { const ww = Math.round(hw * (0.35 + j / 10)); P.rect(13 - ww, ty + j, ww * 2, 1, j > 4 ? g1 : g2); } }
-    for (const [ty] of tiers) { P.px(10, ty + 3, g3); P.px(11, ty + 2, g3); P.px(12, ty + 1, g3); }
-    if (kind === 'snowpine') for (const [ty, , hw] of tiers) { for (let j = 0; j < 3; j++) { const ww = Math.round(hw * (0.35 + j / 10)); P.rect(13 - ww, ty + j, ww * 2, 1, j === 2 ? '#cfe0ee' : '#f4f8ff'); } }
+    P.rect(11, 27, 4, 7, '#4a3018'); P.rect(11, 27, 1, 7, '#6a4428');
+    const pal = TH.arbres.slice(); if (kind === 'snowpine') pal[2] = shade(pal[0], 1.25);
+    // étages du bas vers le haut pour que chaque étage recouvre celui du dessous
+    for (const [ty, hw] of [[21, 12], [15, 10], [9, 9], [3, 7]]) {
+      for (let j = 0; j < 8; j++) {
+        const ww = Math.round(hw * (0.3 + j / 10));
+        for (let i = -ww; i < ww; i++) P.px(13 + i, ty + j, j > 5 ? pal[3] : i < -ww * 0.35 ? pal[2] : i > ww * 0.4 ? pal[3] : (i + j) % 5 ? pal[0] : pal[1]);
+      }
+      if (kind === 'snowpine') for (let j = 0; j < 3; j++) { const ww = Math.round(hw * (0.3 + j / 10)); P.rect(13 - ww, ty + j, ww * 2, 1, j === 2 ? '#cfe0ee' : '#f4f8ff'); }
+    }
   } else if (kind === 'deadtree') {
     P = new Painter(22, 28); ax = 11 - w / 2; ay = 28 - h - 1;
     const b = '#5a4a3a', bd = '#3d3022';
@@ -728,7 +738,7 @@ function buildMapLayers(map) {
   // objets : la partie au-dessus du rectangle de collision va dans la couche du dessus (les joueurs passent derrière)
   const sorted = [...map.objs].sort((a, b) => (a.y + a.h) - (b.y + b.h));
   for (const o of sorted) {
-    const s = spriteFor(o);
+    const s = spriteFor(o, TH);
     if (!s) continue;
     const sx = Math.round(o.x / PX - s.ax), sy = Math.round(o.y / PX - s.ay);
     g.fillStyle = '#00000030';
@@ -752,8 +762,10 @@ function buildMapLayers(map) {
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
     const snow = map.theme === 'hiver', dark = map.theme === 'marais';
     const base = dark ? '#3f5a2a' : '#2f7a3a', mid = dark ? '#4f6d33' : '#3f9a48', hi = dark ? '#6a8a44' : '#62b85a';
-    for (let i = 0; i < 7; i++) { const a = i * 0.9; P.disc(c + Math.round(Math.cos(a) * r * 0.45), c + Math.round(Math.sin(a) * r * 0.35), Math.round(r * 0.55), base); }
-    P.disc(c - 2, c - 3, Math.round(r * 0.5), mid); P.disc(c - 4, c - 5, Math.round(r * 0.22), hi);
+    // même feuillage en touffes que les arbres et la bordure de forêt
+    const bp = dark ? ['#4f6d33', '#46632e', '#6a8a44', '#2f4520'] : TH.arbres, br = Math.max(4, Math.round(r * 0.42));
+    const spots = [[0, -0.45], [-0.5, -0.15], [0.5, -0.15], [0, 0.05], [-0.4, 0.35], [0.4, 0.35]];
+    spots.forEach(([dx, dy], i) => leafBlob(P, c + Math.round(dx * r), c + Math.round(dy * r), br, bp, i % 2));
     if (snow) P.ellipse(c, c - Math.round(r * 0.45), Math.round(r * 0.75), Math.round(r * 0.25), '#f4f8ff');
     else for (let i = 0; i < 6; i++) P.px(c + Math.round(Math.cos(i * 2.1) * r * 0.55), c + Math.round(Math.sin(i * 2.1) * r * 0.4), '#d9334a');
     tg.globalAlpha = 0.92;
