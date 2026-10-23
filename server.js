@@ -52,7 +52,7 @@ const TIERS = ['', 'de bronze', 'd\'argent', 'd\'or'];
 // Familiers : un mini pouvoir sur la touche E (1 chat, 2 chien, 3 bébé dragon, 4 hibou, 5 slime)
 const PETS = {
   1: { nom: 'Chat', pouvoir: 'Ronron : +25 points de vie', soin: 25 },
-  2: { nom: 'Chien', pouvoir: 'Aboiement : repousse les ennemis proches', radius: 140, push: 90 },
+  2: { nom: 'Loup', pouvoir: 'Hurlement : repousse les ennemis proches', radius: 140, push: 90 },
   3: { nom: 'Bébé dragon', pouvoir: 'Petite boule de feu', atk: { speed: 420, dmg: 8, r: 8, life: 1.2 } },
   4: { nom: 'Hibou', pouvoir: 'Œil perçant : révèle les joueurs cachés 4 s', radius: 480, dur: 4 },
   5: { nom: 'Slime', pouvoir: 'Flaque gluante : ralentit les ennemis', r: 90, dur: 4 },

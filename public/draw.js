@@ -16,8 +16,8 @@ const nomClasse = (c, look) => CLS[c].nom[look && look[0] === 'f' ? 0 : 1];
 const OUTFIT = [null, '#d33b3b', '#3a6fd8', '#2f9e55', '#8e4ce0', '#e89a2a', '#e06aa8'];
 const OUTFIT_NOMS = ['Classique', 'Rouge', 'Bleu', 'Vert', 'Violet', 'Orange', 'Rose'];
 const ACCESSOIRES = ['Aucun', 'Cape', 'Lunettes', 'Écharpe'];
-const FAMILIERS = ['Aucun', '🐱 Chat', '🐶 Chien', '🐲 Dragon', '🦉 Hibou', '🟢 Slime'];
-const PET_ICO = [null, '😺', '🐶', '🔥', '🦉', '🟢'];
+const FAMILIERS = ['Aucun', '🐱 Chat', '🐺 Loup', '🐲 Dragon', '🦉 Hibou', '🟢 Slime'];
+const PET_ICO = [null, '😺', '🐺', '🔥', '🦉', '🟢'];
 // Équipement : niveaux bronze, argent, or
 const TIER_C = [null, '#cd7f32', '#dfe5ee', '#f2c94c'];
 const TIER_NOMS = ['', 'bronze', 'argent', 'or'];
@@ -75,166 +75,226 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
   const key = cls + look + dir + frame + 'g' + gearCode;
   if (heroCache[key]) return heroCache[key];
   const P = new Painter(24, 30); P.ox = 4; P.oy = 8;
-  const fem = look[0] === 'f', s = SKIN[+look[1]] || SKIN[0], S = shade(s, 0.82), h = HAIR[+look[2]] || HAIR[0], Hd = shade(h, 0.7), Hl = shade(h, 1.35);
-  const out = OUTFIT[+look[3] || 0], acc = +look[4] || 0, G = gearOf(gearCode);
-  const E = '#1b1424', boots = G.bottes ? TIER_C[G.bottes] : '#4a3426';
-  const C = {
-    guerrier: { c: '#c9d1dc', d: '#8a94a3', a: '#3a6fd8', pants: '#5a5f6a' },
-    voleur: { c: '#4a4f5a', d: '#33363e', a: '#c23b3b', pants: '#2f3238' },
-    mage: { c: '#6a3fc1', d: '#4b2a8f', a: '#f2c94c', pants: '#4b2a8f' },
-    archer: { c: '#2f8f4e', d: '#22683a', a: '#8b5a2b', pants: '#5a4030' },
+  const fem = look[0] === 'f', out = OUTFIT[+look[3] || 0], acc = +look[4] || 0, G = gearOf(gearCode);
+  const s = SKIN[+look[1]] || SKIN[0], sD = shade(s, 0.78), sH = shade(s, 1.12);
+  const h = HAIR[+look[2]] || HAIR[0], hD = shade(h, 0.68), hH = shade(h, 1.4);
+  const E = '#1b1424', line = '#2a1d2e';
+  // trois tons par matière : clair (haut, gauche), moyen, sombre (bas, droite)
+  const T3 = c => [shade(c, 1.3), c, shade(c, 0.66)];
+  const box = (x, y, w, hh, c) => { const [hi, m, lo] = T3(c); P.rect(x, y, w, hh, m); P.rect(x, y, w, 1, hi); P.rect(x, y, 1, hh, hi); P.rect(x + w - 1, y + 1, 1, hh - 1, lo); P.rect(x + 1, y + hh - 1, w - 1, 1, lo); };
+  // palette par classe : couleurs plus sombres et plus sobres
+  const K = {
+    guerrier: { main: '#8f98a6', acc: '#8e2a2a', cloth: '#4a3a3a', pants: '#3e3a44' },
+    voleur:   { main: '#3c3846', acc: '#7a1f2a', cloth: '#2a2632', pants: '#2a2630' },
+    mage:     { main: '#3a2f6a', acc: '#d9a93a', cloth: '#2c2452', pants: '#2c2452' },
+    archer:   { main: '#4a6a2e', acc: '#6b4a2a', cloth: '#3a5424', pants: '#4a3a2a' },
   }[cls];
-  // couleur de tenue choisie : le tabard du guerrier, le foulard du voleur, la robe du mage, la tunique de l'archer
-  let hat = '#5a33a8', hatD = '#4b2a8f', cap = '#2f8f4e', capD = '#22683a';
-  if (out) {
-    if (cls === 'guerrier' || cls === 'voleur') C.a = out;
-    else { C.c = out; C.d = shade(out, 0.72); if (cls === 'mage') { hat = shade(out, 0.85); hatD = shade(out, 0.68); C.pants = C.d; } else { cap = out; capD = shade(out, 0.72); } }
-  }
-  const metal = '#e6ebf2', metalD = '#9aa3b0', wood = '#7a4b25', gold = '#f2c94c', red = '#d33b3b';
-  // équipement : lame, orbe et arc prennent la couleur de l'épée ; le casque du guerrier, celle du casque
-  const blade = G.epee ? shade(TIER_C[G.epee], 1.15) : metal, orb = G.epee ? TIER_C[G.epee] : '#b98cff', bow = G.epee ? shade(TIER_C[G.epee], 0.8) : wood;
-  const helm = G.casque ? TIER_C[G.casque] : metal, helmD = G.casque ? shade(TIER_C[G.casque], 0.7) : metalD;
-  const capeC = out || '#c23b3b', scarf = out || '#e04a3a';
-  const lA = frame === 1 ? -1 : 0, lB = frame === 2 ? -1 : 0;   // jambes qui bougent
+  if (out) { if (cls === 'guerrier') K.acc = out; else if (cls === 'voleur') K.acc = out; else { K.main = shade(out, 0.75); K.cloth = shade(out, 0.55); } }
+  const steel = G.casque ? TIER_C[G.casque] : '#8f98a6';
+  const blade = G.epee ? shade(TIER_C[G.epee], 1.1) : '#d8dee8', bladeD = shade(blade, 0.65);
+  const crystal = G.epee ? TIER_C[G.epee] : cls === 'mage' ? '#7fe0ff' : '#c9a0ff';
+  const wood = '#5a3a20', woodH = '#7a5030', gold = '#d9a93a', leather = '#5a3a24';
+  const bootC = G.bottes ? TIER_C[G.bottes] : '#3a2a22';
+  const capeC = out ? shade(out, 0.8) : '#6a1f24', scarf = out || '#8e2a2a';
+  const lA = frame === 1 ? -1 : 0, lB = frame === 2 ? -1 : 0;
+  const side = dir === 'side', up = dir === 'up', down = dir === 'down';
 
-  // cape (derrière tout, sauf de dos)
-  if (acc === 1 && dir === 'down') { P.rect(3, 10, 10, 9, shade(capeC, 0.7)); }
-  if (acc === 1 && dir === 'side') { P.rect(2, 10, 4, 8, capeC); P.rect(2, 17, 4, 1, shade(capeC, 0.7)); }
-
-  // armes et objets derrière le corps
-  if (dir === 'up') {
-    if (cls === 'guerrier') { P.rect(2, 4, 1, 10, blade); P.px(2, 3, blade); P.rect(1, 14, 3, 1, gold); }
-    if (cls === 'mage') { P.rect(2, 4, 1, 14, wood); P.rect(1, 1, 3, 3, orb); }
-    if (cls === 'archer') { P.px(2, 8, bow); P.px(1, 9, bow); P.rect(0, 10, 1, 4, bow); P.px(1, 14, bow); P.px(2, 15, bow); }
+  // ===== derrière le corps =====
+  if (acc === 1 && !up) { if (side) { P.rect(1, 10, 4, 9, capeC); P.rect(1, 18, 4, 1, shade(capeC, 0.65)); P.rect(2, 11, 1, 6, shade(capeC, 1.2)); } else P.rect(3, 10, 10, 9, shade(capeC, 0.7)); }
+  if (up) {
+    if (cls === 'guerrier') { P.rect(13, 1, 1, 13, blade); P.rect(12, 14, 3, 1, gold); }
+    if (cls === 'mage') { P.rect(13, 0, 1, 18, wood); P.rect(12, -3, 3, 3, crystal); }
   }
-  if (dir === 'side') {
-    if (cls === 'guerrier') { P.rect(2, 11, 3, 6, C.a); P.rect(3, 12, 1, 4, gold); }
-    if (fem && cls !== 'voleur' && cls !== 'guerrier') P.rect(4, 4, 2, 8, h);
-    if (fem && cls === 'guerrier') P.rect(4, 5, 2, 7, h);
-    if (fem && cls === 'archer') P.rect(3, 4, 2, 5, h);
+  if (cls === 'archer' && !up) {   // carquois dans le dos
+    if (side) { P.rect(2, 8, 3, 7, leather); P.px(2, 7, '#e8e2d0'); P.px(3, 6, '#c23b3b'); P.px(4, 7, '#e8e2d0'); }
+    else { P.rect(11, 6, 2, 3, '#e8e2d0'); P.px(12, 5, '#c23b3b'); }
   }
+  if (side && fem && cls !== 'voleur') P.rect(4, 4, 2, cls === 'mage' ? 9 : 8, h);
 
-  // jambes
-  if (cls !== 'mage') {
-    if (dir === 'side') {
-      const f = frame === 0 ? [6, 8] : frame === 1 ? [5, 9] : [9, 5];
-      P.rect(f[0], 16, 2, 2, C.pants); P.rect(f[1], 16, 2, 2, shade(C.pants, 0.8));
-      P.rect(f[0], 18, 2, 1, boots); P.rect(f[1], 18, 2, 1, boots);
-    } else {
-      P.rect(5, 16 + lA, 2, 2, C.pants); P.rect(9, 16 + lB, 2, 2, C.pants);
-      P.rect(5, 18 + lA, 2, 1, boots); P.rect(9, 18 + lB, 2, 1, boots);
-    }
-  } else {
-    if (dir === 'side') { P.rect(frame === 1 ? 5 : 6, 18, 2, 1, boots); P.rect(frame === 2 ? 5 : 9, 18, 2, 1, boots); }
-    else { P.rect(5, 18 + lA, 2, 1, boots); P.rect(9, 18 + lB, 2, 1, boots); }
-  }
-
-  // corps
-  const bx = dir === 'side' ? 5 : 4, bw = dir === 'side' ? 6 : 8;
+  // ===== jambes et bottes =====
   if (cls === 'mage') {
-    P.rect(bx, 11, bw, 7, C.c); P.rect(bx - 1, 15, bw + 2, 3, C.c); P.rect(bx - 1, 17, bw + 2, 1, C.d);
-    P.rect(bx, 13, bw, 1, gold);
+    if (side) { P.rect(frame === 1 ? 5 : 6, 18, 3, 1, bootC); P.rect(frame === 2 ? 6 : 8, 18, 3, 1, shade(bootC, 0.8)); }
+    else { P.rect(5, 18 + lA, 2, 1, bootC); P.rect(9, 18 + lB, 2, 1, bootC); }
+  } else if (side) {
+    const f = frame === 0 ? [6, 8] : frame === 1 ? [5, 9] : [9, 5];
+    P.rect(f[1], 15, 2, 2, shade(K.pants, 0.75)); P.rect(f[1], 17, 3, 2, shade(bootC, 0.75));
+    P.rect(f[0], 15, 2, 2, K.pants); P.rect(f[0], 17, 3, 2, bootC); P.px(f[0], 17, shade(bootC, 1.4));
   } else {
-    P.rect(bx, 11, bw, 5, C.c); P.rect(bx, 15, bw, 1, C.d);
-    if (fem) { P.rect(bx - 1, 15, bw + 2, 2, C.c); P.rect(bx - 1, 16, bw + 2, 1, C.d); }
-    if (cls === 'guerrier' && dir !== 'up') P.rect(dir === 'side' ? 7 : 6, 12, dir === 'side' ? 3 : 4, 3, C.a);
-    P.rect(bx, 14, bw, 1, cls === 'guerrier' ? '#6b4423' : cls === 'voleur' ? '#7a4a2a' : C.a);
-    if (cls === 'voleur') P.rect(bx + 1, 10, bw - 2, 1, C.a);
-    if (cls === 'archer' && dir === 'down') { P.px(5, 11, C.a); P.px(6, 12, C.a); P.px(7, 13, C.a); }
-    if (cls === 'archer' && dir === 'up') { P.rect(9, 9, 3, 6, '#8b5a2b'); P.px(9, 8, '#ddd'); P.px(10, 7, '#ddd'); P.px(11, 8, '#ddd'); }
+    for (const [x, d] of [[5, lA], [9, lB]]) {
+      P.rect(x, 15 + d, 2, 2, K.pants); P.px(x + 1, 15 + d, shade(K.pants, 0.7));
+      P.rect(x, 17 + d, 2, 2, bootC); P.px(x, 17 + d, shade(bootC, 1.45)); P.px(x + 1, 18 + d, shade(bootC, 0.6));
+      if (cls === 'guerrier') P.px(x, 16 + d, steel);   // genouillère
+    }
   }
+
+  // ===== corps =====
+  const bx = side ? 5 : 4, bw = side ? 6 : 8;
+  if (cls === 'mage') {
+    box(bx, 10, bw, 8, K.main); P.rect(bx - 1, 15, 1, 3, K.main); P.rect(bx + bw, 15, 1, 3, shade(K.main, 0.66));
+    P.rect(bx - 1, 17, bw + 2, 1, gold);
+    if (!up) { P.rect(side ? 8 : 7, 10, side ? 1 : 2, 7, gold); P.rect(bx, 13, bw, 1, leather); P.px(side ? 8 : 7, 13, gold); }
+  } else if (cls === 'guerrier') {
+    box(bx, 10, bw, 5, '#8f98a6');                                  // plastron
+    if (!up) { P.rect(side ? 7 : 6, 11, side ? 3 : 4, 5, K.acc); P.rect(side ? 7 : 6, 11, 1, 5, shade(K.acc, 1.25)); P.rect(side ? 9 : 9, 11, 1, 5, shade(K.acc, 0.7)); }   // tabard
+    else { P.rect(5, 10, 6, 6, K.acc); P.rect(5, 10, 6, 1, shade(K.acc, 1.25)); }
+    P.rect(bx, 14, bw, 1, leather); P.px(side ? 8 : 7, 14, gold); if (!side) P.px(8, 14, gold);
+  } else if (cls === 'voleur') {
+    box(bx, 10, bw, 5, K.main);
+    if (!up) { for (let i = 0; i < 5; i++) P.px(bx + 1 + i, 10 + i, leather); P.px(bx + 3, 12, '#9aa3b0'); }   // sangle et boucle
+    P.rect(bx, 14, bw, 1, K.acc);
+  } else {
+    box(bx, 10, bw, 5, K.acc === '#6b4a2a' ? '#6b4a2a' : leather);   // gilet de cuir
+    P.rect(bx + (side ? 0 : 1), 10, side ? 2 : 2, 5, K.cloth); if (!side) P.rect(bx + bw - 3, 10, 2, 5, K.cloth);
+    P.rect(bx, 14, bw, 1, '#3a2614'); P.px(bx + (bw >> 1), 14, gold);
+  }
+  if (fem && cls !== 'mage') { const c = cls === 'guerrier' ? K.acc : cls === 'voleur' ? K.main : K.cloth; P.rect(bx - 1, 15, bw + 2, 1, c); P.rect(bx, 16, bw, 1, shade(c, 0.7)); }
   // armure trouvée : plastron aux couleurs du niveau
   if (G.armure) {
-    const tc = TIER_C[G.armure], x0 = dir === 'side' ? 6 : 5, w0 = dir === 'side' ? 4 : 6;
-    P.rect(x0, 11, w0, 3, tc); P.rect(x0, 11, w0, 1, shade(tc, 1.3)); P.rect(x0, 13, w0, 1, shade(tc, 0.75));
-    if (dir !== 'up' && G.armure === 3) P.px(x0 + (w0 >> 1), 12, '#e04a5a');
+    const tc = TIER_C[G.armure], x0 = side ? 6 : 5, w0 = side ? 4 : 6;
+    P.rect(x0, 11, w0, 3, tc); P.rect(x0, 11, w0, 1, shade(tc, 1.3)); P.rect(x0 + w0 - 1, 12, 1, 2, shade(tc, 0.7)); P.rect(x0, 13, w0, 1, shade(tc, 0.75));
+    if (!up && G.armure === 3) P.px(x0 + (w0 >> 1), 12, '#c0303a');
   }
   if (acc === 3) {
-    if (dir === 'side') { P.rect(5, 10, 6, 2, scarf); P.rect(3, 11, 2, 3, shade(scarf, 0.8)); }
-    else { P.rect(4, 10, 8, 2, scarf); if (dir === 'down') P.rect(9, 12, 2, 3, shade(scarf, 0.8)); else P.rect(5, 12, 2, 3, shade(scarf, 0.8)); }
+    if (side) { P.rect(5, 9, 6, 2, scarf); P.rect(3, 10, 2, 4, shade(scarf, 0.75)); P.px(5, 9, shade(scarf, 1.3)); }
+    else { P.rect(4, 9, 8, 2, scarf); P.rect(4, 9, 8, 1, shade(scarf, 1.3)); if (down) P.rect(9, 11, 2, 4, shade(scarf, 0.75)); else P.rect(5, 11, 2, 4, shade(scarf, 0.75)); }
   }
-  if (acc === 1 && dir === 'up') { P.rect(4, 10, 8, 9, capeC); P.rect(4, 18, 8, 1, shade(capeC, 0.7)); P.rect(6, 11, 1, 7, shade(capeC, 0.85)); P.rect(9, 11, 1, 7, shade(capeC, 0.85)); }
-  // bras
-  if (dir === 'side') {
-    P.rect(8, 11, 2, 4, shade(C.c, 0.85)); P.px(9, 15, s);
+  if (acc === 1 && up) { box(4, 10, 8, 9, capeC); P.rect(6, 11, 1, 7, shade(capeC, 0.8)); P.rect(9, 11, 1, 7, shade(capeC, 0.8)); }
+
+  // ===== bras et épaulières =====
+  const armC = cls === 'guerrier' ? '#8f98a6' : cls === 'mage' ? K.main : cls === 'voleur' ? K.main : K.cloth;
+  if (side) {
+    P.rect(8, 11, 2, 4, shade(armC, 0.85)); P.px(8, 11, shade(armC, 1.2));
+    P.px(9, 15, cls === 'guerrier' ? steel : s);
+    if (cls === 'guerrier') { P.rect(7, 9, 4, 2, steel); P.rect(7, 9, 4, 1, shade(steel, 1.3)); }
   } else {
-    const ax = cls === 'mage' ? 2 : 3, aw = cls === 'mage' ? 2 : 1;
-    P.rect(ax, 11, aw, 4, C.c); P.rect(12, 11, aw, 4, C.c);
-    P.px(ax, 15, s); P.px(12, 15, s);
-    if (cls === 'guerrier') { P.px(3, 11, metalD); P.px(12, 11, metalD); }
+    const aw = cls === 'mage' ? 2 : 2;
+    box(2, 10, aw, 5, armC); box(12, 10, aw, 5, armC);
+    const hand = cls === 'guerrier' ? steel : s;
+    P.rect(2, 15, 2, 1, hand); P.rect(12, 15, 2, 1, hand);
+    if (cls === 'guerrier') {   // épaulières
+      for (const x of [1, 11]) { P.rect(x, 9, 4, 2, steel); P.rect(x, 9, 4, 1, shade(steel, 1.35)); P.px(x + 3, 10, shade(steel, 0.6)); }
+    }
+    if (cls === 'archer') { P.rect(2, 13, 2, 2, leather); P.rect(12, 13, 2, 2, leather); }   // brassards
   }
 
-  // tête
-  if (dir === 'side') {
-    P.rect(5, 3, 7, 6, s); P.rect(6, 2, 5, 1, s); P.rect(6, 9, 5, 1, s); P.px(12, 6, s);
-    P.rect(10, 6, 1, 2, E); P.px(10, 8, '#f29a8a');
+  // ===== tête =====
+  const faceDark = cls === 'voleur' || cls === 'archer';   // visage dans l'ombre de la capuche
+  if (side) {
+    P.rect(5, 3, 7, 6, s); P.rect(6, 2, 5, 1, s); P.rect(6, 9, 5, 1, sD); P.px(12, 6, s); P.rect(5, 8, 6, 1, sD);
+    P.rect(10, 6, 1, 2, E); P.rect(9, 5, 2, 1, line); P.px(11, 8, sD);
   } else {
-    P.rect(4, 3, 8, 6, s); P.rect(5, 2, 6, 1, s); P.rect(5, 9, 6, 1, s); P.px(3, 6, s); P.px(12, 6, s);
-    if (dir === 'down') {
-      P.rect(6, 6, 1, 2, E); P.rect(9, 6, 1, 2, E);
-      P.px(5, 8, '#f29a8a'); P.px(10, 8, '#f29a8a'); P.rect(7, 9, 2, 1, S);
-      if (fem) { P.px(5, 5, E); P.px(10, 5, E); }
+    P.rect(4, 3, 8, 6, s); P.rect(5, 2, 6, 1, s); P.rect(5, 9, 6, 1, sD); P.px(3, 6, s); P.px(12, 6, sD);
+    P.rect(4, 8, 8, 1, sD); P.rect(11, 3, 1, 6, sD);
+    if (down) {
+      P.rect(6, 6, 1, 2, E); P.rect(9, 6, 1, 2, E); P.px(6, 6, '#ffffff');  P.px(9, 6, '#ffffff');
+      P.px(5, 5, line); P.px(6, 5, line); P.px(9, 5, line); P.px(10, 5, line); P.px(5, 4, line); P.px(10, 4, line);   // sourcils froncés
+      P.rect(7, 8, 2, 1, shade(s, 0.62));
+      if (!fem && cls !== 'mage') { P.px(5, 9, sD); P.px(10, 9, sD); }
+      if (fem) { P.px(5, 7, line); P.px(10, 7, line); }
     }
   }
-
   // lunettes
-  if (acc === 2) {
-    const lens = '#bfe8ff', rim = '#3a2a2a';
-    if (dir === 'down') { P.rect(5, 6, 2, 2, lens); P.rect(9, 6, 2, 2, lens); P.rect(4, 5, 8, 1, rim); P.px(6, 7, E); P.px(9, 7, E); }
-    else if (dir === 'side') { P.rect(9, 6, 3, 2, lens); P.rect(6, 5, 6, 1, rim); P.px(10, 7, E); }
+  if (acc === 2 && cls !== 'guerrier') {
+    const lens = '#9fd6ff', rim = '#2a2030';
+    if (down) { P.rect(5, 6, 2, 2, lens); P.rect(9, 6, 2, 2, lens); P.rect(4, 5, 8, 1, rim); P.px(6, 7, E); P.px(9, 7, E); }
+    else if (side) { P.rect(9, 6, 3, 2, lens); P.rect(6, 5, 6, 1, rim); P.px(10, 7, E); }
   }
-  // cheveux
-  const hooded = cls === 'voleur';
-  if (!hooded) {
-    if (dir === 'down') {
-      P.rect(4, 2, 8, 2, h); P.rect(5, 1, 6, 1, h); P.px(4, 4, h); P.px(11, 4, h); P.px(5, 4, h); P.px(8, 4, Hd); P.px(6, 1, Hl); P.px(7, 1, Hl);
-      if (fem) { P.rect(3, 3, 1, 9, h); P.rect(12, 3, 1, 9, h); P.rect(4, 5, 1, 4, h); P.rect(11, 5, 1, 4, h); P.px(3, 12, Hd); P.px(12, 12, Hd); }
-    } else if (dir === 'up') {
-      P.rect(4, 2, 8, 8, h); P.rect(5, 10, 6, 1, Hd); P.rect(5, 1, 6, 1, h); P.px(6, 3, Hl); P.px(7, 2, Hl);
-      if (fem) { P.rect(3, 3, 10, 9, h); P.rect(4, 11, 8, 1, Hd); }
+
+  // ===== cheveux, casques, capuches, chapeaux =====
+  if (cls === 'guerrier') {
+    const [hi, m, lo] = T3(steel);
+    if (fem) { if (down) { P.rect(3, 6, 1, 7, h); P.rect(12, 6, 1, 7, hD); } else if (up) P.rect(4, 8, 8, 4, h); else P.rect(4, 6, 2, 7, h); }
+    if (side) {
+      P.rect(5, 1, 7, 8, m); P.rect(6, 0, 5, 1, m); P.rect(5, 1, 7, 1, hi); P.rect(5, 8, 7, 1, lo); P.rect(5, 2, 1, 6, hi);
+      P.rect(9, 4, 3, 1, E); P.rect(10, 3, 1, 5, gold); P.rect(5, 5, 4, 1, lo);
+      P.rect(5, -3, 3, 3, K.acc); P.px(4, -2, K.acc); P.px(3, -1, K.acc); P.px(6, -3, shade(K.acc, 1.3));
     } else {
-      P.rect(5, 2, 6, 2, h); P.rect(6, 1, 5, 1, h); P.rect(5, 4, 2, 3, h); P.px(11, 3, h); P.px(8, 1, Hl);
-      if (fem) P.rect(4, 3, 2, 9, h);
+      P.rect(4, 1, 8, 8, m); P.rect(5, 0, 6, 1, m); P.rect(4, 1, 8, 1, hi); P.rect(4, 2, 1, 6, hi); P.rect(11, 2, 1, 7, lo); P.rect(4, 8, 8, 1, lo);
+      if (down) { P.rect(5, 5, 6, 1, E); P.rect(7, 2, 2, 7, gold); P.px(7, 2, shade(gold, 1.3)); P.rect(5, 7, 2, 1, lo); P.rect(9, 7, 2, 1, lo); P.px(8, 5, E); P.px(7, 5, E); }
+      else { P.rect(7, 1, 2, 7, lo); }
+      P.rect(7, -3, 2, 3, K.acc); P.px(9, -2, K.acc); P.px(9, -1, K.acc); P.px(7, -3, shade(K.acc, 1.3));
+    }
+  } else if (cls === 'voleur') {
+    const hood = K.cloth, [hi, m, lo] = T3(hood);
+    if (up) { P.rect(3, 1, 10, 10, m); P.rect(4, 0, 8, 1, m); P.rect(4, 11, 8, 2, lo); P.rect(3, 1, 1, 9, hi); P.rect(7, 1, 1, 9, lo); if (fem) for (let i = 0; i < 5; i++) P.px(8, 11 + i, i % 2 ? hD : h); }
+    else if (side) {
+      P.rect(4, 1, 8, 4, m); P.rect(5, 0, 6, 1, m); P.rect(4, 5, 3, 6, m); P.rect(4, 1, 8, 1, hi); P.rect(4, 5, 1, 6, lo);
+      P.rect(7, 5, 5, 4, shade(s, 0.5)); P.px(10, 6, '#ffd84a'); P.rect(7, 7, 5, 3, K.acc); P.px(11, 7, shade(K.acc, 1.3));
+    } else {
+      P.rect(3, 1, 10, 4, m); P.rect(4, 0, 8, 1, m); P.rect(3, 5, 2, 6, m); P.rect(11, 5, 2, 6, lo); P.rect(3, 1, 10, 1, hi); P.rect(3, 2, 1, 8, hi);
+      P.rect(5, 5, 6, 3, shade(s, 0.45)); P.px(6, 6, '#ffd84a'); P.px(9, 6, '#ffd84a'); P.px(5, 5, E); P.px(10, 5, E);
+      P.rect(5, 7, 6, 3, K.acc); P.rect(5, 7, 6, 1, shade(K.acc, 1.3)); P.px(10, 9, shade(K.acc, 0.7));
+      if (fem) { P.rect(13, 8, 1, 6, h); P.px(13, 14, hD); }
+    }
+  } else if (cls === 'mage') {
+    const hat = K.cloth, [hi, m, lo] = T3(hat);
+    if (!up && !fem) {   // barbe de sage
+      const bc = +look[2] === 0 ? '#d8d4cc' : shade(h, 1.1);
+      if (down) { P.rect(5, 7, 6, 3, bc); P.rect(6, 10, 4, 2, bc); P.px(7, 12, bc); P.px(8, 12, shade(bc, 0.8)); P.rect(7, 8, 2, 1, shade(bc, 0.7)); P.px(10, 9, shade(bc, 0.8)); }
+      else if (side) { P.rect(8, 7, 4, 3, bc); P.rect(9, 10, 2, 2, bc); }
+    }
+    if (fem && !up) { if (down) { P.rect(3, 3, 1, 10, h); P.rect(12, 3, 1, 10, hD); P.rect(4, 3, 1, 3, h); P.rect(11, 3, 1, 3, hD); } }
+    if (fem && up) { P.rect(3, 3, 10, 10, h); P.rect(4, 12, 8, 1, hD); }
+    if (!fem && up) { P.rect(4, 3, 8, 7, +look[2] === 0 ? '#d8d4cc' : h); P.rect(5, 9, 6, 1, hD); }
+    if (side) {
+      P.rect(2, 2, 12, 1, lo); P.rect(4, 0, 8, 2, m); P.rect(5, -2, 6, 2, m); P.rect(5, -4, 5, 2, m); P.rect(4, -6, 4, 2, m); P.rect(2, -7, 3, 2, m); P.px(1, -7, m);
+      P.rect(4, 1, 8, 1, gold); P.rect(5, -2, 1, 2, hi); P.rect(5, -4, 1, 2, hi);
+    } else {
+      P.rect(1, 2, 14, 1, lo); P.rect(2, 1, 12, 1, m); P.rect(4, -1, 8, 2, m); P.rect(5, -3, 6, 2, m); P.rect(6, -5, 4, 2, m); P.rect(8, -7, 3, 2, m); P.rect(10, -8, 2, 1, m);
+      P.rect(4, 0, 8, 1, gold); P.rect(4, -1, 1, 2, hi); P.rect(5, -3, 1, 2, hi); P.rect(6, -5, 1, 2, hi); P.rect(11, -1, 1, 2, lo);
+      if (down) { P.px(8, -2, '#7fe0ff'); }
+    }
+  } else if (cls === 'archer') {
+    const hood = K.main, [hi, m, lo] = T3(hood);
+    if (up) { P.rect(3, 1, 10, 9, m); P.rect(4, 0, 8, 1, m); P.px(7, -1, m); P.px(8, -2, m); P.rect(3, 1, 1, 8, hi); P.rect(4, 10, 8, 2, lo); P.rect(10, 4, 2, 8, leather); P.px(10, 3, '#e8e2d0'); P.px(11, 2, '#c23b3b'); if (fem) for (let i = 0; i < 4; i++) P.px(7, 11 + i, i % 2 ? hD : h); }
+    else if (side) {
+      P.rect(4, 1, 8, 3, m); P.rect(5, 0, 6, 1, m); P.px(4, -1, m); P.px(3, -2, m); P.rect(4, 4, 2, 7, m); P.rect(4, 1, 8, 1, hi); P.rect(4, 4, 1, 7, lo);
+      P.rect(6, 4, 6, 1, shade(s, 0.6)); if (fem) P.rect(3, 6, 1, 6, h);
+    } else {
+      P.rect(3, 1, 10, 3, m); P.rect(4, 0, 8, 1, m); P.px(7, -1, m); P.px(8, -2, hi); P.rect(3, 4, 1, 7, m); P.rect(12, 4, 1, 7, lo); P.rect(3, 1, 10, 1, hi); P.rect(3, 2, 1, 8, hi);
+      P.rect(4, 4, 8, 1, shade(s, 0.55)); P.rect(4, 5, 1, 3, shade(s, 0.65)); P.rect(11, 5, 1, 3, shade(s, 0.55));
+      P.rect(3, 10, 10, 1, lo);
+      if (fem) { P.rect(5, 4, 6, 1, h); P.px(13, 8, h); P.px(13, 9, hD); P.px(13, 10, h); P.px(13, 11, hD); }
     }
   }
-
-  // couvre-chefs
-  if (cls === 'guerrier') {
-    if (dir === 'side') { P.rect(5, 1, 7, 4, helm); P.rect(6, 0, 5, 1, helm); P.rect(5, 4, 7, 1, helmD); P.rect(6, -3, 2, 3, red); P.px(5, -2, red); }
-    else { P.rect(4, 1, 8, 4, helm); P.rect(5, 0, 6, 1, helm); P.rect(4, 4, 8, 1, helmD); P.rect(7, -3, 2, 3, red); P.px(9, -2, red); if (dir === 'down') P.rect(7, 5, 2, 1, helmD); if (dir === 'up') P.rect(4, 5, 8, 1, helmD); }
-  } else if (cls === 'voleur') {
-    const hood = '#2e3138';
-    if (dir === 'up') { P.rect(3, 1, 10, 10, hood); P.rect(4, 0, 8, 1, hood); P.rect(4, 11, 8, 2, hood); if (fem) { for (let i = 0; i < 6; i++) P.px(7 + (i % 2), 11 + i, i % 2 ? Hd : h); } }
-    else if (dir === 'side') { P.rect(4, 1, 8, 4, hood); P.rect(5, 0, 6, 1, hood); P.rect(4, 5, 3, 6, hood); P.rect(6, 9, 6, 2, C.a); if (fem) { for (let i = 0; i < 6; i++) P.px(3 + (i % 2), 8 + i, i % 2 ? Hd : h); } }
-    else { P.rect(3, 1, 10, 4, hood); P.rect(4, 0, 8, 1, hood); P.rect(3, 5, 1, 6, hood); P.rect(12, 5, 1, 6, hood); P.rect(4, 8, 8, 2, C.a); if (fem) { P.rect(5, 5, 6, 1, h); for (let i = 0; i < 6; i++) P.px(13, 8 + i, i % 2 ? Hd : h); } }
-  } else if (cls === 'mage') {
-    if (dir === 'side') { P.rect(3, 2, 11, 1, hatD); P.rect(5, 0, 7, 2, hat); P.rect(5, -2, 5, 2, hat); P.rect(4, -4, 4, 2, hat); P.rect(3, -6, 3, 2, hat); P.px(2, -7, hat); P.rect(5, 1, 7, 1, gold); }
-    else { P.rect(2, 2, 12, 1, hatD); P.rect(4, 0, 8, 2, hat); P.rect(5, -2, 6, 2, hat); P.rect(6, -4, 4, 2, hat); P.rect(7, -6, 2, 2, hat); P.px(9, -7, hat); P.rect(4, 1, 8, 1, gold); if (dir === 'down') P.px(8, -1, gold); }
-  } else if (cls === 'archer') {
-    if (dir === 'side') { P.rect(5, 1, 7, 2, cap); P.rect(6, 0, 5, 1, cap); P.rect(11, 3, 2, 1, capD); P.rect(4, -2, 1, 4, '#e04a3a'); P.px(3, -3, '#e04a3a'); }
-    else { P.rect(4, 1, 8, 2, cap); P.rect(5, 0, 6, 1, cap); P.rect(4, 3, 8, 1, capD); P.rect(11, -3, 1, 4, '#e04a3a'); P.px(12, -4, '#e04a3a'); }
-  }
-
   // casque trouvé (autres classes) : un bandeau de métal sur le front
   if (G.casque && cls !== 'guerrier') {
     const tc = TIER_C[G.casque];
-    if (dir === 'side') { P.rect(5, 3, 7, 2, tc); P.rect(5, 4, 7, 1, shade(tc, 0.7)); }
-    else { P.rect(4, 3, 8, 2, tc); P.rect(4, 4, 8, 1, shade(tc, 0.7)); if (dir === 'down') P.px(7, 3, G.casque === 3 ? '#e04a5a' : shade(tc, 1.3)); }
+    if (side) { P.rect(5, 3, 7, 1, tc); P.rect(5, 4, 7, 1, shade(tc, 0.7)); }
+    else if (cls !== 'voleur' || up) { P.rect(4, 3, 8, 1, tc); P.rect(4, 4, 8, 1, shade(tc, 0.7)); if (down) P.px(7, 3, G.casque === 3 ? '#c0303a' : shade(tc, 1.3)); }
+    else { P.rect(4, 2, 8, 1, tc); P.px(7, 2, G.casque === 3 ? '#c0303a' : shade(tc, 1.3)); }
   }
-  // armes devant
-  if (dir === 'down') {
-    if (cls === 'guerrier') { P.rect(13, 4, 1, 10, blade); P.px(13, 3, blade); P.rect(12, 14, 3, 1, gold); P.px(13, 15, '#6b4423'); P.rect(0, 11, 3, 6, C.a); P.rect(1, 12, 1, 4, gold); }
-    if (cls === 'voleur') { P.rect(13, 11, 1, 4, blade); P.rect(12, 15, 3, 1, '#c9a227'); P.rect(2, 12, 1, 3, blade); }
-    if (cls === 'mage') { P.rect(13, 4, 1, 14, wood); P.rect(12, 1, 3, 3, orb); P.px(13, 2, '#ffffff'); }
-    if (cls === 'archer') { P.px(13, 8, bow); P.px(14, 9, bow); P.rect(15, 10, 1, 4, bow); P.px(14, 14, bow); P.px(13, 15, bow); P.rect(13, 9, 1, 6, '#e8e8e8'); }
-  } else if (dir === 'up') {
-    if (cls === 'guerrier') { P.rect(12, 11, 3, 6, C.a); P.rect(13, 12, 1, 4, gold); }
-    if (cls === 'voleur') { P.rect(2, 11, 1, 4, blade); }
+
+  // ===== armes devant =====
+  if (down) {
+    if (cls === 'guerrier') {
+      P.rect(14, 3, 1, 12, blade); P.rect(13, 4, 1, 10, bladeD); P.px(14, 2, blade); P.rect(12, 14, 4, 1, gold); P.px(13, 15, leather); P.px(14, 16, gold);
+      // bouclier : écu sombre avec emblème
+      P.rect(-1, 10, 5, 7, K.acc); P.rect(0, 17, 3, 1, K.acc); P.px(1, 18, K.acc);
+      P.rect(-1, 10, 5, 1, steel); P.rect(-1, 10, 1, 7, steel); P.rect(3, 10, 1, 7, shade(steel, 0.6));
+      P.rect(1, 12, 1, 4, gold); P.rect(0, 13, 3, 1, gold);
+    }
+    if (cls === 'voleur') {
+      P.rect(13, 13, 1, 4, blade); P.px(13, 17, bladeD); P.rect(12, 12, 3, 1, '#7a5a2a');
+      P.rect(2, 13, 1, 4, blade); P.px(2, 17, bladeD); P.rect(1, 12, 3, 1, '#7a5a2a');
+    }
+    if (cls === 'mage') {
+      P.rect(14, 1, 1, 17, wood); P.rect(14, 1, 1, 17, wood); P.px(14, 5, woodH); P.px(14, 9, woodH);
+      P.rect(13, -2, 3, 3, crystal); P.px(13, -2, '#ffffff'); P.px(14, -3, crystal); P.rect(13, 1, 3, 1, gold);
+    }
+    if (cls === 'archer') {
+      P.px(0, 8, wood); P.px(-1, 9, wood); P.rect(-2, 10, 1, 5, woodH); P.px(-1, 15, wood); P.px(0, 16, wood);
+      P.rect(0, 9, 1, 7, '#d8d0c0'); P.rect(1, 12, 2, 2, s);
+    }
+  } else if (up) {
+    if (cls === 'guerrier') { P.rect(0, 10, 4, 7, K.acc); P.rect(0, 10, 4, 1, steel); P.rect(1, 12, 2, 3, shade(K.acc, 0.7)); }
+    if (cls === 'voleur') { P.rect(2, 11, 1, 4, blade); P.rect(13, 11, 1, 4, blade); }
+    if (cls === 'archer') { P.rect(14, 9, 1, 7, woodH); }
   } else {
-    if (cls === 'guerrier') { P.rect(11, 13, 8, 1, blade); P.px(19, 13, blade); P.rect(10, 12, 1, 3, gold); }
-    if (cls === 'voleur') { P.rect(11, 13, 4, 1, blade); P.rect(10, 12, 1, 3, '#c9a227'); }
-    if (cls === 'mage') { P.rect(11, 4, 1, 14, wood); P.rect(10, 1, 3, 3, orb); P.px(11, 2, '#ffffff'); }
-    if (cls === 'archer') { P.px(12, 8, bow); P.px(13, 9, bow); P.rect(14, 10, 1, 5, bow); P.px(13, 15, bow); P.px(12, 16, bow); P.rect(12, 9, 1, 7, '#e8e8e8'); P.rect(8, 12, 6, 1, '#5a3a1e'); P.px(14, 12, '#cccccc'); }
+    if (cls === 'guerrier') { P.rect(11, 13, 8, 1, blade); P.rect(11, 14, 7, 1, bladeD); P.px(19, 13, blade); P.rect(10, 12, 1, 3, gold); P.rect(2, 10, 3, 7, K.acc); P.rect(2, 10, 3, 1, steel); }
+    if (cls === 'voleur') { P.rect(11, 13, 5, 1, blade); P.px(16, 13, bladeD); P.rect(10, 12, 1, 3, '#7a5a2a'); }
+    if (cls === 'mage') { P.rect(11, 1, 1, 17, wood); P.px(11, 6, woodH); P.rect(10, -2, 3, 3, crystal); P.px(10, -2, '#ffffff'); P.rect(10, 1, 3, 1, gold); }
+    if (cls === 'archer') { P.px(12, 7, wood); P.px(13, 8, wood); P.rect(14, 9, 1, 6, woodH); P.px(13, 15, wood); P.px(12, 16, wood); P.rect(12, 8, 1, 8, '#d8d0c0'); P.rect(8, 12, 6, 1, '#5a3a1e'); P.px(14, 12, '#cfd6de'); }
   }
   P.ox = 0; P.oy = 0;
   return (heroCache[key] = P.outline().canvas());
@@ -748,7 +808,7 @@ function portalSprite() {
   for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2, x = 20 + Math.round(Math.cos(a) * 17), y = 12 + Math.round(Math.sin(a) * 9); P.rect(x - 1, y - 1, 3, 2, '#8a8f99'); P.px(x, y - 1, i % 2 ? '#c9a0ff' : '#b7bcc6'); }
   return (dynCache.portal = P.outline().canvas());
 }
-// Familiers : petits compagnons qui suivent leur héros (1 chat, 2 chien, 3 bébé dragon, 4 hibou, 5 slime), 4 couleurs chacun
+// Familiers féroces qui suivent leur héros (1 chat sauvage, 2 loup, 3 dragon, 4 grand-duc, 5 slime), 4 couleurs chacun
 const PET_COULEURS = {
   1: ['#e8923a', '#9aa0ab', '#4a4550', '#f2eee6'],
   2: ['#b07a45', '#e0b060', '#4a4550', '#f2eee6'],
@@ -759,34 +819,52 @@ const PET_COULEURS = {
 function petSprite(k, fr, col = 0) {
   const key = 'pet' + k + fr + col;
   if (dynCache[key]) return dynCache[key];
-  const P = new Painter(16, 14), b = fr ? 1 : 0;
-  const c = (PET_COULEURS[k] || ['#888'])[col] || PET_COULEURS[k][0], d = shade(c, 0.75), l = shade(c, 1.35);
-  if (k === 1) {        // chat
-    P.rect(3, 7, 7, 4, c); P.rect(3, 10, 1, 2, d); P.rect(8, 10 - b, 1, 2 + b, d);
-    P.rect(9, 3, 5, 5, c); P.px(9, 2, c); P.px(13, 2, c); P.px(12, 5, col === 2 ? '#f2c94c' : OUT); P.px(14, 6, '#f29a8a');
-    P.rect(1, 4 + b, 1, 4, c); P.px(2, 7, c); P.rect(4, 8, 1, 2, d); P.rect(6, 8, 1, 2, d);
-  } else if (k === 2) { // chien
-    P.rect(2, 6, 8, 5, c); P.rect(2, 10, 1, 2, d); P.rect(8, 10 - b, 1, 2 + b, d); P.rect(4, 11, 1, 1, d);
-    P.rect(9, 2, 5, 5, c); P.rect(13, 5, 2, 2, c); P.px(14, 5, OUT); P.px(11, 4, col === 2 ? '#f2c94c' : OUT); P.rect(9, 2, 2, 4, d);
-    P.rect(0, 4 - b, 2, 1, c); P.px(1, 5, c); P.rect(5, 6, 3, 1, '#d33b3b');
-  } else if (k === 3) { // bébé dragon
-    P.rect(4, 6, 6, 5, c); P.rect(5, 10, 4, 1, '#f2e08a');
-    P.rect(9, 3, 5, 4, c); P.px(10, 2, '#f2e08a'); P.px(12, 2, '#f2e08a'); P.px(12, 4, OUT); P.px(14, 5, d);
-    P.rect(1, 9, 3, 1, c); P.px(0, 8, c);
-    if (b) { P.rect(4, 2, 4, 3, l); P.px(3, 1, l); } else { P.rect(4, 4, 4, 2, l); P.px(3, 6, l); }
-    P.rect(5, 11, 1, 1, d); P.rect(8, 11, 1, 1, d);
-  } else if (k === 4) { // hibou
-    const belly = col === 2 ? '#ffffff' : '#e8d8b8';
-    P.ellipse(8, 7, 4, 5, c); P.ellipse(8, 9, 2, 3, belly);
-    P.rect(5, 4, 2, 2, '#ffffff'); P.rect(9, 4, 2, 2, '#ffffff'); P.px(6, 5, OUT); P.px(10, 5, OUT); P.px(8, 6, '#f2c94c');
-    P.px(4, 2, d); P.px(12, 2, d);
-    if (b) { P.rect(1, 5, 3, 2, d); P.rect(13, 5, 3, 2, d); } else { P.rect(3, 7, 1, 4, d); P.rect(12, 7, 1, 4, d); }
-    P.px(7, 12, '#f2c94c'); P.px(9, 12, '#f2c94c');
-  } else if (k === 5) { // slime qui rebondit
+  const P = new Painter(18, 16), b = fr ? 1 : 0;
+  const c = (PET_COULEURS[k] || ['#888'])[col] || PET_COULEURS[k][0], d = shade(c, 0.66), l = shade(c, 1.3), dd = shade(c, 0.45);
+  const eye = '#ffd84a';
+  if (k === 1) {        // chat sauvage : silhouette fine, oreilles pointues, queue dressée
+    P.rect(3, 8, 8, 4, c); P.rect(3, 8, 8, 1, l); P.rect(4, 11, 7, 1, d);
+    P.rect(3, 11, 1, 3, d); P.rect(5, 11, 1, 3 - b, c); P.rect(8, 11, 1, 3, d); P.rect(10, 11, 1, 3 - (1 - b), c);
+    P.rect(10, 4, 6, 5, c); P.rect(10, 4, 6, 1, l); P.px(10, 3, c); P.px(10, 2, c); P.px(15, 3, c); P.px(15, 2, c); P.px(11, 3, l); P.px(14, 3, l);
+    P.px(12, 6, eye); P.px(14, 6, eye); P.px(11, 5, dd); P.px(12, 5, dd); P.px(14, 5, dd); P.px(15, 5, dd);
+    P.rect(16, 7, 1, 1, '#d87a7a'); P.rect(12, 8, 4, 1, d);
+    P.rect(1, 6 - b, 1, 4, c); P.rect(2, 9, 1, 1, c); P.px(1, 5 - b, d);
+    if (col !== 2) { P.px(5, 9, d); P.px(7, 9, d); P.px(6, 10, d); }
+  } else if (k === 2) { // loup : oreilles dressées, collerette de fourrure, museau long
+    P.rect(2, 7, 9, 5, c); P.rect(2, 7, 9, 1, l); P.rect(3, 11, 8, 1, d);
+    P.rect(2, 11, 2, 3, d); P.rect(5, 11, 1, 3 - b, c); P.rect(8, 11, 2, 3, d);
+    P.rect(9, 5, 3, 5, l); P.px(9, 10, l); P.px(11, 10, l);   // collerette
+    P.rect(11, 3, 5, 5, c); P.rect(11, 3, 5, 1, l); P.rect(15, 6, 3, 2, c); P.px(17, 6, '#1b1424'); P.rect(15, 8, 2, 1, d); P.px(16, 8, '#ffffff');
+    P.px(11, 1, c); P.px(11, 2, c); P.px(13, 1, c); P.px(13, 2, c); P.px(12, 2, dd);
+    P.px(14, 5, eye); P.px(13, 4, dd); P.px(14, 4, dd);
+    P.rect(0, 6 - b, 2, 2, c); P.px(0, 5 - b, l); P.rect(1, 8, 1, 1, d);
+  } else if (k === 3) { // dragon : cornes, piques, ailes de chauve-souris
+    P.rect(4, 7, 7, 5, c); P.rect(4, 7, 7, 1, l); P.rect(5, 11, 5, 1, '#e8c86a'); P.rect(5, 10, 5, 1, '#d8b85a');
+    for (let i = 0; i < 4; i++) P.px(4 + i * 2, 6, d);   // piques du dos
+    P.rect(10, 3, 6, 5, c); P.rect(10, 3, 6, 1, l); P.rect(15, 6, 2, 2, c); P.px(16, 7, '#ffffff');
+    P.px(10, 1, '#e8e2d0'); P.px(11, 2, '#e8e2d0'); P.px(13, 1, '#e8e2d0'); P.px(13, 2, '#e8e2d0');
+    P.px(13, 5, eye); P.px(12, 4, dd); P.px(13, 4, dd); P.px(16, 5, dd);
+    P.rect(0, 10, 4, 1, c); P.px(0, 9, c); P.px(0, 11, d);
+    if (b) { P.rect(3, 1, 5, 5, d); P.rect(4, 0, 2, 1, d); P.px(4, 2, l); P.px(6, 3, l); P.rect(3, 5, 5, 1, dd); }
+    else { P.rect(2, 5, 6, 3, d); P.px(1, 6, d); P.px(3, 6, l); P.px(5, 6, l); }
+    P.rect(5, 12, 1, 1, dd); P.rect(9, 12, 1, 1, dd);
+  } else if (k === 4) { // grand-duc : aigrettes, regard sévère, serres
+    const belly = col === 2 ? '#ffffff' : shade(c, 1.55);
+    P.ellipse(9, 8, 5, 6, c); P.ellipse(9, 10, 3, 3, belly); for (let i = 0; i < 3; i++) P.px(8 + i, 9 + (i % 2) * 2, d);
+    P.px(5, 1, d); P.px(6, 2, c); P.px(13, 1, d); P.px(12, 2, c);   // aigrettes
+    P.rect(6, 5, 2, 2, eye); P.rect(10, 5, 2, 2, eye); P.px(7, 6, '#1b1424'); P.px(10, 6, '#1b1424');
+    P.rect(5, 4, 3, 1, dd); P.rect(10, 4, 3, 1, dd); P.px(8, 5, dd); P.px(9, 5, dd);   // sourcils froncés
+    P.px(9, 7, '#d9a93a'); P.px(9, 8, '#b8892a');
+    if (b) { P.rect(1, 5, 3, 3, d); P.rect(14, 5, 3, 3, d); P.px(0, 6, d); P.px(17, 6, d); } else { P.rect(4, 7, 1, 5, d); P.rect(13, 7, 1, 5, d); }
+    P.rect(7, 14, 2, 1, '#d9a93a'); P.rect(10, 14, 2, 1, '#d9a93a');
+  } else if (k === 5) { // slime en colère : sourcils, crocs, reflet
     const sq = b ? 1 : 0;
-    P.ellipse(8, 9 + sq, 6 + sq, 4 - sq, d); P.ellipse(8, 8 + sq, 6 + sq, 4 - sq, c);
-    P.rect(5, 6 + sq, 2, 1, l); P.px(4, 7 + sq, l);
-    P.rect(6, 8 + sq, 1, 2, OUT); P.rect(10, 8 + sq, 1, 2, OUT);
+    P.ellipse(9, 10 + sq, 7 + sq, 5 - sq, d); P.ellipse(9, 9 + sq, 7 + sq, 5 - sq, c); P.ellipse(9, 7 + sq, 4, 2, l);
+    P.rect(5, 6 + sq, 2, 1, '#ffffff'); P.px(4, 7 + sq, '#ffffff');
+    P.rect(6, 8 + sq, 2, 2, '#1b1424'); P.rect(11, 8 + sq, 2, 2, '#1b1424'); P.px(6, 8 + sq, '#ff5a3a'); P.px(12, 8 + sq, '#ff5a3a');
+    P.px(5, 7 + sq, dd); P.px(6, 7 + sq, dd); P.px(12, 7 + sq, dd); P.px(13, 7 + sq, dd);
+    P.rect(7, 11 + sq, 5, 1, '#1b1424'); P.px(8, 12 + sq, '#ffffff'); P.px(10, 12 + sq, '#ffffff');
+    P.px(3, 13, d); P.px(15, 13 - sq, d);
   }
   return (dynCache[key] = P.outline().canvas());
 }
