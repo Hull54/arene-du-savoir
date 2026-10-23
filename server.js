@@ -167,11 +167,24 @@ function smallestTeam() {
   for (const p of players.values()) if (p.team >= 0 && p.team < nbTeams) n[p.team]++;
   return n.indexOf(Math.min(...n));
 }
+// Deux élèves avec le même prénom : le second devient « Léa 2 » (sinon leurs résultats se mélangent)
+function uniqueName(name) {
+  const base = String(name).trim().slice(0, 16) || 'Héros';
+  const taken = new Set([...players.values()].map(p => p.name.toLowerCase()));
+  if (!taken.has(base.toLowerCase())) return base;
+  for (let i = 2; ; i++) { const n = base.slice(0, 13) + ' ' + i; if (!taken.has(n.toLowerCase())) return n; }
+}
+function leaderId() {
+  // le meneur : seul en tête, avec au moins 3 victoires
+  let best = null, second = -1;
+  for (const p of players.values()) { if (!best || p.kills > best.kills) { second = best ? best.kills : -1; best = p; } else if (p.kills > second) second = p.kills; }
+  return best && best.kills >= 3 && best.kills > second ? best.id : 0;
+}
 function createPlayer(name, cls, bot = false, look = '') {
   const c = CLASSES[cls] || CLASSES.guerrier;
   const team = mode === 'equipes' ? smallestTeam() : -1;
   const p = {
-    id: nextId++, name: String(name).slice(0, 16) || 'Héros', cls: CLASSES[cls] ? cls : 'guerrier', bot, team,
+    id: nextId++, name: uniqueName(name), cls: CLASSES[cls] ? cls : 'guerrier', bot, team,
     hp: c.hp, maxHp: c.hp, alive: true, angle: 0,
     look: /^[fm][0-3][0-3]$/.test(look) ? look : (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3),
     input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, cdD: 0, dash: null, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
@@ -251,8 +264,13 @@ function kill(target, killer) {
   target.deaths++;
   target.shield = 0; target.stealth = 0; target.fast = 0; target.strong = 0; target.dash = null;
   if (killer && killer !== target) {
-    killer.kills++;
-    addFeed(`${killer.name} a vaincu ${target.name}`);
+    if (target.id === leaderId()) {
+      killer.kills += 2;   // prime au meneur
+      addFeed(`👑 ${killer.name} a vaincu le meneur ${target.name} ! (+2)`);
+    } else {
+      killer.kills++;
+      addFeed(`${killer.name} a vaincu ${target.name}`);
+    }
   } else if (killer === null && boss) addFeed(`Le Roi Gluant a vaincu ${target.name}`);
   fx.push({ k: 'death', x: target.x, y: target.y, t: 0.6, d: 0.6 });
   target.waitQ = 1;  // petite pause avant la question
@@ -514,8 +532,9 @@ function assignTeams() {
   const ps = [...players.values()].sort(() => Math.random() - 0.5);
   ps.forEach((p, i) => { p.team = mode === 'equipes' ? i % nbTeams : -1; });
 }
+let countdown = 0;   // compte à rebours 3-2-1 au début d'une manche
 function newRound() {
-  ended = null; paused = false;
+  ended = null; paused = false; countdown = 3.5;
   for (const q of players.values()) {
     q.kills = q.deaths = q.good = q.bad = q.streak = q.dmgBoss = 0;
     q.fast = q.strong = q.shield = q.stealth = 0; q.pending = null;
@@ -634,7 +653,8 @@ function step() {
     const waiting = eclair.ids.some(id => players.has(id) && !eclair.answers.has(id));
     if (eclair.left <= 0 || !waiting) finishEclair();
   }
-  const frozen = paused || !!eclair;
+  if (countdown > 0 && !paused && !eclair) countdown = Math.max(0, countdown - dt);
+  const frozen = paused || !!eclair || countdown > 0;
   if (!frozen && timer.dur && !ended) { timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); } }
 
   for (const p of players.values()) {
@@ -701,11 +721,12 @@ function step() {
 }
 
 function publicState() {
+  const lead = mode === 'boss' ? 0 : leaderId();
   return JSON.stringify({
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0),
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0),
       p.team,
     ]),
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
@@ -715,7 +736,7 @@ function publicState() {
     boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0] : 0,
     tm: timer.dur ? Math.ceil(timer.left) : -1,
     mode, te: mode === 'equipes' ? teamScores().map(s => s.score) : 0,
-    feed: feed.map(f => f.text), paused, ec: eclair ? Math.ceil(eclair.left) : 0,
+    feed: feed.map(f => f.text), paused, ec: eclair ? Math.ceil(eclair.left) : 0, cd: Math.ceil(countdown - 0.5),
   });
 }
 
@@ -762,7 +783,7 @@ function onMessage(conn, msg) {
       if (p) return;
       conn.player = createPlayer(m.name, m.cls, false, String(m.look || ''));
       conn.player.conn = conn;
-      send(conn, { ...welcome(), id: conn.player.id });
+      send(conn, { ...welcome(), id: conn.player.id, nom: conn.player.name });
       if (ended) send(conn, { t: 'fin', ...ended });
       break;
     case 'in':

@@ -9,7 +9,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: #141b26; color: #fff; font-family: "Pixelify Sans", system-ui, sans-serif; }
   .wrap { display: grid; grid-template-columns: 1fr 370px; height: 100%; }
-  .stage { position: relative; min-height: 0; }
+  .stage { position: relative; min-height: 0; background: #141b26; }
   canvas { width: 100%; height: 100%; display: block; }
   aside { background: #1e2737; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
   h2 { margin: 0 0 6px; font-size: 16px; color: #ffd54a; }
@@ -70,6 +70,7 @@
       <button id="pause">⏸ Pause</button>
       <button class="sec" id="reset">🔄 Nouvelle manche</button>
       <button class="sec" id="finir">🏁 Finir la manche</button>
+      <button class="sec" id="plein">⛶ Plein écran</button>
       <div class="row"><span>Mode :</span>
         <button class="sec" data-mode="libre">Chacun pour soi</button>
         <button class="sec" data-mode="equipes" data-nb="2">2 équipes</button>
@@ -137,6 +138,8 @@ $('finir').onclick = () => confirm('Terminer la manche maintenant et afficher le
 $('addbot').onclick = () => send({ t: 'addbot' });
 $('rmbots').onclick = () => send({ t: 'rmbots' });
 $('eclair').onclick = () => send({ t: 'eclair' });
+// plein écran : seulement la carte (pour le projecteur). Échap pour revenir.
+$('plein').onclick = () => { const st = document.querySelector('.stage'); (st.requestFullscreen || st.webkitRequestFullscreen).call(st); };
 $('timer').onchange = () => send({ t: 'timer', min: +$('timer').value });
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
   if (confirm('Changer de mode commence une nouvelle manche. Continuer ?')) send({ t: 'mode', mode: b.dataset.mode, nb: +b.dataset.nb || 2 });
@@ -324,6 +327,7 @@ function frame() {
     ctx.fillStyle = '#1b1424cc'; ctx.fillRect(8, 46 + i * 26, ctx.measureText(t).width + 14, 24);
     ctx.fillStyle = '#fff'; ctx.fillText(t, 15, 64 + i * 26);
   });
+  if (world.cd > 0) { ctx.font = '160px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 12; ctx.strokeStyle = '#1b1424'; ctx.strokeText(world.cd, r.width / 2, r.height / 2 + 50); ctx.fillStyle = '#ffd54a'; ctx.fillText(world.cd, r.width / 2, r.height / 2 + 50); }
   if (world.paused && !$('fin').style.display.includes('flex')) { ctx.font = '52px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText('⏸ Pause', r.width / 2, r.height / 2); }
 }
 requestAnimationFrame(frame);

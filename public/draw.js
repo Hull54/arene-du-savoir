@@ -28,7 +28,7 @@ function shade(hex, f) {
 
 // Décode l'état compact envoyé par le serveur
 function unpackWorld(w) {
-  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256) }));
+  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512) }));
   return w;
 }
 
@@ -807,6 +807,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     if (p.fa) for (let i = 0; i < 3; i++) sq(d.x - 30 - i * 8, d.y + 14 - i * 5, 1, '#9fd6ff');
     if (p.dz) { const dx = d.x - (d.px ?? d.x), dy = d.y - (d.py ?? d.y), l = Math.hypot(dx, dy) || 1; for (let i = 1; i <= 3; i++) sq(d.x - dx / l * i * 16 + (i % 2 ? 8 : -8), d.y - 20 - dy / l * i * 16, 2, '#ffffffaa'); }
     d.px = d.x; d.py = d.y;
+    // flèche de visée sous mon héros
+    if (isMe) {
+      const a = mine.aim ?? p.a, ca = Math.cos(a), sa = Math.sin(a);
+      for (const [k, w] of [[44, 0], [38, 1], [32, 2]]) for (let j = -w; j <= w; j++) sq(d.x + ca * k - sa * j * 4, d.y + 8 + sa * k + ca * j * 4, 2, '#ffd54ae0');
+    }
     drawHeroSprite(ctx, d.x, d.y, p.c, p.l || 'm00', p.a, d.ph, heroScale);
     if (p.sh) {
       ctx.globalAlpha = alpha * 0.8;
@@ -829,6 +834,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.lineWidth = big ? 9 : 4; ctx.strokeStyle = OUT; ctx.strokeText(p.n, d.x, ny);
     ctx.fillStyle = isMe ? '#ffd54a' : tcol || '#ffffff'; ctx.fillText(p.n, d.x, ny);
     if (p.bz) { ctx.strokeText('❓', d.x, ny - (big ? 50 : 20)); ctx.fillText('❓', d.x, ny - (big ? 50 : 20)); }
+    else if (p.lz) { ctx.strokeText('👑', d.x, ny - (big ? 50 : 20)); ctx.fillText('👑', d.x, ny - (big ? 50 : 20)); }
     const bw = big ? 110 : 36, r = p.hp / p.m;
     ctx.fillStyle = OUT; ctx.fillRect(Math.round(d.x - bw / 2) - 3, ny + 6, bw + 6, big ? 20 : 8);
     ctx.fillStyle = '#3a2a3a'; ctx.fillRect(Math.round(d.x - bw / 2), ny + 9, bw, big ? 14 : 3);

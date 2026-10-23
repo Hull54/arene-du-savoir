@@ -40,7 +40,7 @@ Le jeu est hébergé gratuitement sur **Render** à partir de ce dépôt GitHub.
 | 🔮 Mage | 90 | moyenne | Boule de feu à distance | 💥 Explosion autour de lui | ✨ Téléportation : 3 cases plus loin, même par-dessus l'eau (3 s) |
 | 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches | 🦘 Saut arrière : recule en tirant une flèche (3 s) |
 
-Sans souris, on vise dans la direction où l'on marche.
+Sans souris, on vise dans la direction où l'on marche : une petite flèche jaune sous son héros montre la visée.
 
 ## Les cartes (au choix de l'enseignant)
 
@@ -77,7 +77,7 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 
 ## Modes de jeu
 
-- **Chacun pour soi** : le mode classique.
+- **Chacun pour soi** : le mode classique. Le meneur (seul en tête, au moins 3 victoires) porte une couronne 👑 : le vaincre rapporte 2 points.
 - **Équipes** (2, 3 ou 4) : couleurs d'équipe, pas de dégâts entre coéquipiers, score commun.
 - **👑 Boss coopératif** : toute la classe affronte le Roi Gluant. Les coups l'abîment, et **chaque bonne réponse lui enlève 3 % de sa vie** : les élèves moins à l'aise au combat sont aussi utiles. Les joueurs ne peuvent pas se blesser entre eux.
 
@@ -85,7 +85,7 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 
 - Vue de toute la carte pour le projecteur.
 - **Carte**, **mode** et **minuterie** de manche (3 à 20 minutes, ou sans limite).
-- **Pause**, **Nouvelle manche**, **Finir la manche**. À la fin, un **podium** s'affiche chez tout le monde (et les meilleurs cerveaux).
+- **Pause**, **Nouvelle manche** (avec compte à rebours 3-2-1), **Finir la manche**, **Plein écran** pour le projecteur (Échap pour revenir). À la fin, un **podium** s'affiche chez tout le monde (et les meilleurs cerveaux).
 - **⚡ Question éclair** : le jeu s'arrête et toute la classe reçoit la même question (20 secondes). Le projecteur montre ensuite le nombre de bonnes réponses et la répartition des choix. Les bonnes réponses gagnent un bonus de force.
 - Choix des **notions** posées (par matière, avec « tout » et « aucune »).
 - **Robots** pour tester seul ou compléter un petit groupe.
@@ -123,6 +123,8 @@ Dans `questions.json`, chaque question suit ce modèle :
 - Sur GitHub, modifier le fichier (icône crayon) puis « Commit changes » : Render remet le jeu à jour en 1 à 2 minutes.
 
 ## Les personnages
+
+Si deux élèves choisissent le même prénom, le second devient « Léa 2 » pour que leurs résultats ne se mélangent pas.
 
 Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau et une couleur de cheveux. Tous les dessins sont en pixel art rétro, créés dans le code du jeu (aucune image empruntée).
 

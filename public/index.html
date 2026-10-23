@@ -79,6 +79,7 @@
   .podium i { display: block; background: #8b5a2b; color: #ffd54a; border: 3px solid #1b1424; font-style: normal; font-size: 26px; }
   .finlist { font-size: 17px; line-height: 1.6; }
   .card .ko.chest { color: #8b5a2b; } .card .ko.eclair { color: #3a6fd8; }
+  #count { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 140px; font-weight: 700; color: #ffd54a; text-shadow: 8px 8px 0 #1b1424, -4px -4px 0 #1b1424, 4px -4px 0 #1b1424, -4px 4px 0 #1b1424; pointer-events: none; z-index: 4; }
   @media (max-width: 560px) { .choices { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -95,6 +96,7 @@
 <div id="loading">Chargement de la carte…</div>
 <div id="feed"></div>
 <div id="pause">⏸ Pause</div>
+<div id="count"></div>
 <div id="hud" style="display:none">
   <div class="cd panel"><div class="ico" id="icoA">⚔️</div><span>J</span><div class="fill" id="fillA"></div></div>
   <div class="cd panel"><div class="ico" id="icoP">✨</div><span id="lblP">K</span><div class="fill" id="fillP"></div></div>
@@ -187,7 +189,7 @@ $('go').onclick = () => {
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('go').disabled) $('go').click(); };
 
 // ----- Réseau -----
-let lastHp = null;
+let lastHp = null, lastCd = 0;
 let ws, myId, world = null, me = null, map = null, myCls = null, info = null;
 const MOTS = { cache: 'trouvé', coffre: 'coffre', serie: 'série' };
 function toast(t) {
@@ -207,7 +209,7 @@ function connect(name, cls) {
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     if (m.t === 'welcome' || m.t === 'carte') {
-      if (m.t === 'welcome') { myId = m.id; info = m; }
+      if (m.t === 'welcome') { myId = m.id; info = m; if (m.nom && m.nom !== $('name').value.trim()) setTimeout(() => toast(`Ce prénom est déjà pris : tu t'appelles « ${m.nom} » dans le jeu`), 800); }
       map = m.map; mapLayer = null;
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
@@ -418,6 +420,7 @@ function frame(now) {
   ctx.fillStyle = '#173d1d'; ctx.fillRect(0, 0, vw, vh);
   ctx.translate(Math.round(vw / 2 - camX * zoom), Math.round(vh / 2 - camY * zoom)); ctx.scale(zoom, zoom);
   const teams = world.mode === 'equipes' ? info.teams : null;
+  if (mine) mine.aim = aim;
   drawWorld(ctx, world, map, mine, disp, PX, teams);
   if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -457,6 +460,12 @@ function frame(now) {
   }
   $('feed').innerHTML = world.feed.map(t => `<div>${t.replace(/</g, '&lt;')}</div>`).join('');
   $('pause').style.display = world.paused ? 'block' : 'none';
+  // compte à rebours 3-2-1
+  if (world.cd !== lastCd) {
+    if (world.cd > 0) { $('count').textContent = world.cd; $('count').style.display = 'flex'; Son.play('touche'); }
+    else if (lastCd > 0) { $('count').textContent = 'Combattez !'; $('count').style.fontSize = '80px'; Son.play('retour'); setTimeout(() => { $('count').style.display = 'none'; $('count').style.fontSize = ''; }, 900); }
+    lastCd = world.cd;
+  }
 }
 requestAnimationFrame(frame);
 
