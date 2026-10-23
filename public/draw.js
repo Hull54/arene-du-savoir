@@ -4,10 +4,10 @@ const PX = 3;
 const OUT = '#1b1424';   // couleur des contours
 
 const CLS = {
-  guerrier: { nom: ['Guerrière', 'Guerrier'], ico: '⚔️', color: '#3a6fd8', desc: 'Très résistant. Épée et bouclier, au corps à corps.', pow: '🛡️ Bouclier : réduit les dégâts pendant 3 s' },
-  voleur:   { nom: ['Voleuse', 'Voleur'],     ico: '🗡️', color: '#d64545', desc: 'Rapide, corps à corps. Dégâts doublés en frappant dans le dos !', pow: '👤 Ombre : invisible 4 s, prochaine attaque +50 %' },
-  mage:     { nom: ['Mage', 'Mage'],          ico: '🔮', color: '#8e4ce0', desc: 'Fragile mais puissant. Lance des boules de feu.', pow: '💥 Explosion : dégâts tout autour' },
-  archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail' },
+  guerrier: { nom: ['Guerrière', 'Guerrier'], ico: '⚔️', color: '#3a6fd8', desc: 'Très résistant. Épée et bouclier, au corps à corps.', pow: '🛡️ Bouclier : réduit les dégâts pendant 3 s', dash: '💨 Charge : fonce et bouscule' },
+  voleur:   { nom: ['Voleuse', 'Voleur'],     ico: '🗡️', color: '#d64545', desc: 'Rapide, corps à corps. Dégâts doublés en frappant dans le dos !', pow: '👤 Ombre : invisible 4 s, prochaine attaque +50 %', dash: '🌀 Roulade : esquive, invincible un instant' },
+  mage:     { nom: ['Mage', 'Mage'],          ico: '🔮', color: '#8e4ce0', desc: 'Fragile mais puissant. Lance des boules de feu.', pow: '💥 Explosion : dégâts tout autour', dash: '✨ Téléportation : 3 cases plus loin' },
+  archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail', dash: '🦘 Saut arrière : recule en tirant' },
 };
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
 const HAIR = ['#2a1c14', '#7a4422', '#e8b84a', '#c2482e'];
@@ -28,7 +28,7 @@ function shade(hex, f) {
 
 // Décode l'état compact envoyé par le serveur
 function unpackWorld(w) {
-  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128) }));
+  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256) }));
   return w;
 }
 
@@ -740,6 +740,10 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + 20 + Math.sin(a) * r * 0.6, 3, i % 2 ? '#5ac85a' : '#9af08a'); }
     } else if (f.k === 'zap') {
       for (let i = 0; i <= 14; i++) { const u = i / 14; sq(f.x + (f.x2 - f.x) * u + Math.sin(i * 2 + now * 30) * 6, f.y - 30 + (f.y2 - f.y) * u, 2, i % 2 ? '#ffe27a' : '#ffffff'); }
+    } else if (f.k === 'dust') {
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; sq(f.x + Math.cos(a) * 22 * (1.3 - t), f.y + Math.sin(a) * 8 * (1.3 - t), 3, i % 2 ? '#d8cfc0' : '#b8ad9a'); }
+    } else if (f.k === 'tp') {
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + now * 4; sq(f.x + Math.cos(a) * 30 * t, f.y - 30 + Math.sin(a) * 40 * t, 2, i % 2 ? '#c9a0ff' : '#ffffff'); }
     } else if (f.k === 'item') {
       for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; sq(f.x + Math.cos(a) * 30 * (1.2 - t), f.y - 30 + Math.sin(a) * 30 * (1.2 - t), 2, '#fff6c0'); }
     } else if (f.k === 'hit') {
@@ -801,6 +805,8 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     else { ctx.fillStyle = CLS[p.c].color; ctx.fillRect(Math.round(d.x) - 15, Math.round(d.y) + 24, 30, 3); }
     if (p.st) for (let i = 0; i < 4; i++) sq(d.x - 20 + i * 13, d.y + 10 - ((now * 60 + i * 17) % 50), 1, '#ff8a1e');
     if (p.fa) for (let i = 0; i < 3; i++) sq(d.x - 30 - i * 8, d.y + 14 - i * 5, 1, '#9fd6ff');
+    if (p.dz) { const dx = d.x - (d.px ?? d.x), dy = d.y - (d.py ?? d.y), l = Math.hypot(dx, dy) || 1; for (let i = 1; i <= 3; i++) sq(d.x - dx / l * i * 16 + (i % 2 ? 8 : -8), d.y - 20 - dy / l * i * 16, 2, '#ffffffaa'); }
+    d.px = d.x; d.py = d.y;
     drawHeroSprite(ctx, d.x, d.y, p.c, p.l || 'm00', p.a, d.ph, heroScale);
     if (p.sh) {
       ctx.globalAlpha = alpha * 0.8;

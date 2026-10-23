@@ -26,18 +26,21 @@ Le jeu est hébergé gratuitement sur **Render** à partir de ce dépôt GitHub.
 |---|---|---|
 | Bouger | WASD ou flèches | Glisser le doigt sur l'écran |
 | Viser | Souris (sinon : direction du déplacement) | Direction du déplacement |
-| Attaque | Espace ou clic gauche | Bouton ⚔️ |
-| Pouvoir spécial | E, Maj ou clic droit | Bouton ✨ |
+| Attaque | J ou clic gauche | Bouton ⚔️ |
+| Pouvoir spécial | K, E, Maj ou clic droit | Bouton ✨ |
+| Habileté de déplacement | Espace | Bouton 💨 |
 | Répondre à une question | Clic ou touches 1 à 4 | Toucher la réponse |
 
 ## Les héros
 
-| Classe | Vie | Vitesse | Attaque | Pouvoir |
-|---|---|---|---|---|
-| ⚔️ Guerrier | 170 | lente | Épée, corps à corps, large arc | 🛡️ Bouclier : −75 % de dégâts pendant 3 s |
-| 🗡️ Voleur | 105 | très rapide | Dague, corps à corps. **Dégâts ×2 dans le dos** | 👤 Ombre : invisible 4 s, plus rapide, prochaine attaque +50 % |
-| 🔮 Mage | 90 | moyenne | Boule de feu à distance | 💥 Explosion autour de lui |
-| 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches |
+| Classe | Vie | Vitesse | Attaque | Pouvoir | Habileté (Espace) |
+|---|---|---|---|---|---|
+| ⚔️ Guerrier | 170 | lente | Épée, corps à corps, large arc | 🛡️ Bouclier : −75 % de dégâts pendant 3 s | 💨 Charge : fonce 3 cases, bouscule et blesse un peu (3 s) |
+| 🗡️ Voleur | 105 | très rapide | Dague, corps à corps. **Dégâts ×2 dans le dos** | 👤 Ombre : invisible 4 s, plus rapide, prochaine attaque +50 % | 🌀 Roulade : esquive, invincible pendant la roulade (2 s) |
+| 🔮 Mage | 90 | moyenne | Boule de feu à distance | 💥 Explosion autour de lui | ✨ Téléportation : 3 cases plus loin, même par-dessus l'eau (3 s) |
+| 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches | 🦘 Saut arrière : recule en tirant une flèche (3 s) |
+
+Sans souris, on vise dans la direction où l'on marche.
 
 ## Les cartes (au choix de l'enseignant)
 

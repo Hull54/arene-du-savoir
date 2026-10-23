@@ -96,10 +96,11 @@
 <div id="feed"></div>
 <div id="pause">⏸ Pause</div>
 <div id="hud" style="display:none">
-  <div class="cd panel"><div class="ico" id="icoA">⚔️</div><span>Espace</span><div class="fill" id="fillA"></div></div>
-  <div class="cd panel"><div class="ico" id="icoP">✨</div><span id="lblP">E</span><div class="fill" id="fillP"></div></div>
+  <div class="cd panel"><div class="ico" id="icoA">⚔️</div><span>J</span><div class="fill" id="fillA"></div></div>
+  <div class="cd panel"><div class="ico" id="icoP">✨</div><span id="lblP">K</span><div class="fill" id="fillP"></div></div>
+  <div class="cd panel"><div class="ico" id="icoD">💨</div><span id="lblD">Espace</span><div class="fill" id="fillD"></div></div>
 </div>
-<div id="touch"><button id="tAtk" class="btn">⚔️</button><button id="tPow" class="btn">✨</button></div>
+<div id="touch"><button id="tDash" class="btn">💨</button><button id="tAtk" class="btn">⚔️</button><button id="tPow" class="btn">✨</button></div>
 
 <div id="join" class="screen">
   <h1>Arène du Savoir</h1>
@@ -112,7 +113,7 @@
   </div>
   <div class="classes" id="classes"></div>
   <button class="btn" id="go" disabled>Entrer dans l'arène</button>
-  <div class="keys">Bouger : WASD ou flèches · Viser : souris · Attaque : Espace ou clic · Pouvoir : E ou clic droit</div>
+  <div class="keys">Bouger : WASD ou flèches · Attaque : J (ou clic) · Pouvoir : K (ou E, clic droit) · Habileté : Espace<br>Sans souris, on vise dans la direction où l'on marche.</div>
 </div>
 
 <div id="quiz" class="screen">
@@ -133,6 +134,7 @@
 <script>
 
 const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️' };
+const DASH_ICO = { guerrier: '💨', voleur: '🌀', mage: '✨', archer: '🦘' };
 const ATK_ICO = { guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹' };
 
 // ----- Écran de sélection -----
@@ -148,7 +150,7 @@ const cards = {};
 for (const [k, c] of Object.entries(CLS)) {
   const d = document.createElement('div');
   d.className = 'cls panel';
-  d.innerHTML = `<canvas width="96" height="120"></canvas><b></b><small>${c.desc}<br>${c.pow}</small>`;
+  d.innerHTML = `<canvas width="96" height="120"></canvas><b></b><small>${c.desc}<br>${c.pow}<br>${c.dash}</small>`;
   d.onclick = () => { chosen = k; document.querySelectorAll('.cls').forEach(e => e.classList.remove('sel')); d.classList.add('sel'); check(); };
   $('classes').appendChild(d);
   cards[k] = d;
@@ -211,7 +213,7 @@ function connect(name, cls) {
       $('loading').style.display = 'flex';
       setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute'].forEach(id => $(id).style.display = ''); }, 30);
       if (m.t === 'carte') toast('🗺️ ' + map.nom);
-      $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls];
+      $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls]; $('icoD').textContent = DASH_ICO[cls];
       if ('ontouchstart' in window) $('touch').style.display = 'flex';
     } else if (m.t === 's') {
       world = unpackWorld(m.w);
@@ -349,13 +351,15 @@ addEventListener('keydown', e => {
   if (answering && /^Digit[1-4]$/.test(e.code)) return choose(+e.code.slice(5) - 1);
   if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 1; e.preventDefault(); }
   Son.unlock();
-  if (e.code === 'Space') { attackSound(); sendMsg({ t: 'atk' }); e.preventDefault(); }
-  if (e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
+  if (e.code === 'KeyJ') { attackSound(); sendMsg({ t: 'atk' }); }
+  if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { dashSound(); sendMsg({ t: 'dash' }); } }
+  if (e.code === 'KeyK' || e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
 const cv = $('c'), ctx = cv.getContext('2d');
 cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; mouseAim = true; lastMouse = performance.now(); });
 cv.addEventListener('mousedown', e => { Son.unlock(); if (e.button === 2) sendMsg({ t: 'pow' }); else { attackSound(); sendMsg({ t: 'atk' }); } });
+function dashSound() { if (me && me.alive && me.cdD <= 0.05) Son.play(myCls === 'mage' ? 'tp' : 'dash'); }
 function attackSound() { if (me && me.alive && me.cdA <= 0.05) Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' ? 'tir' : 'atk'); }
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -372,6 +376,7 @@ cv.addEventListener('touchmove', e => {
 cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; } });
 $('tAtk').ontouchstart = e => { e.preventDefault(); Son.unlock(); attackSound(); sendMsg({ t: 'atk' }); };
 $('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
+$('tDash').ontouchstart = e => { e.preventDefault(); Son.unlock(); dashSound(); sendMsg({ t: 'dash' }); };
 
 setInterval(() => {
   if (!map) return;
@@ -444,7 +449,9 @@ function frame(now) {
   if (me) {
     $('fillA').style.height = (me.cdA / c.atk.cd * 100) + '%';
     $('fillP').style.height = (me.cdP / c.power.cd * 100) + '%';
-    $('lblP').textContent = me.cdP > 0 ? Math.ceil(me.cdP) + ' s' : 'E';
+    $('lblP').textContent = me.cdP > 0 ? Math.ceil(me.cdP) + ' s' : 'K';
+    $('fillD').style.height = ((me.cdD || 0) / c.dash.cd * 100) + '%';
+    $('lblD').textContent = me.cdD > 0 ? Math.ceil(me.cdD) + ' s' : 'Espace';
     $('score').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}` + (me.sk >= 2 ? `   🔥 ${me.sk}` : '');
     $('buffs').textContent = [me.st ? `💪 ${me.st}` : '', me.fa ? `👢 ${me.fa}` : ''].filter(Boolean).join('  ');
   }

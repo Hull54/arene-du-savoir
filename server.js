@@ -24,10 +24,10 @@ const SPAWN_PROTECT = 2.5;
 const WRONG_DELAY = 3;
 
 const CLASSES = {
-  guerrier: { nom: 'Guerrier', hp: 170, speed: 150, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 } },
-  voleur:   { nom: 'Voleur',   hp: 105, speed: 200, atk: { type: 'melee', range: 55, arc: 1.2, dmg: 18, cd: 0.35, backstab: 2 }, power: { nom: 'Ombre', cd: 9, dur: 4 } },
-  mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 380, dmg: 22, cd: 0.65, r: 10, life: 1.6 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 } },
-  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9 } },
+  guerrier: { nom: 'Guerrier', hp: 170, speed: 150, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
+  voleur:   { nom: 'Voleur',   hp: 105, speed: 200, atk: { type: 'melee', range: 55, arc: 1.2, dmg: 18, cd: 0.35, backstab: 2 }, power: { nom: 'Ombre', cd: 9, dur: 4 }, dash: { nom: 'Roulade', cd: 2, dist: 140, dur: 0.24 } },
+  mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 380, dmg: 22, cd: 0.65, r: 10, life: 1.6 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
+  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 
 // Objets des coffres et objets cachés
@@ -174,7 +174,7 @@ function createPlayer(name, cls, bot = false, look = '') {
     id: nextId++, name: String(name).slice(0, 16) || 'Héros', cls: CLASSES[cls] ? cls : 'guerrier', bot, team,
     hp: c.hp, maxHp: c.hp, alive: true, angle: 0,
     look: /^[fm][0-3][0-3]$/.test(look) ? look : (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3),
-    input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
+    input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, cdD: 0, dash: null, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
     fast: 0, strong: 0, busy: false, streak: 0, dmgBoss: 0,
     kills: 0, deaths: 0, good: 0, bad: 0, question: null, waitQ: 0, conn: null, botT: 0,
     ...freeSpot(team),
@@ -249,7 +249,7 @@ function kill(target, killer) {
   target.alive = false;
   target.hp = 0;
   target.deaths++;
-  target.shield = 0; target.stealth = 0; target.fast = 0; target.strong = 0;
+  target.shield = 0; target.stealth = 0; target.fast = 0; target.strong = 0; target.dash = null;
   if (killer && killer !== target) {
     killer.kills++;
     addFeed(`${killer.name} a vaincu ${target.name}`);
@@ -261,7 +261,7 @@ function kill(target, killer) {
 function respawn(p) {
   Object.assign(p, freeSpot(p.team));
   p.hp = p.maxHp; p.alive = true; p.protect = SPAWN_PROTECT; p.question = null;
-  p.cdA = 0; p.cdP = 0;
+  p.cdA = 0; p.cdP = 0; p.cdD = 0; p.dash = null;
   fx.push({ k: 'spawn', x: p.x, y: p.y, t: 0.6, d: 0.6 });
 }
 
@@ -292,7 +292,7 @@ function answer(p, i) {
 
 const canHit = (a, b) => b.alive && a !== b && mode !== 'boss' && !(mode === 'equipes' && a && a.team === b.team);
 function damage(target, amount, attacker) {
-  if (!target.alive || target.protect > 0 || target.busy) return;
+  if (!target.alive || target.protect > 0 || target.busy || (target.dash && target.dash.inv)) return;
   if (attacker && attacker.strong > 0) amount *= 1.5;
   if (target.shield > 0) amount *= 0.25;
   target.hp -= amount;
@@ -364,6 +364,56 @@ function power(p) {
     p.stealth = pw.dur;
     fx.push({ k: 'smoke', x: p.x, y: p.y, t: 0.5, d: 0.5 });
   }
+}
+
+// ---------- Habileté de déplacement (Espace) ----------
+function dash(p) {
+  if (!p.alive || p.cdD > 0 || paused || p.busy || p.dash) return;
+  const d = CLASSES[p.cls].dash;
+  // direction : celle du mouvement, sinon celle de la visée (l'archer saute vers l'arrière)
+  let a = p.angle;
+  if (p.bot) { if (p.moveAngle != null) a = p.moveAngle; }
+  else { const mx = p.input.r - p.input.l, my = p.input.d - p.input.u; if (mx || my) a = Math.atan2(my, mx); }
+  if (p.cls === 'archer') a = p.angle + Math.PI;
+  p.cdD = d.cd;
+  if (p.cls === 'mage') {
+    // téléportation : le point libre le plus loin sur la ligne, sans traverser les murs (l'eau, oui)
+    let best = null;
+    for (let k = d.dist; k >= 30; k -= 10) {
+      const x = p.x + Math.cos(a) * k, y = p.y + Math.sin(a) * k;
+      let wall = false;
+      for (let u = 0; u <= k; u += 12) if (WALL.has(tileAt(p.x + Math.cos(a) * u, p.y + Math.sin(a) * u))) { wall = true; break; }
+      if (!wall && !blocked(x, y, R)) { best = { x, y }; break; }
+    }
+    if (!best) { p.cdD = 0.3; return; }
+    fx.push({ k: 'tp', x: p.x, y: p.y, t: 0.4, d: 0.4 });
+    p.x = best.x; p.y = best.y;
+    fx.push({ k: 'tp', x: p.x, y: p.y, t: 0.4, d: 0.4 });
+    return;
+  }
+  const sp = d.dist / d.dur;
+  p.dash = { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: d.dur, inv: p.cls === 'voleur', hit: new Set() };
+  fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.35, d: 0.35 });
+  if (p.cls === 'archer') shoot(p, p.angle, CLASSES.archer.atk);
+}
+function dashStep(p, dt) {
+  const D = p.dash;
+  const mx = D.vx * dt, my = D.vy * dt;
+  const bx = blocked(p.x + mx, p.y, R), by = blocked(p.x, p.y + my, R);
+  if (!bx) p.x += mx;
+  if (!by) p.y += my;
+  if (p.cls === 'guerrier') {
+    // la charge bouscule les adversaires touchés
+    const d = CLASSES.guerrier.dash, len = Math.hypot(D.vx, D.vy);
+    for (const o of players.values()) {
+      if (!canHit(p, o) || D.hit.has(o.id) || Math.hypot(o.x - p.x, o.y - p.y) > R * 2 + 6) continue;
+      D.hit.add(o.id);
+      damage(o, d.dmg, p);
+      for (let k = d.push; k > 0; k -= 10) { const nx = o.x + D.vx / len * k, ny = o.y + D.vy / len * k; if (!blocked(nx, ny, R)) { o.x = nx; o.y = ny; break; } }
+    }
+    if (boss && boss.hp > 0 && !D.hit.has('boss') && Math.hypot(boss.x - p.x, boss.y - p.y) < boss.r + R + 6) { D.hit.add('boss'); hitBoss(d.dmg, p); }
+  }
+  if ((D.t -= dt) <= 0 || (bx && by)) { p.dash = null; if (p.cls !== 'archer') fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.3, d: 0.3 }); }
 }
 
 // ---------- Coffres et objets cachés ----------
@@ -564,6 +614,11 @@ function botThink(p, dt) {
   p.moveAngle = dir ? (dir > 0 ? ang : ang + Math.PI) : null;
   if (seen && bd < want + 30 && Math.random() < 0.5) attack(p);
   if (seen && bd < 200 && Math.random() < 0.01) power(p);
+  // habileté : foncer (corps à corps) ou s'éloigner (à distance)
+  if (seen && Math.random() < 0.02) {
+    if (a.type === 'melee' && bd > 110 && bd < 260) { p.moveAngle = p.angle; dash(p); }
+    else if (a.type === 'proj' && bd < 110) { p.moveAngle = p.angle + Math.PI; dash(p); }
+  }
 }
 
 // ---------- Boucle de jeu ----------
@@ -590,7 +645,7 @@ function step() {
       continue;
     }
     if (p.pending) { giveItem(p, p.pending, 'serie'); p.pending = null; }
-    p.cdA = Math.max(0, p.cdA - dt); p.cdP = Math.max(0, p.cdP - dt);
+    p.cdA = Math.max(0, p.cdA - dt); p.cdP = Math.max(0, p.cdP - dt); p.cdD = Math.max(0, p.cdD - dt);
     p.shield = Math.max(0, p.shield - dt); p.protect = Math.max(0, p.protect - dt);
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
     p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt);
@@ -598,6 +653,7 @@ function step() {
     if (p.busy) { if ((p.busyT -= dt) <= 0) cancelChest(p); continue; }
     const hl = carte.heal;
     if (hl && Math.hypot(p.x - hl.x, p.y - hl.y) < hl.r) p.hp = Math.min(p.maxHp, p.hp + hl.heal * dt);
+    if (p.dash) { dashStep(p, dt); continue; }
     let mx, my;
     if (p.bot) {
       mx = p.moveAngle == null ? 0 : Math.cos(p.moveAngle);
@@ -649,7 +705,7 @@ function publicState() {
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0),
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0),
       p.team,
     ]),
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
@@ -669,7 +725,7 @@ function broadcast() {
     if (c.role === 'prof') c.send(`{"t":"s","w":${common}}`);
     else if (c.player) {
       const p = c.player;
-      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, team: p.team };
+      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, team: p.team };
       c.send(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
     }
   }
@@ -713,6 +769,7 @@ function onMessage(conn, msg) {
       if (p) { p.input = { u: +!!m.u, d: +!!m.d, l: +!!m.l, r: +!!m.r }; if (typeof m.a === 'number') p.angle = m.a; }
       break;
     case 'atk': if (p) attack(p); break;
+    case 'dash': if (p) dash(p); break;
     case 'pow': if (p) power(p); break;
     case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i); break;
     case 'prof':
