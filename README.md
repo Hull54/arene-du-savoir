@@ -39,29 +39,60 @@ Le jeu est hébergé gratuitement sur **Render** à partir de ce dépôt GitHub.
 | 🔮 Mage | 90 | moyenne | Boule de feu à distance | 💥 Explosion autour de lui |
 | 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches |
 
-## L'arène (prévue pour environ 20 joueurs)
+## Les cartes (au choix de l'enseignant)
 
-Une grande carte en pixel art, vue de dessus, traversée par une rivière. L'eau bloque les joueurs mais pas les flèches ni les boules de feu : on traverse par l'un des 5 ponts.
+Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte à tout moment depuis son tableau de bord.
 
-| Région | Particularité |
+| Carte | Particularités |
 |---|---|
-| ❄️ Toundra glacée | Sapins enneigés, bonshommes de neige et un **lac gelé** sur lequel on glisse plus vite |
-| 🌲 Forêt des Murmures | Arbres et buissons : un joueur dans un buisson est invisible tant qu'il n'attaque pas |
-| 🟤 Marais Gluant | Arbres morts, mares, et **boue qui ralentit** |
-| 🌵 Désert Brûlant | Cactus, rochers et une oasis entourée de palmiers |
-| 🏘️ Village de Mirabel | Maisons, étals du marché et **fontaine de soin** sur la place : la zone que tout le monde se dispute |
-| 🏰 Donjon Oublié | Forteresse aux couloirs étroits et piliers éclairés de torches, idéale pour les embuscades du Voleur |
+| 🏘️ Village de Mirabel | Maisons où l'on peut entrer, rivière avec ponts et gué, grand lac avec une île au trésor, fontaine de soin |
+| 🌲 Forêt des Murmures | Beaucoup de buissons pour se cacher, ruisseau avec gués, cabane du bûcheron, source de soin |
+| 🌵 Désert Brûlant | Oasis, temple en ruine, plateaux rocheux, sables mouvants qui ralentissent |
+| 🏰 Donjon Oublié | Salles et couloirs, torches, fosses et lave (on peut tirer par-dessus), coffres dans les coins |
+| ❄️ Toundra Glacée | Immense lac gelé où l'on glisse plus vite, cabanes, feu de camp qui soigne |
+| 🏟️ Grand Colisée | Grande arène ouverte de gladiateurs, cellules dans les coins |
+| 🟤 Marais Gluant | Boue qui ralentit, passerelles, cabane de la sorcière |
 
-Une mini-carte en haut à droite et le nom de la zone actuelle aident les élèves à s'orienter.
+- **L'eau** bloque les joueurs mais pas les flèches ni les boules de feu. On traverse par les ponts ou par les **gués** (eau peu profonde, on y avance plus lentement).
+- **Les buissons** cachent un joueur tant qu'il n'attaque pas.
+- **Le lieu de soin** (fontaine, source, autel ou feu de camp) redonne de la vie.
+
+## Coffres et objets cachés
+
+- **Coffres-questions** : en touchant un coffre, l'élève reçoit une question (il est protégé pendant qu'il répond). Bonne réponse : un objet puissant. Mauvaise réponse : une petite potion quand même. Le coffre se referme et se remplit après 40 secondes.
+- **Objets cachés** : des objets apparaissent dans les buissons, les maisons et les coins secrets. On ne les voit que de près (une petite étincelle de loin).
+- **Séries** : 3 bonnes réponses de suite donnent un objet bonus.
+
+| Objet | Effet |
+|---|---|
+| 🧪 Potion de vie | +50 points de vie |
+| ❤️ Grande potion | Vie au maximum |
+| 👢 Bottes de vitesse | Plus rapide pendant 10 s |
+| 💪 Potion de force | +50 % de dégâts pendant 10 s |
+| 🛡️ Bouclier magique | −75 % de dégâts pendant 4 s |
+| 🌑 Cape d'ombre | Invisible pendant 5 s |
+
+## Modes de jeu
+
+- **Chacun pour soi** : le mode classique.
+- **Équipes** (2, 3 ou 4) : couleurs d'équipe, pas de dégâts entre coéquipiers, score commun.
+- **👑 Boss coopératif** : toute la classe affronte le Roi Gluant. Les coups l'abîment, et **chaque bonne réponse lui enlève 3 % de sa vie** : les élèves moins à l'aise au combat sont aussi utiles. Les joueurs ne peuvent pas se blesser entre eux.
 
 ## Tableau de bord enseignant (`/prof`)
 
-- Vue de toute l'arène pour le projecteur.
-- **Pause** (pour reprendre l'attention du groupe), **Nouvelle manche** (remise à zéro des scores).
+- Vue de toute la carte pour le projecteur.
+- **Carte**, **mode** et **minuterie** de manche (3 à 20 minutes, ou sans limite).
+- **Pause**, **Nouvelle manche**, **Finir la manche**. À la fin, un **podium** s'affiche chez tout le monde (et les meilleurs cerveaux).
+- **⚡ Question éclair** : le jeu s'arrête et toute la classe reçoit la même question (20 secondes). Le projecteur montre ensuite le nombre de bonnes réponses et la répartition des choix. Les bonnes réponses gagnent un bonus de force.
 - Choix des **notions** posées (par matière, avec « tout » et « aucune »).
 - **Robots** pour tester seul ou compléter un petit groupe.
 - **Classement** et bouton ✕ pour retirer un joueur.
-- **Réussite du groupe par notion** et, pour chaque élève, son taux de réussite et la **notion à revoir** (vert ≥ 75 %, jaune ≥ 50 %, rouge en dessous).
+- **Réussite du groupe par notion** et, pour chaque élève, son taux de réussite et la **notion à revoir**.
+- **📥 Exporter les résultats** : un fichier qui s'ouvre dans Excel (une ligne par élève, une colonne par notion).
+
+## Sons
+
+Sons rétro 8 bits fabriqués par le jeu. Chaque élève peut couper le son avec le bouton 🔊 en haut à gauche.
 
 ## Les questions
 
@@ -94,10 +125,11 @@ Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière
 
 ## Fichiers
 
-- `server.js` : le serveur de jeu (règles, combats, questions, robots).
+- `server.js` : le serveur de jeu (règles, combats, questions, coffres, modes, robots).
+- `cartes.js` : les 7 cartes, tracées en tuiles.
 - `public/index.html` : l'écran de l'élève.
 - `public/prof.html` : le tableau de bord de l'enseignant.
-- `public/monde.js` : la carte (régions, rivière, étangs, boue), partagée par le serveur et les écrans.
-- `public/draw.js` : le dessin en pixel art de l'arène et des héros (partagé par les deux écrans).
+- `public/draw.js` : le dessin en pixel art des cartes et des héros (partagé par les deux écrans).
+- `public/sons.js` : les sons 8 bits.
 - `questions.json` : les questions fixes.
 - `generateurs.js` : les questions générées (verbes, tables, numération, fractions, angles, triangles).

@@ -63,6 +63,22 @@
   #touch { position: fixed; right: 16px; bottom: 16px; display: none; gap: 12px; }
   #touch button { width: 76px; height: 76px; font-size: 30px; }
   #loading { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 26px; color: #ffd54a; background: #1b1424; }
+  #mute { position: fixed; top: 52px; left: 12px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
+  #buffs { position: fixed; top: 52px; left: 64px; font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: flex; gap: 10px; }
+  #teams { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+  #teams span { padding: 3px 12px; font-size: 16px; border: 3px solid #1b1424; color: #1b1424; font-weight: 700; }
+  #toast { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+  #toast div { background: #f4ecd8; color: #2a1f3d; border: 4px solid #1b1424; padding: 6px 16px; font-size: 19px; font-weight: 700; box-shadow: 4px 4px 0 #0008; animation: pop .25s; }
+  @keyframes pop { from { transform: scale(.6); } to { transform: scale(1); } }
+  #fin { background: #1b1424dd; display: none; z-index: 5; }
+  #fin .card { width: min(560px, 100%); }
+  #fin h2 { margin: 6px 0 10px; }
+  .podium { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin: 10px 0; }
+  .podium div { width: 120px; text-align: center; font-weight: 700; }
+  .podium canvas { width: 72px; height: 90px; display: block; margin: 0 auto; image-rendering: pixelated; }
+  .podium i { display: block; background: #8b5a2b; color: #ffd54a; border: 3px solid #1b1424; font-style: normal; font-size: 26px; }
+  .finlist { font-size: 17px; line-height: 1.6; }
+  .card .ko.chest { color: #8b5a2b; } .card .ko.eclair { color: #3a6fd8; }
   @media (max-width: 560px) { .choices { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -71,6 +87,10 @@
 
 <div id="score" class="panel" style="display:none"></div>
 <div id="zone" class="panel" style="display:none"></div>
+<button id="mute" class="panel" style="display:none">🔊</button>
+<div id="buffs"></div>
+<div id="teams"></div>
+<div id="toast"></div>
 <div id="hidden">🌿 Tu es caché dans un buisson</div>
 <div id="loading">Chargement de la carte…</div>
 <div id="feed"></div>
@@ -97,7 +117,7 @@
 
 <div id="quiz" class="screen">
   <div class="card">
-    <div class="ko">💫 Tu es K.O. ! Réponds pour revenir au combat.</div>
+    <div class="ko" id="qHead">💫 Tu es K.O. ! Réponds pour revenir au combat.</div>
     <div class="tag" id="qTag"></div>
     <h2 id="qText"></h2>
     <div id="qSvg"></div>
@@ -106,7 +126,9 @@
   </div>
 </div>
 
-<script src="monde.js"></script>
+<div id="fin" class="screen"><div class="card" id="finCard"></div></div>
+
+<script src="sons.js"></script>
 <script src="draw.js"></script>
 <script>
 
@@ -163,7 +185,16 @@ $('go').onclick = () => {
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('go').disabled) $('go').click(); };
 
 // ----- Réseau -----
-let ws, myId, world = null, me = null, map = null, myCls = null;
+let lastHp = null;
+let ws, myId, world = null, me = null, map = null, myCls = null, info = null;
+const MOTS = { cache: 'trouvé', coffre: 'coffre', serie: 'série' };
+function toast(t) {
+  const d = document.createElement('div'); d.textContent = t; $('toast').appendChild(d);
+  setTimeout(() => d.remove(), 3200);
+  while ($('toast').children.length > 3) $('toast').firstChild.remove();
+}
+$('mute').onclick = () => { $('mute').textContent = Son.toggle() ? '🔇' : '🔊'; };
+$('mute').textContent = Son.muted ? '🔇' : '🔊';
 const disp = new Map();   // positions affichées (lissage)
 const fxLocal = [];
 
@@ -173,17 +204,32 @@ function connect(name, cls) {
   ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look }));
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
-    if (m.t === 'welcome') {
-      myId = m.id; map = m;
+    if (m.t === 'welcome' || m.t === 'carte') {
+      if (m.t === 'welcome') { myId = m.id; info = m; }
+      map = m.map; mapLayer = null;
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
-      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud'].forEach(id => $(id).style.display = ''); }, 30);
+      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute'].forEach(id => $(id).style.display = ''); }, 30);
+      if (m.t === 'carte') toast('🗺️ ' + map.nom);
       $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls];
       if ('ontouchstart' in window) $('touch').style.display = 'flex';
     } else if (m.t === 's') {
-      world = unpackWorld(m.w); me = m.me;
+      world = unpackWorld(m.w);
+      const mp = world.p.find(p => p.id === myId);
+      if (me && m.me) {
+        if (me.alive && !m.me.alive) Son.play('ko');
+        else if (mp && lastHp != null && mp.hp < lastHp - 1 && m.me.alive) Son.play('touche');
+      }
+      if (world.fx.some(f => (f.k === 'slam' || f.k === 'boom') && f.t > f.d - 0.08 && mp && Math.hypot(f.x - mp.x, f.y - mp.y) < 700)) Son.play('boom');
+      lastHp = mp ? mp.hp : null;
+      me = m.me;
     } else if (m.t === 'q') showQuestion(m);
     else if (m.t === 'res') showResult(m);
+    else if (m.t === 'close') { answering = false; $('quiz').style.display = 'none'; }
+    else if (m.t === 'item') { if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play('objet'); }
+    else if (m.t === 'serie') { toast(`🔥 Série de ${m.n} bonnes réponses ! Bonus : ${m.ico} ${m.nom}`); Son.play('serie'); }
+    else if (m.t === 'fin') showFin(m);
+    else if (m.t === 'debut') { $('fin').style.display = 'none'; }
     else if (m.t === 'kicked') { alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
   };
   ws.onclose = () => { if (map) { alert('Connexion perdue avec le serveur.'); location.reload(); } };
@@ -192,9 +238,20 @@ const sendMsg = o => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
 
 // ----- Questions -----
 let answering = false;
+let qKind = 'respawn', qTimer = null;
 function showQuestion(m) {
   answering = true;
+  qKind = m.kind || 'respawn';
   $('quiz').style.display = 'flex';
+  const head = $('qHead');
+  head.className = 'ko ' + qKind;
+  clearInterval(qTimer);
+  if (qKind === 'chest') { head.textContent = '🎁 Un coffre au trésor ! Bonne réponse = meilleur objet.'; Son.play('coffre'); }
+  else if (qKind === 'eclair') {
+    let t = m.temps || 20; Son.play('eclair');
+    const upd = () => { head.textContent = `⚡ Question éclair pour toute la classe ! ${t} s`; t = Math.max(0, t - 1); };
+    upd(); qTimer = setInterval(upd, 1000);
+  } else head.textContent = '💫 Tu es K.O. ! Réponds pour revenir au combat.';
   $('qTag').textContent = m.notion ? `${m.matiere} · ${m.notion}` : m.matiere;
   $('qSvg').innerHTML = m.svg || '';
   $('qText').textContent = m.question;
@@ -217,15 +274,70 @@ function choose(i) {
 function showResult(m) {
   const btns = [...$('qChoices').children];
   const chosenBtn = btns.find(b => b.classList.contains('chosen'));
+  clearInterval(qTimer);
+  if (m.kind === 'chest' || m.kind === 'eclair') {
+    answering = false;
+    if (m.ok) chosenBtn && chosenBtn.classList.add('good');
+    else { chosenBtn && chosenBtn.classList.add('bad'); btns[m.bonne] && btns[m.bonne].classList.add('good'); }
+    Son.play(m.ok ? 'bon' : 'faux');
+    $('qMsg').textContent = m.kind === 'chest'
+      ? (m.ok ? `✅ Bravo ! Tu obtiens : ${m.ico} ${m.nom}` : `❌ Pas tout à fait… Tu obtiens quand même : ${m.ico} ${m.nom}`) + (m.explication ? ' ' + m.explication : '')
+      : m.ok ? '✅ Bravo ! Bonus de force à ton retour au combat.' : (m.repondu ? '❌ Pas tout à fait. Regarde la bonne réponse.' : '⏱ Temps écoulé !') + (m.explication ? ' ' + m.explication : '');
+    setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.ok ? 1500 : 3000);
+    return;
+  }
   if (m.ok) {
     chosenBtn && chosenBtn.classList.add('good');
+    Son.play('retour');
     $('qMsg').textContent = '✅ Bravo ! Retour au combat !';
-    setTimeout(() => $('quiz').style.display = 'none', 700);
+    setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, 700);
   } else {
+    Son.play('faux');
     chosenBtn && chosenBtn.classList.add('bad');
     btns[m.bonne] && btns[m.bonne].classList.add('good');
     $('qMsg').textContent = '❌ Pas tout à fait. Regarde la bonne réponse… nouvelle question dans 3 secondes.' + (m.explication ? ' ' + m.explication : '');
   }
+}
+
+// ----- Fin de manche -----
+function heroCanvas(pl) {
+  const c = document.createElement('canvas'); c.width = 72; c.height = 90;
+  const g = c.getContext('2d'); drawHeroSprite(g, 36, 62, pl.c, pl.l, Math.PI / 2, 0, 3); return c;
+}
+function showFin(m) {
+  Son.play('fin');
+  answering = false; $('quiz').style.display = 'none';
+  const card = $('finCard'); card.innerHTML = '';
+  const h = document.createElement('h2');
+  h.textContent = m.why === 'boss-gagne' ? '🎉 Victoire ! Le Roi Gluant est vaincu !' : m.why === 'boss-perdu' ? '👑 Le Roi Gluant a gagné cette fois…' : '🏁 Fin de la manche !';
+  card.appendChild(h);
+  if (m.teams) {
+    const t = document.createElement('div'); t.className = 'finlist';
+    t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${m.teams[0].nom} gagnent !</b>`;
+    m.teams.forEach(e => { const d = document.createElement('div'); d.textContent = `${e.nom} : ${e.score} victoire${e.score > 1 ? 's' : ''}, ${e.good} bonne${e.good > 1 ? 's' : ''} réponse${e.good > 1 ? 's' : ''}`; t.appendChild(d); });
+    card.appendChild(t);
+  }
+  const sub = document.createElement('div'); sub.className = 'tag';
+  sub.textContent = m.mode === 'boss' ? 'Plus gros dégâts au boss' : 'Le plus de victoires';
+  card.appendChild(sub);
+  const pod = document.createElement('div'); pod.className = 'podium';
+  [1, 0, 2].forEach(i => {
+    const pl = m.top[i]; if (!pl) return;
+    const d = document.createElement('div');
+    d.appendChild(heroCanvas(pl));
+    d.append(pl.n);
+    const step = document.createElement('i'); step.textContent = ['🥇', '🥈', '🥉'][i] + ' ' + pl.v; step.style.height = [64, 46, 34][i] + 'px';
+    d.appendChild(step); pod.appendChild(d);
+  });
+  card.appendChild(pod);
+  if (m.cerveaux.length) {
+    const c = document.createElement('div'); c.className = 'finlist';
+    c.textContent = '🧠 Meilleurs cerveaux : ' + m.cerveaux.map(p => `${p.n} (${p.v})`).join(', ');
+    card.appendChild(c);
+  }
+  const w = document.createElement('div'); w.className = 'msg'; w.textContent = 'En attente de la prochaine manche…';
+  card.appendChild(w);
+  $('fin').style.display = 'flex';
 }
 
 // ----- Contrôles -----
@@ -236,13 +348,15 @@ addEventListener('keydown', e => {
   if (!map) return;
   if (answering && /^Digit[1-4]$/.test(e.code)) return choose(+e.code.slice(5) - 1);
   if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 1; e.preventDefault(); }
-  if (e.code === 'Space') { sendMsg({ t: 'atk' }); e.preventDefault(); }
+  Son.unlock();
+  if (e.code === 'Space') { attackSound(); sendMsg({ t: 'atk' }); e.preventDefault(); }
   if (e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
 const cv = $('c'), ctx = cv.getContext('2d');
 cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; mouseAim = true; lastMouse = performance.now(); });
-cv.addEventListener('mousedown', e => { if (e.button === 2) sendMsg({ t: 'pow' }); else sendMsg({ t: 'atk' }); });
+cv.addEventListener('mousedown', e => { Son.unlock(); if (e.button === 2) sendMsg({ t: 'pow' }); else { attackSound(); sendMsg({ t: 'atk' }); } });
+function attackSound() { if (me && me.alive && me.cdA <= 0.05) Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' ? 'tir' : 'atk'); }
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
 // Tactile : glisser n'importe où à gauche pour bouger
@@ -256,14 +370,14 @@ cv.addEventListener('touchmove', e => {
   e.preventDefault();
 }, { passive: false });
 cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; } });
-$('tAtk').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'atk' }); };
+$('tAtk').ontouchstart = e => { e.preventDefault(); Son.unlock(); attackSound(); sendMsg({ t: 'atk' }); };
 $('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
 
 setInterval(() => {
   if (!map) return;
   const mx = keys.r - keys.l, my = keys.d - keys.u;
   if (mouseAim && performance.now() - lastMouse < 3000) {
-    aim = Math.atan2(mouse.y - innerHeight / 2, mouse.x - innerWidth / 2);
+    aim = Math.atan2(mouse.y - meScreen.y, mouse.x - meScreen.x);
   } else if (mx || my) aim = Math.atan2(my, mx);
   sendMsg({ t: 'in', ...keys, a: +aim.toFixed(2) });
 }, 50);
@@ -272,7 +386,7 @@ setInterval(() => {
 function resize() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
 addEventListener('resize', resize); resize();
 
-let lastFrame = performance.now(), camX = 0, camY = 0;
+let lastFrame = performance.now(), camX = 0, camY = 0, meScreen = { x: innerWidth / 2, y: innerHeight / 2 };
 function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   requestAnimationFrame(frame);
@@ -291,14 +405,20 @@ function frame(now) {
   if (!mapLayer) return;
   // zoom : chaque pixel d'art fait 2 ou 3 pixels d'écran (net, sans flou)
   const zoom = Math.min(vw, vh) < 620 ? 2 / 3 : 1;
+  // la caméra reste dans la carte (pas de vide sur les bords)
+  const hw = vw / 2 / zoom, hh = vh / 2 / zoom;
+  camX = map.W > hw * 2 ? Math.max(hw, Math.min(map.W - hw, camX)) : map.W / 2;
+  camY = map.H > hh * 2 ? Math.max(hh, Math.min(map.H - hh, camY)) : map.H / 2;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#173d1d'; ctx.fillRect(0, 0, vw, vh);
   ctx.translate(Math.round(vw / 2 - camX * zoom), Math.round(vh / 2 - camY * zoom)); ctx.scale(zoom, zoom);
-  drawWorld(ctx, world, map, mine, disp);
+  const teams = world.mode === 'equipes' ? info.teams : null;
+  drawWorld(ctx, world, map, mine, disp, PX, teams);
+  if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const reg = mine ? Monde.regionAt(mine.x, mine.y) : null;
-  // ambiance : flocons dans la toundra, pénombre dans le donjon
-  if (reg === 'neige') {
+  const reg = map.theme;
+  // ambiance : flocons en hiver, pénombre dans le donjon, chaleur au désert
+  if (reg === 'hiver') {
     ctx.fillStyle = '#ffffffcc';
     for (let i = 0; i < 70; i++) {
       const x = (i * 137 + now * 0.02 * (20 + (i % 5) * 6) + Math.sin(now / 900 + i) * 20) % vw, y = (i * 89 + now * 0.05 * (1 + (i % 3))) % vh;
@@ -312,17 +432,21 @@ function frame(now) {
     ctx.fillStyle = '#ffb34714'; ctx.fillRect(0, 0, vw, vh);
   }
   const mmW = Math.min(210, vw * 0.3);
-  drawMinimap(ctx, world, map, mine, vw - mmW - 14, 14, mmW);
-  if (reg) $('zone').textContent = Monde.REGIONS[reg];
+  drawMinimap(ctx, world, map, mine, vw - mmW - 14, 14, mmW, teams);
+  const tm = world.tm >= 0 ? `   ⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}` : '';
+  $('zone').textContent = map.nom + tm;
+  $('teams').innerHTML = '';
+  if (teams && world.te) world.te.forEach((sc, i) => { const s = document.createElement('span'); s.style.background = teams[i].color; s.textContent = `${teams[i].nom} ${sc}`; if (me && me.team === i) s.style.outline = '3px solid #fff'; $('teams').appendChild(s); });
   $('hidden').style.display = mine && mine.hd ? 'block' : 'none';
 
   // HUD
-  const c = map.classes[myCls];
+  const c = info.classes[myCls];
   if (me) {
     $('fillA').style.height = (me.cdA / c.atk.cd * 100) + '%';
     $('fillP').style.height = (me.cdP / c.power.cd * 100) + '%';
     $('lblP').textContent = me.cdP > 0 ? Math.ceil(me.cdP) + ' s' : 'E';
-    $('score').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}`;
+    $('score').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}` + (me.sk >= 2 ? `   🔥 ${me.sk}` : '');
+    $('buffs').textContent = [me.st ? `💪 ${me.st}` : '', me.fa ? `👢 ${me.fa}` : ''].filter(Boolean).join('  ');
   }
   $('feed').innerHTML = world.feed.map(t => `<div>${t.replace(/</g, '&lt;')}</div>`).join('');
   $('pause').style.display = world.paused ? 'block' : 'none';
