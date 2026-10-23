@@ -1,0 +1,8 @@
+{
+  "name": "arene-du-savoir",
+  "version": "1.0.0",
+  "description": "Jeu de combat en arène éducatif pour la classe",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

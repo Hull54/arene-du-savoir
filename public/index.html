@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Arène du Savoir</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2430; color: #fff; font-family: system-ui, "Segoe UI", sans-serif; }
+  canvas { display: block; touch-action: none; }
+  .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px; padding: 16px; }
+  #join { background: radial-gradient(circle at 50% 30%, #3b4d6b, #141b26); }
+  h1 { margin: 0; font-size: clamp(28px, 6vw, 52px); letter-spacing: 1px; text-shadow: 0 4px 0 #000a; }
+  .sub { opacity: .8; margin-top: -8px; }
+  input#name { font-size: 22px; padding: 10px 16px; border-radius: 12px; border: 3px solid #ffd54a; width: min(320px, 90vw); text-align: center; }
+  .classes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; width: min(760px, 100%); }
+  .cls { background: #ffffff14; border: 3px solid transparent; border-radius: 16px; padding: 12px; cursor: pointer; text-align: center; transition: transform .1s; }
+  .cls:hover { transform: translateY(-3px); }
+  .cls.sel { border-color: #ffd54a; background: #ffd54a22; }
+  .cls .ico { font-size: 44px; }
+  .cls b { display: block; font-size: 18px; margin: 4px 0; }
+  .cls small { opacity: .85; line-height: 1.35; display: block; }
+  button.big { font-size: 22px; padding: 12px 34px; border-radius: 14px; border: 0; background: #ffd54a; color: #222; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #b8901f; }
+  button.big:disabled { opacity: .5; cursor: default; }
+  .keys { font-size: 14px; opacity: .75; text-align: center; }
+  #hud { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 10px; pointer-events: none; }
+  .cd { width: 74px; height: 74px; border-radius: 14px; background: #000a; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; font-size: 12px; }
+  .cd .ico { font-size: 28px; }
+  .cd .fill { position: absolute; left: 0; right: 0; bottom: 0; background: #0009; }
+  #score { position: fixed; top: 10px; left: 12px; background: #000a; padding: 8px 12px; border-radius: 10px; font-size: 15px; }
+  #feed { position: fixed; top: 160px; right: 12px; text-align: right; font-size: 14px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+  #feed div { background: #000a; padding: 4px 10px; border-radius: 8px; }
+  #pause { position: fixed; top: 40%; width: 100%; text-align: center; font-size: 40px; font-weight: 800; text-shadow: 0 3px 0 #000; display: none; }
+  #quiz { background: #0d1320e6; display: none; }
+  .card { background: #fff; color: #222; border-radius: 20px; padding: 22px; width: min(620px, 100%); text-align: center; box-shadow: 0 10px 40px #000; }
+  .card .tag { display: inline-block; background: #6c4cf5; color: #fff; padding: 4px 12px; border-radius: 999px; font-size: 14px; }
+  .card h2 { font-size: clamp(20px, 3.5vw, 28px); margin: 14px 0 18px; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .choices button { font-size: 18px; padding: 14px 10px; border-radius: 12px; border: 3px solid #ddd; background: #f6f6fb; cursor: pointer; }
+  .choices button:hover { border-color: #6c4cf5; }
+  .choices button.good { background: #c8f7c5; border-color: #2e9e3a; }
+  .choices button.bad { background: #ffd0d0; border-color: #d33; }
+  .msg { min-height: 26px; margin-top: 12px; font-weight: 600; }
+  #touch { position: fixed; right: 16px; bottom: 16px; display: none; gap: 12px; }
+  #touch button { width: 76px; height: 76px; border-radius: 50%; border: 0; font-size: 30px; background: #ffffff33; color: #fff; }
+  @media (max-width: 560px) { .choices { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="score"></div>
+<div id="feed"></div>
+<div id="pause">⏸ Pause</div>
+<div id="hud">
+  <div class="cd"><div class="ico" id="icoA">⚔️</div><span>Espace</span><div class="fill" id="fillA"></div></div>
+  <div class="cd"><div class="ico" id="icoP">✨</div><span id="lblP">E</span><div class="fill" id="fillP"></div></div>
+</div>
+<div id="touch"><button id="tAtk">⚔️</button><button id="tPow">✨</button></div>
+
+<div id="join" class="screen">
+  <h1>⚔️ Arène du Savoir</h1>
+  <div class="sub">Choisis ton héros. Si tu tombes, réponds à une question pour revenir !</div>
+  <input id="name" maxlength="16" placeholder="Ton prénom" autocomplete="off">
+  <div class="classes" id="classes"></div>
+  <button class="big" id="go" disabled>Entrer dans l'arène</button>
+  <div class="keys">Bouger : WASD ou flèches · Viser : souris · Attaque : Espace ou clic · Pouvoir : E ou clic droit</div>
+</div>
+
+<div id="quiz" class="screen">
+  <div class="card">
+    <div style="font-size:15px;color:#a33;font-weight:700">💀 Tu es tombé ! Réponds pour revenir au combat.</div>
+    <div class="tag" id="qTag"></div>
+    <h2 id="qText"></h2>
+    <div class="choices" id="qChoices"></div>
+    <div class="msg" id="qMsg"></div>
+  </div>
+</div>
+
+<script src="draw.js"></script>
+<script>
+
+const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️' };
+const ATK_ICO = { guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹' };
+
+// ----- Écran de sélection -----
+let chosen = null;
+const $ = id => document.getElementById(id);
+for (const [k, c] of Object.entries(CLS)) {
+  const d = document.createElement('div');
+  d.className = 'cls';
+  d.innerHTML = `<div class="ico">${c.ico}</div><b>${k[0].toUpperCase() + k.slice(1)}</b><small>${c.desc}<br>${c.pow}</small>`;
+  d.onclick = () => { chosen = k; document.querySelectorAll('.cls').forEach(e => e.classList.remove('sel')); d.classList.add('sel'); check(); };
+  $('classes').appendChild(d);
+}
+const check = () => $('go').disabled = !(chosen && $('name').value.trim());
+$('name').oninput = check;
+$('name').value = localStorage.getItem('arene-nom') || '';
+$('go').onclick = () => {
+  const name = $('name').value.trim();
+  try { localStorage.setItem('arene-nom', name); } catch {}
+  connect(name, chosen);
+};
+$('name').onkeydown = e => { if (e.key === 'Enter' && !$('go').disabled) $('go').click(); };
+
+// ----- Réseau -----
+let ws, myId, world = null, me = null, map = null, myCls = null;
+const disp = new Map();   // positions affichées (lissage)
+const fxLocal = [];
+
+function connect(name, cls) {
+  myCls = cls;
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls }));
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'welcome') {
+      myId = m.id; map = m;
+      $('join').style.display = 'none';
+      $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls];
+      if ('ontouchstart' in window) $('touch').style.display = 'flex';
+    } else if (m.t === 's') {
+      world = m.w; me = m.me;
+    } else if (m.t === 'q') showQuestion(m);
+    else if (m.t === 'res') showResult(m);
+    else if (m.t === 'kicked') { alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
+  };
+  ws.onclose = () => { if (map) { alert('Connexion perdue avec le serveur.'); location.reload(); } };
+}
+const sendMsg = o => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
+
+// ----- Questions -----
+let answering = false;
+function showQuestion(m) {
+  answering = true;
+  $('quiz').style.display = 'flex';
+  $('qTag').textContent = m.matiere;
+  $('qText').textContent = m.question;
+  $('qMsg').textContent = '';
+  const box = $('qChoices'); box.innerHTML = '';
+  m.choix.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `<b>${i + 1}.</b> ${c}`;
+    b.onclick = () => choose(i);
+    box.appendChild(b);
+  });
+}
+function choose(i) {
+  if (!answering) return;
+  answering = false;
+  $('qChoices').children[i].classList.add('chosen');
+  sendMsg({ t: 'ans', i });
+}
+function showResult(m) {
+  const btns = [...$('qChoices').children];
+  const chosenBtn = btns.find(b => b.classList.contains('chosen'));
+  if (m.ok) {
+    chosenBtn && chosenBtn.classList.add('good');
+    $('qMsg').textContent = '✅ Bravo ! Retour au combat !';
+    setTimeout(() => $('quiz').style.display = 'none', 700);
+  } else {
+    chosenBtn && chosenBtn.classList.add('bad');
+    btns[m.bonne] && btns[m.bonne].classList.add('good');
+    $('qMsg').textContent = '❌ Pas tout à fait. Regarde la bonne réponse… nouvelle question dans 3 secondes.' + (m.explication ? ' ' + m.explication : '');
+  }
+}
+
+// ----- Contrôles -----
+const keys = { u: 0, d: 0, l: 0, r: 0 };
+const KEYMAP = { KeyW: 'u', ArrowUp: 'u', KeyS: 'd', ArrowDown: 'd', KeyA: 'l', ArrowLeft: 'l', KeyD: 'r', ArrowRight: 'r', KeyZ: 'u', KeyQ: 'l' };
+let aim = 0, mouseAim = false, lastMouse = 0, mouse = { x: 0, y: 0 };
+addEventListener('keydown', e => {
+  if (!map) return;
+  if (answering && /^Digit[1-4]$/.test(e.code)) return choose(+e.code.slice(5) - 1);
+  if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 1; e.preventDefault(); }
+  if (e.code === 'Space') { sendMsg({ t: 'atk' }); e.preventDefault(); }
+  if (e.code === 'KeyE' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
+});
+addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
+const cv = $('c'), ctx = cv.getContext('2d');
+cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; mouseAim = true; lastMouse = performance.now(); });
+cv.addEventListener('mousedown', e => { if (e.button === 2) sendMsg({ t: 'pow' }); else sendMsg({ t: 'atk' }); });
+cv.addEventListener('contextmenu', e => e.preventDefault());
+
+// Tactile : glisser n'importe où à gauche pour bouger
+let touchId = null, touchStart = null;
+cv.addEventListener('touchstart', e => { for (const t of e.changedTouches) if (touchId === null) { touchId = t.identifier; touchStart = { x: t.clientX, y: t.clientY }; } });
+cv.addEventListener('touchmove', e => {
+  for (const t of e.changedTouches) if (t.identifier === touchId) {
+    const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
+    keys.l = dx < -15 ? 1 : 0; keys.r = dx > 15 ? 1 : 0; keys.u = dy < -15 ? 1 : 0; keys.d = dy > 15 ? 1 : 0;
+  }
+  e.preventDefault();
+}, { passive: false });
+cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; } });
+$('tAtk').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'atk' }); };
+$('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
+
+setInterval(() => {
+  if (!map) return;
+  const mx = keys.r - keys.l, my = keys.d - keys.u;
+  if (mouseAim && performance.now() - lastMouse < 3000) {
+    aim = Math.atan2(mouse.y - innerHeight / 2, mouse.x - innerWidth / 2);
+  } else if (mx || my) aim = Math.atan2(my, mx);
+  sendMsg({ t: 'in', ...keys, a: +aim.toFixed(2) });
+}, 50);
+
+// ----- Rendu -----
+function resize() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
+addEventListener('resize', resize); resize();
+
+let lastFrame = performance.now(), camX = 0, camY = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+  requestAnimationFrame(frame);
+  if (!world || !map) return;
+  const k = Math.min(1, dt * 18);
+  for (const p of world.p) {
+    const d = disp.get(p.id);
+    if (!d || Math.hypot(d.x - p.x, d.y - p.y) > 150) disp.set(p.id, { x: p.x, y: p.y });
+    else { d.x += (p.x - d.x) * k; d.y += (p.y - d.y) * k; }
+  }
+  const mine = world.p.find(p => p.id === myId);
+  const md = mine && disp.get(mine.id);
+  if (md) { camX = md.x; camY = md.y; }
+
+  const dpr = devicePixelRatio, vw = innerWidth, vh = innerHeight;
+  const zoom = Math.min(1.1, Math.max(0.6, Math.min(vw, vh) / 700));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#1b2430'; ctx.fillRect(0, 0, vw, vh);
+  ctx.translate(vw / 2, vh / 2); ctx.scale(zoom, zoom); ctx.translate(-camX, -camY);
+  drawWorld(ctx, world, map, mine, disp);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const mmW = Math.min(200, vw * 0.3);
+  drawMinimap(ctx, world, map, mine, vw - mmW - 12, 12, mmW);
+  const zone = mine && map.zones.find(z => z.round ? Math.hypot(mine.x - z.x - z.w / 2, mine.y - z.y - z.h / 2) < z.w / 2 : mine.x >= z.x && mine.x <= z.x + z.w && mine.y >= z.y && mine.y <= z.y + z.h);
+  ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = '#000a';
+  const label = zone ? zone.nom : 'Plaines';
+  ctx.strokeText(label, vw / 2, 30); ctx.fillStyle = '#fff'; ctx.fillText(label, vw / 2, 30);
+  if (mine && mine.hd) { ctx.font = '15px system-ui'; ctx.strokeText('🌿 Tu es caché dans un buisson', vw / 2, 54); ctx.fillText('🌿 Tu es caché dans un buisson', vw / 2, 54); }
+
+  // HUD
+  const c = map.classes[myCls];
+  if (me) {
+    $('fillA').style.height = (me.cdA / c.atk.cd * 100) + '%';
+    $('fillP').style.height = (me.cdP / c.power.cd * 100) + '%';
+    $('lblP').textContent = me.cdP > 0 ? Math.ceil(me.cdP) + ' s' : 'E';
+    $('score').textContent = `🏆 ${me.kills} victoires · 💀 ${me.deaths} chutes · 🧠 ${me.good} bonnes réponses`;
+  }
+  $('feed').innerHTML = world.feed.map(t => `<div>${t.replace(/</g, '&lt;')}</div>`).join('');
+  $('pause').style.display = world.paused ? 'block' : 'none';
+}
+requestAnimationFrame(frame);
+
+</script>
+</body>
+</html>

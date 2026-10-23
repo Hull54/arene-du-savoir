@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arène du Savoir – Enseignant</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #141b26; color: #fff; font-family: system-ui, "Segoe UI", sans-serif; }
+  .wrap { display: grid; grid-template-columns: 1fr 360px; height: 100%; }
+  canvas { width: 100%; height: 100%; display: block; }
+  aside { background: #1e2737; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+  h2 { margin: 0 0 6px; font-size: 16px; color: #ffd54a; }
+  .box { background: #ffffff0d; border-radius: 12px; padding: 10px 12px; }
+  .url { font-size: 22px; font-weight: 800; word-break: break-all; }
+  button { font-size: 14px; padding: 7px 12px; border-radius: 9px; border: 0; background: #ffd54a; color: #222; font-weight: 700; cursor: pointer; margin: 2px; }
+  button.sec { background: #ffffff22; color: #fff; }
+  label { display: block; padding: 3px 0; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { padding: 4px 3px; text-align: left; }
+  th { color: #aab; font-weight: 600; font-size: 12px; }
+  tr + tr td { border-top: 1px solid #ffffff14; }
+  .x { background: none; color: #f77; padding: 0 4px; margin: 0; }
+  .pct { font-variant-numeric: tabular-nums; }
+  @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; grid-template-rows: 55vh auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="c"></canvas>
+  <aside>
+    <div class="box">
+      <h2>Adresse pour les élèves</h2>
+      <div class="url" id="urls">…</div>
+    </div>
+    <div class="box">
+      <h2>Contrôles</h2>
+      <button id="pause">⏸ Pause</button>
+      <button class="sec" id="reset">🔄 Nouvelle manche</button><br>
+      <button class="sec" id="addbot">🤖 Ajouter un robot</button>
+      <button class="sec" id="rmbots">Retirer les robots</button>
+    </div>
+    <div class="box">
+      <h2>Matières des questions</h2>
+      <div id="subjects"></div>
+    </div>
+    <div class="box">
+      <h2>Classement</h2>
+      <table><thead><tr><th>Élève</th><th>🏆</th><th>💀</th><th>✅</th><th>❌</th><th></th></tr></thead><tbody id="board"></tbody></table>
+    </div>
+    <div class="box">
+      <h2>Réussite par matière</h2>
+      <table id="stats"></table>
+    </div>
+  </aside>
+</div>
+<script src="draw.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('c'), ctx = cv.getContext('2d');
+let map = null, world = null;
+const disp = new Map();
+const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
+const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
+ws.onopen = () => send({ t: 'prof' });
+ws.onclose = () => { $('urls').textContent = 'Serveur arrêté – relance « node server.js »'; };
+ws.onmessage = e => {
+  const m = JSON.parse(e.data);
+  if (m.t === 'welcome') map = m;
+  else if (m.t === 's') world = m.w;
+  else if (m.t === 'info') info(m);
+};
+$('pause').onclick = () => send({ t: 'pause' });
+$('reset').onclick = () => confirm('Remettre tous les scores à zéro ?') && send({ t: 'reset' });
+$('addbot').onclick = () => send({ t: 'addbot' });
+$('rmbots').onclick = () => send({ t: 'rmbots' });
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+let subjKey = '';
+function info(m) {
+  const local = /^(localhost|127\.)/.test(location.hostname);
+  $('urls').innerHTML = local && m.urls.length ? m.urls.map(esc).join('<br>') : esc(location.origin);
+  $('pause').textContent = m.paused ? '▶ Reprendre' : '⏸ Pause';
+  const key = JSON.stringify(m.subjects);
+  if (key !== subjKey) {
+    subjKey = key;
+    $('subjects').innerHTML = '';
+    for (const { s, on } of m.subjects) {
+      const l = document.createElement('label');
+      l.innerHTML = `<input type="checkbox" ${on ? 'checked' : ''}> ${esc(s)}`;
+      l.querySelector('input').onchange = ev => send({ t: 'subject', s, on: ev.target.checked });
+      $('subjects').appendChild(l);
+    }
+  }
+  const ps = [...m.players].sort((a, b) => b.k - a.k || b.g - a.g);
+  $('board').innerHTML = ps.map(p => `<tr><td>${CLS[p.c].ico} ${esc(p.n)}${p.bot ? ' 🤖' : ''}</td><td>${p.k}</td><td>${p.d}</td><td>${p.g}</td><td>${p.b}</td>
+    <td><button class="x" title="Retirer" data-id="${p.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="6">En attente des élèves…</td></tr>';
+  $('board').querySelectorAll('.x').forEach(b => b.onclick = () => send({ t: 'kick', id: +b.dataset.id }));
+  const subs = m.subjects.map(x => x.s);
+  const names = Object.keys(m.stats).filter(n => Object.keys(m.stats[n]).length);
+  $('stats').innerHTML = names.length
+    ? `<tr><th>Élève</th>${subs.map(s => `<th>${esc(s.slice(0, 5))}.</th>`).join('')}</tr>` + names.map(n => `<tr><td>${esc(n)}</td>${subs.map(s => {
+        const v = m.stats[n][s];
+        if (!v) return '<td>–</td>';
+        const pct = Math.round(v.ok / (v.ok + v.ko) * 100);
+        const col = pct >= 75 ? '#4cd964' : pct >= 50 ? '#ffcc00' : '#ff6b6b';
+        return `<td class="pct" style="color:${col}" title="${v.ok} bonnes / ${v.ok + v.ko}">${pct}%</td>`;
+      }).join('')}</tr>`).join('')
+    : '<tr><td>Les résultats apparaîtront dès les premières questions.</td></tr>';
+}
+
+function frame() {
+  requestAnimationFrame(frame);
+  const r = cv.getBoundingClientRect(), dpr = devicePixelRatio;
+  if (cv.width !== r.width * dpr) { cv.width = r.width * dpr; cv.height = r.height * dpr; }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#141b26'; ctx.fillRect(0, 0, r.width, r.height);
+  if (!map || !world) return;
+  for (const p of world.p) {
+    const d = disp.get(p.id);
+    if (!d || Math.hypot(d.x - p.x, d.y - p.y) > 150) disp.set(p.id, { x: p.x, y: p.y });
+    else { d.x += (p.x - d.x) * 0.35; d.y += (p.y - d.y) * 0.35; }
+  }
+  const s = Math.min(r.width / (map.W + 40), r.height / (map.H + 40));
+  ctx.translate((r.width - map.W * s) / 2, (r.height - map.H * s) / 2);
+  ctx.scale(s, s);
+  drawWorld(ctx, world, map, null, disp);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.font = 'bold 16px system-ui'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+  world.feed.forEach((t, i) => ctx.fillText(t, 14, 26 + i * 22));
+  if (world.paused) { ctx.font = 'bold 48px system-ui'; ctx.textAlign = 'center'; ctx.fillText('⏸ Pause', r.width / 2, r.height / 2); }
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

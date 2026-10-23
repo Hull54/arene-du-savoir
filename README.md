@@ -1,1 +1,82 @@
-# arene-du-savoir
+# ⚔️ Arène du Savoir — prototype
+
+Jeu de combat en arène pour toute la classe. Quand un élève tombe, il doit répondre à une question (français, maths, univers social, sciences) pour revenir au combat.
+
+## Jouer en ligne (aucune installation)
+
+Le jeu est hébergé gratuitement sur **Render** à partir de ce dépôt GitHub.
+
+1. Ouvrir la page enseignant : `https://<votre-adresse>.onrender.com/prof` sur l'ordinateur relié au projecteur.
+2. L'adresse à donner aux élèves s'affiche en haut à droite. Ils l'ouvrent dans le navigateur de leur Chromebook, tablette ou ordinateur, écrivent leur prénom et choisissent leur héros.
+
+> Le service gratuit se met en veille après 15 minutes sans joueurs. La première visite peut alors prendre environ une minute : ouvrez la page enseignant quelques minutes avant la période.
+
+### Mise en ligne initiale (une seule fois)
+
+1. Sur render.com : **New +** → **Blueprint** → choisir le dépôt `arene-du-savoir` → **Apply**. Render lit le fichier `render.yaml` et crée le service tout seul.
+2. Chaque modification poussée sur GitHub est remise en ligne automatiquement.
+
+### Option : sur un ordinateur où l'on peut installer Node.js
+
+`node server.js`, puis ouvrir `http://localhost:3000/prof`. Les élèves doivent alors être sur le même réseau.
+
+## Commandes des élèves
+
+| Action | Clavier / souris | Tablette |
+|---|---|---|
+| Bouger | WASD ou flèches | Glisser le doigt sur l'écran |
+| Viser | Souris (sinon : direction du déplacement) | Direction du déplacement |
+| Attaque | Espace ou clic gauche | Bouton ⚔️ |
+| Pouvoir spécial | E, Maj ou clic droit | Bouton ✨ |
+| Répondre à une question | Clic ou touches 1 à 4 | Toucher la réponse |
+
+## Les héros
+
+| Classe | Vie | Vitesse | Attaque | Pouvoir |
+|---|---|---|---|---|
+| ⚔️ Guerrier | 170 | lente | Épée, corps à corps, large arc | 🛡️ Bouclier : −75 % de dégâts pendant 3 s |
+| 🗡️ Voleur | 105 | très rapide | Dague, corps à corps. **Dégâts ×2 dans le dos** | 👤 Ombre : invisible 4 s, plus rapide, prochaine attaque +50 % |
+| 🔮 Mage | 90 | moyenne | Boule de feu à distance | 💥 Explosion autour de lui |
+| 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches |
+
+## L'arène (prévue pour environ 20 joueurs)
+
+| Zone | Particularité |
+|---|---|
+| 🌲 Forêt des Murmures | Arbres et buissons : un joueur dans un buisson est invisible tant qu'il n'attaque pas |
+| 🟤 Marais Gluant | La boue ralentit de 45 % |
+| 🏛️ Ruines Anciennes | Labyrinthe de murs, idéal pour les embuscades du Voleur |
+| 🌊 Lac aux Ponts | L'eau bloque les joueurs mais pas les flèches ni les boules de feu ; deux ponts en croix |
+| 🏟️ Colisée (centre) | Piliers et **fontaine de soin** au milieu : la zone que tout le monde se dispute |
+
+Une mini-carte en haut à droite et le nom de la zone actuelle aident les élèves à s'orienter.
+
+## Tableau de bord enseignant (`/prof`)
+
+- Vue de toute l'arène pour le projecteur.
+- **Pause** (pour reprendre l'attention du groupe), **Nouvelle manche** (remise à zéro des scores).
+- Choix des **matières** posées.
+- **Robots** pour tester seul ou compléter un petit groupe.
+- **Classement** et bouton ✕ pour retirer un joueur.
+- **Réussite par matière** pour chaque élève (en vert ≥ 75 %, jaune ≥ 50 %, rouge en dessous) : un portrait rapide des notions à revoir.
+
+## Ajouter ou modifier des questions
+
+Tout est dans `questions.json`. Chaque question suit ce modèle :
+
+```json
+{"matiere":"Mathématiques","question":"Combien font 7 × 8 ?","choix":["56","54","48","64"],"reponse":0}
+```
+
+- `reponse` est la position de la bonne réponse dans `choix`, en commençant à **0**. Les choix sont mélangés automatiquement à l'écran.
+- Une nouvelle `matiere` (ex. « Anglais ») apparaît toute seule dans le tableau de bord.
+- Optionnel : `"explication":"..."` s'affiche quand l'élève se trompe.
+- Sur GitHub, modifier le fichier (icône crayon) puis « Commit changes » : Render remet le jeu à jour en 1 à 2 minutes.
+
+## Fichiers
+
+- `server.js` : le serveur de jeu (règles, combats, questions, robots).
+- `public/index.html` : l'écran de l'élève.
+- `public/prof.html` : le tableau de bord de l'enseignant.
+- `public/draw.js` : le dessin de l'arène (partagé par les deux écrans).
+- `questions.json` : la banque de questions.
