@@ -79,6 +79,6 @@
   {"matiere": "Mathématiques", "notion": "Numération", "question": "Quel nombre est pair ?", "choix": ["4 538", "3 217", "1 005", "7 891"], "reponse": 0},
   {"matiere": "Mathématiques", "notion": "Numération", "question": "Dans 3,47, quel chiffre est à la position des dixièmes ?", "choix": ["4", "3", "7", "0"], "reponse": 0},
   {"matiere": "Mathématiques", "notion": "Numération", "question": "Quel nombre décimal est le plus grand ?", "choix": ["0,8", "0,75", "0,09", "0,5"], "reponse": 0},
-  {"matiere": "Mathématiques", "notion": "Tables de 1 à 12", "question": "Quel est le résultat d'une multiplication par 1 ?", "choix": ["Le même nombre", "Toujours 1", "Toujours 0", "Le double du nombre"], "reponse": 0},
-  {"matiere": "Mathématiques", "notion": "Tables de 1 à 12", "question": "Quel est le résultat de n'importe quel nombre multiplié par 0 ?", "choix": ["0", "1", "Le même nombre", "10"], "reponse": 0}
+  {"matiere": "Mathématiques", "notion": "Tables de multiplication (0 à 12)", "question": "Quel est le résultat d'une multiplication par 1 ?", "choix": ["Le même nombre", "Toujours 1", "Toujours 0", "Le double du nombre"], "reponse": 0},
+  {"matiere": "Mathématiques", "notion": "Tables de multiplication (0 à 12)", "question": "Quel est le résultat de n'importe quel nombre multiplié par 0 ?", "choix": ["0", "1", "Le même nombre", "10"], "reponse": 0}
 ]

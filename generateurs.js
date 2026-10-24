@@ -50,14 +50,25 @@ function genVerbe() {
 }
 
 // ---------- Mathématiques : tables de 1 à 12 ----------
-function genTables() {
-  const a = ri(1, 12), b = ri(1, 12), p = a * b;
-  if (Math.random() < 0.7) {
-    const leurres = [a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b, p + 1, p - 2, p + 10, p + 3, p + 5].filter(x => x > 0).sort(() => Math.random() - 0.5);
-    return { matiere: 'Mathématiques', notion: 'Tables de 1 à 12', question: `Combien font ${a} × ${b} ?`, choix: choices(String(p), leurres.map(String)), reponse: 0, explication: `${a} × ${b} = ${p}` };
-  }
-  const leurres = [b + 1, b - 1, b + 2, a, b * 2, b + 3, b + 4].filter(x => x > 0).sort(() => Math.random() - 0.5);
-  return { matiere: 'Mathématiques', notion: 'Tables de 1 à 12', question: `Combien font ${fmt(p)} ÷ ${a} ?`, choix: choices(String(b), leurres.map(String)), reponse: 0, explication: `${a} × ${b} = ${p}, donc ${p} ÷ ${a} = ${b}` };
+// Tables de 0 à 12 : une notion par opération, pour les cocher séparément
+const melange = arr => arr.sort(() => Math.random() - 0.5);
+const QM = (notion, question, bon, leurres, explication) => ({ matiere: 'Mathématiques', notion, question, choix: choices(String(bon), melange([...new Set(leurres.filter(x => x >= 0 && x !== bon))]).map(String)), reponse: 0, explication });
+function genAddition() {
+  const a = ri(0, 12), b = ri(0, 12), s = a + b;
+  return QM('Tables d\'addition (0 à 12)', `Combien font ${a} + ${b} ?`, s, [s + 1, s - 1, s + 2, s - 2, s + 10, a * b, s + 3], `${a} + ${b} = ${s}`);
+}
+function genSoustraction() {
+  const a = ri(0, 12), b = ri(0, 12), s = a + b;
+  return QM('Tables de soustraction (0 à 12)', `Combien font ${s} − ${a} ?`, b, [b + 1, b - 1, b + 2, b - 2, s, a, b + 3], `${a} + ${b} = ${s}, donc ${s} − ${a} = ${b}`);
+}
+function genMultiplication() {
+  const a = ri(0, 12), b = ri(0, 12), p = a * b;
+  return QM('Tables de multiplication (0 à 12)', `Combien font ${a} × ${b} ?`, p, [a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b, p + 1, p - 2, p + 10, a + b, p + 3],
+    a === 0 || b === 0 ? `Un nombre multiplié par 0 donne toujours 0 : ${a} × ${b} = 0` : `${a} × ${b} = ${p}`);
+}
+function genDivision() {
+  const a = ri(1, 12), b = ri(0, 12), p = a * b;   // on ne divise jamais par 0
+  return QM('Tables de division (0 à 12)', `Combien font ${fmt(p)} ÷ ${a} ?`, b, [b + 1, b - 1, b + 2, a, b * 2, b + 3, p], `${a} × ${b} = ${p}, donc ${p} ÷ ${a} = ${b}`);
 }
 
 // ---------- Mathématiques : numération ----------
@@ -183,7 +194,10 @@ function genTriangles() {
 
 module.exports = {
   'Accord des verbes': genVerbe,
-  'Tables de 1 à 12': genTables,
+  'Tables d\'addition (0 à 12)': genAddition,
+  'Tables de soustraction (0 à 12)': genSoustraction,
+  'Tables de multiplication (0 à 12)': genMultiplication,
+  'Tables de division (0 à 12)': genDivision,
   'Numération': genNumeration,
   'Fractions': genFractions,
   'Angles': genAngles,

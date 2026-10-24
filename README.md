@@ -153,15 +153,15 @@ Sons rétro 8 bits fabriqués par le jeu. Chaque élève peut couper le son avec
 
 ## Les questions
 
-Les questions portent sur 10 notions, que l'enseignant coche ou décoche pendant la partie :
+Les questions portent sur 13 notions, que l'enseignant coche ou décoche pendant la partie :
 
 - **Français** : phrase de base, classes de mots variables, construction du GN, accords dans le GN, accord des verbes (1er et 2e groupe, présent et imparfait).
-- **Mathématiques** : tables de 1 à 12, angles, fractions, triangles, numération.
+- **Mathématiques** : tables d'addition, de soustraction, de multiplication et de division de 0 à 12 (4 notions séparées), angles, fractions, triangles, numération.
 
 Il y a deux sortes de questions :
 
 - **Questions fixes**, dans `questions.json` (82 questions).
-- **Questions générées** à l'infini par `generateurs.js` : conjugaisons, multiplications et divisions, valeur de position, arrondis, fractions illustrées, angles et triangles dessinés. Chaque partie propose donc des questions différentes.
+- **Questions générées** à l'infini par `generateurs.js` : conjugaisons, additions, soustractions, multiplications et divisions, valeur de position, arrondis, fractions illustrées, angles et triangles dessinés. Chaque partie propose donc des questions différentes.
 
 ### Ajouter ou modifier une question fixe
 
