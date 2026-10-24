@@ -95,7 +95,7 @@
         <select id="timer"><option value="0">sans limite</option><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select>
       </div>
       <div class="row">
-        <button id="eclair">⚡ Question éclair</button>
+        <button id="eclair">⚡ Question éclair</button><select id="eclDur" title="Temps pour répondre à une question éclair"><option value="10">10 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="45">45 s</option></select>
         <button class="sec" id="addbot">🤖 Robot</button>
         <button class="sec" id="rmbots">Retirer les robots</button>
       </div>
@@ -169,6 +169,7 @@ ws.onmessage = e => {
 };
 $('pause').onclick = () => send({ t: 'pause' });
 $('regles').onclick = () => send({ t: 'regles' });
+$('eclDur').onchange = e => send({ t: 'eclairdur', s: +e.target.value });
 setInterval(() => { if (ws.readyState === 1) send({ t: 'bilans', silent: true }); }, 120000);   // sauvegarde régulière de l'historique
 // ----- Mes questions : gardées dans ce navigateur, envoyées au jeu à chaque connexion -----
 let perso = [];
@@ -286,6 +287,7 @@ function info(m) {
   $('board').querySelectorAll('.x').forEach(b => b.onclick = () => send({ t: 'kick', id: +b.dataset.id }));
   $('board').querySelectorAll('.nv').forEach(b => b.onclick = () => { const v = { n: 'f', f: 'd', d: 'n' }[b.dataset.v]; niv[b.dataset.n] = v; envoyerNiv({ [b.dataset.n]: v }); b.dataset.v = v; b.textContent = NIV[v]; });
   $('ouvert').checked = !!m.ouvert;
+  if (document.activeElement !== $('eclDur')) $('eclDur').value = m.eclairDur || 20;
   $('teamsBox').innerHTML = eq ? m.teams.map((t, i) => {
     const mem = m.players.filter(p => p.team === i);
     return `<div><span class="dot" style="background:${t.color}"></span><b>${esc(t.nom)}</b> : ${m.te ? m.te[i] : mem.reduce((s, p) => s + p.k, 0)} ${unite} · ${mem.length} joueurs</div>`;

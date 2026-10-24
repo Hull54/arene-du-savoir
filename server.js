@@ -102,6 +102,7 @@ let boss = null;
 let hill = null;                   // colline : { x, y, t, owner, pts[] }
 let flags = null, caps = [0, 0];   // drapeaux : [{ team, hx, hy, x, y, carrier, back }]
 let goldT = 0, goldFrom = -1;      // coffre doré : délai avant qu'un autre coffre devienne doré
+let eclairDur = 20;   // durée d'une question éclair (s), au choix de l'enseignant
 let timer = { dur: 0, left: 0 };   // minuterie de manche (secondes), dur = 0 : sans limite
 let ended = null;                  // résultats de fin de manche
 let eclair = null;                 // question éclair en cours
@@ -1105,13 +1106,13 @@ function newRound() {
 function startEclair(bouclier = false) {
   if (eclair || ended) return;
   const Q = newQuestion({});
-  eclair = { ...Q, left: 20, answers: new Map(), ids: [], bouclier };
+  eclair = { ...Q, left: eclairDur, answers: new Map(), ids: [], bouclier };
   for (const p of players.values()) {
     cancelChest(p);
     eclair.ids.push(p.id);
     p.question = null;
     if (p.bot) p.botT = rand(3, 12);
-    else send(p.conn, questionMsg(Q, 'eclair', { temps: 20, bouclier }));
+    else send(p.conn, questionMsg(Q, 'eclair', { temps: eclairDur, bouclier }));
   }
   addFeed('⚡ Question éclair pour toute la classe !');
 }
@@ -1225,7 +1226,7 @@ function step() {
   }
   if (countdown > 0 && !paused && !eclair) countdown = Math.max(0, countdown - dt);
   const frozen = paused || !!eclair || countdown > 0;
-  if (!frozen && timer.dur && !ended) { timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); } }
+  if (!frozen && timer.dur && !ended) { if (timer.left > 60 && timer.left - dt <= 60 && timer.dur > 90) addFeed('⏱ Plus qu\'une minute !'); timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); } }
 
   for (const p of players.values()) {
     if (frozen) continue;
@@ -1355,7 +1356,7 @@ setInterval(() => {
     t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
     carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
-    mode, modes: MODES, nbTeams, teams: TEAMS.slice(0, nbTeams), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
+    eclairDur, mode, modes: MODES, nbTeams, teams: TEAMS.slice(0, nbTeams), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
     players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n' })), ouvert: ouvertTous,
@@ -1443,6 +1444,7 @@ function onMessage(conn, msg) {
       break;
     case 'finir': endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); break;
     case 'eclair': startEclair(); break;
+    case 'eclairdur': if ([10, 20, 30, 45].includes(m.s)) eclairDur = m.s; break;
     case 'boss':
       if (!BOSSES[m.k]) break;
       bossKind = m.k;

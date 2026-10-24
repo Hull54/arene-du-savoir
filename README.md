@@ -146,7 +146,7 @@ Les Boss viennent des cartes du système d'émulation de la classe (un par mois)
 - Vue de toute la carte pour le projecteur.
 - **Carte**, **mode** et **minuterie** de manche (3 à 20 minutes, ou sans limite).
 - **Pause**, **Nouvelle manche** (avec compte à rebours 3-2-1), **Finir la manche**, **Plein écran** pour le projecteur (Échap pour revenir). À la fin, un **podium** s'affiche chez tout le monde (et les meilleurs cerveaux).
-- **⚡ Question éclair** : le jeu s'arrête et toute la classe reçoit la même question (20 secondes). Le projecteur montre ensuite le nombre de bonnes réponses et la répartition des choix. Les bonnes réponses gagnent un bonus de force.
+- **⚡ Question éclair** : le jeu s'arrête et toute la classe reçoit la même question (10, 20, 30 ou 45 secondes, au choix à côté du bouton). Le projecteur montre ensuite le nombre de bonnes réponses et la répartition des choix. Les bonnes réponses gagnent un bonus de force.
 - Choix des **notions** posées (par matière, avec « tout » et « aucune »).
 - **Robots** pour tester seul ou compléter un petit groupe.
 - **Classement** et bouton ✕ pour retirer un joueur.
@@ -154,6 +154,12 @@ Les Boss viennent des cartes du système d'émulation de la classe (un par mois)
 - **🖨️ Bilans à imprimer** : une fiche par élève sur toute la séance (pas seulement la manche) : nombre de questions, réussite par notion, points forts, notions à revoir, pièces d'or gagnées et une ligne pour un commentaire.
 - **Révision ciblée** (automatique) : pendant la séance, le jeu note les notions que chaque élève rate. Ces notions reviennent plus souvent dans ses questions (jusqu'à 4 fois plus), et moins souvent celles qu'il réussit bien.
 - **📥 Exporter les résultats** : un fichier qui s'ouvre dans Excel (une ligne par élève, une colonne par notion).
+
+## Rythme et appareils lents
+
+- **Une minute avant la fin** d'une manche minutée, chaque élève reçoit l'alerte « Plus qu'une minute ! » et le chrono clignote en rouge les 10 dernières secondes.
+- **Mode économie** (bouton ✨ / 🐢 en haut à gauche) : image moins fine et moins d'effets. Il s'active tout seul si l'appareil rame.
+- **Test de charge** (30 joueurs, dont 25 robots) : le serveur garde ses 15 mises à jour par seconde sans retard, environ 40 à 50 Ko/s par élève (soit environ 12 Mbit/s pour toute la classe).
 
 ## Sons
 

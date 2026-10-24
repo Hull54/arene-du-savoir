@@ -114,6 +114,8 @@
   #touch { position: fixed; right: 16px; bottom: 16px; display: none; gap: 12px; }
   #touch button { width: 76px; height: 76px; font-size: 30px; }
   #loading { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 26px; color: #ffd54a; background: #1b1424; }
+  #zone.fin10 { color: #ff6a5a; animation: clign .5s steps(2) infinite; } @keyframes clign { 50% { opacity: .4; } }
+  #eco { position: fixed; top: 52px; left: 64px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
   #mute { position: fixed; top: 52px; left: 12px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
   #buffs { position: fixed; top: 52px; left: 64px; font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: flex; gap: 10px; }
   #bossbar { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); width: min(520px, 70vw); padding: 4px 10px 8px; text-align: center; font-size: 16px; display: none; pointer-events: none; }
@@ -148,6 +150,7 @@
 <div id="score" class="panel" style="display:none"></div>
 <div id="zone" class="panel" style="display:none"></div>
 <button id="mute" class="panel" style="display:none">🔊</button>
+<button id="eco" class="panel" style="display:none" title="Mode économie : moins d'effets, pour les appareils lents">✨</button>
 <div id="buffs"></div>
 <div id="gear" style="display:none"></div>
 <div id="teams"></div>
@@ -390,7 +393,7 @@ function connect(name, cls) {
       map = m.map; mapLayer = null;
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
-      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'gear'].forEach(id => $(id).style.display = ''); }, 30);
+      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'eco', 'gear'].forEach(id => $(id).style.display = ''); }, 30);
       if (m.t === 'carte') toast('🗺️ ' + map.nom);
       $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls]; $('icoD').textContent = DASH_ICO[cls];
       if ('ontouchstart' in window) $('touch').style.display = 'flex';
@@ -640,10 +643,17 @@ setInterval(() => {
 }, 50);
 
 // ----- Rendu -----
-function resize() { cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio; }
-addEventListener('resize', resize); resize();
+// Mode économie : image moins fine et moins d'effets (s'active seul si l'appareil rame)
+let eco = false, ecoManuel = false;
+try { const v = localStorage.getItem('arene-eco'); if (v != null) { eco = v === '1'; ecoManuel = true; } } catch {}
+const DPR = () => eco ? 1 : devicePixelRatio;
+const majEco = () => { $('eco').textContent = eco ? '🐢' : '✨'; $('eco').title = eco ? 'Mode économie activé (clic : effets complets)' : 'Effets complets (clic : mode économie, pour les appareils lents)'; resize(); };
+$('eco').onclick = () => { eco = !eco; ecoManuel = true; try { localStorage.setItem('arene-eco', eco ? '1' : '0'); } catch {} majEco(); toast(eco ? '🐢 Mode économie' : '✨ Effets complets'); };
+let lentT = 0;
+function resize() { cv.width = innerWidth * DPR(); cv.height = innerHeight * DPR(); }
+addEventListener('resize', resize); majEco();
 
-let lastFrame = performance.now(), camX = 0, camY = 0, meScreen = { x: innerWidth / 2, y: innerHeight / 2 };
+let lastTm = -1, lastFrame = performance.now(), camX = 0, camY = 0, meScreen = { x: innerWidth / 2, y: innerHeight / 2 };
 function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   requestAnimationFrame(frame);
@@ -658,7 +668,8 @@ function frame(now) {
   const md = mine && disp.get(mine.id);
   if (md) { camX = md.x; camY = md.y; }
 
-  const dpr = devicePixelRatio, vw = innerWidth, vh = innerHeight;
+  if (!eco && !ecoManuel) { lentT = dt > 0.045 ? lentT + dt : Math.max(0, lentT - dt); if (lentT > 4) { eco = true; majEco(); toast('🐢 Appareil lent : mode économie activé'); } }
+  const dpr = DPR(), vw = innerWidth, vh = innerHeight;
   if (!mapLayer) return;
   // zoom : chaque pixel d'art fait 2 ou 3 pixels d'écran (net, sans flou)
   const zoom = Math.min(vw, vh) < 620 ? 2 / 3 : 1;
@@ -678,7 +689,7 @@ function frame(now) {
   // ambiance : flocons en hiver, pénombre dans le donjon, chaleur au désert
   if (reg === 'hiver') {
     ctx.fillStyle = '#ffffffcc';
-    for (let i = 0; i < 70; i++) {
+    for (let i = 0, nf = eco ? 20 : 70; i < nf; i++) {
       const x = (i * 137 + now * 0.02 * (20 + (i % 5) * 6) + Math.sin(now / 900 + i) * 20) % vw, y = (i * 89 + now * 0.05 * (1 + (i % 3))) % vh;
       const s = i % 3 ? 3 : 4; ctx.fillRect(Math.round(x), Math.round(y), s, s);
     }
@@ -692,6 +703,8 @@ function frame(now) {
   const mmW = Math.min(210, vw * 0.3);
   drawMinimap(ctx, world, map, mine, vw - mmW - 14, 14, mmW, teams);
   const tm = world.tm >= 0 ? `   ⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}` : '';
+  if (world.tm === 60 && lastTm !== 60) { toast('⏱ Plus qu\'une minute ! Termine ta question.'); Son.play('eclair'); }
+  $('zone').classList.toggle('fin10', world.tm >= 0 && world.tm <= 10); lastTm = world.tm;
   $('zone').textContent = map.nom + tm + (world.hl ? `   ⛰️ bouge dans ${world.hl[4]} s` : '');
   $('teams').innerHTML = '';
   if (teams && world.te) world.te.forEach((sc, i) => { const s = document.createElement('span'); s.style.background = teams[i].color; s.textContent = `${world.mode === 'colline' ? '⛰️ ' : world.mode === 'drapeau' ? '🚩 ' : ''}${teams[i].nom} ${sc}${world.mode === 'colline' ? '/120' : world.mode === 'drapeau' ? '/3' : ''}`; if (me && me.team === i) s.style.outline = '3px solid #fff'; $('teams').appendChild(s); });
