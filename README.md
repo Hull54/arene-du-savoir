@@ -151,7 +151,7 @@ Chaque familier a un mini pouvoir sur la touche **E**, rechargé en 15 secondes.
 | Familier | Pouvoir |
 |---|---|
 | 🐱 Chat | Ronron : +25 points de vie |
-| 🐶 Chien | Aboiement : repousse les ennemis proches, sans dégâts |
+| 🐺 Loup | Hurlement : repousse les ennemis proches, sans dégâts |
 | 🐲 Bébé dragon | Crache une petite boule de feu (8 dégâts) |
 | 🦉 Hibou | Œil perçant : révèle pendant 4 s les joueurs cachés (buissons, herbes, ombre) |
 | 🟢 Slime | Flaque gluante : ralentit les ennemis qui marchent dedans |
