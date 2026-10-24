@@ -42,7 +42,7 @@ function shade(hex, f) {
 function unpackWorld(w) {
   w.pz = w.pz || [];
   w.mn = w.mn || [];
-  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024), sz: !!(f & 2048) }));
+  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024), sz: !!(f & 2048), at: !!(f & 4096) }));
   return w;
 }
 
@@ -73,6 +73,10 @@ class Painter {
 // ---------- Héros en pixel art ----------
 // look = "f12" : f/m, teinte de peau (0-3), couleur de cheveux (0-3) ; dir = down | up | side ; frame = 0, 1, 2
 const heroCache = {};
+function line2(P, x0, y0, x1, y1, c) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+  for (let i = 0; i <= n; i++) P.px(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), c);
+}
 function heroSprite(cls, look, dir, frame, gearCode = 0) {
   const key = cls + look + dir + frame + 'g' + gearCode;
   if (heroCache[key]) return heroCache[key];
@@ -169,19 +173,23 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
 
   // ===== bras et épaulières =====
   const armC = cls === 'guerrier' ? '#8f98a6' : cls === 'mage' ? K.main : cls === 'voleur' ? K.main : K.cloth;
+  // balancement des bras à la marche (sw), bras d'arme levé à l'attaque
+  const sw = frame === 1 ? 1 : frame === 2 ? -1 : 0, atk = frame === 3;
+  const hL = sw + (atk && cls !== 'mage' ? 1 : 0), hR = atk ? -2 : -sw;   // décalage vertical des mains (vue de face/dos)
   if (side) {
-    P.rect(8, 11, 2, 4, shade(armC, 0.85)); P.px(8, 11, shade(armC, 1.2));
-    P.px(9, 15, cls === 'guerrier' ? steel : s);
+    const fx = atk ? 2 : sw;
+    P.rect(8, 11, 2, 2, shade(armC, 0.85)); P.rect(8 + fx, 13, 2, 2, shade(armC, 0.85)); P.px(8, 11, shade(armC, 1.2));
+    P.px(9 + fx, 15 - (atk ? 1 : 0), cls === 'guerrier' ? steel : s);
     if (cls === 'guerrier') { P.rect(7, 9, 4, 2, steel); P.rect(7, 9, 4, 1, shade(steel, 1.3)); }
   } else {
     const aw = cls === 'mage' ? 2 : 2;
-    box(2, 10, aw, 5, armC); box(12, 10, aw, 5, armC);
+    box(2, 10, aw, Math.max(3, 5 + hL), armC); box(12, 10, aw, Math.max(3, 5 + hR), armC);
     const hand = cls === 'guerrier' ? steel : s;
-    P.rect(2, 15, 2, 1, hand); P.rect(12, 15, 2, 1, hand);
+    P.rect(2, 15 + hL, 2, 1, hand); P.rect(12, 15 + hR, 2, 1, hand);
     if (cls === 'guerrier') {   // épaulières
       for (const x of [1, 11]) { P.rect(x, 9, 4, 2, steel); P.rect(x, 9, 4, 1, shade(steel, 1.35)); P.px(x + 3, 10, shade(steel, 0.6)); }
     }
-    if (cls === 'archer') { P.rect(2, 13, 2, 2, leather); P.rect(12, 13, 2, 2, leather); }   // brassards
+    if (cls === 'archer') { P.rect(2, 13 + hL, 2, 2, leather); P.rect(12, 13 + hR, 2, 2, leather); }   // brassards
   }
 
   // ===== tête =====
@@ -273,7 +281,48 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
   }
 
   // ===== armes devant =====
-  if (down) {
+  const oy0 = P.oy, ox0 = P.ox;
+  if (atk) {   // geste d'attaque : coup d'épée, coup de dague, sort lancé, arc tendu
+    if (down) {
+      if (cls === 'guerrier') {
+        line2(P, 13, 13, 19, 19, blade); line2(P, 13, 14, 18, 19, bladeD); P.rect(12, 12, 3, 1, gold); P.px(12, 13, gold);
+        P.rect(-1, 11, 5, 7, K.acc); P.rect(-1, 11, 5, 1, steel); P.rect(-1, 11, 1, 7, steel); P.rect(1, 13, 1, 4, gold); P.rect(0, 14, 3, 1, gold);
+      }
+      if (cls === 'voleur') {
+        P.rect(13, 13, 1, 6, blade); P.px(13, 19, bladeD); P.rect(12, 12, 3, 1, '#7a5a2a');
+        P.rect(2, 14, 1, 4, blade); P.px(2, 18, bladeD); P.rect(1, 13, 3, 1, '#7a5a2a');
+      }
+      if (cls === 'mage') {
+        P.rect(14, -2, 1, 17, wood); P.px(14, 3, woodH); P.px(14, 8, woodH);
+        P.rect(13, -5, 3, 3, crystal); P.px(13, -5, '#ffffff'); P.rect(13, -2, 3, 1, gold);
+      }
+      if (cls === 'archer') {
+        P.px(2, 6, wood); P.px(1, 7, wood); P.rect(0, 8, 1, 9, woodH); P.px(1, 17, wood); P.px(2, 18, wood);
+        line2(P, 2, 6, 4, 12, '#d8d0c0'); line2(P, 4, 12, 2, 18, '#d8d0c0');
+        P.rect(1, 12, 9, 1, '#5a3a1e'); P.px(0, 12, '#cfd6de'); P.px(-1, 12, '#cfd6de'); P.rect(4, 11, 2, 2, s);
+      }
+    } else if (up) {
+      if (cls === 'guerrier') { P.rect(0, 11, 4, 7, K.acc); P.rect(0, 11, 4, 1, steel); line2(P, 13, 9, 17, 3, blade); }
+      if (cls === 'voleur') { P.rect(2, 12, 1, 4, blade); P.rect(13, 6, 1, 5, blade); }
+      if (cls === 'mage') { P.rect(13, -4, 2, 2, crystal); }
+      if (cls === 'archer') { P.rect(13, 6, 1, 8, woodH); P.rect(12, 9, 1, 3, '#d8d0c0'); }
+    } else {
+      if (cls === 'guerrier') {
+        P.rect(12, 12, 7, 1, blade); P.rect(12, 13, 6, 1, bladeD); P.px(19, 12, blade); P.rect(11, 11, 1, 3, gold);
+        P.rect(2, 10, 3, 7, K.acc); P.rect(2, 10, 3, 1, steel);
+      }
+      if (cls === 'voleur') { P.rect(12, 13, 6, 1, blade); P.px(18, 13, bladeD); P.rect(11, 12, 1, 3, '#7a5a2a'); }
+      if (cls === 'mage') {
+        line2(P, 9, 18, 14, 2, wood); P.rect(13, -1, 3, 3, crystal); P.px(13, -1, '#ffffff'); P.rect(13, 2, 3, 1, gold);
+      }
+      if (cls === 'archer') {
+        P.px(13, 6, wood); P.px(14, 7, wood); P.rect(15, 8, 1, 8, woodH); P.px(14, 16, wood); P.px(13, 17, wood);
+        line2(P, 13, 6, 9, 12, '#d8d0c0'); line2(P, 9, 12, 13, 17, '#d8d0c0');
+        P.rect(9, 12, 8, 1, '#5a3a1e'); P.px(17, 12, '#cfd6de'); P.px(18, 12, '#cfd6de'); P.px(8, 12, '#e8e2d0');
+      }
+    }
+  } else if (down) {
+    P.oy = oy0 + hR;   // l'arme suit la main droite
     if (cls === 'guerrier') {
       P.rect(14, 3, 1, 12, blade); P.rect(13, 4, 1, 10, bladeD); P.px(14, 2, blade); P.rect(12, 14, 4, 1, gold); P.px(13, 15, leather); P.px(14, 16, gold);
       // bouclier : écu sombre avec emblème
@@ -294,15 +343,18 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
       P.rect(0, 9, 1, 7, '#d8d0c0'); P.rect(1, 12, 2, 2, s);
     }
   } else if (up) {
+    P.oy = oy0 - hR;
     if (cls === 'guerrier') { P.rect(0, 10, 4, 7, K.acc); P.rect(0, 10, 4, 1, steel); P.rect(1, 12, 2, 3, shade(K.acc, 0.7)); }
     if (cls === 'voleur') { P.rect(2, 11, 1, 4, blade); P.rect(13, 11, 1, 4, blade); }
     if (cls === 'archer') { P.rect(14, 9, 1, 7, woodH); }
   } else {
+    P.ox = ox0 + sw;
     if (cls === 'guerrier') { P.rect(11, 13, 8, 1, blade); P.rect(11, 14, 7, 1, bladeD); P.px(19, 13, blade); P.rect(10, 12, 1, 3, gold); P.rect(2, 10, 3, 7, K.acc); P.rect(2, 10, 3, 1, steel); }
     if (cls === 'voleur') { P.rect(11, 13, 5, 1, blade); P.px(16, 13, bladeD); P.rect(10, 12, 1, 3, '#7a5a2a'); }
     if (cls === 'mage') { P.rect(11, 1, 1, 17, wood); P.px(11, 6, woodH); P.rect(10, -2, 3, 3, crystal); P.px(10, -2, '#ffffff'); P.rect(10, 1, 3, 1, gold); }
     if (cls === 'archer') { P.px(12, 7, wood); P.px(13, 8, wood); P.rect(14, 9, 1, 6, woodH); P.px(13, 15, wood); P.px(12, 16, wood); P.rect(12, 8, 1, 8, '#d8d0c0'); P.rect(8, 12, 6, 1, '#5a3a1e'); P.px(14, 12, '#cfd6de'); }
   }
+  P.ox = ox0; P.oy = oy0;
   if (acc === 4) {   // couronne d'or par-dessus tout
     const cy = cls === 'guerrier' ? -2 : cls === 'mage' ? -3 : -1, cx = side ? 6 : 5;
     P.rect(cx, cy + 1, 6, 2, '#f2c94c'); P.px(cx, cy, '#f2c94c'); P.px(cx + 2, cy - 1, '#f2c94c'); P.px(cx + 3, cy - 1, '#f2c94c'); P.px(cx + 5, cy, '#f2c94c');
@@ -317,9 +369,9 @@ function dirFromAngle(a) {
   return s > 0 ? 'down' : 'up';
 }
 // Dessine un héros : (x, y) = centre du joueur dans le monde ; S = taille d'un pixel d'art
-function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0) {
+function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0, atk = false) {
   const d = dirFromAngle(angle);
-  const frame = walk ? 1 + (Math.floor(walk) % 2) : 0;
+  const frame = atk ? 3 : walk ? 1 + (Math.floor(walk) % 2) : 0;
   const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame, gear);
   g.save();
   g.imageSmoothingEnabled = false;
@@ -988,195 +1040,316 @@ const BOSS_INFO = {
   gluant:    { nom: 'Roi Gluant', ico: '👑', col: '#9af08a' },
 };
 const SBIRE_DE = { gobelin: 'gobelin', dragon: 'citrouille', ombres: 'ombre', givre: 'glace', cyclope: 'sablier', minotaure: 'diablotin', kraken: 'pieuvre', golem: 'livre', titan: 'gobelin', empereur: 'chevalier', gluant: 'slime' };
-// Boss en pixel art (52 x 46), d'après les cartes du système d'émulation. Ils regardent vers la droite.
-function bossSprite(frame, flash, k = 'gluant') {
-  const key = 'boss' + k + frame + flash;
+// Boss en pixel art (60 x 54), d'après les cartes du système d'émulation. Ils regardent vers la droite.
+// f : pas de marche (0-3), a : attaque (bras levés, bouche ouverte), b : respiration, flash : touché
+function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
+  const key = 'boss' + k + f + flash + a + b;
   if (dynCache[key]) return dynCache[key];
-  const P = new Painter(52, 46), sq = frame ? 1 : 0;
-  const F = c => flash ? shade(c, 1.55) : c;   // flash blanc quand il est touché
-  const T3 = c => [F(shade(c, 1.3)), F(c), F(shade(c, 0.68))];
+  const P = new Painter(60, 54);
+  const glow = new Set();
+  const G = c => (glow.add(c), c);                              // couleurs lumineuses : pas d'ombrage automatique
+  const F = c => flash ? shade(c, 1.55) : c;                    // flash blanc quand il est touché
+  const T = c => [F(shade(c, 1.28)), F(c), F(shade(c, 0.7)), F(shade(c, 0.48))];
   const line = (x0, y0, x1, y1, c, w = 1) => { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1; for (let i = 0; i <= n; i++) P.rect(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), w, w, c); };
-  // triangle plein (pour les ailes)
   const tri = (ax, ay, bx, by, cx, cy, c) => {
     for (let y = Math.min(ay, by, cy); y <= Math.max(ay, by, cy); y++) for (let x = Math.min(ax, bx, cx); x <= Math.max(ax, bx, cx); x++) {
       const d1 = (x - bx) * (ay - by) - (ax - bx) * (y - by), d2 = (x - cx) * (by - cy) - (bx - cx) * (y - cy), d3 = (x - ax) * (cy - ay) - (cx - ax) * (y - ay);
       if (!((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0))) P.px(x, y, c);
     }
   };
-  // aile de chauve-souris : membrane entre des baleines qui partent de l'épaule
-  const wing = (sx, sy, tips, col, rib) => {
-    for (let i = 0; i < tips.length - 1; i++) {
-      const [x1, y1] = tips[i], [x2, y2] = tips[i + 1], mx = Math.round((x1 + x2) / 2 + (sx - (x1 + x2) / 2) * 0.25), my = Math.round((y1 + y2) / 2 + (sy - (y1 + y2) / 2) * 0.25);
-      tri(sx, sy, x1, y1, mx, my, col); tri(sx, sy, mx, my, x2, y2, col);
-    }
-    for (const [x, y] of tips) line(sx, sy, x, y, rib);
-    P.rect(sx - 1, sy - 1, 3, 2, rib);
-  };
+  // volume : sombre dessous, moyen, reflet en haut à gauche
+  const ball = (cx, cy, rx, ry, c) => { const [h, m, d] = T(c); P.ellipse(cx, cy, rx, ry, d); P.ellipse(cx - 1, cy - 1, Math.max(1, rx - 1), Math.max(1, ry - 1), m); P.ellipse(cx - Math.ceil(rx * 0.35), cy - Math.ceil(ry * 0.4), Math.max(1, Math.round(rx * 0.4)), Math.max(1, Math.round(ry * 0.35)), h); };
+  const limb = (x0, y0, x1, y1, w, c) => { const [h, m, d] = T(c); line(x0, y0, x1, y1, d, w); if (w > 1) line(x0, y0, x1, y1, m, w - 1); if (w > 2) line(x0, y0, x1, y1, h, 1); };
+  const box = (x, y, w, h, c) => { const [hi, m, d] = T(c); P.rect(x, y, w, h, m); P.rect(x, y, w, 1, hi); P.rect(x, y, 1, h, hi); P.rect(x + w - 1, y + 1, 1, h - 1, d); P.rect(x + 1, y + h - 1, w - 1, 1, d); };
+  // œil lumineux dans une orbite sombre, et sourcil épais en V (regard menaçant)
+  const eye = (x, y, c, w = 2, sock = '#1a0e10') => { P.rect(x - 1, y - 1, w + 2, 3, F(sock)); P.rect(x, y, w, a ? 2 : 1, G(c)); P.px(x + (w > 2 ? 1 : 0), y, G('#ffffff')); };
+  const brow = (x, y, dir, len, c) => { for (let i = 0; i < len; i++) P.rect(x + dir * i, y + Math.floor(i * 0.6), 1, 2, c); };
+  const fangs = (x, y, n, gap, down = 1) => { for (let i = 0; i < n; i++) { P.px(x + i * gap, y, G('#f4f0e0')); P.px(x + i * gap, y + down, G('#d8d0c0')); } };
+  const lA = [0, -2, 0, 1][f], lB = [0, 1, 0, -2][f], sw = f === 1 ? -1 : f === 3 ? 1 : 0;
+
   if (k === 'gobelin') {
-    // peau rose-brun, oreilles immenses, cheveux en pointes, crie en tapant sur un gros tambour
-    const [sL, s, sD] = T3('#c48a78'), vest = F('#5e4234'), cloth = F('#4a3428');
-    P.rect(19, 37 - sq, 5, 6, sD); P.rect(30, 37 + sq, 5, 6, sD); P.rect(17, 42, 8, 3, sD); P.rect(29, 42, 8, 3, sD);
-    P.rect(16, 31, 21, 6, cloth); for (let x = 16; x < 37; x += 3) P.rect(x, 37, 2, 2, cloth);
-    P.ellipse(27, 26, 10, 8, vest); P.rect(21, 20, 12, 3, s); P.rect(24, 22, 6, 2, sL);
-    line(16, 19, 33, 34, F('#3a2a20'));   // sangle du tambour
-    P.rect(38, 13 - sq, 4, 12, s); P.disc(40, 12 - sq, 3, s); P.px(39, 11 - sq, sL);
-    line(41, 11 - sq, 47, 2 - sq, F('#8a5a2a'), 1); P.disc(48, 2 - sq, 2, F('#6a4030'));
-    P.rect(9, 22, 4, 9, s); P.disc(11, 31, 2, s);
-    P.ellipse(13, 34, 11, 8, F('#8a4a2a')); P.ellipse(15, 33, 8, 6, F('#efd8c8')); P.ellipse(13, 31, 3, 2, F('#ffffff'));
-    for (let i = 0; i < 4; i++) { P.rect(4 + i * 5, 38, 1, 4, F('#5a3020')); line(4 + i * 5, 38, 7 + i * 5, 41, F('#d8c0a0')); }
-    line(12, 31, 20, 26, F('#8a5a2a')); P.disc(21, 25, 2, F('#6a4030'));
-    for (let i = 0; i < 12; i++) { P.rect(17 - i, 12 - (i >> 1), 2, 3 - (i >> 2) + 1, i < 2 ? sD : s); P.rect(35 + i, 12 - (i >> 1), 2, 3 - (i >> 2) + 1, i < 2 ? sD : s); }
-    P.px(6, 6, sL); P.px(46, 6, sL);
-    P.ellipse(26, 13, 9, 8, s); P.ellipse(23, 9, 4, 2, sL);
-    for (const [x, y] of [[22, 4], [24, 2], [26, 1], [28, 2], [30, 4], [25, 3], [27, 3]]) P.rect(x, y, 1, 3, F('#2e2018'));
-    P.rect(20, 11, 4, 2, '#fff2c0'); P.rect(29, 11, 4, 2, '#fff2c0'); P.px(22, 12, OUT); P.px(30, 12, OUT);
-    P.rect(19, 9, 3, 1, OUT); P.rect(22, 10, 2, 1, OUT); P.rect(31, 9, 3, 1, OUT); P.rect(29, 10, 2, 1, OUT);
-    P.rect(25, 13, 3, 3, sD); P.px(25, 15, OUT);
-    P.ellipse(26, 18 + sq, 5, 3, '#3a1414'); P.rect(22, 16 + sq, 9, 1, '#ffffff'); P.px(23, 17 + sq, '#ffffff'); P.px(29, 17 + sq, '#ffffff'); P.rect(24, 20 + sq, 4, 1, '#c04050');
+    const [sH, s, sD, sDD] = T('#c88c78'), vest = '#5e4234', cloth = '#4a3428', mo = a ? 3 : b;
+    // jambes arquées, gros pieds
+    limb(25, 40, 23, 47 + lA, 5, '#a8705e'); box(18, 47 + lA, 10, 4, '#a8705e'); for (let i = 0; i < 3; i++) P.px(19 + i * 3, 50 + lA, sDD);
+    limb(35, 40, 37, 47 + lB, 5, '#a8705e'); box(34, 47 + lB, 10, 4, '#a8705e'); for (let i = 0; i < 3; i++) P.px(35 + i * 3, 50 + lB, sDD);
+    // pagne déchiré
+    box(19, 35, 23, 7, cloth); for (let x = 19; x < 42; x += 3) tri(x, 41, x + 3, 41, x + 1, 44 + (x % 2), F(cloth));
+    // torse et gilet en lambeaux
+    ball(30, 30 + sw, 12, 9, vest); tri(25, 22, 36, 22, 30, 31, F(s)); P.rect(29, 24, 2, 5, F(sD)); P.px(27, 25, F(sH));
+    line(18, 22, 38, 39, F('#2e2018'), 2); P.px(28, 30, G('#c8a040'));
+    // bras gauche vers le tambour
+    limb(21, 25, 14, 31, 4, '#c88c78'); limb(14, 31, 19, 35, 4, '#c88c78'); P.disc(20, 35, 2, F(s));
+    line(21, 34, 28, 29, F('#7a4a2a')); P.disc(29, 28, 2, F('#5a3020'));
+    // tambour : fût cerclé, peau tendue, cordes
+    ball(14, 42, 12, 9, '#8a4a2a'); P.ellipse(16, 39, 9, 6, F('#3a2014')); P.ellipse(16, 39, 8, 5, F('#e8d0bc')); P.ellipse(14, 37, 4, 2, F('#fff4e8'));
+    for (let i = 0; i < 5; i++) { line(4 + i * 4, 44, 6 + i * 4, 50, F('#d8c0a0')); P.px(4 + i * 4, 44, F('#5a3020')); }
+    P.rect(3, 50, 22, 1, F('#5a3020'));
+    // bras droit : baguette levée, ou qui frappe le tambour
+    if (a) { limb(39, 24, 43, 31, 4, '#c88c78'); limb(43, 31, 33, 36, 4, '#c88c78'); P.disc(32, 36, 2, F(s)); line(31, 36, 22, 38, F('#7a4a2a')); P.disc(21, 38, 3, F('#5a3020')); for (let i = 0; i < 3; i++) P.px(14 + i * 4, 32 - i, G('#fff6c0')); }
+    else { limb(39, 24, 46, 17, 4, '#c88c78'); limb(46, 17, 46, 9, 4, '#c88c78'); P.disc(47, 8, 3, F(s)); line(47, 7, 54, 1, F('#7a4a2a')); P.disc(55, 2, 3, F('#5a3020')); P.px(54, 1, F('#8a5a3a')); }
+    // oreilles immenses
+    tri(22, 11, 2, 4, 21, 18, F(s)); tri(20, 12, 7, 7, 20, 16, F(sD)); P.px(3, 4, F(sH)); line(4, 5, 20, 11, F(sH));
+    tri(38, 11, 58, 4, 39, 18, F(s)); tri(40, 12, 53, 7, 40, 16, F(sD)); line(56, 5, 40, 11, F(sH));
+    // tête
+    ball(30, 15, 10, 9, '#c88c78');
+    for (const [x0, y0, x1, y1] of [[25, 8, 23, 1], [28, 7, 28, 0], [31, 7, 33, 0], [34, 8, 37, 2], [27, 7, 25, 3]]) line(x0, y0, x1, y1, F('#2a1a12'), 2);
+    P.px(24, 9, F(sDD)); P.rect(26, 9, 8, 1, F(sD));                            // rides du front
+    eye(23, 13, '#ffd84a', 3); eye(33, 13, '#ffd84a', 3); P.px(25, 13, OUT); P.px(33, 13, OUT);
+    brow(21, 10, 1, 7, F('#2a1a12')); brow(39, 10, -1, 7, F('#2a1a12'));
+    P.rect(28, 14, 4, 5, F(sD)); P.rect(28, 14, 2, 4, F(s)); P.px(28, 18, OUT); P.px(31, 18, OUT); P.px(27, 19, F(sDD)); P.px(32, 19, F(sDD));
+    // bouche qui hurle : dents en scie, crocs, langue
+    P.ellipse(30, 22 + (mo >> 1), 6, 2 + mo, F('#2a0808')); for (let x = 25; x <= 35; x += 2) P.px(x, 20, G('#fffaf0')); P.rect(25, 20, 11, 1, G('#f4ecd8'));
+    P.px(25, 21, G('#ffffff')); P.px(35, 21, G('#ffffff')); P.px(26, 23 + mo, G('#e8e0d0')); P.px(34, 23 + mo, G('#e8e0d0'));
+    P.ellipse(30, 23 + mo, 3, 1, F('#b83848'));
   } else if (k === 'dragon' || k === 'givre') {
-    const ice = k === 'givre';
-    const [bL, b, bD] = T3(ice ? '#3f8f86' : '#8f969e'), belly = F(ice ? '#bfe6dc' : '#e2dcc8'), wingC = F(ice ? '#2f6f68' : '#6a7078'), rib = F(ice ? '#7ad0c4' : '#b8bec6');
-    wing(32, 17, [[34, 0 + sq], [44, 1 + sq], [51, 8 + sq], [49, 18], [42, 22]], wingC, rib);
-    if (!ice) for (const [x, w] of [[11, 9], [26, 10], [41, 9]]) {   // trois citrouilles grimaçantes
-      const [oL, o, oD] = T3('#e07a22');
-      P.ellipse(x, 39, w, 6, o); P.ellipse(x - 3, 37, 3, 2, oL); P.rect(x - 4, 34, 1, 11, oD); P.rect(x + 4, 34, 1, 11, oD);
-      P.rect(x - 4, 37, 3, 2, '#ffe27a'); P.rect(x + 2, 37, 3, 2, '#ffe27a'); P.rect(x - 4, 41, 9, 1, '#ffe27a'); P.px(x - 2, 41, oD); P.px(x + 2, 41, oD);
-      P.rect(x, 32, 2, 2, F('#3a6a2a'));
-    } else { P.ellipse(26, 43, 22, 3, F('#dff4f0')); for (let i = 0; i < 8; i++) P.px(6 + i * 5, 41 + (i % 2), '#ffffff'); }
+    const ice = k === 'givre', body = ice ? '#3a8a80' : '#8c939c', [bH, bc, bD, bDD] = T(body);
+    const belly = ice ? '#bfe6dc' : '#ddd5bf', wingC = F(ice ? '#2a5e58' : '#5e646c'), wingL = F(ice ? '#4a8e86' : '#80868e'), rib = F(ice ? '#8ad8cc' : '#b8bec6');
+    const wf = [0, 2, 4, 2][f] - (a ? 2 : 0), mo = a ? 3 : 0, eyeC = ice ? '#dffcff' : '#ffcc3a';
+    // aile du fond (membrane en panneaux, baleines claires)
+    const tips = [[41, 1 + wf], [51, 1 + wf], [58, 9 + wf], [58, 21], [50, 27]];
+    for (let i = 0; i < tips.length - 1; i++) { const [x1, y1] = tips[i], [x2, y2] = tips[i + 1]; tri(38, 22, x1, y1, x2, y2, i % 2 ? wingC : wingL); }
+    for (const [x, y] of tips) line(38, 22, x, y, rib); for (let i = 0; i < tips.length - 1; i++) { const [x1, y1] = tips[i], [x2, y2] = tips[i + 1]; P.px(Math.round((x1 + x2) / 2), Math.round((y1 + y2) / 2) + 1, F(ice ? '#1a3e3a' : '#3e444c')); }
+    // socle : trois citrouilles grimaçantes, ou glace
+    if (!ice) for (const [x, w] of [[12, 10], [30, 11], [48, 10]]) {
+      ball(x, 46, w, 7, '#e07a22'); P.rect(x - 4, 40, 1, 12, F('#a8501a')); P.rect(x + 4, 40, 1, 12, F('#a8501a'));
+      tri(x - 6, 44, x - 2, 44, x - 4, 41, G('#ffd24a')); tri(x + 2, 44, x + 6, 44, x + 4, 41, G('#ffd24a')); tri(x - 1, 46, x + 1, 46, x, 45, G('#ffd24a'));
+      P.rect(x - 6, 48, 13, 2, G('#ffb02a')); for (let i = 0; i < 4; i++) P.px(x - 5 + i * 3, 48 + (i % 2), F('#a8501a'));
+      P.rect(x, 38, 2, 3, F('#3a6a2a')); P.px(x + 2, 38, F('#5a9a3a'));
+    } else { P.ellipse(30, 51, 27, 3, F('#d8f2ee')); P.ellipse(30, 50, 22, 2, F('#f4fffd')); for (let i = 0; i < 6; i++) tri(6 + i * 9, 51, 10 + i * 9, 51, 8 + i * 9, 45 - (i % 2) * 2, F('#bfeef0')); }
     const gy = ice ? 4 : 0;
-    P.ellipse(29, 24 + gy, 11, 8, b); P.ellipse(25, 27 + gy, 6, 5, belly); for (let i = 0; i < 4; i++) P.rect(21, 23 + gy + i * 2, 8, 1, F(shade(ice ? '#bfe6dc' : '#e2dcc8', 0.85)));
-    for (let i = 0; i < 6; i++) P.px(30 + i * 2, 16 + gy + (i >> 1), bD);
-    line(38, 28 + gy, 46, 24 + gy, b, 2); line(46, 24 + gy, 50, 18 + gy, b, 2); P.px(51, 17 + gy, bD); P.px(50, 16 + gy, bD);
-    P.rect(20, 31 + gy, 4, 5, bD); P.rect(33, 31 + gy, 5, 5, bD); for (const x of [19, 21, 23, 32, 34, 36]) P.px(x, 36 + gy, '#e8e2d0');
-    line(23, 20 + gy, 16, 11, b, 3); line(24, 21 + gy, 18, 13, belly, 1);
-    P.rect(8, 7, 11, 6, b); P.rect(4, 9, 6, 4, b); P.rect(8, 7, 11, 1, bL); P.rect(4, 13, 10, 2, bD);
-    P.px(5, 12, '#ffffff'); P.px(7, 12, '#ffffff'); P.px(9, 12, '#ffffff'); P.px(6, 13, '#ffffff'); P.px(8, 13, '#ffffff');
-    P.rect(4, 10 + sq, 3, 1, '#3a1414'); P.px(5, 9, OUT);
-    P.rect(11, 8, 3, 2, ice ? '#e0fff8' : '#ffd84a'); P.px(12, 9, OUT); P.rect(10, 7, 4, 1, OUT);
-    line(15, 7, 20, 2, F('#e8e2d0')); line(17, 8, 22, 4, F('#e8e2d0')); P.px(18, 6, F('#c8c2b0'));
-    for (let i = 0; i < 4; i++) P.px(18 + i, 12 + i, bD);
-    wing(22, 19, [[18, 14 + sq], [12, 18 + sq], [14, 24]], wingC, rib);
-    if (ice) for (let i = 0; i < 4; i++) P.px(10 + i * 9, 20 + (i % 2) * 6, '#ffffff');
+    // queue
+    limb(44, 36 + gy, 52, 32 + gy, 4, body); limb(52, 32 + gy, 57, 24 + gy, 3, body); tri(55, 22 + gy, 59, 20 + gy, 58, 26 + gy, F(bD));
+    // corps, plaques du ventre, piques du dos
+    ball(34, 31 + gy, 13, 10, body); P.ellipse(28, 34 + gy, 7, 6, F(belly)); for (let i = 0; i < 5; i++) P.rect(22, 30 + gy + i * 2, 12, 1, F(shade(belly, 0.82)));
+    for (let i = 0; i < 6; i++) tri(32 + i * 3, 22 + gy + (i >> 1), 35 + i * 3, 22 + gy + (i >> 1), 33 + i * 3, 18 + gy + (i >> 1), F(bDD));
+    for (let i = 0; i < 14; i++) P.px(30 + ((i * 7) % 16), 27 + gy + ((i * 5) % 8), F(bD));      // écailles
+    // pattes : arrière musclée, avant griffue
+    ball(42, 40 + gy, 7, 6, body); box(39, 46 + gy, 10, 3, shade(body, 0.8)); for (let i = 0; i < 3; i++) P.px(39 + i * 4, 49 + gy, G('#f0ead8'));
+    limb(27, 38 + gy, 23 + sw, 46 + gy, 4, body); for (let i = 0; i < 3; i++) P.px(21 + i * 2 + sw, 47 + gy + (i % 2), G('#f0ead8'));
+    // petite aile avant
+    tri(29, 24 + gy, 22, 16 + wf, 18, 22 + wf, wingL); tri(29, 24 + gy, 18, 22 + wf, 23, 28 + gy, wingC); line(29, 24 + gy, 22, 16 + wf, rib); line(29, 24 + gy, 18, 22 + wf, rib);
+    // cou
+    limb(30, 28 + gy, 21, 16, 6, body); line(28, 30 + gy, 20, 19, F(belly), 2);
+    // tête : crâne, museau, mâchoire (ouverte en attaque), crocs, naseau qui fume
+    ball(18, 12, 7, 6, body); box(4, 11, 13, 5, body); P.rect(4, 11, 13, 1, F(bH));
+    P.rect(5, 16, 12, 1 + mo, G(a ? (ice ? '#9ae8f0' : '#ff8a1e') : '#3a0a0a')); box(5, 17 + mo, 11, 3, shade(body, 0.85));
+    for (let x = 6; x < 16; x += 2) { P.px(x, 16, G('#ffffff')); P.px(x + 1, 16 + mo, G('#f0ead8')); }
+    if (a) for (let i = 0; i < 4; i++) P.rect(1 - i, 15 + (i % 2), 2, 2, G(i % 2 ? (ice ? '#ffffff' : '#ffe27a') : (ice ? '#9ae8f0' : '#ff6a1e')));
+    P.px(5, 12, OUT); P.px(6, 12, F(bDD));
+    eye(14, 10, eyeC, 3, '#20141a'); P.px(16, 10, OUT);
+    line(11, 7, 20, 10, F(bDD), 2); P.rect(11, 6, 4, 1, F(bDD));                    // arcade sourcilière menaçante
+    limb(20, 8, 26, 3, 3, ice ? '#d8f4f0' : '#e8e0c8'); line(26, 3, 28, 0, F(ice ? '#ffffff' : '#f4ecd8'), 2);
+    limb(22, 11, 29, 7, 2, ice ? '#d8f4f0' : '#e8e0c8'); P.px(30, 6, F('#f4ecd8'));
+    for (let i = 0; i < 3; i++) tri(20 + i * 2, 16, 22 + i * 2, 16, 21 + i * 2, 19, F(bD));
+    if (ice) for (let i = 0; i < 6; i++) P.px(8 + i * 8, 22 + ((i * 7) % 12), G('#ffffff'));
   } else if (k === 'ombres') {
-    // seigneur encapuchonné qui flotte : visage noir, deux yeux blancs, longues mains, bas de robe en fumée
-    const [rL, r, rD] = T3('#6c6c76'), fy = sq, hand = F('#d8d4c8');
-    for (const d of [-1, 1]) { tri(26 + d * 6, 15 + fy, 26 + d * 17, 27 + fy, 26 + d * 9, 30 + fy, rD); line(26 + d * 7, 16 + fy, 26 + d * 16, 27 + fy, r, 2); }
-    for (let y = 14; y < 41; y++) {
-      const w = 6 + Math.floor((y - 14) * 0.55);
-      for (let x = -w; x < w; x++) { const fold = Math.floor((x + 40) * 6 / (w + 2) + Math.sin(y * 0.35) * 0.6) % 3; P.px(26 + x, y + fy, fold === 0 ? rD : fold === 1 ? r : rL); }
+    const [rH, r, rD, rDD] = T('#66666f'), fy = [0, 1, 2, 1][(f + b * 2) % 4], hand = F('#d6d2c4'), handD = F('#9a968a');
+    // aura de fumée
+    for (let i = 0; i < 10; i++) { const x = 6 + ((i * 13 + f * 3) % 48), y = 8 + ((i * 7) % 30); P.px(x, y + fy, F('#8a8a9a')); }
+    // manches : bras tombants, ou levés grands ouverts en attaque
+    for (const d of [-1, 1]) {
+      const sx = 30 + d * 7, hx = a ? 30 + d * 25 : 30 + d * 21, hy = a ? 10 : 30;
+      tri(sx, 17 + fy, hx, hy + fy, 30 + d * 10, 30 + fy, rD); line(sx, 17 + fy, hx, hy + fy, r, 3); line(sx, 17 + fy, hx, hy + fy, rH, 1);
+      const fx0 = hx - (d < 0 ? 3 : 0);
+      P.rect(fx0, hy + 1 + fy, 4, 3, hand); P.rect(fx0, hy + 3 + fy, 4, 1, handD);
+      for (let i = 0; i < 4; i++) line(fx0 + i, hy + 4 + fy, fx0 + i + d * (a ? 1 : 0) - (a ? d : 0), hy + 7 + (i % 2) + fy, i % 2 ? handD : hand);
     }
-    for (let x = 12; x < 41; x += 2) { const h = 2 + ((x * 7) % 5); for (let j = 0; j < h; j++) P.px(x + ((j + x) % 3 === 0 ? 1 : 0), 41 + j + fy, j > h - 2 ? F('#9a9aa4') : rD); }
-    for (const hx of [7, 42]) { P.rect(hx, 26 + fy, 4, 3, hand); for (let i = 0; i < 4; i++) P.rect(hx + i, 29 + fy, 1, 3 + (i % 2), hand); P.px(hx + 1, 26 + fy, F('#a8a498')); }
-    P.ellipse(26, 9 + fy, 9, 9, r); P.ellipse(26, 7 + fy, 7, 6, rL); P.ellipse(26, 11 + fy, 5, 6, '#08080e');
-    for (let i = 0; i < 4; i++) P.px(19 + i, 4 + i + fy, rD);
-    P.rect(23, 10 + fy, 2, 1, '#ffffff'); P.rect(28, 10 + fy, 2, 1, '#ffffff');
-    P.px(26, 0 + fy, rL);
+    // robe : plis verticaux, plus sombre vers le bas
+    for (let y = 15; y < 44; y++) {
+      const w = 7 + Math.floor((y - 15) * 0.6);
+      for (let x = -w; x < w; x++) { const fold = Math.floor((x + w) * 7 / (2 * w) + Math.sin(y * 0.3 + x * 0.2) * 0.4); const c = fold % 3 === 0 ? rDD : fold % 3 === 1 ? rD : r; P.px(30 + x, y + fy, y > 36 && (x + y) % 2 ? rDD : c); }
+      P.px(30 - w, y + fy, rH);
+    }
+    for (let x = 12; x < 49; x += 2) { const h = 2 + ((x * 7 + f * 2) % 6); for (let j = 0; j < h; j++) P.px(x + ((j + x + f) % 3 === 0 ? 1 : 0), 44 + j + fy, j > h - 3 ? F('#8a8a96') : rDD); }
+    // capuche, visage d'ombre, yeux blancs ou rouges en attaque
+    ball(30, 10 + fy, 10, 10, '#66666f'); P.ellipse(30, 12 + fy, 6, 7, F('#050508')); P.ellipse(30, 15 + fy, 4, 4, F('#000000'));
+    for (let i = 0; i < 4; i++) { P.px(22 + i, 5 + i + fy, rDD); P.px(38 - i, 5 + i + fy, rDD); }
+    const ec = a ? '#ff4a3a' : '#ffffff';
+    P.px(26, 10 + fy, G(shade(ec, 0.7))); P.rect(27, 11 + fy, 2, 1, G(ec)); P.px(34, 10 + fy, G(shade(ec, 0.7))); P.rect(32, 11 + fy, 2, 1, G(ec));
+    if (a) { P.px(26, 11 + fy, G('#ff9a8a')); P.px(34, 11 + fy, G('#ff9a8a')); }
+    P.px(30, 0 + fy, rH);
   } else if (k === 'cyclope') {
-    // brute chauve à un seul œil, horloge dans une main, sablier dans l'autre
-    const [sL, s, sD] = T3('#c08a64');
-    P.rect(16, 36 - sq, 7, 7, sD); P.rect(30, 36 + sq, 7, 7, sD); P.rect(14, 42, 10, 3, sD); P.rect(29, 42, 10, 3, sD);
-    P.rect(16, 30, 21, 6, F('#5a4030')); for (let x = 16; x < 37; x += 3) P.rect(x, 36, 2, 2, F('#5a4030'));
-    P.ellipse(26, 23, 13, 10, s); P.ellipse(22, 19, 6, 4, sL); P.rect(25, 24, 2, 4, sD);
-    for (const [x, y] of [[33, 15], [35, 17], [34, 13], [37, 16]]) P.px(x, y, sD);
-    P.rect(10, 18, 5, 12, s); P.disc(9, 23, 9, F('#c8a060')); P.disc(9, 23, 7, F('#f2e8d0'));
-    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; P.px(9 + Math.round(Math.cos(a) * 6), 23 + Math.round(Math.sin(a) * 6), OUT); }
-    line(9, 23, 9, 18, OUT); line(9, 23, 13, 23, OUT);
-    P.rect(38, 18, 5, 10, s);
-    P.rect(39, 24, 10, 2, F('#6a4a2a')); P.rect(39, 38, 10, 2, F('#6a4a2a')); P.rect(39, 26, 1, 12, F('#6a4a2a')); P.rect(48, 26, 1, 12, F('#6a4a2a'));
-    for (let y = 0; y < 6; y++) { P.rect(41 + (y >> 1), 26 + y, 6 - y, 1, F('#d8eef8')); P.rect(41 + (y >> 1), 37 - y, 6 - y, 1, F('#d8eef8')); }
-    P.rect(42, 33, 4, 4, F('#e8c070')); P.px(43, 30 + sq, F('#e8c070')); P.rect(41, 36, 6, 1, F('#e8c070'));
-    P.ellipse(26, 9, 9, 8, s); P.ellipse(23, 5, 4, 2, sL);
-    P.rect(16, 7, 3, 3, s); P.px(15, 6, s); P.rect(34, 7, 3, 3, s); P.px(37, 6, s);
-    P.disc(26, 8, 4, '#f4f0e0'); P.disc(26, 8, 2, F('#7a4a2a')); P.px(26, 8, OUT); P.px(25, 7, '#ffffff');
-    P.rect(21, 3, 10, 1, sD); P.rect(23, 14, 6, 1, sD); P.px(22, 13, sD); P.px(29, 13, sD);
+    const skin = '#c48c64', [sH, s, sD, sDD] = T(skin), mo = a ? 2 : 0;
+    // jambes trapues, pieds larges
+    limb(24, 40, 23, 48 + lA, 7, skin); box(18, 47 + lA, 11, 5, shade(skin, 0.85)); for (let i = 0; i < 4; i++) P.px(19 + i * 3, 51 + lA, F(sDD));
+    limb(36, 40, 37, 48 + lB, 7, skin); box(34, 47 + lB, 11, 5, shade(skin, 0.85)); for (let i = 0; i < 4; i++) P.px(35 + i * 3, 51 + lB, F(sDD));
+    box(17, 34, 26, 7, '#5a4030'); for (let x = 17; x < 43; x += 3) tri(x, 40, x + 3, 40, x + 1, 44, F('#5a4030'));
+    // torse massif : pectoraux, ventre, taches sur l'épaule
+    ball(30, 27 + b, 15, 11, skin); ball(24, 23 + b, 6, 4, skin); ball(36, 23 + b, 6, 4, skin); P.rect(29, 21 + b, 2, 10, F(sD)); P.ellipse(30, 31 + b, 6, 3, F(sD)); P.ellipse(29, 30 + b, 5, 2, F(s));
+    for (const [x, y] of [[40, 17], [43, 19], [41, 20], [44, 16], [39, 19]]) P.px(x, y + b, F(sDD));
+    // bras gauche : horloge (levée en attaque)
+    const cx = a ? 11 : 11, cy = a ? 14 : 27;
+    limb(17, 21, 12, cy + 4, 6, skin);
+    P.disc(cx, cy, 9, F('#a87830')); P.disc(cx, cy, 8, F('#d8a848')); P.disc(cx, cy, 6, G('#f4ead2'));
+    for (let i = 0; i < 12; i++) { const an = i / 12 * Math.PI * 2; P.px(cx + Math.round(Math.cos(an) * 5), cy + Math.round(Math.sin(an) * 5), i % 3 ? F('#8a7a5a') : OUT); }
+    const ha = f * Math.PI / 2 - Math.PI / 2; line(cx, cy, cx + Math.round(Math.cos(ha) * 4), cy + Math.round(Math.sin(ha) * 4), OUT); line(cx, cy, cx + 3, cy, OUT); P.px(cx, cy, F('#c03030'));
+    // bras droit : sablier
+    limb(43, 21, 48, 31, 6, skin); P.disc(48, 32, 3, F(s));
+    box(44, 30, 11, 2, '#6a4a2a'); box(44, 46, 11, 2, '#6a4a2a'); P.rect(44, 32, 1, 14, F('#4a3018')); P.rect(54, 32, 1, 14, F('#4a3018'));
+    for (let y = 0; y < 7; y++) { P.rect(46 + (y >> 1), 32 + y, 7 - y, 1, G('#dcf0f8')); P.rect(46 + (y >> 1), 45 - y, 7 - y, 1, G('#dcf0f8')); }
+    P.rect(47, 41, 5, 4, G('#e8c070')); P.rect(48, 33, 3, 2, G('#e8c070')); P.px(49, 36 + (f % 3), G('#f0d090')); P.px(49, 38 + (f % 2), G('#f0d090'));
+    // tête chauve, oreilles pointues, un seul œil immense
+    tri(19, 9, 13, 5, 20, 14, F(s)); tri(41, 9, 47, 5, 40, 14, F(s)); P.px(15, 6, F(sH)); P.px(45, 6, F(sH));
+    ball(30, 11, 10, 9, skin); P.ellipse(26, 5, 3, 1, F(sH));
+    P.disc(30, 10, 5, F('#2a1810')); P.disc(30, 10, 4, G('#f4eedc')); P.disc(30, 10, 3, G(a ? '#e83a2a' : '#a8602a')); P.disc(30, 10, 1, OUT); P.px(29, 9, G('#ffffff'));
+    if (a) { P.px(26, 10, G('#ff9a6a')); P.px(34, 10, G('#ff9a6a')); }
+    P.rect(25, 5, 11, 1, F(sDD)); P.rect(24, 4, 3, 2, F(sDD)); P.rect(34, 4, 3, 2, F(sDD)); P.rect(28, 6, 5, 1, F(sDD));   // paupière lourde
+    P.rect(26, 7, 9, 1, F(sD));
+    P.rect(28, 14, 4, 2, F(sD)); P.px(28, 15, OUT); P.px(31, 15, OUT);
+    if (a) { P.rect(25, 18, 11, 2 + mo, F('#2a0808')); fangs(26, 18, 4, 3); }
+    else { line(25, 19, 35, 19, F(sDD)); P.px(24, 20, F(sDD)); P.px(36, 20, F(sDD)); P.rect(27, 18, 7, 1, F(sD)); }
   } else if (k === 'minotaure') {
-    // taureau musclé : grandes cornes, hache dans une main, épée dans l'autre, sabots et queue
-    const [fL, f, fD] = T3('#77808f'), horn = F('#ece4d0');
-    line(38, 32, 47, 38, f, 2); P.rect(46, 38, 3, 3, fD);
-    P.rect(17, 34 - sq, 6, 7, fD); P.rect(30, 34 + sq, 6, 7, fD); P.rect(16, 41, 7, 3, F('#3a3a44')); P.rect(30, 41, 7, 3, F('#3a3a44'));
-    P.rect(17, 29, 19, 6, F('#3e4250')); for (let x = 17; x < 36; x += 3) P.rect(x, 35, 2, 2, F('#3e4250'));
-    P.ellipse(26, 21, 12, 9, f); P.ellipse(22, 17, 5, 3, fL); P.rect(25, 20, 2, 6, fD); P.rect(21, 24, 10, 1, fD);
-    P.rect(10, 15, 5, 12, f); P.rect(38, 15, 5, 12, f);
-    line(9, 30, 9, 6, F('#6a4a2a'), 2); P.rect(3, 4, 6, 9, F('#c8ced8')); P.rect(3, 4, 1, 9, F('#ffffff')); P.rect(8, 6, 2, 5, F('#8a909a'));
-    line(42, 28, 50, 4, F('#d8dee8'), 2); line(43, 28, 51, 5, F('#8a909a')); P.rect(39, 27, 7, 2, F('#c8a040')); P.rect(41, 29, 2, 4, F('#6a4a2a'));
-    P.ellipse(26, 9, 7, 7, f); P.rect(22, 11, 9, 6, fL); P.rect(23, 15, 7, 2, F('#c8b0b8')); P.px(24, 15, OUT); P.px(28, 15, OUT);
-    P.rect(21, 7, 3, 2, '#ffe0d0'); P.rect(29, 7, 3, 2, '#ffe0d0'); P.px(22, 8, OUT); P.px(30, 8, OUT); P.rect(20, 6, 4, 1, OUT); P.rect(29, 6, 4, 1, OUT);
-    P.rect(16, 7, 3, 2, f); P.rect(33, 7, 3, 2, f);
-    line(19, 4, 13, 2, horn, 2); line(13, 2, 12, -1, horn, 1); line(33, 4, 39, 2, horn, 2); line(39, 2, 40, -1, horn, 1);
+    const fur = '#757e8e', [fH, fc, fD, fDD] = T(fur), horn = '#ece2c8', mo = a ? 2 : 0;
+    // queue qui fouette
+    limb(41, 36, 50, 42 + sw * 2, 2, fur); P.rect(49, 42 + sw * 2, 4, 4, F(fDD));
+    // jambes et sabots
+    limb(25, 39, 23, 47 + lA, 6, fur); box(19, 47 + lA, 9, 4, '#2a2a32'); P.px(23, 50 + lA, F('#1a1a20'));
+    limb(35, 39, 37, 47 + lB, 6, fur); box(33, 47 + lB, 9, 4, '#2a2a32'); P.px(37, 50 + lB, F('#1a1a20'));
+    box(19, 33, 22, 7, '#3c404e'); for (let x = 19; x < 41; x += 3) tri(x, 39, x + 3, 39, x + 1, 43, F('#3c404e'));
+    // torse : pectoraux, abdominaux, fourrure aux épaules
+    ball(30, 26 + b, 13, 10, fur); ball(25, 22 + b, 5, 4, fur); ball(35, 22 + b, 5, 4, fur);
+    P.rect(29, 21 + b, 2, 11, F(fD)); for (let i = 0; i < 3; i++) { P.rect(25, 27 + i * 2 + b, 4, 1, F(fD)); P.rect(31, 27 + i * 2 + b, 4, 1, F(fD)); }
+    for (let i = 0; i < 8; i++) { P.px(18 + i, 17 + (i % 2), F(fH)); P.px(35 + i, 17 + (i % 2), F(fH)); }
+    // bras gauche + hache (levée en attaque)
+    if (a) { limb(19, 19, 14, 10, 5, fur); line(15, 12, 5, 0, F('#6a4a2a'), 2); tri(0, 0, 9, 0, 3, 9, F('#c8ced8')); line(0, 1, 6, 1, G('#ffffff')); }
+    else { limb(19, 19, 13, 31, 5, fur); line(12, 37, 12, 6, F('#6a4a2a'), 2); tri(3, 3, 11, 7, 3, 16, F('#c8ced8')); line(3, 4, 3, 15, G('#ffffff')); P.rect(10, 6, 2, 9, F('#8a909a')); }
+    // bras droit + épée (abattue en attaque)
+    if (a) { limb(41, 19, 46, 27, 5, fur); line(47, 27, 58, 42, F('#d8dee8'), 2); line(48, 27, 59, 41, G('#ffffff')); P.rect(44, 25, 6, 2, F('#c8a040')); }
+    else { limb(41, 19, 47, 30, 5, fur); line(48, 28, 57, 3, F('#d8dee8'), 2); line(49, 28, 58, 4, F('#9aa0aa')); P.rect(45, 28, 7, 2, F('#c8a040')); P.rect(47, 30, 2, 4, F('#6a4a2a')); }
+    // tête de taureau : cornes, oreilles, mufle, anneau, yeux rouges
+    limb(23, 7, 15, 5, 3, horn); limb(15, 5, 13, 0, 2, horn); P.px(13, 0, F('#fffaf0')); limb(37, 7, 45, 5, 3, horn); limb(45, 5, 47, 0, 2, horn);
+    P.rect(22, 6, 3, 3, F('#8a8270')); P.rect(35, 6, 3, 3, F('#8a8270'));
+    tri(22, 10, 15, 9, 21, 13, F(fc)); tri(38, 10, 45, 9, 39, 13, F(fc)); P.px(17, 10, F('#c8a0a8')); P.px(43, 10, F('#c8a0a8'));
+    ball(30, 11, 8, 8, fur); P.ellipse(30, 6, 5, 2, F(fH));
+    ball(30, 17, 6, 4, '#b4a4ac'); P.rect(27, 17, 2, 2, OUT); P.rect(32, 17, 2, 2, OUT); P.ellipse(30, 21, 2, 1, G('#d8b040')); P.px(30, 22, F('#a88020'));
+    if (a) { P.rect(26, 20, 9, 1 + mo, F('#2a0a0a')); for (let i = 0; i < 3; i++) P.px(23 - i * 2, 16 - i, G('#e8f0f8')); for (let i = 0; i < 3; i++) P.px(37 + i * 2, 16 - i, G('#e8f0f8')); }
+    eye(24, 11, '#ff3a2a', 2); eye(34, 11, '#ff3a2a', 2);
+    brow(22, 8, 1, 6, F(fDD)); brow(38, 8, -1, 6, F(fDD));
   } else if (k === 'kraken') {
-    // pieuvre géante aux grands yeux, tentacules en spirale, éclairs du chaos, petit sablier
-    const [kL, kc, kD] = T3('#6a6284'), sucker = F('#c8c0d8');
-    // six tentacules qui s'enroulent au bout, ventouses claires en dessous
-    for (const [dir, base, len] of [[-1, 0.4, 20], [1, 0.4, 20], [-1, 1.1, 16], [1, 1.1, 16], [-1, 1.5, 12], [1, 1.5, 12]]) {
-      let x = 26 + dir * 6, y = 30, a = Math.PI / 2 - dir * base;
+    const kc = '#685f84', [kH, km, kD, kDD] = T(kc), sucker = F('#d0c8e0');
+    // tentacules qui ondulent (levés en attaque)
+    const arms = [[-1, 0.3, 22], [1, 0.3, 22], [-1, 0.9, 19], [1, 0.9, 19], [-1, 1.45, 15], [1, 1.45, 15], [-1, 2.0, 11], [1, 2.0, 11]];
+    arms.forEach(([dir, base, len], j) => {
+      let x = 30 + dir * 5, y = 26, an = Math.PI / 2 - dir * (base + (a ? 0.9 : 0)) + Math.sin(f * Math.PI / 2 + j) * 0.15;
       for (let i = 0; i < len; i++) {
-        const th = i < len * 0.5 ? 3 : i < len * 0.8 ? 2 : 1;
-        P.rect(Math.round(x) - (th >> 1), Math.round(y), th, th, (i >> 2) % 2 ? kD : kc);
+        const th = i < len * 0.45 ? 4 : i < len * 0.75 ? 3 : i < len * 0.9 ? 2 : 1;
+        P.rect(Math.round(x) - (th >> 1), Math.round(y), th, th, (i >> 2) % 2 ? kD : km);
+        if (th > 1) P.px(Math.round(x) - (th >> 1), Math.round(y), kH);
         if (i % 3 === 1 && th > 1) P.px(Math.round(x), Math.round(y) + th, sucker);
-        x += Math.cos(a) * 1.4; y += Math.sin(a) * 1.4 * 0.8;
-        a -= dir * (i < len * 0.55 ? 0.03 : 0.42);
+        x += Math.cos(an) * 1.5; y += Math.sin(an) * 1.5 * 0.8;
+        an -= dir * (i < len * 0.5 ? 0.04 : 0.4 + Math.sin(f + j) * 0.05);
       }
-    }
-    P.ellipse(26, 30, 10, 6, kc);
-    P.rect(23, 34, 6, 1, F('#8a6a3a')); P.rect(23, 42, 6, 1, F('#8a6a3a')); P.rect(24, 35, 4, 3, F('#e8f2f8')); P.rect(24, 39, 4, 3, F('#e8f2f8')); P.rect(25, 40, 2, 2, F('#e8c070'));
-    P.ellipse(26, 13, 12, 12, kc); P.ellipse(22, 7, 5, 4, kL); for (const [x, y] of [[30, 6], [33, 10], [19, 15], [32, 16]]) P.px(x, y, kD);
-    P.disc(20, 20, 3, '#f4f0e0'); P.disc(32, 20, 3, '#f4f0e0'); P.rect(19, 20, 3, 1, OUT); P.rect(31, 20, 3, 1, OUT); P.px(19, 19, '#ffffff'); P.px(31, 19, '#ffffff'); P.rect(17, 16, 6, 1, kD); P.rect(29, 16, 6, 1, kD);
-    const bolt = '#fff6a0';
-    for (const [bx, d] of [[5, 1], [44, -1]]) { line(bx, 0, bx + d * 3, 4, bolt); line(bx + d * 3, 4, bx, 5, bolt); line(bx, 5, bx + d * 4, 10 + sq, bolt); }
+    });
+    // sablier tenu
+    box(26, 40, 9, 2, '#8a6a3a'); box(26, 50, 9, 2, '#8a6a3a'); for (let y = 0; y < 4; y++) { P.rect(27 + (y >> 1), 42 + y, 7 - y, 1, G('#e4f2f8')); P.rect(27 + (y >> 1), 49 - y, 7 - y, 1, G('#e4f2f8')); } P.rect(29, 47, 3, 2, G('#e8c070'));
+    // manteau : grosse tête bombée, taches, reflets
+    ball(30, 15, 14, 14, kc); P.ellipse(30, 26, 9, 3, F(kD));
+    for (const [x, y, rr] of [[36, 6, 1], [40, 11, 2], [22, 9, 1], [38, 18, 1], [25, 4, 1], [33, 3, 1]]) P.disc(x, y, rr, F(kD));
+    P.ellipse(23, 6, 3, 2, F(shade(kc, 1.5)));
+    // yeux : pupilles fendues horizontales, paupières lourdes en V
+    for (const ex of [22, 38]) { P.disc(ex, 20, 4, F('#2a1a28')); P.disc(ex, 20, 3, G(a ? '#ff6a3a' : '#f0e4b0')); P.rect(ex - 2, 20, 5, 1, OUT); P.px(ex - 1, 19, G('#ffffff')); }
+    for (const [ex, d] of [[22, 1], [38, -1]]) for (let i = -4; i <= 4; i++) { const t = Math.round((d * i + 4) / 8 * 3); P.rect(ex + i, 15, 1, 2 + t, F(kD)); P.px(ex + i, 17 + t, F(kDD)); }
+    brow(16, 14, 1, 8, F(kDD)); brow(44, 14, -1, 8, F(kDD));
+    // éclairs du chaos
+    if (f % 2 === 0 || a) for (const [bx, d] of [[4, 1], [55, -1]]) { line(bx, 0, bx + d * 4, 5, G('#fff6a0')); line(bx + d * 4, 5, bx + d, 6, G('#fff6a0')); line(bx + d, 6, bx + d * 5, 12, G('#fff6a0')); P.px(bx + d * 5, 13, G('#ffffff')); }
   } else if (k === 'golem') {
-    // golem en blocs de papier ligné, tête cube au regard sévère, pile de livres dans les bras
-    const [pL, p, pD] = T3('#e6dcc2'), ln = F('#b8ac8c');
-    const blk = (x, y, w, h) => { P.rect(x, y, w, h, p); P.rect(x, y, w, 1, pL); P.rect(x + w - 1, y, 1, h, pD); P.rect(x, y + h - 1, w, 1, pD); for (let j = y + 2; j < y + h - 1; j += 2) P.rect(x + 1, j, w - 2, 1, ln); };
-    blk(16, 33 - sq, 8, 9); blk(29, 33 + sq, 8, 9);
-    P.rect(13, 42, 12, 3, F('#6a3a2a')); P.rect(13, 42, 12, 1, F('#9a5a3a')); P.rect(28, 42, 11, 3, F('#3a4a6a'));
-    blk(17, 26, 18, 8); blk(14, 15, 24, 12); P.rect(14, 26, 24, 1, F('#8a7a5a'));
-    blk(38, 15, 7, 6); blk(39, 21, 6, 9); P.rect(39, 30, 6, 3, p);
-    blk(8, 15, 6, 6); blk(7, 21, 6, 6);
-    for (let i = 0; i < 4; i++) { const c = F(['#8a2a2a', '#2a4a8a', '#2a6a3a', '#7a5a2a'][i]); P.rect(2 + (i % 2), 18 + i * 3, 12, 3, c); P.rect(2 + (i % 2), 18 + i * 3, 12, 1, F('#f4ecd8')); }
-    P.rect(5, 30, 9, 3, p);
-    blk(17, 2, 18, 13); P.rect(17, 2, 18, 2, F('#f4ecd8'));
-    P.rect(20, 7, 4, 2, '#ffffff'); P.rect(29, 7, 4, 2, '#ffffff'); P.px(22, 8, OUT); P.px(30, 8, OUT);
-    line(19, 5, 24, 7, OUT); line(33, 5, 28, 7, OUT); P.rect(25, 9, 3, 3, pD); P.rect(22, 12, 9, 1, OUT); P.px(21, 13, OUT); P.px(31, 13, OUT);
+    const pc = '#e4d8bc', ln = F('#b0a282'), ink = F('#4a4a5a');
+    const blk = (x, y, w, h) => { box(x, y, w, h, pc); for (let j = y + 2; j < y + h - 1; j += 2) P.rect(x + 1, j, w - 2, 1, ln); P.rect(x + 2, y + 1, 1, h - 2, F('#d88a8a')); };
+    // jambes en blocs, pieds en livres
+    blk(19, 40 + lA, 9, 8); box(16, 47 + lA, 13, 5, '#7a3a2a'); P.rect(16, 48 + lA, 13, 1, F('#f4ecd8'));
+    blk(33, 40 + lB, 9, 8); box(32, 47 + lB, 13, 5, '#2a4a7a'); P.rect(32, 48 + lB, 13, 1, F('#f4ecd8'));
+    // torse, ceinture, gribouillis d'encre
+    blk(16, 20 + b, 28, 14); box(16, 32, 28, 3, '#6a4a2a'); P.rect(28, 32, 4, 3, G('#d8b040'));
+    for (const [x, y, w] of [[19, 23, 6], [33, 25, 7], [21, 28, 4], [35, 29, 5]]) P.rect(x, y + b, w, 1, ink);
+    P.px(40, 22 + b, F('#c03030')); P.px(41, 23 + b, F('#c03030'));   // une rature rouge
+    blk(19, 34, 22, 7);
+    // bras : livres serrés, ou levés au-dessus de la tête en attaque
+    if (a) { blk(8, 4, 8, 16); blk(44, 4, 8, 16); box(7, 0, 10, 5, pc); box(43, 0, 10, 5, pc); }
+    else {
+      blk(8, 20, 8, 7); blk(7, 27, 8, 8); blk(44, 20, 8, 7); blk(45, 27, 8, 9); box(45, 36, 8, 4, pc);
+      for (let i = 0; i < 4; i++) { const c = ['#8a2a2a', '#2a4a8a', '#2a6a3a', '#7a5a2a'][i]; box(1 + (i % 2), 22 + i * 3, 13, 3, c); P.rect(2 + (i % 2), 23 + i * 3, 11, 1, F('#f4ecd8')); }
+    }
+    // tête cube : dessus clair, côté sombre, front lourd, yeux ambre, bouche crispée
+    blk(19, 4 + sw, 22, 16); P.rect(19, 4 + sw, 22, 2, F('#fff6e0')); P.rect(38, 6 + sw, 3, 14, F('#b8ac8c'));
+    P.rect(21, 9 + sw, 17, 2, F('#6a5a3a')); P.rect(28, 10 + sw, 3, 2, F('#6a5a3a'));
+    eye(23, 12 + sw, '#ffb02a', 3, '#3a2a18'); eye(33, 12 + sw, '#ffb02a', 3, '#3a2a18');
+    brow(21, 9 + sw, 1, 7, F('#3a2a18')); brow(38, 9 + sw, -1, 7, F('#3a2a18'));
+    box(28, 13 + sw, 4, 3, shade(pc, 0.8));
+    if (a) { P.rect(23, 17 + sw, 13, 2, F('#2a1a0a')); fangs(24, 17 + sw, 6, 2); }
+    else { P.rect(24, 17 + sw, 11, 1, OUT); P.px(23, 18 + sw, OUT); P.px(35, 18 + sw, OUT); }
   } else if (k === 'titan') {
-    // géant musclé à la barbe hirsute, deux troncs dans le dos, poings levés, boucle en tête de lion
-    const [sL, s, sD] = T3('#c89c74'), hair = F('#5a3a22'), log = F('#8a6a44'), logD = F('#5a4428');
-    P.rect(11, 0, 7, 30, log); P.rect(35, 0, 7, 30, log); for (let y = 2; y < 30; y += 4) { P.rect(12, y, 5, 1, logD); P.rect(36, y + 2, 5, 1, logD); } P.ellipse(14, 0, 3, 1, F('#c8a878')); P.ellipse(38, 0, 3, 1, F('#c8a878'));
-    P.rect(15, 35 - sq, 8, 7, s); P.rect(30, 35 + sq, 8, 7, s); P.rect(14, 42, 10, 3, sD); P.rect(29, 42, 10, 3, sD);
-    P.rect(16, 29, 21, 7, F('#6a4a30')); for (let x = 16; x < 37; x += 3) P.rect(x, 36, 2, 2, F('#6a4a30'));
-    P.ellipse(26, 21, 14, 9, s); P.ellipse(20, 18, 5, 3, sL); P.ellipse(32, 18, 5, 3, sL); P.rect(25, 17, 2, 9, sD); for (let i = 0; i < 3; i++) { P.rect(21, 22 + i * 2, 4, 1, sD); P.rect(27, 22 + i * 2, 4, 1, sD); }
-    P.rect(16, 28, 21, 2, F('#4a3020')); P.disc(26, 30, 3, F('#c8a040')); P.px(25, 30, OUT); P.px(27, 30, OUT);
-    P.ellipse(7, 18, 4, 6, s); P.disc(6, 9 - sq, 4, s); P.px(5, 7 - sq, sL); P.ellipse(45, 18, 4, 6, s); P.disc(46, 9 + sq, 4, s); P.px(45, 7 + sq, sL);
-    P.ellipse(26, 8, 8, 7, hair); P.ellipse(26, 9, 6, 6, s); P.rect(20, 12, 13, 6, hair); P.ellipse(26, 16, 6, 4, hair);
-    for (let i = 0; i < 6; i++) P.rect(18 + i * 3, 1 + (i % 2), 2, 3, hair);
-    P.rect(22, 8, 3, 2, '#ffffff'); P.rect(28, 8, 3, 2, '#ffffff'); P.px(23, 9, OUT); P.px(29, 9, OUT); P.rect(21, 7, 4, 1, OUT); P.rect(28, 7, 4, 1, OUT);
-    P.rect(24, 14 + sq, 5, 2, '#3a1414'); P.rect(24, 14 + sq, 5, 1, '#ffffff');
-    const bolt = '#fff6a0'; line(2, 12, 0, 16, bolt); line(50, 12, 52, 16, bolt);
+    const skin = '#c89c74', [sH, s, sD, sDD] = T(skin), hair = '#5a3820', mo = a ? 3 : 1;
+    // deux troncs dans le dos (écorce, anneaux)
+    for (const x of [9, 44]) { box(x, 0, 8, 32, '#8a6a44'); for (let y = 2; y < 31; y += 3) P.px(x + 2 + (y % 4), y, F('#5a4428')); P.rect(x + 2, 3, 1, 26, F('#6a5034')); P.ellipse(x + 3, 0, 3, 1, F('#d8b888')); P.px(x + 3, 0, F('#a88858')); }
+    // jambes musclées
+    limb(24, 39, 22, 48 + lA, 8, skin); box(17, 48 + lA, 12, 4, shade(skin, 0.85)); P.ellipse(23, 43 + lA, 2, 1, F(sH));
+    limb(36, 39, 38, 48 + lB, 8, skin); box(33, 48 + lB, 12, 4, shade(skin, 0.85)); P.ellipse(37, 43 + lB, 2, 1, F(sH));
+    box(18, 33, 24, 7, '#6a4a30'); for (let x = 18; x < 42; x += 3) tri(x, 39, x + 3, 39, x + 1, 44, F('#6a4a30'));
+    // torse : gros pectoraux, abdominaux en grille, ceinture à tête de lion
+    ball(30, 25 + b, 15, 10, skin); ball(23, 20 + b, 7, 5, skin); ball(37, 20 + b, 7, 5, skin); P.rect(29, 17 + b, 2, 15, F(sD));
+    for (let i = 0; i < 3; i++) { box(24, 26 + i * 3 + b, 5, 3, skin); box(31, 26 + i * 3 + b, 5, 3, skin); }
+    box(17, 32, 26, 3, '#4a3020'); ball(30, 34, 4, 4, '#c8a040'); P.px(28, 33, OUT); P.px(32, 33, OUT); P.rect(29, 36, 3, 1, OUT); for (let i = 0; i < 6; i++) P.px(26 + i * 2 - (i > 2 ? 0 : 0), 30 + (i % 2), F('#a87820'));
+    // bras : poings levés, ou qui frappent le sol en attaque
+    if (a) { limb(16, 18, 13, 30, 6, skin); limb(13, 30, 18, 42, 6, skin); ball(19, 44, 4, 4, skin); limb(44, 18, 47, 30, 6, skin); limb(47, 30, 42, 42, 6, skin); ball(41, 44, 4, 4, skin); for (let i = 0; i < 5; i++) P.px(10 + i * 10, 50, G('#fff6a0')); }
+    else { limb(16, 18, 7, 22, 6, skin); limb(7, 22, 7, 11, 6, skin); ball(7, 9, 4, 4, skin); P.rect(5, 8, 5, 1, F(sD)); limb(44, 18, 53, 22, 6, skin); limb(53, 22, 53, 11, 6, skin); ball(53, 9, 4, 4, skin); P.rect(51, 8, 5, 1, F(sD)); }
+    // tête : crinière, barbe, sourcils froncés, bouche qui hurle
+    ball(30, 9, 11, 9, hair); for (let i = 0; i < 8; i++) tri(19 + i * 3, 3, 21 + i * 3, 3, 20 + i * 3 - 1, 0 + (i % 2), F(hair));
+    ball(30, 10, 7, 7, skin); ball(30, 17, 8, 6, hair); for (let i = 0; i < 5; i++) P.px(25 + i * 2, 21 + (i % 2), F('#3a2414'));
+    P.rect(25, 6, 10, 1, F(sD)); P.rect(26, 4, 8, 1, F(sD));
+    P.rect(24, 9, 4, 2, G('#f4f0e0')); P.rect(32, 9, 4, 2, G('#f4f0e0')); P.px(26, 9, OUT); P.px(33, 9, OUT); P.px(26, 10, OUT); P.px(33, 10, OUT);
+    brow(22, 6, 1, 7, F('#2a1810')); brow(38, 6, -1, 7, F('#2a1810'));
+    P.rect(29, 11, 2, 3, F(sD)); P.px(28, 13, F(sDD)); P.px(31, 13, F(sDD));
+    P.rect(26, 15, 8, 1 + mo, F('#2a0808')); P.rect(26, 15, 8, 1, G('#f4ecd8')); if (a) P.rect(27, 18, 6, 1, G('#e8e0d0'));
+    if (f % 2 === 0 || a) { line(1, 14, 4, 18, G('#fff6a0')); line(4, 18, 1, 20, G('#fff6a0')); line(58, 14, 55, 18, G('#fff6a0')); line(55, 18, 58, 20, G('#fff6a0')); }
   } else if (k === 'empereur') {
-    // démon en armure : immenses cornes, yeux rouges, crocs, épaulières à pointes, crâne à la ceinture, épée
-    const [aL, a, aD] = T3('#5c616c'), eye = '#ff3a2a';
-    P.rect(15, 34 - sq, 8, 8, aD); P.rect(30, 34 + sq, 8, 8, aD); P.rect(14, 41, 10, 4, a); P.rect(29, 41, 10, 4, a); P.px(14, 44, aL); P.px(38, 44, aL);
-    for (let i = 0; i < 5; i++) { P.rect(17 + i * 4, 29, 3, 6 - (i % 2) * 2, aD); }
-    P.ellipse(26, 21, 12, 9, a); P.ellipse(22, 17, 5, 3, aL); P.rect(25, 15, 2, 12, aD); P.rect(19, 21, 14, 1, aD);
-    P.rect(16, 27, 21, 3, F('#3a3036')); P.disc(26, 28, 3, F('#e8e2d0')); P.px(25, 28, OUT); P.px(27, 28, OUT); P.px(26, 30, OUT);
-    for (const [x, d] of [[13, -1], [39, 1]]) { P.ellipse(x, 14, 6, 4, a); P.px(x, 11, aL); for (let i = 0; i < 3; i++) line(x + d * i * 2, 11, x + d * (i * 2 + 2), 7 - i, aL); }
-    P.rect(7, 16, 5, 11, a); P.rect(41, 16, 5, 11, a); for (let i = 0; i < 3; i++) P.rect(42 + i * 2, 27, 1, 4, F('#c8ccd4'));
-    line(8, 30, 8, 2, F('#d8dee8'), 2); P.rect(8, 2, 1, 26, F('#ffffff')); P.rect(4, 29, 10, 2, F('#8a6a3a')); P.rect(7, 31, 3, 4, F('#4a3428')); P.disc(8, 36, 1, F('#c8a040'));
-    P.ellipse(26, 8, 7, 7, a); P.rect(21, 10, 11, 5, aD);
-    P.rect(21, 7, 3, 2, eye); P.rect(29, 7, 3, 2, eye); P.rect(20, 6, 4, 1, OUT); P.rect(29, 6, 4, 1, OUT);
-    P.rect(22, 12, 9, 2, '#2a0a0a'); for (let i = 0; i < 4; i++) P.px(22 + i * 2 + 1, 12, '#ffffff'); P.px(23, 14, '#ffffff'); P.px(29, 14, '#ffffff');
-    const horn = F('#2e2a2e'), hornL = F('#5a545a');
-    line(20, 3, 15, 0, horn, 2); line(15, 0, 14, -4, horn, 2); P.px(14, -5, hornL); line(32, 3, 37, 0, horn, 2); line(37, 0, 38, -4, horn, 2); P.px(38, -5, hornL);
-    P.px(22, 1, hornL); P.px(30, 1, hornL);
+    const ar = '#585d68', [aH, am, aD, aDD] = T(ar), red = '#ff3a2a', mo = a ? 3 : 1;
+    // cape rouge sombre derrière
+    tri(18, 16, 42, 16, 10, 50, F('#5a1418')); tri(42, 16, 50, 50, 10, 50, F('#5a1418')); for (let x = 12; x < 50; x += 4) P.rect(x, 40, 1, 10, F('#3a0a0e'));
+    // jambes en armure, genouillères à pointe
+    box(20, 40 + lA, 8, 8, ar); box(18, 47 + lA, 11, 5, shade(ar, 0.8)); tri(20, 42 + lA, 24, 42 + lA, 22, 38 + lA, F(aH));
+    box(32, 40 + lB, 8, 8, ar); box(31, 47 + lB, 11, 5, shade(ar, 0.8)); tri(32, 42 + lB, 36, 42 + lB, 34, 38 + lB, F(aH));
+    for (let i = 0; i < 6; i++) box(18 + i * 4, 33, 4, 7 - (i % 2) * 2, shade(ar, 0.8));
+    // cuirasse : plaques, fissures rougeoyantes, ceinture à crâne
+    ball(30, 25 + b, 13, 10, ar); P.rect(29, 17 + b, 2, 14, F(aDD));
+    for (let i = 0; i < 3; i++) { P.rect(23, 25 + i * 3 + b, 5, 1, F(aD)); P.rect(32, 25 + i * 3 + b, 5, 1, F(aD)); }
+    line(24, 20 + b, 27, 24 + b, G('#ff5a3a')); line(35, 19 + b, 33, 23 + b, G('#ff5a3a')); P.px(31, 27 + b, G('#ff8a5a'));
+    box(17, 30, 26, 3, '#3a3036'); ball(30, 31, 3, 3, '#e8e2d0'); P.px(29, 31, OUT); P.px(31, 31, OUT); P.px(30, 33, OUT);
+    // épaulières à pointes
+    for (const [x, d] of [[16, -1], [44, 1]]) { ball(x, 16, 7, 5, ar); for (let i = 0; i < 3; i++) tri(x + d * (i * 3 - 2), 13, x + d * (i * 3 + 1), 13, x + d * (i * 3), 6 - i, F(aH)); }
+    // bras gauche + épée (levée au-dessus de la tête en attaque)
+    if (a) { limb(14, 20, 12, 10, 5, ar); line(12, 8, 1, 0, F('#d8dee8'), 2); line(13, 8, 2, 0, G('#ffffff')); box(9, 8, 8, 2, '#8a6a3a'); }
+    else { limb(14, 20, 10, 31, 5, ar); line(10, 30, 10, 2, F('#d8dee8'), 2); P.rect(10, 2, 1, 27, G('#ffffff')); box(6, 29, 10, 2, '#8a6a3a'); P.rect(9, 31, 3, 4, F('#4a3428')); P.disc(10, 36, 1, G('#ff3a2a')); }
+    // bras droit : griffe (tendue en attaque, avec énergie rouge)
+    if (a) { limb(46, 20, 55, 24, 5, ar); for (let i = 0; i < 4; i++) line(55, 22 + i, 59, 20 + i * 2, F('#c8ccd4')); for (let i = 0; i < 4; i++) P.px(56 + (i % 2), 18 + i * 3, G('#ff6a4a')); }
+    else { limb(46, 20, 49, 31, 5, ar); for (let i = 0; i < 4; i++) line(47 + i, 33, 47 + i, 36 + (i % 2), F('#c8ccd4')); }
+    // tête de démon : cornes immenses, yeux rouges, crocs
+    limb(24, 6, 17, 3, 3, '#3a3438'); limb(17, 3, 15, -1, 2, '#3a3438'); limb(36, 6, 43, 3, 3, '#3a3438'); limb(43, 3, 45, -1, 2, '#3a3438');
+    P.px(26, 3, F('#5a545a')); P.px(34, 3, F('#5a545a'));
+    ball(30, 10, 8, 8, ar); box(24, 13, 13, 5, shade(ar, 0.7));
+    eye(24, 9, red, 3, '#0a0406'); eye(33, 9, red, 3, '#0a0406'); P.px(23, 10, G('#ff8a6a')); P.px(37, 10, G('#ff8a6a'));
+    brow(22, 6, 1, 7, F(aDD)); brow(38, 6, -1, 7, F(aDD));
+    P.rect(25, 14, 11, 1 + mo, G(a ? '#ff3a1a' : '#2a0a0a')); for (let i = 0; i < 6; i++) P.px(25 + i * 2, 14, G('#ffffff')); P.px(26, 15 + mo, G('#f4f0e0')); P.px(34, 15 + mo, G('#f4f0e0'));
   } else {
-    const b = flash ? '#c8ffc0' : '#5ac85a', bd = flash ? '#8ae08a' : '#3a9a44', bl = flash ? '#ffffff' : '#9af08a';
-    P.ellipse(26, 30 + sq, 23 + sq, 14 - sq, bd);
-    P.ellipse(26, 28 + sq, 22 + sq, 14 - sq, b);
-    P.ellipse(17, 22 + sq, 6, 3, bl); P.px(12, 24, bl);
-    P.rect(16, 25, 5, 6, '#ffffff'); P.rect(31, 25, 5, 6, '#ffffff'); P.rect(18, 27, 3, 4, OUT); P.rect(33, 27, 3, 4, OUT);
-    P.rect(14, 23, 7, 1, OUT); P.rect(31, 23, 7, 1, OUT);
-    P.rect(21, 35, 10, 2, OUT); P.rect(23, 37, 6, 1, '#e04a5a');
-    P.rect(17, 9 + sq * 2, 18, 6, '#f2c94c'); P.rect(17, 5 + sq * 2, 3, 4, '#f2c94c'); P.rect(24, 3 + sq * 2, 4, 6, '#f2c94c'); P.rect(32, 5 + sq * 2, 3, 4, '#f2c94c');
-    P.px(25, 11 + sq * 2, '#e04a5a'); P.px(19, 11 + sq * 2, '#3a7ae0'); P.px(32, 11 + sq * 2, '#3fbf5a');
+    // Roi Gluant
+    const [gH, gm, gD] = T('#5ac85a'), sq = (b + (f % 2)) % 2;
+    P.ellipse(30, 37 + sq, 26 + sq, 15 - sq, gD); P.ellipse(29, 35 + sq, 25 + sq, 15 - sq, gm); P.ellipse(20, 28 + sq, 7, 3, gH); P.px(14, 31, gH);
+    for (let i = 0; i < 4; i++) P.px(12 + i * 12, 49, gD);
+    P.rect(18, 32, 6, 6, G('#ffffff')); P.rect(36, 32, 6, 6, G('#ffffff')); P.rect(21, 34, 3, 4, OUT); P.rect(36, 34, 3, 4, OUT);
+    brow(15, 28, 1, 9, OUT); brow(45, 28, -1, 9, OUT);
+    P.rect(24, 42, 12, 2 + (a ? 2 : 0), F('#2a0a0a')); P.rect(26, 44 + (a ? 2 : 0), 8, 1, F('#e04a5a')); fangs(25, 42, 2, 9);
+    const cy = 12 + sq * 2, gold = '#f2c94c';
+    box(20, cy + 5, 20, 6, gold); tri(20, cy + 5, 24, cy + 5, 20, cy - 1, F(gold)); tri(27, cy + 5, 33, cy + 5, 30, cy - 4, F(gold)); tri(36, cy + 5, 40, cy + 5, 40, cy - 1, F(gold));
+    P.px(30, cy + 7, G('#e04a5a')); P.px(24, cy + 7, G('#3a7ae0')); P.px(36, cy + 7, G('#3fbf5a'));
+  }
+  // ombrage automatique : bord éclairé en haut à gauche, bord sombre en bas à droite, grain de texture
+  const W0 = P.w, H0 = P.h, g0 = P.g.slice();
+  for (let y = 0; y < H0; y++) for (let x = 0; x < W0; x++) {
+    const i = y * W0 + x, c = g0[i];
+    if (!c || glow.has(c) || c === OUT) continue;
+    const up = y > 0 && g0[i - W0], left = x > 0 && g0[i - 1], down = y < H0 - 1 && g0[i + W0], right = x < W0 - 1 && g0[i + 1];
+    if (!up || !left) P.g[i] = shade(c, 1.16);
+    else if (!down || !right) P.g[i] = shade(c, 0.74);
+    else { const n = ((x * 73856093) ^ (y * 19349663)) >>> 0, h = (n % 100) / 100; if (h < 0.1) P.g[i] = shade(c, 0.9); else if (h > 0.93) P.g[i] = shade(c, 1.08); }
   }
   return (dynCache[key] = P.outline().canvas());
 }
@@ -1456,10 +1629,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   const B = world.boss;
   let bossDrawn = !B;
   const drawBoss = () => {
-    const [x, y, , , ang, fl, bk, shield, phase] = B, fr = Math.floor(now * 3) % 2, bs = big ? 7 : PX;
+    const [x, y, , , ang, fl, bk, shield, phase, an] = B, bs = big ? 7 : PX;
+    const fr = an & 2 ? Math.floor(now * 7) % 4 : 0, atk = an & 1 ? 1 : 0, br = Math.floor(now * 1.6) % 2;
     ctx.fillStyle = '#00000044'; ctx.beginPath(); ctx.ellipse(x, y + 40, 70, 16, 0, 0, 7); ctx.fill();
     if (phase === 2) for (let k = 0; k < 10; k++) { const t = (now * 0.8 + k / 10) % 1; sq(x + Math.sin(k * 2.7) * 70, y + 30 - t * 120, big ? 4 : 2, t < 0.5 ? '#ff5a3a' : '#a8201a'); }
-    const spr = bossSprite(fr, fl && Math.floor(now * 20) % 2 ? 1 : 0, bk);
+    const spr = bossSprite(fr, fl && Math.floor(now * 20) % 2 ? 1 : 0, bk, atk, br);
     ctx.save(); ctx.translate(Math.round(x), Math.round(y - 10)); if (Math.cos(ang) < -0.2) ctx.scale(-1, 1);
     ctx.drawImage(spr, Math.round(-spr.width * bs / 2), Math.round(-spr.height * bs / 2), spr.width * bs, spr.height * bs); ctx.restore();
     if (shield) {   // Bouclier du savoir : bulle bleue
@@ -1533,7 +1707,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     }
     // au repos, le héros respire (1 pixel) ; le cristal du mage luit doucement
     const breathe = !d.ph && Math.sin(now * 2.6 + p.id) > 0.3 ? -heroScale / 3 : 0;
-    drawHeroSprite(ctx, d.x, d.y + breathe, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g);
+    drawHeroSprite(ctx, d.x, d.y + breathe, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, p.at);
     if (p.c === 'mage') {
       const dd = dirFromAngle(p.a), S = heroScale, gx = d.x + (dd === 'down' ? 6 * S : dd === 'up' ? 5 * S : dd === 'right' ? 2 * S : -2 * S), gy = d.y + breathe + 22 - (dd === 'up' ? 22 : 21) * S;
       const pul = 0.18 + Math.sin(now * 3 + p.id) * 0.06;
@@ -1579,7 +1753,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.fillRect(Math.round(d.x - bw / 2), ny + 9, Math.round(bw * r / 3) * 3, big ? 14 : 3);
   }
   if (B) {
-    const [x, y, hp, max, , , bk] = B, bw = big ? 300 : 140, ny = y - (big ? 150 : 95), BI = BOSS_INFO[bk] || BOSS_INFO.gluant, lbl = BI.ico + ' ' + BI.nom;
+    const [x, y, hp, max, , , bk] = B, bw = big ? 300 : 140, ny = y - (big ? 212 : 104), BI = BOSS_INFO[bk] || BOSS_INFO.gluant, lbl = BI.ico + ' ' + BI.nom;
     ctx.lineWidth = big ? 9 : 4; ctx.strokeStyle = OUT; ctx.strokeText(lbl, x, ny - 8); ctx.fillStyle = BI.col; ctx.fillText(lbl, x, ny - 8);
     ctx.fillStyle = OUT; ctx.fillRect(x - bw / 2 - 3, ny, bw + 6, big ? 24 : 12);
     ctx.fillStyle = '#3a2a3a'; ctx.fillRect(x - bw / 2, ny + 3, bw, big ? 18 : 6);

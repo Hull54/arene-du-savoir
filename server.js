@@ -461,7 +461,7 @@ function shoot(p, angle, a, bonus = 0) {
 function attack(p) {
   if (!p.alive || p.cdA > 0 || paused || p.busy || p.stun > 0) return;
   const a = CLASSES[p.cls].atk;
-  p.cdA = a.cd;
+  p.cdA = a.cd; p.atkT = 0.25;
   p.revealed = 1;                       // attaquer révèle le joueur caché dans un buisson
   const fromShadow = p.stealth > 0;
   p.stealth = 0;
@@ -836,6 +836,7 @@ function updateMinions(dt) {
 }
 // Une attaque du Boss, décrite par son type (voir BOSSES)
 function bossAttack(a, best, aim) {
+  boss.anim = 0.5;
   const bx = Math.round(boss.x), by = Math.round(boss.y);
   const shots = (angles, cls) => { for (const an of angles) projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(an) * a.vit, vy: Math.sin(an) * a.vit, r: 12, dmg: bossDmg(a.dmg), life: 2.4, owner: -1, cls, slow: a.ralenti || 0 }); };
   const cibles = n => [...players.values()].filter(p => p.alive && !p.busy && Math.hypot(p.x - boss.x, p.y - boss.y) < a.portee).sort(() => Math.random() - 0.5).slice(0, n);
@@ -890,6 +891,7 @@ function bossThink(dt) {
   if (!boss || boss.hp <= 0) return;
   const B = BOSSES[boss.k], cm = boss.phase === 2 ? 0.7 : 1;   // enragé : attaques plus fréquentes
   boss.cdA -= dt; boss.cdB -= dt; boss.flash = Math.max(0, boss.flash - dt); boss.pathT -= dt;
+  boss.anim = Math.max(0, (boss.anim || 0) - dt); boss.moving = !!boss.charge;   // pour l'animation : attaque, marche
   if (boss.shield > 0 && boss.shield !== Infinity && (boss.shield -= dt) <= 0) { boss.shield = 0; addFeed('🛡️ Le bouclier disparaît !'); }
   if (boss.phase === 2 && (boss.cdSbire -= dt) <= 0) { boss.cdSbire = 18; summon(2); }
   updateMinions(dt);
@@ -918,6 +920,7 @@ function bossThink(dt) {
   }
   boss.angle = Math.atan2(ty - boss.y, tx - boss.x);
   if (bd > 90) {
+    boss.moving = true;
     const sp = B.speed * (boss.phase === 2 ? 1.35 : 1) * dt, mx = Math.cos(boss.angle) * sp, my = Math.sin(boss.angle) * sp;
     if (!blocked(boss.x + mx, boss.y, 30)) boss.x += mx;
     if (!blocked(boss.x, boss.y + my, 30)) boss.y += my;
@@ -1193,7 +1196,7 @@ function step() {
     p.cdA = Math.max(0, p.cdA - dt); p.cdP = Math.max(0, p.cdP - dt); p.cdD = Math.max(0, p.cdD - dt); p.cdF = Math.max(0, p.cdF - dt);
     p.shield = Math.max(0, p.shield - dt); p.protect = Math.max(0, p.protect - dt);
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
-    p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt); p.stun = Math.max(0, (p.stun || 0) - dt);
+    p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt); p.stun = Math.max(0, (p.stun || 0) - dt); p.atkT = Math.max(0, (p.atkT || 0) - dt);
     p.hidden = p.revealed <= 0 && inBush(p);
     if (p.busy) {
       if (p.goldNext && (p.goldNext.t -= dt) <= 0) { const g = p.goldNext; p.goldNext = null; askQuestion(p, 'chest', { chest: g.chest, gold: true, step: 2, nOk: g.nOk }); }
@@ -1268,7 +1271,7 @@ function publicState() {
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0),
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0),
       p.team, gearCode(p),
     ]),
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
@@ -1277,7 +1280,7 @@ function publicState() {
     tb: barrels.map(b => (b.t ? 0 : b.fuse ? 2 : 1)).join(''),
     pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1), z.boss ? 1 : 0]),
     it: items.map(it => [it.x, it.y, it.k]),
-    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase] : 0,
+    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase, (boss.anim > 0 ? 1 : 0) | (boss.moving ? 2 : 0)] : 0,
     mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / SBIRE.hp * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),
     tm: timer.dur ? Math.ceil(timer.left) : -1,
     mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
