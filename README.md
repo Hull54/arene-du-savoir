@@ -50,7 +50,7 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 | Carte | Particularités |
 |---|---|
 | 🏘️ Village de Mirabel | Maisons où l'on peut entrer, rivière avec ponts et gué, grand lac avec une île au trésor, fontaine de soin |
-| 🏙️ Cité de Pierrefort | Ville médiévale : rues pavées et ruelles, 11 maisons à visiter, marché avec fontaine de soin, canal avec 3 ponts, cathédrale, réverbères |
+| 🏙️ Cité de Pierrefort | Ville médiévale : rues pavées et ruelles, 12 maisons à visiter, marché avec fontaine de soin, canal avec 3 ponts, cathédrale, réverbères |
 | 🌵 Désert Brûlant | Oasis, temple en ruine, plateaux rocheux, sables mouvants qui ralentissent |
 | 🏰 Donjon Oublié | Salles et couloirs, torches, fosses et lave (on peut tirer par-dessus), coffres dans les coins |
 | ❄️ Toundra Glacée | Immense lac gelé où l'on glisse plus vite, cabanes, feu de camp qui soigne |
