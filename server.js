@@ -1032,6 +1032,7 @@ function assignTeams() {
   const ps = [...players.values()].sort(() => Math.random() - 0.5);
   ps.forEach((p, i) => { p.team = teamMode() ? i % nbTeams : -1; p.carry = null; });
 }
+let regles = false;   // l'enseignant affiche les règles du mode sur tous les écrans (jeu en pause)
 let countdown = 0;   // compte à rebours 3-2-1 au début d'une manche
 function newRound() {
   ended = null; paused = false; countdown = 3.5;
@@ -1287,7 +1288,7 @@ function publicState() {
     hl: hill ? [hill.x, hill.y, HILL.r, hill.owner, Math.ceil(hill.t)] : 0,
     fl: flags ? flags.map(f => [Math.round(f.x), Math.round(f.y), f.carrier ? 1 : 0, f.hx, f.hy]) : 0,
     gc: chests.findIndex(c => c.gold),
-    feed: feed.map(f => f.text), paused, ec: eclair ? Math.ceil(eclair.left) : 0, cd: Math.ceil(countdown - 0.5),
+    feed: feed.map(f => f.text), paused, rg: regles ? 1 : 0, ec: eclair ? Math.ceil(eclair.left) : 0, cd: Math.ceil(countdown - 0.5),
   });
 }
 
@@ -1356,7 +1357,8 @@ function onMessage(conn, msg) {
   if (conn.role !== 'prof') return;
   switch (m.t) {
     case 'subject': m.on ? subjects.add(m.s) : subjects.delete(m.s); break;
-    case 'pause': if (!ended) { paused = !paused; addFeed(paused ? '⏸ Partie en pause' : '▶ La partie reprend !'); } break;
+    case 'pause': if (!ended) { paused = !paused; regles = false; addFeed(paused ? '⏸ Partie en pause' : '▶ La partie reprend !'); } break;
+    case 'regles': if (!ended) { regles = !regles; paused = regles; } break;
     case 'addbot': {
       const cls = Object.keys(CLASSES)[Math.floor(Math.random() * 4)];
       const used = new Set([...players.values()].map(q => q.name));

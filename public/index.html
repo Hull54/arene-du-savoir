@@ -19,6 +19,32 @@
   .panel { background: #2e2445; border: 4px solid #1b1424; box-shadow: inset -4px -4px 0 #211a33, inset 4px 4px 0 #44386a, 4px 4px 0 #0008; }
   input#name { font: 600 22px "Pixelify Sans", monospace; padding: 10px 16px; border: 4px solid #1b1424; box-shadow: inset 3px 3px 0 #d9d2c0; background: #f4ecd8; width: min(320px, 90vw); text-align: center; outline: none; }
   input#name:focus { border-color: #ffd54a; }
+  /* ----- menu en étapes ----- */
+  .dots { display: flex; gap: 8px; margin-top: -6px; }
+  .dots i { width: 14px; height: 14px; border: 3px solid #1b1424; background: #44386a; }
+  .dots i.on { background: #ffd54a; } .dots i.done { background: #8a7a4a; }
+  .wiz { width: min(820px, 100%); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .wtitle { font-size: clamp(22px, 3.4vw, 30px); color: #ffd54a; text-align: center; font-weight: 700; }
+  .wbody { display: flex; gap: 18px; align-items: center; justify-content: center; flex-wrap: wrap; min-height: 180px; }
+  #bigPrev { width: 128px; height: 160px; image-rendering: pixelated; }
+  .wiz[data-step="1"] #bigPrev, .wiz[data-step="2"] #bigPrev, .wiz[data-step="3"] #bigPrev { display: none; }
+  .wcontent { display: flex; flex-direction: column; align-items: center; gap: 12px; flex: 1; min-width: 260px; }
+  .wiz .wstep { display: none; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+  .wiz[data-step="1"] .wstep[data-s="1"], .wiz[data-step="3"] .wstep[data-s="3"] { display: flex; }
+  .wiz #lookPanel { flex-direction: column; padding: 0; }
+  .wiz[data-step="1"] #lookPanel, .wiz[data-step="3"] #lookPanel { display: none; }
+  .wiz[data-step="2"] #lookPanel > :not([data-s="2"]), .wiz[data-step="4"] #lookPanel > :not([data-s="4"]), .wiz[data-step="5"] #lookPanel > :not([data-s="5"]) { display: none !important; }
+  .wiz .sw { font-size: 18px; } .wiz .sw b { width: 38px; height: 38px; } .wiz .sw span, .wiz .lrow > span { min-width: 90px; text-align: right; }
+  .wiz .seg.small button { font-size: 18px; padding: 8px 12px; }
+  .wiz #pets { flex-wrap: wrap; justify-content: center; }
+  #gender canvas { display: none; }
+  .wiz #gender { gap: 18px; } .wiz #gender button { display: flex; flex-direction: column; align-items: center; font-size: 22px; padding: 10px 22px; }
+  .wiz #gender canvas { display: block; width: 96px; height: 120px; image-rendering: pixelated; }
+  .wnav { display: flex; justify-content: space-between; gap: 12px; }
+  .wnav .btn { font-size: 20px; padding: 8px 22px; } .btn.alt { background: #c9bfe6; box-shadow: inset -4px -4px 0 #9a8fc0, inset 4px 4px 0 #ece6ff, 4px 4px 0 #0008; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  details.keys summary { cursor: pointer; font-weight: 700; }
+  .wiz .classes { width: 100%; }
   .classes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; width: min(780px, 100%); }
   .cls { padding: 10px; cursor: pointer; text-align: center; }
   .cls:hover { transform: translateY(-3px); }
@@ -101,6 +127,10 @@
   .podium i { display: block; background: #8b5a2b; color: #ffd54a; border: 3px solid #1b1424; font-style: normal; font-size: 26px; }
   .finlist { font-size: 17px; line-height: 1.6; }
   .card .ko.chest { color: #8b5a2b; } .card .ko.eclair { color: #3a6fd8; }
+  #rules { display: none; background: #0b0812aa; z-index: 3; }
+  .rules { text-align: left; } .rules .rgT { text-align: center; margin: 4px 0 6px; } .rgB { text-align: center; font-size: 20px; font-weight: 700; color: #8b5a2b; margin-bottom: 8px; }
+  .rgL { font-size: 18px; line-height: 1.45; margin: 0; padding-left: 22px; } .rules .btn { display: block; margin: 14px auto 0; }
+  .rules .who { text-align: center; margin-top: 12px; color: #44386a; font-weight: 700; }
   #count { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 140px; font-weight: 700; color: #ffd54a; text-shadow: 8px 8px 0 #1b1424, -4px -4px 0 #1b1424, 4px -4px 0 #1b1424, -4px 4px 0 #1b1424; pointer-events: none; z-index: 4; }
   @media (max-width: 560px) { .choices { grid-template-columns: 1fr; } }
 </style>
@@ -131,22 +161,35 @@
 
 <div id="join" class="screen">
   <h1>Arène du Savoir</h1>
-  <div class="sub">Choisis ton héros. Si tu tombes, réponds à une question pour revenir !</div>
-  <input id="name" maxlength="16" placeholder="Ton prénom" autocomplete="off">
-  <div class="look panel" id="lookPanel">
-    <div class="seg" id="gender"><button data-g="f">👧 Fille</button><button data-g="m">👦 Garçon</button></div>
-    <div class="sw" id="skins"><span>Peau</span></div>
-    <div class="sw" id="hairs"><span>Cheveux</span></div>
-    <div class="sw" id="outfits"><span>Tenue</span></div>
-    <div class="lrow"><span>Accessoire</span><div class="seg small" id="accs"></div></div>
-    <div class="lrow"><span>Familier</span><div class="seg small" id="pets"></div></div>
-    <div class="sw" id="petcols"><span>Couleur du familier</span></div>
+  <div class="dots" id="dots"></div>
+  <div class="wiz panel" id="wiz" data-step="1">
+    <div class="wtitle" id="wTitle"></div>
+    <div class="wbody">
+      <canvas id="bigPrev" width="128" height="160"></canvas>
+      <div class="wcontent">
+        <div class="wstep" data-s="1">
+          <input id="name" maxlength="16" placeholder="Ton prénom" autocomplete="off">
+          <button class="btn alt" id="quick" style="display:none"></button>
+        </div>
+        <div class="wstep" data-s="3"><div class="classes" id="classes"></div><div class="keys" id="clsInfo"></div></div>
+        <div class="look" id="lookPanel">
+          <div class="seg" id="gender" data-s="2"><button data-g="f"><canvas width="96" height="120"></canvas>👧 Fille</button><button data-g="m"><canvas width="96" height="120"></canvas>👦 Garçon</button></div>
+          <div class="sw" id="skins" data-s="4"><span>Peau</span></div>
+          <div class="sw" id="hairs" data-s="4"><span>Cheveux</span></div>
+          <div class="sw" id="outfits" data-s="4"><span>Tenue</span></div>
+          <div class="lrow" data-s="4"><span>Accessoire</span><div class="seg small" id="accs"></div></div>
+          <div class="lrow" data-s="5"><span>Familier</span><div class="seg small" id="pets"></div></div>
+          <div class="sw" id="petcols" data-s="5"><span>Couleur</span></div>
+          <div class="keys" id="petInfo" data-s="5"></div>
+        </div>
+      </div>
+    </div>
+    <div class="wnav"><button class="btn alt" id="back">◀ Retour</button><button class="btn" id="next">Suivant ▶</button><button class="btn" id="go" disabled>Entrer dans l'arène ⚔️</button></div>
   </div>
-  <div class="keys" id="petInfo"></div>
-  <div class="classes" id="classes"></div>
-  <button class="btn" id="go" disabled>Entrer dans l'arène</button>
-  <div class="keys">Bouger : WASD ou flèches · Attaque : J (ou clic) · Pouvoir : K (ou clic droit) · Habileté : Espace · Familier : E<br>Sans souris, on vise dans la direction où l'on marche.</div>
+  <details class="keys"><summary>Comment jouer ?</summary>Si tu tombes, réponds à une question pour revenir !<br>Bouger : WASD ou flèches · Attaque : J (ou clic) · Pouvoir : K (ou clic droit) · Habileté : Espace · Familier : E<br>Sans souris, on vise dans la direction où l'on marche.</details>
 </div>
+
+<div id="rules" class="screen"><div class="card rules"><div id="rulesBody"></div><div id="rulesFoot"></div></div></div>
 
 <div id="quiz" class="screen">
   <div class="card">
@@ -213,8 +256,8 @@ const cards = {};
 for (const [k, c] of Object.entries(CLS)) {
   const d = document.createElement('div');
   d.className = 'cls panel';
-  d.innerHTML = `<canvas width="96" height="120"></canvas><b></b><small>${c.desc}<br>${c.pow}<br>${c.dash}</small>`;
-  d.onclick = () => { chosen = k; document.querySelectorAll('.cls').forEach(e => e.classList.remove('sel')); d.classList.add('sel'); check(); };
+  d.innerHTML = `<canvas width="96" height="120"></canvas><b></b><small>${c.desc}</small>`;
+  d.onclick = () => { chosen = k; document.querySelectorAll('.cls').forEach(e => e.classList.remove('sel')); d.classList.add('sel'); $('clsInfo').innerHTML = `${c.pow}<br>${c.dash}`; check(); };
   $('classes').appendChild(d);
   cards[k] = d;
 }
@@ -243,6 +286,16 @@ function animPreview() {
     drawHeroSprite(g, 48, 86, k, look, ang, chosen === k ? previewT * 4 : 0, 4);
     drawPetPreview(g, 80, 96);
   }
+  const k0 = chosen || 'guerrier';
+  document.querySelectorAll('#gender canvas').forEach((c, i) => {
+    const g = c.getContext('2d'); g.clearRect(0, 0, 96, 120); g.fillStyle = '#0005'; g.fillRect(28, 104, 40, 8);
+    drawHeroSprite(g, 48, 86, k0, (i ? 'm' : 'f') + look.slice(1), Math.PI / 2, look[0] === (i ? 'm' : 'f') ? previewT * 4 : 0, 4);
+  });
+  if (step >= 4) {
+    const g = $('bigPrev').getContext('2d'); g.clearRect(0, 0, 128, 160); g.fillStyle = '#0005'; g.fillRect(36, 140, 56, 10);
+    drawHeroSprite(g, 64, 112, k0, look, [Math.PI / 2, 0, -Math.PI / 2, Math.PI][Math.floor(previewT / 1.5) % 4], previewT * 4, 5);
+    drawPetPreview(g, 124, 140);
+  }
   requestAnimationFrame(animPreview);
 }
 function drawPetPreview(g, x, y) {
@@ -264,16 +317,44 @@ function animFinLook() {
   drawPetPreview(g, 80, 96);
   requestAnimationFrame(animFinLook);
 }
-const check = () => $('go').disabled = !(chosen && $('name').value.trim());
-$('name').oninput = () => { check(); chargerOr(); renderLook(); };
+// ----- Menu en étapes : prénom → fille/garçon → classe → look → familier -----
+let step = 1;
+const STEPS = ['Quel est ton prénom ?', 'Fille ou garçon ?', 'Choisis ta classe', 'Ton look', 'Ton familier'];
+STEPS.forEach(() => $('dots').appendChild(document.createElement('i')));
+function check() {
+  const ok = step === 1 ? !!$('name').value.trim() : step === 3 ? !!chosen : true;
+  $('next').disabled = !ok; $('go').disabled = !(chosen && $('name').value.trim());
+}
+function showStep(n) {
+  step = Math.max(1, Math.min(STEPS.length, n));
+  $('wiz').dataset.step = step; $('wTitle').textContent = STEPS[step - 1];
+  [...$('dots').children].forEach((d, i) => { d.className = i + 1 === step ? 'on' : i + 1 < step ? 'done' : ''; });
+  $('back').style.visibility = step > 1 ? '' : 'hidden';
+  $('next').style.display = step < STEPS.length ? '' : 'none'; $('go').style.display = step === STEPS.length ? '' : 'none';
+  check();
+  if (step === 1) setTimeout(() => $('name').focus(), 0);
+}
+$('next').onclick = () => { if (!$('next').disabled) showStep(step + 1); };
+$('back').onclick = () => showStep(step - 1);
+// un élève qui revient retrouve son héros en un clic
+let savedCls = null; try { savedCls = localStorage.getItem('arene-classe'); } catch {}
+function majQuick() {
+  const ok = savedCls && CLS[savedCls] && $('name').value.trim();
+  $('quick').style.display = ok ? '' : 'none';
+  if (ok) $('quick').textContent = `⚡ Rejouer avec mon ${nomClasse(savedCls, look)}`;
+}
+$('quick').onclick = () => { chosen = savedCls; $('go').disabled = false; $('go').click(); };
+$('name').oninput = () => { check(); chargerOr(); renderLook(); majQuick(); };
 $('name').value = localStorage.getItem('arene-nom') || '';
-chargerOr(); renderLook(); animPreview();
+if (savedCls && cards[savedCls]) cards[savedCls].click();
+chargerOr(); renderLook(); majQuick(); showStep(1); animPreview();
 $('go').onclick = () => {
   const name = $('name').value.trim();
-  try { localStorage.setItem('arene-nom', name); } catch {}
+  if (!name || !chosen) return;
+  try { localStorage.setItem('arene-nom', name); localStorage.setItem('arene-classe', chosen); } catch {}
   connect(name, chosen);
 };
-$('name').onkeydown = e => { if (e.key === 'Enter' && !$('go').disabled) $('go').click(); };
+$('name').onkeydown = e => { if (e.key === 'Enter' && !$('next').disabled) showStep(2); };
 
 // ----- Réseau -----
 let lastHp = null, lastCd = 0, lastGear = null;
@@ -322,7 +403,7 @@ function connect(name, cls) {
     else if (m.t === 'or') { monOr += m.n; sauverOr(); if (m.n > 1) toast(`🪙 +${m.n} pièces d'or !`); }
     else if (m.t === 'serie') { toast(`🔥 Série de ${m.n} bonnes réponses ! Bonus : ${m.ico} ${m.nom}`); Son.play('serie'); }
     else if (m.t === 'fin') showFin(m);
-    else if (m.t === 'debut') { $('fin').style.display = 'none'; $('join').insertBefore($('lookPanel'), $('classes')); }
+    else if (m.t === 'debut') { $('fin').style.display = 'none'; document.querySelector('.wcontent').appendChild($('lookPanel')); }
     else if (m.t === 'kicked') { alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
   };
   ws.onclose = () => { if (map) { alert('Connexion perdue avec le serveur.'); location.reload(); } };
@@ -629,6 +710,7 @@ function frame(now) {
   }
   $('feed').innerHTML = world.feed.map(t => `<div>${t.replace(/</g, '&lt;')}</div>`).join('');
   $('pause').style.display = world.paused ? 'block' : 'none';
+  majRegles();
   // compte à rebours 3-2-1
   if (world.cd !== lastCd) {
     if (world.cd > 0) { $('count').textContent = world.cd; $('count').style.display = 'flex'; Son.play('touche'); }
@@ -637,6 +719,22 @@ function frame(now) {
   }
 }
 requestAnimationFrame(frame);
+// règles du mode : à la première entrée (et à chaque nouveau mode), quand l'enseignant les affiche, et pendant le 3-2-1
+const reglesVues = new Set();
+let reglesMode = null, reglesEtat = '';
+const ended0 = () => $('fin').style.display === 'flex';
+function majRegles() {
+  if (!world || !me) return;
+  const mode = world.mode, prof = !!world.rg, neuf = !reglesVues.has(mode) && !ended0(), cd = world.cd > 0;
+  const etat = answering ? '' : prof ? 'prof' : neuf ? 'neuf' : cd ? 'cd' : '';
+  if (etat === reglesEtat && mode === reglesMode) return;
+  reglesEtat = etat; reglesMode = mode;
+  if (!etat) { $('rules').style.display = 'none'; return; }
+  $('rulesBody').innerHTML = reglesHTML(mode);
+  $('rulesFoot').innerHTML = etat === 'prof' ? '<div class="who">🧑‍🏫 Écoute ton enseignant : il explique les règles.</div>' : etat === 'neuf' ? '<button class="btn" id="rulesOk">Compris ! ⚔️</button>' : '';
+  if (etat === 'neuf') $('rulesOk').onclick = () => { reglesVues.add(mode); majRegles(); };
+  $('rules').style.display = 'flex';
+}
 
 </script>
 </body>

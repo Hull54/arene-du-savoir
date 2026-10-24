@@ -50,6 +50,8 @@
   .podium canvas { width: 120px; height: 150px; display: block; margin: 0 auto; image-rendering: pixelated; }
   .podium i { display: block; background: #8b5a2b; color: #ffd54a; border: 3px solid #1b1424; font-style: normal; font-size: 34px; }
   .big { font-size: 24px; line-height: 1.5; }
+  #rglCard { text-align: left; } #rglCard .rgT { color: #2a1f3d; text-align: center; font-size: 46px; margin: 0 0 8px; } #rglCard .rgB { text-align: center; font-size: 32px; font-weight: 700; color: #8b5a2b; margin-bottom: 10px; }
+  #rglCard .rgL { font-size: 28px; line-height: 1.5; } #rglCard .big { text-align: center; font-size: 18px; opacity: .7; margin-top: 10px; }
   @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; grid-template-rows: 55vh auto; } }
 </style>
 </head>
@@ -58,6 +60,7 @@
   <div class="stage">
     <canvas id="c"></canvas>
     <div class="over" id="ecl"><div class="card" id="eclCard"></div></div>
+    <div class="over" id="rgl"><div class="card" id="rglCard"></div></div>
     <div class="over" id="fin"><div class="card" id="finCard"></div></div>
   </div>
   <aside>
@@ -68,6 +71,7 @@
     <div class="box">
       <h2>Partie</h2>
       <button id="pause">⏸ Pause</button>
+      <button id="regles" title="Met le jeu en pause et affiche les règles du mode sur tous les écrans">📜 Règles</button>
       <button class="sec" id="reset">🔄 Nouvelle manche</button>
       <button class="sec" id="finir">🏁 Finir la manche</button>
       <button class="sec" id="plein">⛶ Plein écran</button>
@@ -130,7 +134,13 @@ ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; }
   else if (m.t === 'carte') { map = m.map; mapLayer = null; disp.clear(); }
-  else if (m.t === 's') world = unpackWorld(m.w);
+  else if (m.t === 's') {
+    world = unpackWorld(m.w);
+    $('rgl').style.display = world.rg ? 'flex' : 'none';
+    if (world.rg && $('rglCard').dataset.m !== world.mode) { $('rglCard').dataset.m = world.mode; $('rglCard').innerHTML = reglesHTML(world.mode, '<div class="big">Appuie sur ▶ Jouer ! pour reprendre la partie.</div>'); }
+    if (!world.rg) $('rglCard').dataset.m = '';
+    $('regles').textContent = world.rg ? '▶ Jouer !' : '📜 Règles';
+  }
   else if (m.t === 'info') info(m);
   else if (m.t === 'eclairRes') eclairRes(m);
   else if (m.t === 'fin') showFin(m);
@@ -138,6 +148,7 @@ ws.onmessage = e => {
   else if (m.t === 'bilans') bilans(m);
 };
 $('pause').onclick = () => send({ t: 'pause' });
+$('regles').onclick = () => send({ t: 'regles' });
 $('reset').onclick = () => confirm('Commencer une nouvelle manche ? Les scores seront remis à zéro.') && send({ t: 'reset' });
 $('finir').onclick = () => confirm('Terminer la manche maintenant et afficher les gagnants ?') && send({ t: 'finir' });
 $('addbot').onclick = () => send({ t: 'addbot' });

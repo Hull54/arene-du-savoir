@@ -38,6 +38,20 @@ function shade(hex, f) {
   return '#' + [c(r), c(g), c(b)].map(v => v.toString(16).padStart(2, '0')).join('');
 }
 
+// Règles expliquées avant la partie, selon le mode (élèves et projecteur)
+const REGLES = {
+  libre: { ico: '⚔️', titre: 'Chacun pour soi', but: 'Marque le plus de points !', pts: ['Vaincre un adversaire : 1 point.', 'Le meneur porte une couronne 👑 : le vaincre rapporte 2 points.', 'Les bonnes réponses donnent des pièces d\'or et des bonus.'] },
+  equipes: { ico: '🤝', titre: 'Équipes', but: 'Fais gagner ton équipe !', pts: ['Ton équipe a une couleur : tu ne peux pas blesser tes coéquipiers.', 'Chaque adversaire vaincu donne 1 point à ton équipe.', 'Restez ensemble et aidez-vous !'] },
+  colline: { ico: '⛰️', titre: 'Roi de la colline', but: 'Tiens la zone en cercle avec ton équipe !', pts: ['Ton équipe seule dans la zone : 1 point par seconde.', 'Deux équipes dans la zone : elle clignote et personne ne marque.', 'La zone change de place toutes les 75 secondes. 120 points pour gagner.'] },
+  drapeau: { ico: '🚩', titre: 'Capture du drapeau', but: 'Ramène le drapeau adverse dans ta base !', pts: ['Touche le drapeau adverse pour le prendre (tu avances un peu moins vite).', 'Tu marques seulement si ton propre drapeau est dans ta base.', 'Un porteur K.O. lâche le drapeau : touche-le pour le ramener. 3 captures pour gagner.'] },
+  boss: { ico: '👑', titre: 'Boss coopératif', but: 'Toute la classe ensemble contre le Boss !', pts: ['On ne peut pas se blesser entre nous.', 'Chaque bonne réponse enlève 3 % de vie au Boss : tout le monde est utile !', '🛡️ Bouclier du savoir : répondez juste ensemble pour le briser.', 'À la moitié de sa vie, il s\'enrage et appelle des sbires.'] },
+};
+const REGLE_KO = 'Tu tombes ? Réponds à une question pour revenir au combat.';
+function reglesHTML(mode, extra = '') {
+  const R = REGLES[mode] || REGLES.libre;
+  return `<h2 class="rgT">${R.ico} ${R.titre}</h2><div class="rgB">${R.but}</div><ul class="rgL">${R.pts.map(t => `<li>${t}</li>`).join('')}<li>💫 ${REGLE_KO}</li></ul>${extra}`;
+}
+
 // Décode l'état compact envoyé par le serveur
 function unpackWorld(w) {
   w.pz = w.pz || [];
