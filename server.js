@@ -13,9 +13,61 @@ const QUESTIONS = JSON.parse(fs.readFileSync(path.join(__dirname, 'questions.jso
 const GENERATEURS = require('./generateurs');
 const { CARTES, WALL, WATER } = require('./cartes');
 // Liste des notions (cases à cocher de l'enseignant), regroupées par matière
-const NOTIONS = [];
+const NOTIONS_BASE = [];
 for (const q of [...QUESTIONS, ...Object.values(GENERATEURS).map(g => g())])
-  if (!NOTIONS.some(n => n.s === q.notion)) NOTIONS.push({ s: q.notion, m: q.matiere });
+  if (!NOTIONS_BASE.some(n => n.s === q.notion)) NOTIONS_BASE.push({ s: q.notion, m: q.matiere });
+
+// ---------- Codes des élèves (communs à la classe et aux parties à la maison) ----------
+// La liste vient du tableau de bord (gardée dans le navigateur de l'enseignant). Chaque appareil d'élève garde aussi
+// une copie de sa fiche : si le serveur gratuit s'est endormi et a tout oublié, la fiche revient avec l'élève.
+// code -> { code, nom, or, achats: [], badges: [], maison: { q, ok, min, notions }, v } ; la version la plus récente gagne
+const CODES = new Map();
+const MONDES = new Set();    // la partie de la classe + une partie par élève qui s'entraîne à la maison
+const FORMAT_CODE = /^[A-Z]{2,10}\d{2}$/;
+function ficheCode(r) {
+  const code = String(r.code).trim().toUpperCase().slice(0, 12), ma = r.maison && typeof r.maison === 'object' ? r.maison : null;
+  return {
+    code, nom: String(r.nom || 'Héros').slice(0, 16), or: Math.max(0, Math.round(+r.or || 0)),
+    achats: Array.isArray(r.achats) ? r.achats.map(String).slice(0, 40) : [], badges: Array.isArray(r.badges) ? r.badges.map(String).slice(0, 20) : [],
+    maison: ma ? { q: +ma.q || 0, ok: +ma.ok || 0, min: +ma.min || 0, notions: ma.notions && typeof ma.notions === 'object' ? Object.fromEntries(Object.entries(ma.notions).slice(0, 60).map(([n, v]) => [String(n).slice(0, 60), { ok: +v.ok || 0, ko: +v.ko || 0 }])) : {} } : null,
+    v: +r.v || 0,
+  };
+}
+function majCode(rec) {
+  rec.v = (rec.v || 0) + 1;
+  const prof = JSON.stringify({ t: 'codeMaj', rec }), eleve = JSON.stringify({ t: 'compteMaj', rec });
+  for (const monde of MONDES) for (const c of monde.conns) {
+    if (c.role === 'prof') c.send(prof);
+    else if (c.player && c.player.code === rec.code) c.send(eleve);
+  }
+}
+
+function lanAddresses() {
+  return Object.values(os.networkInterfaces()).flat()
+    .filter(i => i && i.family === 'IPv4' && !i.internal).map(i => `http://${i.address}:${PORT}`);
+}
+
+// Objets de chaque carte rangés par tuile : un test de collision ne regarde que les objets voisins
+const GRILLES = new WeakMap(), MARGE = 48;
+function grilleObjs(c) {
+  let g = GRILLES.get(c);
+  if (g) return g;
+  g = Array.from({ length: c.cols * c.rows }, () => []);
+  for (const o of c.objs) {
+    const i0 = Math.max(0, Math.floor((o.x - MARGE) / c.T)), i1 = Math.min(c.cols - 1, Math.floor((o.x + o.w + MARGE) / c.T));
+    const j0 = Math.max(0, Math.floor((o.y - MARGE) / c.T)), j1 = Math.min(c.rows - 1, Math.floor((o.y + o.h + MARGE) / c.T));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) g[j * c.cols + i].push(o);
+  }
+  GRILLES.set(c, g);
+  return g;
+}
+
+// ---------- Une partie (un « monde ») : la classe, ou un élève seul à la maison ----------
+// Tout l'état du jeu vit dans cette fonction : chaque appel crée une partie indépendante.
+function creerMonde(opts = {}) {
+const solo = !!opts.solo;
+const NOTIONS = NOTIONS_BASE.map(n => ({ ...n }));
+const partis = new Map();   // élève dont la connexion a coupé : on garde ses scores 2 minutes, il les retrouve en revenant
 
 // ---------- Réglages du jeu ----------
 const TICK = 1000 / 30;
@@ -28,7 +80,7 @@ const CLASSES = {
   voleur:   { nom: 'Voleur',   hp: 105, speed: 200, atk: { type: 'melee', range: 55, arc: 1.2, dmg: 18, cd: 0.35, backstab: 2 }, power: { nom: 'Ombre', cd: 9, dur: 4 }, dash: { nom: 'Roulade', cd: 2, dist: 140, dur: 0.24 } },
   mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 380, dmg: 22, cd: 0.65, r: 10, life: 1.6 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
   druide:   { nom: 'Druide',   hp: 115, speed: 165, atk: { type: 'proj', speed: 460, dmg: 16, cd: 0.5, r: 8, life: 1.25 }, power: { nom: 'Cercle de soin', cd: 10, radius: 170, soin: 40 }, dash: { nom: 'Bond', cd: 3, dist: 140, dur: 0.24, racines: 70, rdur: 3 } },
-  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
+  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 
 // Objets des coffres et objets cachés
@@ -47,7 +99,7 @@ const BONS_OBJETS = ['grandepotion', 'vitesse', 'force', 'bouclier', 'ombre', 'f
 const GEAR = {
   casque: { nom: 'Casque', ico: '🪖', armure: 5 },
   armure: { nom: 'Armure', ico: '🥋', armure: 10 },
-  epee:   { nom: 'Épée',   ico: '🗡️', degats: 5 },
+  epee:   { nom: 'Épée',   ico: '🗡️', degats: 15 },   // % de dégâts en plus (une épée en points avantageait trop les attaques rapides)
   bottes: { nom: 'Bottes', ico: '🥾', vitesse: 5 },
 };
 const GEAR_KEYS = Object.keys(GEAR);
@@ -56,7 +108,7 @@ const TIERS = ['', 'de bronze', 'd\'argent', 'd\'or'];
 const PETS = {
   1: { nom: 'Chat', pouvoir: 'Ronron : +25 points de vie', soin: 25 },
   2: { nom: 'Loup', pouvoir: 'Hurlement : repousse les ennemis proches', radius: 140, push: 90 },
-  3: { nom: 'Bébé dragon', pouvoir: 'Petite boule de feu', atk: { speed: 420, dmg: 8, r: 8, life: 1.2 } },
+  3: { nom: 'Bébé dragon', pouvoir: 'Petite boule de feu', atk: { speed: 420, dmg: 20, r: 8, life: 1.2 } },
   4: { nom: 'Hibou', pouvoir: 'Œil perçant : révèle les joueurs cachés 4 s', radius: 480, dur: 4 },
   5: { nom: 'Slime', pouvoir: 'Flaque gluante : ralentit les ennemis', r: 90, dur: 4 },
 };
@@ -94,10 +146,11 @@ let feed = [];
 let paused = false;
 const subjects = new Set(NOTIONS.map(n => n.s));
 // Questions de l'enseignant (gardées dans son navigateur et renvoyées à chaque connexion de /prof)
-let PERSO = [];
+let PERSO = [], PERSO_BRUT = [];
 const str = (v, n) => typeof v === 'string' ? v.trim().slice(0, n) : '';
 function setPerso(qs) {
   if (!Array.isArray(qs)) return;
+  PERSO_BRUT = qs;
   const avant = new Set(PERSO.map(q => q.notion));
   PERSO = qs.slice(0, 1000).map(q => ({ matiere: str(q.matiere, 40) || 'Mes questions', notion: str(q.notion, 60), question: str(q.question, 300), choix: (Array.isArray(q.choix) ? q.choix : []).slice(0, 4).map(c => str(c, 120)).filter(Boolean), reponse: 0, explication: str(q.explication, 300) }))
     .filter(q => q.notion && q.question && q.choix.length >= 2 && new Set(q.choix).size === q.choix.length);
@@ -107,9 +160,6 @@ function setPerso(qs) {
 const stats = {};            // nom -> { notion: {ok, ko} } pour la manche
 const memoire = {};          // nom -> { notion: {ok, ko} } pour toute la séance (révision ciblée, bilans)
 const orSeance = {};         // nom -> pièces d'or gagnées pendant la séance
-// Codes des élèves : la liste vient du tableau de bord (gardée dans le navigateur de l'enseignant)
-// code -> { code, nom, or, achats: [], badges: [], v } ; v augmente à chaque changement (la version la plus récente gagne)
-const CODES = new Map();
 const badgesSeance = {};     // nom -> Set des badges gagnés pendant la séance
 const BADGES = {
   serie5: { ico: '🔥', nom: 'Série de 5', txt: '5 bonnes réponses de suite' },
@@ -128,7 +178,6 @@ const BADGES = {
 const MSGS = ['🆘 Aide-moi !', '🎯 À l\'objectif !', '⚔️ On attaque !', '🛡️ Je défends', '👍 Bravo !'];   // messages rapides (pas de clavier libre)
 let bulles = [];             // { id, i, t } bulles au-dessus des joueurs
 const codeDe = p => p && p.code && CODES.get(p.code);
-function majCode(rec) { rec.v = (rec.v || 0) + 1; for (const c of conns) if (c.role === 'prof') send(c, { t: 'codeMaj', rec }); }
 function badge(p, id) {
   if (!p || p.bot || !p.name || !BADGES[id]) return;
   const set = badgesSeance[p.name] || (badgesSeance[p.name] = new Set()), rec = codeDe(p);
@@ -171,15 +220,18 @@ function circleHitsRect(x, y, r, o) {
   return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
 }
 const healCore = () => carte.heal && carte.heal.kind !== 'source';
+function touchObj(x, y, r) {
+  const os = r > MARGE ? carte.objs : grilleObjs(carte)[clamp(Math.floor(y / T), 0, carte.rows - 1) * carte.cols + clamp(Math.floor(x / T), 0, carte.cols - 1)];
+  for (const o of os) if (circleHitsRect(x, y, r, o)) return true;
+  return false;
+}
 // Pour les joueurs : murs, eau, fosses, objets
 function blocked(x, y, r) {
   if (x < r || y < r || x > W - r || y > H - r) return true;
   const k = r * 0.75;
-  for (const [px, py] of [[x, y], [x + k, y], [x - k, y], [x, y + k], [x, y - k]]) {
-    const t = tileAt(px, py);
-    if (WALL.has(t) || WATER.has(t)) return true;
-  }
-  if (carte.objs.some(o => circleHitsRect(x, y, r, o))) return true;
+  const dur = (px, py) => { const t = tileAt(px, py); return WALL.has(t) || WATER.has(t); };
+  if (dur(x, y) || dur(x + k, y) || dur(x - k, y) || dur(x, y + k) || dur(x, y - k)) return true;
+  if (touchObj(x, y, r)) return true;
   if (healCore() && Math.hypot(x - carte.heal.x, y - carte.heal.y) < 30 + r) return true;
   if (barrels.some(b => !b.t && Math.hypot(x - b.x, y - b.y) < BARREL.r + r - 4)) return true;
   return false;
@@ -187,7 +239,7 @@ function blocked(x, y, r) {
 // Pour les projectiles : seulement les murs et les objets
 function blockedShot(x, y, r) {
   if (x < 0 || y < 0 || x > W || y > H) return true;
-  return WALL.has(tileAt(x, y)) || carte.objs.some(o => circleHitsRect(x, y, r, o));
+  return WALL.has(tileAt(x, y)) || touchObj(x, y, r);
 }
 const inBush = p => tileAt(p.x, p.y + 8) === 'h' || carte.bushes.some(b => Math.hypot(b.x - p.x, b.y - p.y) < b.r);
 function freeSpot(team = -1) {
@@ -299,7 +351,7 @@ function giveGear(p, src) {
   const fresh = open.filter(k => p.gear[k] === 0);
   const k = pick(fresh.length && Math.random() < 0.6 ? fresh : open);
   const lvl = ++p.gear[k];
-  const g = GEAR[k], bonus = g.armure ? `+${g.armure * lvl} armure` : g.degats ? `+${g.degats * lvl} dégâts` : `+${g.vitesse * lvl} % vitesse`;
+  const g = GEAR[k], bonus = g.armure ? `+${g.armure * lvl} armure` : g.degats ? `+${g.degats * lvl} % dégâts` : `+${g.vitesse * lvl} % vitesse`;
   const nom = `${g.nom} ${TIERS[lvl]}`;
   fx.push({ k: 'item', x: p.x, y: p.y, t: 0.7, d: 0.7 });
   send(p.conn, { t: 'item', k, nom, ico: g.ico, src, gear: true, bonus, lvl });
@@ -382,6 +434,12 @@ function gainOr(p, n) {
   send(p.conn, { t: 'or', n });
 }
 function record(p, q, ok) {
+  const fiche = solo && codeDe(p);
+  if (fiche) {   // pratique à la maison : notée sur la fiche de l'élève (visible dans le tableau de bord)
+    const ma = fiche.maison || (fiche.maison = { q: 0, ok: 0, min: 0, notions: {} }), n = ma.notions[q.notion] || (ma.notions[q.notion] = { ok: 0, ko: 0 });
+    ma.q++; if (ok) { ma.ok++; n.ok++; } else n.ko++;
+    majCode(fiche);
+  }
   const s = (stats[p.name][q.notion] = stats[p.name][q.notion] || { ok: 0, ko: 0 });
   const mem = p.bot ? {} : memoire[p.name] || (memoire[p.name] = {});   // les robots ne comptent pas dans les bilans
   const sm = (mem[q.notion] = mem[q.notion] || { ok: 0, ko: 0 });
@@ -591,8 +649,8 @@ function damage(target, amount, attacker) {
   if (mode === 'zombie' && attacker && attacker.team !== target.team) return zombieHit(target, attacker);   // contagion : pas de dégâts
   if (mode === 'entrainement' && attacker && attacker.bot) amount *= 0.6;   // robots d'entraînement moins forts
   if (attacker && attacker.strong > 0) amount *= 1.5;
-  if (target.shield > 0) amount *= 0.25;
-  amount *= 1 - armorOf(target) / 100;
+  if (target.shield > 0) amount *= 0.25;   // le bouclier remplace l'armure (les deux ensemble rendaient presque invincible)
+  else amount *= 1 - armorOf(target) / 100;
   target.hp -= amount;
   fx.push({ k: 'hit', x: target.x, y: target.y, t: 0.25, d: 0.25 });
   if (target.hp <= 0) kill(target, attacker);
@@ -607,7 +665,7 @@ function hitBoss(amount, attacker) {
   bossCheck(attacker);
 }
 
-const sword = p => GEAR.epee.degats * p.gear.epee;   // l'épée ajoute des dégâts aux attaques de base
+const sword = p => 1 + GEAR.epee.degats * p.gear.epee / 100;   // l'épée multiplie les dégâts des attaques de base
 function shoot(p, angle, a, bonus = 0) {
   projectiles.push({
     x: p.x + Math.cos(angle) * (R + 4), y: p.y + Math.sin(angle) * (R + 4),
@@ -623,9 +681,9 @@ function attack(p) {
   p.revealed = 1;                       // attaquer révèle le joueur caché dans un buisson
   const fromShadow = p.stealth > 0;
   p.stealth = 0;
-  if (a.type === 'proj') return shoot(p, p.angle, a, sword(p));
+  if (a.type === 'proj') return shoot(p, p.angle, a, a.dmg * (sword(p) - 1));
   fx.push({ k: 'slash', x: p.x, y: p.y, a: p.angle, r: a.range + R, arc: a.arc, t: 0.18, d: 0.18 });
-  const base = a.dmg + sword(p);
+  const base = a.dmg * sword(p);
   if (boss && boss.hp > 0) {
     const dx = boss.x - p.x, dy = boss.y - p.y;
     if (Math.hypot(dx, dy) < a.range + R + boss.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.5) hitBoss(base * (fromShadow ? 1.5 : 1), p);
@@ -640,13 +698,13 @@ function attack(p) {
     const dx = o.x - p.x, dy = o.y - p.y, dist = Math.hypot(dx, dy);
     if (dist > a.range + R * 2) continue;
     if (angDiff(Math.atan2(dy, dx), p.angle) > a.arc / 2 + 0.3) continue;
-    let dmg = base;
+    let dmg = base, dos = false;
     // Voleur : dégâts doublés si la cible regarde dans la même direction que l'attaque (elle nous tourne le dos)
     if (a.backstab && angDiff(o.angle, Math.atan2(dy, dx)) < 1.2) {
-      dmg *= a.backstab;
+      dmg *= a.backstab; dos = true;
       fx.push({ k: 'crit', x: o.x, y: o.y - 30, txt: 'Dans le dos !', t: 0.8, d: 0.8 });
     }
-    if (fromShadow) dmg *= 1.5;
+    if (fromShadow) dmg *= dos ? 1.25 : 1.5;   // ombre + dans le dos : ×2,5 au lieu de ×3
     damage(o, dmg, p);
   }
 }
@@ -666,7 +724,7 @@ function power(p) {
     if (minions.length) hitMinions(m => Math.hypot(m.x - p.x, m.y - p.y) < pw.radius + SBIRE.r, pw.dmg, p);
   } else if (p.cls === 'archer') {
     const a = CLASSES.archer.atk;
-    for (let i = 0; i < pw.count; i++) shoot(p, p.angle - pw.spread / 2 + (pw.spread * i) / (pw.count - 1), a);
+    for (let i = 0; i < pw.count; i++) shoot(p, p.angle - pw.spread / 2 + (pw.spread * i) / (pw.count - 1), { ...a, dmg: pw.dmg });
   } else if (p.cls === 'druide') {
     // Cercle de soin : le druide et ses alliés proches (coéquipiers, ou toute la classe contre le boss)
     fx.push({ k: 'cercle', x: p.x, y: p.y, r: pw.radius, t: 0.6, d: 0.6 });
@@ -1409,6 +1467,7 @@ function assignTeams() {
 let regles = false;   // l'enseignant affiche les règles du mode sur tous les écrans (jeu en pause)
 let countdown = 0;   // compte à rebours 3-2-1 au début d'une manche
 function newRound() {
+  partis.clear();
   roundT = 0; tempete = null;
   ended = null; paused = false; countdown = 3.5;
   if (eclair) { eclair = null; for (const c of conns) if (c.player) send(c, { t: 'close' }); }
@@ -1679,7 +1738,7 @@ function step() {
   feed = feed.filter(f => (f.t -= dt) > 0);
   bulles = bulles.filter(b => (b.t -= dt) > 0);
 
-  if ((tickCount = (tickCount + 1) % 2) === 0) broadcast();   // 15 envois/s : assez fluide, moins lourd pour le Wi-Fi
+  if (solo || (tickCount = (tickCount + 1) % 2) === 0) broadcast();   // à la maison, le monde avance à 15 pas/s : un envoi à chaque pas   // 15 envois/s : assez fluide, moins lourd pour le Wi-Fi
 }
 
 function publicState() {
@@ -1720,21 +1779,18 @@ function publicState() {
 function broadcast() {
   const common = publicState();
   for (const c of conns) {
-    if (c.role === 'prof') c.send(`{"t":"s","w":${common}}`);
+    if (c.role === 'prof') c.etat(`{"t":"s","w":${common}}`);
     else if (c.player) {
       const p = c.player;
       const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear };
-      c.send(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
+      c.etat(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
     }
   }
 }
 
-function lanAddresses() {
-  return Object.values(os.networkInterfaces()).flat()
-    .filter(i => i && i.family === 'IPv4' && !i.internal).map(i => `http://${i.address}:${PORT}`);
-}
 
-setInterval(() => {
+const infoT = setInterval(() => {
+  if (solo) return;
   const info = JSON.stringify({
     t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
@@ -1749,7 +1805,7 @@ setInterval(() => {
 
 const welcome = () => ({ t: 'welcome', map: carte, classes: CLASSES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
 setCarte(CARTES[0]);
-setInterval(step, TICK);
+const stepT = setInterval(step, solo ? TICK * 2 : TICK);   // une partie à la maison coûte deux fois moins au serveur
 
 // ---------- Messages ----------
 function onMessage(conn, msg) {
@@ -1760,13 +1816,30 @@ function onMessage(conn, msg) {
     case 'join':
       if (p) return;
     {
-      const rec = typeof m.code === 'string' && CODES.get(m.code.trim().toUpperCase());
-      if (m.code && !rec) { send(conn, { t: 'codeFaux' }); return; }
+      const code = typeof m.code === 'string' ? m.code.trim().toUpperCase() : '';
+      let rec = code && CODES.get(code);
+      // serveur réveillé qui a oublié les codes : on reprend la fiche gardée par l'appareil de l'élève
+      if (code && !rec && m.fiche && String(m.fiche.code).toUpperCase() === code && FORMAT_CODE.test(code)) { rec = ficheCode(m.fiche); CODES.set(code, rec); }
+      if (code && !rec) { send(conn, { t: 'codeFaux' }); return; }
       conn.player = createPlayer(rec ? rec.nom : m.name, m.cls, false, String(m.look || ''));
       conn.player.conn = conn;
       if (rec) conn.player.code = rec.code;
+      const ancien = partis.get(conn.player.name);
+      if (ancien && Date.now() - ancien.t < 120000 && ancien.cls === conn.player.cls) {   // retour après une coupure
+        const { t, cls, team, ...garde } = ancien;
+        Object.assign(conn.player, garde);
+        if (teamMode() && team >= 0 && team < nbTeams && team !== conn.player.team) Object.assign(conn.player, { team }, freeSpot(team));
+        partis.delete(conn.player.name);
+      }
       send(conn, { ...welcome(), id: conn.player.id, nom: conn.player.name });
-      if (rec) send(conn, { t: 'compte', nom: rec.nom, or: rec.or, achats: rec.achats, badges: rec.badges });
+      if (rec) send(conn, { t: 'compte', nom: rec.nom, or: rec.or, achats: rec.achats, badges: rec.badges, rec });
+      if (solo) {   // à la maison : sa révision ciblée revient (séance de classe et pratiques précédentes), et des robots
+        const q = conn.player, mem = memoire[q.name] || (memoire[q.name] = {});
+        const depuis = opts.depuis && opts.depuis.memoire[q.name];
+        for (const src of [depuis, rec && rec.maison && rec.maison.notions]) if (src) for (const [n, v] of Object.entries(src)) { const d = mem[n] || (mem[n] = { ok: 0, ko: 0 }); d.ok += v.ok; d.ko += v.ko; }
+        q.debut = Date.now();
+        ensureBots();
+      }
     }
       if (ended) send(conn, { t: 'fin', ...ended });
       if (cart) send(conn, { t: 'route', pts: cart.pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
@@ -1794,6 +1867,7 @@ function onMessage(conn, msg) {
       break;
     }
     case 'prof':
+      if (solo) return;
       conn.role = 'prof';
       send(conn, welcome());
       if (ended) send(conn, { t: 'fin', ...ended });
@@ -1807,9 +1881,9 @@ function onMessage(conn, msg) {
     case 'codes':   // liste des codes (au chargement du tableau de bord) : on garde la version la plus récente de chaque fiche
       if (Array.isArray(m.list)) for (const r of m.list.slice(0, 60)) {
         if (!r || typeof r.code !== 'string' || typeof r.nom !== 'string') continue;
-        const code = r.code.trim().toUpperCase().slice(0, 12), old = CODES.get(code);
-        if (old && (old.v || 0) > (r.v || 0)) { send(conn, { t: 'codeMaj', rec: old }); continue; }
-        CODES.set(code, { code, nom: r.nom.slice(0, 16), or: Math.max(0, Math.round(+r.or || 0)), achats: Array.isArray(r.achats) ? r.achats.map(String).slice(0, 40) : [], badges: Array.isArray(r.badges) ? r.badges.filter(b => BADGES[b]) : [], v: r.v || 0 });
+        const f = ficheCode(r), old = CODES.get(f.code);
+        if (old && (old.v || 0) > f.v) { send(conn, { t: 'codeMaj', rec: old }); continue; }
+        CODES.set(f.code, f);
       }
       if (m.remplace) for (const c of [...CODES.keys()]) if (!m.list.some(r => r && String(r.code).toUpperCase() === c)) CODES.delete(c);
       break;
@@ -1872,8 +1946,31 @@ function onMessage(conn, msg) {
 
 function onClose(conn) {
   conns.delete(conn);
+  const q = conn.player;
+  if (!solo && q && !q.bot) {
+    partis.set(q.name, { t: Date.now(), cls: q.cls, team: q.team, gear: q.gear, ...Object.fromEntries(['kills', 'deaths', 'good', 'bad', 'streak', 'dmgBoss', 'obj'].map(k => [k, q[k]])) });
+    for (const [n, a] of partis) if (Date.now() - a.t > 120000) partis.delete(n);
+  }
+  const fiche = solo && conn.player && codeDe(conn.player);
+  if (fiche && fiche.maison && conn.player.debut) { fiche.maison.min += Math.round((Date.now() - conn.player.debut) / 60000); majCode(fiche); }
   if (conn.player) { cancelChest(conn.player); players.delete(conn.player.id); addFeed(`${conn.player.name} a quitté l'arène`); }
 }
+
+if (solo) {   // à la maison : entraînement contre des robots, avec les notions et les questions choisies par l'enseignant
+  mode = 'entrainement';
+  const r = opts.depuis;
+  if (r) { setPerso(r.perso); subjects.clear(); for (const n of r.subjects) subjects.add(n); Object.assign(niveaux, r.niveaux); ouvertTous = r.ouvert; }
+}
+return {
+  conns, onMessage, onClose,
+  arreter() { clearInterval(infoT); clearInterval(stepT); },
+  reglages: () => ({ perso: PERSO_BRUT, subjects: [...subjects], niveaux: { ...niveaux }, ouvert: ouvertTous, memoire }),
+};
+}   // fin de creerMonde
+
+const classe = creerMonde();
+MONDES.add(classe);
+const MAX_MAISON = +process.env.MAX_MAISON || 15;   // parties à la maison en même temps (le serveur gratuit a peu de mémoire)
 
 // ---------- Serveur HTTP + WebSocket minimal ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png' };
@@ -1909,8 +2006,19 @@ server.on('upgrade', (req, socket) => {
       else { head = Buffer.alloc(10); head[0] = 0x81; head[1] = 127; head.writeBigUInt64BE(BigInt(data.length), 2); }
       socket.write(Buffer.concat([head, data]));
     },
+    // état du jeu : si l'appareil n'arrive pas à suivre (Wi-Fi faible), on saute une image plutôt que d'accumuler du retard
+    etat(str) { if (socket.writableLength < 65536) this.send(str); },
+    socket,
   };
-  conns.add(conn);
+  // /maison : une partie rien que pour cet élève, fermée quand il part
+  let monde = classe;
+  if (req.url.startsWith('/maison')) {
+    if (MONDES.size > MAX_MAISON) { conn.send(JSON.stringify({ t: 'complet' })); return socket.end(); }
+    monde = creerMonde({ solo: true, depuis: classe.reglages() });
+    MONDES.add(monde);
+  }
+  monde.conns.add(conn);
+  conn.vu = Date.now();
 
   let buf = Buffer.alloc(0);
   socket.on('data', chunk => {
@@ -1929,14 +2037,20 @@ server.on('upgrade', (req, socket) => {
         for (let i = 0; i < len; i++) payload[i] = buf[off + i] ^ mask[i % 4];
       } else payload = buf.slice(off, off + len);
       buf = buf.slice(off + len);
-      if (op === 1) onMessage(conn, payload.toString());
+      conn.vu = Date.now();
+      if (op === 1) monde.onMessage(conn, payload.toString());
       else if (op === 8) { socket.end(); return; }
       else if (op === 9) socket.write(Buffer.concat([Buffer.from([0x8a, payload.length]), payload]));
     }
   });
-  socket.on('close', () => onClose(conn));
+  socket.on('close', () => { monde.onClose(conn); if (monde !== classe) { monde.arreter(); MONDES.delete(monde); } });
   socket.on('error', () => socket.destroy());
 });
+
+// toutes les 5 s : on ferme les connexions d'élèves muettes depuis 20 s (l'appareil envoie un signe de vie)
+setInterval(() => {
+  for (const m of MONDES) for (const c of m.conns) if (c.player && c.role !== 'prof' && Date.now() - c.vu > 20000) c.socket.destroy();
+}, 5000);
 
 server.listen(PORT, () => {
   console.log('\n⚔️  Arène du Savoir est prête !\n');

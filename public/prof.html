@@ -31,7 +31,7 @@
   td, th { padding: 4px 3px; text-align: left; }
   th { color: #aab; font-weight: 600; font-size: 12px; }
   tr + tr td { border-top: 1px solid #ffffff14; }
-  .cpt { display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 4px 10px; font-size: 14px; align-items: center; margin-top: 6px; } .cpt b { font-family: monospace; letter-spacing: 1px; }
+  .cpt { display: grid; grid-template-columns: 1fr auto auto auto auto auto; gap: 4px 10px; font-size: 14px; align-items: center; margin-top: 6px; } .cpt b { font-family: monospace; letter-spacing: 1px; }
   .cmp { background: none; padding: 0 3px; margin: 0; font-size: 15px; cursor: pointer; } .gele { opacity: .5; }
   .x { background: none; color: #f77; padding: 0 4px; margin: 0; }
   .pct { font-variant-numeric: tabular-nums; }
@@ -169,7 +169,12 @@ const disp = new Map();
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
 ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
-ws.onclose = () => { $('urls').textContent = 'Serveur arrêté – rechargez la page dans un instant'; };
+// coupure : on attend que le serveur réponde de nouveau, puis on recharge la page toute seule
+ws.onclose = () => {
+  $('urls').textContent = '📶 Connexion perdue… reconnexion automatique';
+  const essai = () => fetch('/prof', { cache: 'no-store' }).then(r => r.ok ? location.reload() : setTimeout(essai, 3000), () => setTimeout(essai, 3000));
+  setTimeout(essai, 2000);
+};
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); }
@@ -215,8 +220,14 @@ const MOTS = ['LOUP', 'OURS', 'RENARD', 'HIBOU', 'LYNX', 'CERF', 'AIGLE', 'CASTO
 let codes = [];
 try { codes = JSON.parse(localStorage.getItem('arene-codes') || '[]'); } catch {}
 const sauverCodes = (envoi = true) => { try { localStorage.setItem('arene-codes', JSON.stringify(codes)); } catch {} if (envoi) send({ t: 'codes', list: codes, remplace: true }); renderCodes(); };
+// résumé de la pratique à la maison d'un élève (sur sa fiche)
+function maisonTxt(r) {
+  const ma = r && r.maison; if (!ma || !ma.q) return 'Pas encore de pratique à la maison';
+  const pire = Object.entries(ma.notions).filter(([, v]) => v.ko).sort((a, b) => b[1].ko / (b[1].ok + b[1].ko) - a[1].ko / (a[1].ok + a[1].ko))[0];
+  return `${ma.q} question${ma.q > 1 ? 's' : ''}, ${Math.round(ma.ok / ma.q * 100)} % de réussite, environ ${ma.min} min` + (pire ? ` · à revoir : ${pire[0]}` : '');
+}
 function renderCodes() {
-  $('cList').innerHTML = codes.length ? '<div class="cpt"><span>Élève</span><span>Code</span><span>🪙</span><span>🏅</span><span></span>' + codes.map((r, i) => `<span>${esc(r.nom)}</span><b>${r.code}</b><span>${r.or}</span><span title="${r.badges.length} badge(s)">${r.badges.map(b => BADGE_ICO[b] || '').join('') || '·'}</span><button class="x" data-i="${i}" title="Supprimer">✕</button>`).join('') + '</div>' : '';
+  $('cList').innerHTML = codes.length ? '<div class="cpt"><span>Élève</span><span>Code</span><span>🪙</span><span>🏅</span><span title="Pratique à la maison">🏠</span><span></span>' + codes.map((r, i) => `<span>${esc(r.nom)}</span><b>${r.code}</b><span>${r.or}</span><span title="${r.badges.length} badge(s)">${r.badges.map(b => BADGE_ICO[b] || '').join('') || '·'}</span><span title="${maisonTxt(r)}">${r.maison && r.maison.q ? `${r.maison.q} q · ${Math.round(r.maison.ok / r.maison.q * 100)} %` : '·'}</span><button class="x" data-i="${i}" title="Supprimer">✕</button>`).join('') + '</div>' : '';
   $('cList').querySelectorAll('.x').forEach(b => b.onclick = () => { const r = codes[+b.dataset.i]; if (confirm(`Supprimer le code de ${r.nom} ? Ses pièces et badges seront perdus.`)) { codes.splice(+b.dataset.i, 1); sauverCodes(); } });
 }
 $('cAdd').onclick = () => {
@@ -494,7 +505,7 @@ function bilans(m) {
     const revoir = lignes.filter(([, s]) => s.ok + s.ko >= 2 && pct(s) < 60).map(([n]) => n);
     const forts = lignes.filter(([, s]) => s.ok + s.ko >= 3 && pct(s) >= 80).map(([n]) => n);
     const col = p => p >= 75 ? '#2f9e55' : p >= 50 ? '#d9a020' : '#c0392b';
-    return `<section><h2>${esc(nom)}</h2><div class="sous">${tot} question${tot > 1 ? 's' : ''} · <b style="color:${col(Math.round(ok / tot * 100))}">${Math.round(ok / tot * 100)} % de réussite</b>${m.or[nom] ? ` · 🪙 ${m.or[nom]} pièces d'or` : ''}</div>
+    return `<section><h2>${esc(nom)}</h2><div class="sous">${tot} question${tot > 1 ? 's' : ''} · <b style="color:${col(Math.round(ok / tot * 100))}">${Math.round(ok / tot * 100)} % de réussite</b>${m.or[nom] ? ` · 🪙 ${m.or[nom]} pièces d'or` : ''}${(() => { const r = codes.find(c => c.nom === nom); return r && r.maison && r.maison.q ? ` · 🏠 À la maison : ${esc(maisonTxt(r))}` : ''; })()}</div>
       <table><tr><th style="width:45%">Notion</th><th style="width:12%">Réussite</th><th></th><th>Séance précédente</th></tr>${lignes.map(([n, s]) => { const a = avant(nom, n), dp = a ? pct(s) - a.p : 0;
         return `<tr><td><small>${esc(matiere[n] || '')}</small> ${esc(n)}</td><td>${s.ok} / ${s.ok + s.ko}</td><td><span class="barre"><i style="width:${pct(s)}%;background:${col(pct(s))}"></i></span> ${pct(s)} %</td><td>${a ? `${a.p} % <small>(${a.d})</small> <b style="color:${dp > 5 ? '#2f9e55' : dp < -5 ? '#c0392b' : '#777'}">${dp > 5 ? '▲' : dp < -5 ? '▼' : '='}</b>` : '<small>—</small>'}</td></tr>`; }).join('')}</table>
       ${forts.length ? `<p>⭐ <b>Points forts :</b> ${forts.map(esc).join(', ')}</p>` : ''}

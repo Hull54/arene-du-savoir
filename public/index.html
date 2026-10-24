@@ -88,6 +88,7 @@
   .cd .fill { position: absolute; left: 0; right: 0; bottom: 0; background: #000a; }
   #code { font: 600 16px "Pixelify Sans", monospace; width: 100%; padding: 8px 10px; margin-top: 8px; text-transform: uppercase; letter-spacing: 2px; border: 3px solid #1b1424; background: #fffaf0; }
   #codeMsg { font-size: 14px; color: #ffd54a; min-height: 18px; margin-top: 4px; }
+  #reco { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); display: none; padding: 14px 22px; background: #1b1424e6; border: 3px solid #ffd54a; font-size: 20px; color: #fff; text-align: center; z-index: 30; }
   #gele { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #9fd6ff55; font-size: 28px; color: #fff; text-shadow: 3px 3px 0 #1b1424; text-align: center; pointer-events: none; z-index: 5; }
   #msgBtn { position: fixed; left: 12px; bottom: 100px; font-size: 22px; padding: 6px 10px; cursor: pointer; display: none; }
   #msgMenu { position: fixed; left: 12px; bottom: 150px; display: none; flex-direction: column; gap: 6px; z-index: 4; }
@@ -175,6 +176,7 @@
 <div id="toast"></div>
 <div id="hidden">🌿 Tu es caché</div>
 <div id="gele"></div>
+<div id="reco">📶 Connexion perdue…<br><small>On te reconnecte, ne ferme pas la page.</small></div>
 <button id="msgBtn" class="panel" title="Messages rapides à ton équipe (touches 5 à 9)">💬</button>
 <div id="msgMenu"></div>
 <div id="joy"><i></i></div>
@@ -219,7 +221,7 @@
         </div>
       </div>
     </div>
-    <div class="wnav"><button class="btn alt" id="back">◀ Retour</button><button class="btn" id="next">Suivant ▶</button><button class="btn" id="go" disabled>Entrer dans l'arène ⚔️</button></div>
+    <div class="wnav"><button class="btn alt" id="back">◀ Retour</button><button class="btn" id="next">Suivant ▶</button><button class="btn alt" id="solo" disabled title="Une partie rien que pour toi, contre des robots : idéal à la maison">🏠 M'entraîner seul</button><button class="btn" id="go" disabled>Entrer dans l'arène ⚔️</button></div>
   </div>
   <details class="keys"><summary>Comment jouer ?</summary>Si tu tombes, réponds à une question pour revenir !<br>Bouger : WASD ou flèches · Attaque : J (ou clic) · Pouvoir : K (ou clic droit) · Habileté : Espace · Familier : E<br>Sans souris, on vise dans la direction où l'on marche.</details>
 </div>
@@ -361,14 +363,14 @@ STEPS.forEach(() => $('dots').appendChild(document.createElement('i')));
 function check() {
   const id = !!($('name').value.trim() || $('code').value.trim());
   const ok = step === 1 ? id : step === 3 ? !!chosen : true;
-  $('next').disabled = !ok; $('go').disabled = !(chosen && id);
+  $('next').disabled = !ok; $('go').disabled = $('solo').disabled = !(chosen && id);
 }
 function showStep(n) {
   step = Math.max(1, Math.min(STEPS.length, n));
   $('wiz').dataset.step = step; $('wTitle').textContent = STEPS[step - 1];
   [...$('dots').children].forEach((d, i) => { d.className = i + 1 === step ? 'on' : i + 1 < step ? 'done' : ''; });
   $('back').style.visibility = step > 1 ? '' : 'hidden';
-  $('next').style.display = step < STEPS.length ? '' : 'none'; $('go').style.display = step === STEPS.length ? '' : 'none';
+  $('next').style.display = step < STEPS.length ? '' : 'none'; $('go').style.display = $('solo').style.display = step === STEPS.length ? '' : 'none';
   check();
   if (step === 1) setTimeout(() => $('name').focus(), 0);
 }
@@ -389,12 +391,17 @@ chargerOr(); renderLook(); majQuick(); showStep(1); animPreview();
 $('code').oninput = () => { $('codeMsg').textContent = $('code').value.trim() ? '🔑 Avec ton code, tes pièces, achats et badges te suivent sur tous les appareils.' : ''; check(); };
 try { $('code').value = localStorage.getItem('arene-code') || ''; } catch {}
 $('code').oninput();
-$('go').onclick = () => {
+function partir(solo) {
   const name = $('name').value.trim(), code = $('code').value.trim().toUpperCase();
   if (!(name || code) || !chosen) return;
   try { localStorage.setItem('arene-nom', name); localStorage.setItem('arene-classe', chosen); localStorage.setItem('arene-code', code); } catch {}
-  connect(name || 'Héros', chosen, code);
-};
+  connect(name || 'Héros', chosen, code, solo);
+}
+$('go').onclick = () => partir(false);
+$('solo').onclick = () => partir(true);
+// copie de la fiche du code sur cet appareil : elle revient avec l'élève si le serveur s'est endormi
+const lireFiche = code => { try { return JSON.parse(localStorage.getItem('arene-fiche-' + code) || 'null'); } catch { return null; } };
+const garderFiche = rec => { try { localStorage.setItem('arene-fiche-' + rec.code, JSON.stringify(rec)); } catch {} };
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('next').disabled) showStep(2); };
 
 // ----- Réseau -----
@@ -416,12 +423,16 @@ const disp = new Map();   // positions affichées (lissage)
 const fxLocal = [];
 
 let mesBadges = [], badgesJour = [];
-function connect(name, cls, code = '') {
+let SOLO = false, dernier = null, essais = 0, vuServeur = 0;
+function connect(name, cls, code = '', solo = false) {
+  SOLO = solo; dernier = [name, cls, code, solo];
   myCls = cls;
-  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined }));
+  ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + (solo ? '/maison' : ''));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined, fiche: code ? lireFiche(code) || undefined : undefined }));
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
+    vuServeur = Date.now();
+    if (m.t === 'welcome' && essais) { essais = 0; $('reco').style.display = 'none'; answering = false; $('quiz').style.display = 'none'; toast('📶 Te revoilà ! Tes points sont gardés.'); }
     if (m.t === 'welcome' || m.t === 'carte') {
       if (m.t === 'welcome') { myId = m.id; info = m; if (m.nom && !code && m.nom !== $('name').value.trim()) setTimeout(() => toast(`Ce prénom est déjà pris : tu t'appelles « ${m.nom} » dans le jeu`), 800); }
       map = m.map; mapLayer = null;
@@ -449,8 +460,14 @@ function connect(name, cls, code = '') {
     else if (m.t === 'item') { if (m.gear) toast(`${m.ico} ${m.nom} ! (${m.bonus})`); else if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play(m.gear ? 'serie' : 'objet'); }
     else if (m.t === 'portail') Son.play('tp');
     else if (m.t === 'or') { monOr = Math.max(0, monOr + m.n); sauverOr(); if (m.n > 1) toast(`🪙 +${m.n} pièces d'or !`); }
-    else if (m.t === 'compte') { $('name').value = m.nom; monOr = m.or; achats = m.achats || []; mesBadges = m.badges || []; sauverOr(); toast(`🔑 Bienvenue ${m.nom} ! Tu as ${m.or} pièce${m.or > 1 ? 's' : ''} d'or.`); }
-    else if (m.t === 'codeFaux') { alert('Ce code secret est inconnu. Vérifie-le avec ton enseignant, ou efface-le pour jouer avec ton prénom.'); try { localStorage.removeItem('arene-code'); } catch {} location.reload(); }
+    else if (m.t === 'compteMaj') { garderFiche(m.rec); monOr = m.rec.or; achats = m.rec.achats; sauverOr(); }
+    else if (m.t === 'complet') { ws.onclose = null; alert('Beaucoup d\'élèves s\'entraînent en ce moment. Réessaie dans quelques minutes !'); location.reload(); }
+    else if (m.t === 'compte') { if (m.rec) garderFiche(m.rec); $('name').value = m.nom; monOr = m.or; achats = m.achats || []; mesBadges = m.badges || []; sauverOr(); toast(`🔑 Bienvenue ${m.nom} ! Tu as ${m.or} pièce${m.or > 1 ? 's' : ''} d'or.`); }
+    else if (m.t === 'codeFaux') {   // code inconnu : on joue quand même, avec le prénom
+      alert('Ce code secret est inconnu. Vérifie-le avec ton enseignant. Pour cette fois, tu joues avec ton prénom.');
+      try { localStorage.removeItem('arene-code'); } catch {}
+      ws.onclose = null; ws.close(); connect(name, cls, '', solo); return;
+    }
     else if (m.t === 'badge') { if (!mesBadges.includes(m.id)) mesBadges.push(m.id); badgesJour.push(`${m.ico} ${m.nom}`); toast(`🏅 Nouveau badge : ${m.ico} ${m.nom} (${m.txt})`); Son.play('coffre'); }
     else if (m.t === 'bravo') { toast('⭐ Bravo pour ta belle attitude : +5 pièces d\'or !'); Son.play('serie'); }
     else if (m.t === 'moins') toast('🪙 L\'enseignant t\'a retiré 5 pièces d\'or.');
@@ -462,10 +479,22 @@ function connect(name, cls, code = '') {
     else if (m.t === 'fin') showFin(m);
     else if (m.t === 'route') ROUTE = m.pts;
     else if (m.t === 'debut') { $('fin').style.display = 'none'; document.querySelector('.wcontent').appendChild($('lookPanel')); }
-    else if (m.t === 'kicked') { alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
+    else if (m.t === 'kicked') { ws.onclose = null; alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
   };
-  ws.onclose = () => { if (map) { alert('Connexion perdue avec le serveur.'); location.reload(); } };
+  // coupure (Wi-Fi, serveur redémarré) : on réessaie toutes les 2 s pendant une minute, sans rien perdre
+  ws.onclose = () => {
+    if (!map) return;
+    if (++essais > 30) { alert('Connexion perdue avec le serveur.'); location.reload(); return; }
+    $('reco').style.display = 'block';
+    setTimeout(() => connect(...dernier), 2000);
+  };
 }
+// signe de vie toutes les 2 s; si le serveur ne répond plus depuis 6 s, on relance la connexion
+setInterval(() => {
+  if (!ws || ws.readyState !== 1) return;
+  ws.send('{"t":"p"}');
+  if (map && Date.now() - vuServeur > 6000) ws.close();
+}, 2000);
 // couleurs des équipes : le serveur envoie la liste complète (TEAMS)
 const equipes = () => info && info.teams;
 const sendMsg = o => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
@@ -850,7 +879,7 @@ function frame(now) {
   const tm = world.tm >= 0 ? `   ⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}` : '';
   if (world.tm === 60 && lastTm !== 60) { toast('⏱ Plus qu\'une minute ! Termine ta question.'); Son.play('eclair'); }
   $('zone').classList.toggle('fin10', world.tm >= 0 && world.tm <= 10); lastTm = world.tm;
-  $('zone').textContent = map.nom + tm + (world.hl ? `   ⛰️ bouge dans ${world.hl[4]} s` : '') + infoMode(world) + (world.mode === 'zombie' && mine ? (mine.tm === 1 ? '   🧟 Tu es un zombie' : '   🧄 Tu es humain') : world.mode === 'chariot' && mine ? (mine.tm === 0 ? '   🛒 Pousse le chariot' : '   🛡️ Arrête le chariot') : '');
+  $('zone').textContent = (SOLO ? '🏠 Pratique · ' : '') + map.nom + tm + (world.hl ? `   ⛰️ bouge dans ${world.hl[4]} s` : '') + infoMode(world) + (world.mode === 'zombie' && mine ? (mine.tm === 1 ? '   🧟 Tu es un zombie' : '   🧄 Tu es humain') : world.mode === 'chariot' && mine ? (mine.tm === 0 ? '   🛒 Pousse le chariot' : '   🛡️ Arrête le chariot') : '');
   $('teams').innerHTML = '';
   scoresEquipes(world, teams).forEach(([txt, col], i) => { const s = document.createElement('span'); s.style.background = col; s.textContent = txt; if (me && me.team === i && world.mode !== 'chariot') s.style.outline = '3px solid #fff'; $('teams').appendChild(s); });
   $('hidden').style.display = mine && mine.hd ? 'block' : 'none';
@@ -905,7 +934,7 @@ function frame(now) {
         const lv = me.ge[k], G = info.gear[k], d = document.createElement('div');
         d.className = 'panel' + (lv ? '' : ' off');
         if (lv) d.style.borderColor = TIER_C[lv];
-        d.innerHTML = `${G.ico}<i style="color:${TIER_C[lv] || '#fff'}">${lv ? (G.armure ? '+' + G.armure * lv : G.degats ? '+' + G.degats * lv : '+' + G.vitesse * lv + '%') : ''}</i>`;
+        d.innerHTML = `${G.ico}<i style="color:${TIER_C[lv] || '#fff'}">${lv ? (G.armure ? '+' + G.armure * lv : G.degats ? '+' + G.degats * lv + '%' : '+' + G.vitesse * lv + '%') : ''}</i>`;
         d.title = lv ? `${G.nom} ${TIER_NOMS[lv]}` : G.nom + ' : à trouver dans les coffres';
         $('gear').appendChild(d);
       }

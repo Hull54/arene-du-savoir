@@ -47,7 +47,7 @@ Les règles du mode s'affichent la première fois qu'un élève y joue (bouton �
 | ⚔️ Guerrier | 170 | lente | Épée, corps à corps, large arc | 🛡️ Bouclier : −75 % de dégâts pendant 3 s | 💨 Charge : fonce 3 cases, bouscule et blesse un peu (3 s) |
 | 🗡️ Voleur | 105 | très rapide | Dague, corps à corps. **Dégâts ×2 dans le dos** | 👤 Ombre : invisible 4 s, plus rapide, prochaine attaque +50 % | 🌀 Roulade : esquive, invincible pendant la roulade (2 s) |
 | 🔮 Mage | 90 | moyenne | Boule de feu à distance | 💥 Explosion autour de lui | ✨ Téléportation : 3 cases plus loin, même par-dessus l'eau (3 s) |
-| 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches | 🦘 Saut arrière : recule en tirant une flèche (3 s) |
+| 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches (10 dégâts chacune) | 🦘 Saut arrière : recule en tirant une flèche (3 s) |
 | 🌿 Druide | 115 | moyenne | Graine magique à distance | 🌿 Cercle de soin : +40 PV à lui et à ses coéquipiers proches (à toute la classe contre le Boss) | 🍃 Bond : saute et laisse des racines qui ralentissent les adversaires (3 s) |
 
 Sans souris, on vise dans la direction où l'on marche : une petite flèche jaune sous son héros montre la visée.
@@ -121,10 +121,10 @@ On le trouve surtout dans les coffres, parfois caché sur la carte. Chaque pièc
 |---|---|---|---|
 | 🪖 Casque | +5 armure | +10 armure | +15 armure |
 | 🥋 Armure | +10 armure | +20 armure | +30 armure |
-| 🗡️ Épée | +5 dégâts | +10 dégâts | +15 dégâts |
+| 🗡️ Épée | +15 % de dégâts | +30 % de dégâts | +45 % de dégâts |
 | 🥾 Bottes | +5 % vitesse | +10 % vitesse | +15 % vitesse |
 
-Chaque point d'armure retire 1 % des dégâts reçus, jusqu'à 40 % au maximum. L'épée ajoute ses dégâts aux attaques de base (épée, dague, boule de feu, flèche).
+Chaque point d'armure retire 1 % des dégâts reçus, jusqu'à 40 % au maximum. L'épée augmente les dégâts des attaques de base (épée, dague, boule de feu, flèche). Pendant un bouclier (du guerrier ou magique), l'armure ne compte pas : le bouclier la remplace.
 
 ## Modes de jeu
 
@@ -182,6 +182,20 @@ Les Boss viennent des cartes du système d'émulation de la classe (un par mois)
 - **💬 Messages rapides** (en équipes, Boss et Survie) : bouton 💬 ou touches 5 à 9 : « Aide-moi ! », « À l'objectif ! », « On attaque ! », « Je défends », « Bravo ! ». Une bulle s'affiche au-dessus du héros et les coéquipiers reçoivent le message. Aucun clavier libre.
 - **Tablette** : la manette apparaît là où le doigt touche l'écran (cercle et bouton jaune), avec les boutons d'attaque, de pouvoir, d'élan, de familier et de super-pouvoir.
 - **📘 Guide de l'enseignant** (`/guide`, bouton sur le tableau de bord) : préparation, routine d'une séance, quel mode choisir (apprentissage, révision, plaisir), tableau des règles selon le mode, gestion de classe, dépannage et une affiche des règles à imprimer. Sous les boutons de mode, une ligne rappelle le réglage conseillé pour le mode choisi.
+
+## 🏠 Pratique à la maison
+
+- Dans le menu, le bouton **🏠 M'entraîner seul** ouvre une partie rien que pour l'élève, contre 3 robots, avec les **notions et les questions choisies en classe** par l'enseignant (y compris ses questions à lui). Personne d'autre n'y entre.
+- La révision ciblée continue : les notions que l'élève a ratées en classe, et lors de ses pratiques précédentes, reviennent plus souvent.
+- **Avec son code secret**, la pratique est notée sur sa fiche : nombre de questions, bonnes réponses, minutes jouées et notions travaillées. L'enseignant voit la colonne 🏠 dans la boîte des codes et une ligne sur chaque bilan imprimé. Les pièces d'or gagnées à la maison s'ajoutent à son compte.
+- Le service gratuit oublie tout quand il s'endort. Pour que les codes survivent, l'appareil de l'élève garde une copie de sa fiche et la redonne au jeu à son retour ; le tableau de bord renvoie aussi tous les codes à chaque ouverture.
+- Au plus **15 élèves** peuvent s'entraîner en même temps à la maison (le serveur gratuit est petit). Le 16e reçoit « Réessaie dans quelques minutes ». Une partie à la maison avance à 15 pas par seconde au lieu de 30 : elle coûte deux fois moins au serveur, sans différence visible.
+
+## Coupures de réseau
+
+- Si le Wi-Fi coupe ou que le serveur redémarre (une mise à jour, par exemple), l'élève voit « 📶 Connexion perdue… » et le jeu le reconnecte tout seul pendant une minute. Revenu dans les 2 minutes, il retrouve ses points, son équipe et son équipement de la manche. Le tableau de bord enseignant se recharge aussi tout seul quand le serveur répond de nouveau.
+- Un appareil qui ne donne plus signe de vie depuis 20 secondes est retiré de la partie : plus de héros « fantôme » immobile sur la carte.
+- Sur un Wi-Fi faible, le serveur saute une image plutôt que d'accumuler du retard : le jeu reste à jour, même s'il est un peu moins fluide sur cet appareil.
 
 ## Ambiance
 
@@ -263,7 +277,7 @@ Chaque familier a un mini pouvoir sur la touche **E**, rechargé en 15 secondes.
 |---|---|
 | 🐱 Chat | Ronron : +25 points de vie |
 | 🐺 Loup | Hurlement : repousse les ennemis proches, sans dégâts |
-| 🐲 Bébé dragon | Crache une petite boule de feu (8 dégâts) |
+| 🐲 Bébé dragon | Crache une boule de feu (20 dégâts) |
 | 🦉 Hibou | Œil perçant : révèle pendant 4 s les joueurs cachés (buissons, herbes, ombre) |
 | 🟢 Slime | Flaque gluante : ralentit les ennemis qui marchent dedans |
 
