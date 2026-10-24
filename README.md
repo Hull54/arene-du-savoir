@@ -174,6 +174,21 @@ Les Boss viennent des cartes du système d'émulation de la classe (un par mois)
 - **Révision ciblée** (automatique) : pendant la séance, le jeu note les notions que chaque élève rate. Ces notions reviennent plus souvent dans ses questions (jusqu'à 4 fois plus), et moins souvent celles qu'il réussit bien.
 - **📥 Exporter les résultats** : un fichier qui s'ouvre dans Excel (une ligne par élève, une colonne par notion).
 
+## Ambiance
+
+- **Secousses et petit gel** : l'écran tremble un peu quand on est touché ou qu'une explosion éclate tout près, et l'image se fige une fraction de seconde quand on gagne un duel. Les bords rougissent quand on perd de la vie.
+- **Particules** : étincelles sur les coups, fumée et étoiles au K.O., débris des explosions, feuilles vertes des soins.
+- **Chute au K.O.** : le héros bascule, des étoiles tournent au-dessus de lui et une petite âme s'envole.
+- **Portrait** de son héros en haut à gauche, avec sa barre de vie (verte, jaune puis rouge).
+- **Jour et nuit** : un cycle de 10 minutes, le même pour toute la classe. Au crépuscule la lumière devient orangée ; la nuit, tout s'assombrit sauf autour de son héros, des lanternes, des torches et du lieu de soin. Le donjon reste dans la pénombre.
+- **Météo** qui change toutes les 4 minutes selon la carte : pluie, pétales, neige ou blizzard, tempête de sable, brume du marais, poussière dorée. En octobre et novembre, des feuilles tombent ; en hiver, il neige au village.
+- **Petits animaux** : papillons, lapins, oiseaux, lézards au désert, lucioles et grenouilles au marais, chauves-souris et rats au donjon. Ils se sauvent quand un héros approche.
+- **Décor de saison** selon le mois réel : citrouilles et feuilles mortes en octobre, feuilles en novembre, cadeaux en décembre, bonshommes de neige en janvier, cœurs en février, tulipes au printemps, œufs à Pâques, pommes en septembre, fleurs et champignons l'été.
+- **🎵 Musique** : un petit air 8 bits différent pour chaque type de carte. Sur l'écran des élèves, elle est coupée au départ (bouton 🎵) ; l'enseignant peut la faire jouer au projecteur avec le bouton **🎵 Musique** du tableau de bord.
+- **🌀 Tempête** (case à cocher du tableau de bord, en Chacun pour soi et en Équipes) : en fin de manche, un cercle violet rétrécit vers le centre de la carte. Hors du cercle, la tempête enlève de la vie. Avec une minuterie, elle occupe la dernière moitié (au plus les 2 dernières minutes) ; sans minuterie, elle commence après 3 minutes et dure 2 minutes. Les retours en jeu se font dans le cercle.
+
+Tous ces effets sont calculés sur l'appareil de l'élève : rien de plus ne passe par le Wi-Fi. En mode économie 🐢, il y a moins de particules, pas d'animaux et la nuit n'a pas d'éclairage.
+
 ## Rythme et appareils lents
 
 - **Une minute avant la fin** d'une manche minutée, chaque élève reçoit l'alerte « Plus qu'une minute ! » et le chrono clignote en rouge les 10 dernières secondes.

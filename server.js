@@ -77,6 +77,7 @@ const teamsNow = () => mode === 'zombie' ? [{ nom: 'Humains', color: '#3a7ae0' }
 const RUNES = { max: 3, win: 12, respawn: 4 };     // course aux runes : 12 runes pour gagner
 const CART = { energie: 120, bonne: 70, contre: 40, vitesse: 45, zone: 140, every: 8, duree: 300 };   // escorte du chariot
 const SURVIE = { vagues: 8, repos: 12 };
+const TEMPETE = { debut: 180, duree: 120, rMin: 0.22, degats: 10 };   // zone qui rétrécit (chacun pour soi et équipes)
 const VAGUE_SBIRES = ['slime', 'gobelin', 'citrouille', 'ombre', 'glace', 'pieuvre', 'livre', 'chevalier'];
 let runes = [], runePts = [], runeT = 0, cart = null, surv = null, zomb = null;
 const HILL = { r: 120, move: 75, win: 120 };       // colline : 120 points (1 par seconde tenue seul) pour gagner
@@ -115,6 +116,7 @@ let hill = null;                   // colline : { x, y, t, owner, pts[] }
 let flags = null, caps = [0, 0];   // drapeaux : [{ team, hx, hy, x, y, carrier, back }]
 let goldT = 0, goldFrom = -1;      // coffre doré : délai avant qu'un autre coffre devienne doré
 let eclairDur = 20;   // durée d'une question éclair (s), au choix de l'enseignant
+let tempeteOn = false, tempete = null, roundT = 0;   // tempête : choix de l'enseignant
 let timer = { dur: 0, left: 0 };   // minuterie de manche (secondes), dur = 0 : sans limite
 let ended = null;                  // résultats de fin de manche
 let eclair = null;                 // question éclair en cours
@@ -168,6 +170,7 @@ function freeSpot(team = -1) {
   for (let i = 0; i < 500; i++) {
     const x = rand(80, W - 80), y = rand(80, H - 80);
     if (blocked(x, y, R + 12) || WATER.has(tileAt(x, y + 40))) continue;
+    if (tempete && i < 450 && Math.hypot(x - tempete.x, y - tempete.y) > tempete.r * 0.8) continue;
     if (boss && Math.hypot(boss.x - x, boss.y - y) < 400 && i < 300) continue;
     let near = false;
     for (const p of players.values()) if (p.alive && Math.hypot(p.x - x, p.y - y) < 250 && (team < 0 || p.team !== team)) near = true;
@@ -1357,6 +1360,7 @@ function assignTeams() {
 let regles = false;   // l'enseignant affiche les règles du mode sur tous les écrans (jeu en pause)
 let countdown = 0;   // compte à rebours 3-2-1 au début d'une manche
 function newRound() {
+  roundT = 0; tempete = null;
   ended = null; paused = false; countdown = 3.5;
   if (eclair) { eclair = null; for (const c of conns) if (c.player) send(c, { t: 'close' }); }
   for (const q of players.values()) {
@@ -1493,7 +1497,25 @@ function botThink(p, dt) {
   }
 }
 
+// ---------- Tempête : la zone de jeu rétrécit en fin de manche ----------
+const tempeteMode = () => tempeteOn && (mode === 'libre' || mode === 'equipes');
+function updateTempete(dt) {
+  roundT += dt;
+  if (!tempeteMode()) { tempete = null; return; }
+  const s = timer.dur ? Math.min(TEMPETE.duree, timer.dur * 0.5) : TEMPETE.duree;
+  const u = Math.min(1, timer.dur ? 1 - timer.left / s : (roundT - TEMPETE.debut) / s);
+  if (u <= 0) { tempete = null; return; }
+  if (!tempete) { tempete = { x: W / 2, y: H / 2, r: 0 }; addFeed('🌀 La tempête arrive : reste dans le cercle !'); }
+  const r0 = Math.hypot(W, H) / 2, r1 = Math.min(W, H) * TEMPETE.rMin;
+  tempete.r = r0 + (r1 - r0) * u;
+  for (const p of players.values()) {
+    if (!p.alive || p.busy || p.protect > 0 || Math.hypot(p.x - tempete.x, p.y - tempete.y) <= tempete.r) continue;
+    p.hp -= TEMPETE.degats * dt;
+    if (p.hp <= 0) { addFeed(`🌀 ${p.name} est emporté par la tempête`); kill(p, null); }
+  }
+}
 function botGoal(p) {
+  if (tempete && Math.hypot(p.x - tempete.x, p.y - tempete.y) > tempete.r * 0.75) return { x: tempete.x, y: tempete.y, r: 40 };
   if (mode === 'runes' && runes.length) { const r = runes.filter(r => !r.by).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0]; return r ? { x: r.x, y: r.y, r: 10 } : null; }
   if (mode === 'chariot' && cart) return { x: cart.x + Math.cos(p.id) * 60, y: cart.y + Math.sin(p.id) * 60, r: 30 };
   if (mode === 'colline' && hill) return { x: hill.x + Math.cos(p.id) * 50, y: hill.y + Math.sin(p.id) * 50, r: 30 };
@@ -1582,6 +1604,7 @@ function step() {
     if (mode === 'chariot') updateCart(dt);
     if (mode === 'survie') updateSurvie(dt);
     if (mode === 'zombie') updateZombie(dt);
+    if (!ended) updateTempete(dt);
     projectiles = projectiles.filter(b => {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || blockedShot(b.x, b.y, b.r)) return false;
@@ -1634,6 +1657,7 @@ function publicState() {
     tm: timer.dur ? Math.ceil(timer.left) : cart && isFinite(cart.left) ? Math.ceil(cart.left) : zomb && isFinite(zomb.left) ? Math.ceil(zomb.left) : -1,
     mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
     hl: hill ? [hill.x, hill.y, HILL.r, hill.owner, Math.ceil(hill.t)] : 0,
+    zt: tempete ? [tempete.x, tempete.y, Math.round(tempete.r)] : 0,
     fl: flags ? flags.map(f => [Math.round(f.x), Math.round(f.y), f.carrier ? 1 : 0, f.hx, f.hy]) : 0,
     gc: chests.findIndex(c => c.gold),
     pm: lead && players.get(lead) ? prime(players.get(lead)) : 0,
@@ -1663,7 +1687,7 @@ setInterval(() => {
     t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
     carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
-    eclairDur, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
+    eclairDur, tempete: tempeteOn, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
     players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n' })), ouvert: ouvertTous,
@@ -1712,6 +1736,7 @@ function onMessage(conn, msg) {
     case 'perso': setPerso(m.qs); break;
     case 'niveaux': if (m.v && typeof m.v === 'object') for (const [n, v] of Object.entries(m.v)) if (['f', 'n', 'd'].includes(v)) niveaux[String(n).slice(0, 20)] = v; if (typeof m.ouvert === 'boolean') ouvertTous = m.ouvert; break;
     case 'pause': if (!ended) { paused = !paused; regles = false; addFeed(paused ? '⏸ Partie en pause' : '▶ La partie reprend !'); } break;
+    case 'tempete': tempeteOn = !!m.v; if (!tempeteOn) tempete = null; break;
     case 'regles': if (!ended) { regles = !regles; paused = regles; } break;
     case 'addbot': addBot(); break;
     case 'rmbots': for (const [id, q] of players) if (q.bot) players.delete(id); break;

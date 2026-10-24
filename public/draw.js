@@ -923,7 +923,11 @@ function buildMapLayers(map) {
   }
   for (const o of map.objs) if (o.kind === 'brazier') torches.push([o.x + o.w / 2, o.y - 40]);
   const lamps = map.objs.filter(o => o.kind === 'lamp').map(o => [o.x + o.w / 2, o.y - 72]);
-  mapAnim = { glints, torches, lamps };
+  const herbe = [];
+  const presArbre = (i, j) => { for (let dj = -1; dj <= 2; dj++) for (let di = -1; di <= 1; di++) if (tile(i + di, j + dj) === 'T') return true; return false; };
+  for (let j = 1; j < map.rows - 1; j++) for (let i = 1; i < map.cols - 1; i++) if (tile(i, j) === '.' && !presArbre(i, j) && !(map.bushes || []).some(b => Math.hypot(b.x - (i + 0.5) * map.T, b.y - (j + 0.5) * map.T) < b.r + 40) && !map.objs.some(o => (i + 0.5) * map.T > o.x - 20 && (i + 0.5) * map.T < o.x + o.w + 20 && (j + 0.5) * map.T > o.y - 20 && (j + 0.5) * map.T < o.y + o.h + 20)) herbe.push([(i + 0.5) * map.T, (j + 0.5) * map.T, i, j]);
+  mapAnim = { glints, torches, lamps, herbe };
+  bestioles = null;
   // ----- finition « plateau de jeu de rôle » (calculée une seule fois au chargement) -----
   // 1) ombres portées des arbres, toits et buissons, décalées vers le bas à droite
   const sc = document.createElement('canvas'); sc.width = AW; sc.height = AH;
@@ -938,6 +942,8 @@ function buildMapLayers(map) {
     if (i > 0 && floorT(tile(i - 1, j))) for (let y = 0; y < TS; y += 2) g.fillRect(i * TS, j * TS + y, 1, 1);
     if (j > 0 && floorT(tile(i, j - 1))) for (let x = 0; x < TS; x += 2) g.fillRect(i * TS + x, j * TS, 1, 1);
   }
+  // 2b) décor de saison (selon le mois réel) : citrouilles, feuilles, cadeaux, bonshommes de neige, fleurs…
+  decorSaison(g, map, herbe, TS, hsh);
   // 3) couleurs plus sobres : moins saturées, plus chaudes, avec des taches de lumière et des bords assombris
   // taches de lumière précalculées par blocs de 4 pixels (plus rapide)
   const MW = (AW >> 2) + 1, MH = (AH >> 2) + 1, mot = new Float32Array(MW * MH);
@@ -1522,6 +1528,8 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   const md = mine && (disp.get(mine.id) || mine);
   const sq = (x, y, s, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x / PX) * PX, Math.round(y / PX) * PX, s * PX, s * PX); };
   const img = (c, x, y, s = PX) => ctx.drawImage(c, Math.round(x - c.width * s / 2), Math.round(y - c.height * s / 2), c.width * s, c.height * s);
+  const dtW = Math.min(0.05, Math.max(0, now - (drawWorld.t || now))); drawWorld.t = now;
+  const leger = typeof eco !== 'undefined' && eco;   // mode économie (écran des élèves)
 
   // reflets sur l'eau, lieu de soin, torches
   for (const [x, y, ph] of mapAnim.glints) { const t = (now * 0.6 + ph) % 3; if (t < 1) sq(x + t * 12, y, 2 + (t > 0.3 && t < 0.7 ? 1 : 0), '#ffffffaa'); }
@@ -1649,6 +1657,8 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     img(barrelSprite(lit ? 1 : 0), b.x + (lit ? Math.sin(now * 60) * 2 : 0), b.y);
   });
 
+  if (!leger) drawBestioles(ctx, world, map, sq, dtW, now);
+  if (world.zt) drawTempete(ctx, world.zt, map, sq, now, big);
   // effets
   for (const f of world.fx) {
     const t = f.t / f.d;
@@ -1740,6 +1750,10 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     }
     ctx.restore();
   }
+  partsDepuisFx(world, leger ? 50 : 360);
+  drawParts(ctx, sq, dtW);
+  suivreKO(world, disp);
+  drawChutes(ctx, sq, dtW, heroScale);
   // projectiles
   for (const [x, y, c, a] of world.b) {
     if (c === 'mage') {
@@ -1917,6 +1931,137 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
 }
 
 // Mini-carte (vue élève)
+// ---------- Ambiance vivante : tout est calculé sur l'appareil, rien ne passe par le Wi-Fi ----------
+// Particules : étincelles des coups, fumée des K.O., débris des explosions
+const PARTS = [];
+let fxVus = new Map();
+function partsDepuisFx(world, lim) {
+  const vus = new Map();
+  for (const f of world.fx) {
+    const key = f.k + '|' + Math.round(f.x) + '|' + Math.round(f.y), avant = fxVus.get(key);
+    vus.set(key, f.t);
+    if ((avant !== undefined && f.t <= avant + 0.01) || PARTS.length > lim) continue;
+    const add = (n, cols, v, vie, g = 0, up = 0, dy = -24) => {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, sp = v * (0.4 + Math.random() * 0.6);
+        PARTS.push({ x: f.x, y: f.y + dy, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.7 - up, g, t: vie * (0.6 + Math.random() * 0.4), d: vie, c: cols[i % cols.length], s: Math.random() < 0.4 ? 2 : 1 });
+      }
+    };
+    if (f.k === 'hit') add(7, ['#ffffff', '#ffe27a', '#ffb347'], 220, 0.3);
+    else if (f.k === 'death') { add(14, ['#e8e4f0', '#bdb6cc', '#8a8498'], 90, 0.9, -60, 30, -10); add(8, ['#ffe27a', '#ffffff'], 200, 0.6); }
+    else if (f.k === 'boom' && !f.c) add(f.gold ? 16 : 22, f.gold ? ['#fff6c0', '#f2c94c'] : ['#ffe27a', '#ff8a1e', '#ff4a1a', '#5a4a3a'], 320, 0.6, 500, 160, 0);
+    else if (f.k === 'item' || f.k === 'spawn') add(10, ['#fff6c0', '#ffe36b', '#ffffff'], 120, 0.7, -40, 40);
+    else if (f.k === 'cercle' || f.k === 'heal') add(10, ['#8af07a', '#c8ff6a', '#ffffff'], 120, 0.9, -80, 30, 0);
+  }
+  fxVus = vus;
+}
+function drawParts(ctx, sq, dt) {
+  for (let i = PARTS.length - 1; i >= 0; i--) {
+    const q = PARTS[i];
+    if ((q.t -= dt) <= 0) { PARTS.splice(i, 1); continue; }
+    q.x += q.vx * dt; q.y += q.vy * dt; q.vy += q.g * dt; q.vx *= 0.95;
+    ctx.globalAlpha = Math.min(1, q.t / q.d * 1.6); sq(q.x, q.y, q.s, q.c);
+  }
+  ctx.globalAlpha = 1;
+}
+// Chute au K.O. : le héros bascule, des étoiles tournent, une petite âme s'envole
+const etatsVie = new Map(), chutes = [];
+function suivreKO(world, disp) {
+  for (const p of world.p) {
+    if (etatsVie.get(p.id) === true && !p.al && !p.hd && !p.inv) { const d = disp.get(p.id) || p; chutes.push({ x: d.x, y: d.y, c: p.c, l: p.l || 'm00', a: p.a, g: p.g, t: 0 }); }
+    etatsVie.set(p.id, p.al);
+  }
+}
+function drawChutes(ctx, sq, dt, S) {
+  for (let i = chutes.length - 1; i >= 0; i--) {
+    const k = chutes[i];
+    if ((k.t += dt) > 1.4) { chutes.splice(i, 1); continue; }
+    const u = Math.min(1, k.t / 0.3);
+    ctx.save(); ctx.globalAlpha = k.t < 0.9 ? 1 : Math.max(0, 1 - (k.t - 0.9) / 0.5);
+    ctx.translate(Math.round(k.x), Math.round(k.y + 20)); ctx.rotate(u * u * Math.PI / 2 * (Math.cos(k.a) < 0 ? -1 : 1));
+    drawHeroSprite(ctx, 0, -20, k.c, k.l, k.a, 0, S, k.g, false);
+    ctx.restore();
+    if (k.t > 0.25) for (let j = 0; j < 3; j++) { const a = k.t * 7 + j * 2.1; sq(k.x + Math.cos(a) * 18, k.y + Math.sin(a) * 5, 2, j % 2 ? '#ffffff' : '#ffe27a'); }
+    if (k.t > 0.45) { const v = (k.t - 0.45) / 0.95; ctx.globalAlpha = 0.85 * (1 - v); sq(k.x - 4 + Math.sin(k.t * 9) * 4, k.y - 24 - v * 70, 3, '#e8f4ff'); sq(k.x - 1 + Math.sin(k.t * 9) * 4, k.y - 16 - v * 70, 1, '#e8f4ff'); ctx.globalAlpha = 1; }
+  }
+}
+// Tempête : tout ce qui est hors du cercle s'assombrit en violet
+function drawTempete(ctx, [x, y, r], map, sq, now, big) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(70,20,110,0.36)'; ctx.beginPath(); ctx.rect(-50, -50, map.W + 100, map.H + 100); ctx.arc(x, y, r, 0, 7); ctx.fill('evenodd');
+  ctx.strokeStyle = '#e2b8ff'; ctx.lineWidth = big ? 12 : 4; ctx.setLineDash([18, 12]); ctx.lineDashOffset = -now * 40; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+  ctx.restore();
+  const n = Math.min(90, Math.round(r / 14));
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + now * 0.25, d = r + 10 + ((i * 37 + now * 60) % 60); sq(x + Math.cos(a) * d, y + Math.sin(a) * d, i % 3 ? 2 : 3, i % 2 ? '#c890ff' : '#ffffff'); }
+}
+// Petits animaux qui se sauvent quand un héros approche
+let bestioles = null;
+const BESTIOLES = { village: ['papillon', 'papillon', 'lapin', 'oiseau'], foret: ['papillon', 'lapin', 'oiseau', 'lapin'], cite: ['oiseau', 'papillon', 'oiseau'], colisee: ['oiseau', 'papillon'], desert: ['lezard', 'lezard', 'papillon'], hiver: ['lapinB', 'oiseau', 'lapinB'], marais: ['luciole', 'luciole', 'grenouille', 'papillon'], donjon: ['chauve', 'rat', 'rat'] };
+const VOLANTS = new Set(['papillon', 'luciole', 'chauve']);
+function drawBestioles(ctx, world, map, sq, dt, now) {
+  const H = mapAnim && mapAnim.herbe;
+  if (!H || !H.length) return;
+  const spot = () => H[Math.floor(Math.random() * H.length)];
+  if (!bestioles) {
+    const types = BESTIOLES[map.theme] || BESTIOLES.village;
+    bestioles = [];
+    for (let i = 0; i < 12; i++) { const [x, y] = spot(); bestioles.push({ k: types[i % types.length], x, y, hx: x, hy: y, tx: x, ty: y, t: Math.random() * 3, fuite: 0, vx: 0, vy: 0, ph: Math.random() * 6, c: i % 3 }); }
+  }
+  for (const b of bestioles) {
+    let proche = null;
+    for (const p of world.p) if (p.al && Math.abs(p.x - b.x) < 110 && Math.abs(p.y - b.y) < 110 && Math.hypot(p.x - b.x, p.y - b.y) < (b.k === 'luciole' ? 60 : 95)) { proche = p; break; }
+    if (proche && b.fuite <= 0) { const a = Math.atan2(b.y - proche.y, b.x - proche.x); b.fuite = b.k === 'oiseau' ? 2 : 0.9; const v = b.k === 'oiseau' || VOLANTS.has(b.k) ? 260 : 210; b.vx = Math.cos(a) * v; b.vy = Math.sin(a) * v - (b.k === 'oiseau' ? 140 : 0); }
+    if (b.fuite > 0) {
+      b.x += b.vx * dt; b.y += b.vy * dt; b.fuite -= dt;
+      if (b.fuite <= 0) { if (b.k === 'oiseau') { const [x, y] = spot(); b.x = x; b.y = y; } b.hx = b.tx = b.x; b.hy = b.ty = b.y; }
+    } else if (VOLANTS.has(b.k)) {   // vole en boucle autour de son coin
+      b.ph += dt; b.x += ((b.hx + Math.sin(b.ph * 0.9) * 40 + Math.sin(b.ph * 2.3) * 12) - b.x) * Math.min(1, dt * 3); b.y += ((b.hy + Math.sin(b.ph * 1.3) * 26 - 10) - b.y) * Math.min(1, dt * 3);
+    } else {   // trottine vers un point proche, puis s'arrête
+      if ((b.t -= dt) <= 0) { b.t = 1.5 + Math.random() * 3; b.tx = b.hx + (Math.random() - 0.5) * 120; b.ty = b.hy + (Math.random() - 0.5) * 80; }
+      const dx = b.tx - b.x, dy = b.ty - b.y, l = Math.hypot(dx, dy);
+      if (l > 3) { const v = Math.min(l, (b.k === 'lezard' ? 70 : 45) * dt); b.x += dx / l * v; b.y += dy / l * v; b.vx = dx; }
+    }
+    // dessin (1 case = 1 pixel d'art)
+    const x = b.x, y = b.y, f = Math.floor(now * 10 + b.ph * 3) % 2, dir = (b.vx || 1) > 0 ? 1 : -1, hop = !VOLANTS.has(b.k) && b.k !== 'lezard' && b.k !== 'rat' && (b.fuite > 0 || Math.hypot(b.tx - b.x, b.ty - b.y) > 3) ? -Math.abs(Math.sin(now * 14 + b.ph)) * 6 : 0;
+    if (b.k === 'papillon') { const c = ['#ffd54a', '#ff8ac8', '#9fd6ff'][b.c]; sq(x, y, 1, '#3a2a1a'); if (f) { sq(x - PX * 2, y - PX, 2, c); sq(x + PX, y - PX, 2, c); } else { sq(x - PX, y - PX, 1, c); sq(x + PX, y - PX, 1, c); } }
+    else if (b.k === 'luciole') { ctx.globalAlpha = 0.25 + 0.2 * Math.sin(now * 4 + b.ph); ctx.fillStyle = '#e8ff7a'; ctx.beginPath(); ctx.arc(x, y, 9, 0, 7); ctx.fill(); ctx.globalAlpha = 1; sq(x, y, 1, '#f4ffb0'); }
+    else if (b.k === 'chauve') { sq(x - PX, y, 2, '#2a2234'); if (f) { sq(x - PX * 3, y - PX, 2, '#2a2234'); sq(x + PX, y - PX, 2, '#2a2234'); } else { sq(x - PX * 3, y + PX, 2, '#2a2234'); sq(x + PX, y + PX, 2, '#2a2234'); } sq(x - PX, y, 1, '#ff4a4a'); }
+    else if (b.k === 'oiseau') { const vol = b.fuite > 0; sq(x - PX, y + hop, 2, '#7a6a5a'); sq(x + dir * PX, y - PX + hop, 1, '#5a4a3a'); sq(x + dir * PX * 2, y - PX + hop, 1, '#e0a03a'); if (vol) { sq(x - PX * 2, y - PX * (f ? 2 : 0), 1, '#5a4a3a'); sq(x + PX, y - PX * (f ? 2 : 0), 1, '#5a4a3a'); } }
+    else if (b.k === 'lapin' || b.k === 'lapinB') { const c = b.k === 'lapinB' ? '#ffffff' : '#b08a6a', c2 = b.k === 'lapinB' ? '#c8d8e8' : '#8a6a4a'; ctx.fillStyle = '#00000030'; ctx.fillRect(x - 6, y + 4, 12, 3); sq(x - PX * 2, y - PX + hop, 3, c); sq(x + dir * PX, y - PX * 2 + hop, 2, c); sq(x + dir * PX, y - PX * 4 + hop, 1, c2); sq(x - dir * PX * 2, y + hop, 1, '#ffffff'); }
+    else if (b.k === 'lezard') { sq(x - PX * 2, y, 1, '#4a8a3a'); sq(x - PX, y, 2, '#6aaa4a'); sq(x + dir * PX * 2, y, 1, '#6aaa4a'); sq(x - dir * PX * 3, y + PX, 1, '#4a8a3a'); }
+    else if (b.k === 'rat') { sq(x - PX, y, 2, '#6a6478'); sq(x + dir * PX, y, 1, '#8a8498'); sq(x - dir * PX * 2, y + PX, 1, '#d88a9a'); sq(x - dir * PX * 3, y + PX, 1, '#d88a9a'); }
+    else if (b.k === 'grenouille') { sq(x - PX, y + hop, 3, '#4a9a3a'); sq(x - PX, y - PX + hop, 1, '#ffffff'); sq(x + PX, y - PX + hop, 1, '#ffffff'); }
+  }
+}
+// Décor selon le mois, peint une seule fois dans la carte (aucun coût pendant le jeu)
+function decorSaison(g, map, herbe, TS, hsh) {
+  const mois = new Date().getMonth() + 1;
+  const pix = (x, y, rows, pal) => rows.forEach((r, j) => { for (let i = 0; i < r.length; i++) if (pal[r[i]]) { g.fillStyle = pal[r[i]]; g.fillRect(x + i, y + j, 1, 1); } });
+  const S = {
+    citrouille: [['...gg..', '.kkgkk.', 'koOoOok', 'kOoOoOk', 'koOoOok', '.kkkkk.'], { o: '#e8862a', O: '#c8641a', g: '#4a8a2a', k: '#5a2a10' }],
+    cadeau: [['.y.y.', 'kkykk', 'rryrr', 'yyyyy', 'rryrr', 'kkkkk'], { r: '#c83a3a', y: '#ffd54a', k: '#4a1a1a' }],
+    cadeau2: [['.y.y.', 'kkykk', 'rryrr', 'yyyyy', 'rryrr', 'kkkkk'], { r: '#3a9a4a', y: '#f4f8ff', k: '#1a3a1a' }],
+    bonhomme: [['..kk..', '.kwwk.', '.kwok.', '..kk..', '.kwwk.', 'kwwwwk', 'kwwwwk', '.kkkk.'], { w: '#f4f8ff', o: '#ff8a1e', k: '#5a6a80' }],
+    coeur: [['.r.r.', 'rrrrr', 'rrrrr', '.rrr.', '..r..'], { r: '#ff5a8a' }],
+    oeuf: [['.kk.', 'kabk', 'kbak', 'kabk', '.kk.'], { a: ['#ffd54a', '#9fd6ff', '#ff8ac8'][0], b: '#ffffff', k: '#6a5a7a' }],
+    oeuf2: [['.kk.', 'kabk', 'kbak', 'kabk', '.kk.'], { a: '#9fd6ff', b: '#ff8ac8', k: '#5a6a8a' }],
+    tulipe: [['r.r', 'rrr', '.g.', 'gg.'], { r: '#e84a6a', g: '#3a8a3a' }],
+    tulipe2: [['y.y', 'yyy', '.g.', '.gg'], { y: '#ffd54a', g: '#3a8a3a' }],
+    marguerite: [['.w.', 'wyw', '.w.'], { w: '#ffffff', y: '#ffd54a' }],
+    champi: [['.rr.', 'rwrr', '.cc.'], { r: '#d83a3a', w: '#ffffff', c: '#f0e0c8' }],
+    pomme: [['.g.', 'rrr', 'rRr', '.r.'], { r: '#d83a3a', R: '#ff8a7a', g: '#4a8a2a' }],
+  };
+  const choix = mois === 10 ? ['citrouille'] : mois === 12 ? ['cadeau', 'cadeau2'] : mois === 1 ? ['bonhomme'] : mois === 2 ? ['bonhomme', 'coeur', 'coeur'] : mois === 3 ? ['tulipe', 'marguerite'] : mois === 4 ? ['oeuf', 'oeuf2', 'tulipe2'] : mois === 9 ? ['pomme', 'champi'] : mois === 11 ? [] : ['tulipe', 'tulipe2', 'marguerite', 'champi'];
+  const dense = map.theme === 'donjon' ? 0.012 : 0.03;
+  for (const [, , i, j] of herbe) {
+    if (mois === 11 || mois === 10) {   // feuilles mortes
+      if (hsh(i, j, 81) < 0.25 && map.theme !== 'desert') for (let k = 0; k < 6; k++) { g.fillStyle = ['#c8641a', '#e8a03a', '#a83a2a', '#8a5a2a'][k % 4]; g.fillRect(i * TS + Math.floor(hsh(i, j, 90 + k) * TS), j * TS + Math.floor(hsh(i, j, 99 + k) * TS), 1 + (k % 2), 1); }
+    }
+    if (!choix.length || hsh(i, j, 77) > dense) continue;
+    const [rows, pal] = S[choix[Math.floor(hsh(i, j, 78) * choix.length)]];
+    pix(i * TS + Math.floor(hsh(i, j, 79) * (TS - 8)), j * TS + Math.floor(hsh(i, j, 80) * (TS - 9)), rows, pal);
+  }
+}
 function drawMinimap(ctx, world, map, mine, x, y, w, teams = null) {
   const s = w / map.W, h = map.H * s;
   ctx.save();
@@ -1938,6 +2083,7 @@ function drawMinimap(ctx, world, map, mine, x, y, w, teams = null) {
     ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + fx * s) - 4, Math.round(y + fy * s) - 5, 8, 8);
     ctx.fillStyle = teams && teams[i] ? teams[i].color : '#fff'; ctx.fillRect(Math.round(x + fx * s) - 3, Math.round(y + fy * s) - 4, 6, 6);
   });
+  if (world.zt) { ctx.strokeStyle = '#d8a0ff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x + world.zt[0] * s, y + world.zt[1] * s, world.zt[2] * s, 0, 7); ctx.stroke(); }
   for (const [rx, ry] of world.ru || []) { ctx.fillStyle = '#7fe0ff'; ctx.fillRect(Math.round(x + rx * s) - 3, Math.round(y + ry * s) - 3, 6, 6); }
   if (world.ca) { ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + world.ca[0] * s) - 5, Math.round(y + world.ca[1] * s) - 5, 10, 10); ctx.fillStyle = '#e0a03a'; ctx.fillRect(Math.round(x + world.ca[0] * s) - 4, Math.round(y + world.ca[1] * s) - 4, 8, 8); }
   for (const [mx, my] of world.mn || []) { ctx.fillStyle = '#e04a5a'; ctx.fillRect(Math.round(x + mx * s) - 2, Math.round(y + my * s) - 2, 4, 4); }

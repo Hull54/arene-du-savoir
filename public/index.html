@@ -86,7 +86,12 @@
   .cd .ico { font-size: 28px; }
   .cd.super { pointer-events: auto; cursor: pointer; background: #6a4a10; box-shadow: 0 0 0 3px #ffd54a, 0 0 18px #ffd54a; animation: brille 0.8s ease-in-out infinite alternate; } @keyframes brille { to { box-shadow: 0 0 0 3px #fff2b0, 0 0 30px #ffd54a; } }
   .cd .fill { position: absolute; left: 0; right: 0; bottom: 0; background: #000a; }
-  #score { position: fixed; top: 10px; left: 12px; padding: 6px 12px; font-size: 16px; }
+  #nuit { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; display: none; }
+  #score { position: fixed; top: 10px; left: 12px; padding: 3px 12px 3px 4px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  #portrait { width: 30px; height: 30px; image-rendering: pixelated; background: #44386a; border: 2px solid #1b1424; }
+  #pv { position: absolute; left: 4px; bottom: 2px; width: 34px; height: 3px; background: #1b1424; } #pv i { display: block; height: 100%; background: #6fd85a; }
+  #musique { position: fixed; top: 52px; left: 116px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
+  #tempete { position: fixed; top: 40%; left: 50%; transform: translateX(-50%); font-size: 22px; color: #f0d0ff; text-shadow: 3px 3px 0 #1b1424; display: none; animation: clign .6s steps(2) infinite; pointer-events: none; }
   #zone { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); padding: 4px 14px; font-size: 18px; color: #ffd54a; white-space: nowrap; }
   #hidden { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: none; }
   #feed { position: fixed; top: 170px; right: 12px; text-align: right; font-size: 15px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
@@ -118,7 +123,7 @@
   #zone.fin10 { color: #ff6a5a; animation: clign .5s steps(2) infinite; } @keyframes clign { 50% { opacity: .4; } }
   #eco { position: fixed; top: 52px; left: 64px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
   #mute { position: fixed; top: 52px; left: 12px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
-  #buffs { position: fixed; top: 52px; left: 64px; font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: flex; gap: 10px; }
+  #buffs { position: fixed; top: 56px; left: 172px; font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: flex; gap: 10px; }
   #bossbar { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); width: min(520px, 70vw); padding: 4px 10px 8px; text-align: center; font-size: 16px; display: none; pointer-events: none; }
   #bossbar .bar { height: 14px; background: #3a2a3a; border: 3px solid #1b1424; margin-top: 3px; }
   #bossbar .bar i { display: block; height: 100%; background: #e04a5a; transition: width .2s; }
@@ -147,10 +152,12 @@
 </head>
 <body>
 <canvas id="c"></canvas>
+<canvas id="nuit"></canvas>
 
-<div id="score" class="panel" style="display:none"></div>
+<div id="score" class="panel" style="display:none"><canvas id="portrait" width="16" height="16"></canvas><span id="scoreT"></span><span id="pv"><i></i></span></div>
 <div id="zone" class="panel" style="display:none"></div>
 <button id="mute" class="panel" style="display:none">🔊</button>
+<button id="musique" class="panel" style="display:none" title="Musique de la carte">🎵</button>
 <button id="eco" class="panel" style="display:none" title="Mode économie : moins d'effets, pour les appareils lents">✨</button>
 <div id="buffs"></div>
 <div id="gear" style="display:none"></div>
@@ -158,6 +165,7 @@
 <div id="bossbar" class="panel"><div id="bossName"></div><div class="bar"><i id="bossHp"></i></div></div>
 <div id="toast"></div>
 <div id="hidden">🌿 Tu es caché</div>
+<div id="tempete">🌀 Tu es dans la tempête ! Reviens dans le cercle</div>
 <div id="loading">Chargement de la carte…</div>
 <div id="feed"></div>
 <div id="pause">⏸ Pause</div>
@@ -381,6 +389,10 @@ function toast(t) {
 }
 $('mute').onclick = () => { $('mute').textContent = Son.toggle() ? '🔇' : '🔊'; };
 $('mute').textContent = Son.muted ? '🔇' : '🔊';
+const majMus = () => { $('musique').style.opacity = Son.musOn ? 1 : 0.45; $('musique').title = Son.musOn ? 'Musique : activée (clic pour couper)' : 'Musique : coupée (clic pour l\'écouter)'; };
+$('musique').onclick = () => { Son.toggleMusique(); if (map) Son.musique(map.theme); majMus(); }; majMus();
+// secousse de l'écran, petit gel quand on gagne un duel, éclair rouge quand on est touché
+let secousse = 0, gel = 0, flashRouge = 0, lastKills = null;
 const disp = new Map();   // positions affichées (lissage)
 const fxLocal = [];
 
@@ -395,7 +407,7 @@ function connect(name, cls) {
       map = m.map; mapLayer = null;
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
-      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'eco', 'gear'].forEach(id => $(id).style.display = ''); }, 30);
+      setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'eco', 'gear', 'musique'].forEach(id => $(id).style.display = ''); Son.musique(map.theme); }, 30);
       if (m.t === 'carte') toast('🗺️ ' + map.nom);
       $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls]; $('icoD').textContent = DASH_ICO[cls];
       if ('ontouchstart' in window) $('touch').style.display = 'flex';
@@ -404,9 +416,11 @@ function connect(name, cls) {
       const mp = world.p.find(p => p.id === myId);
       if (me && m.me) {
         if (me.alive && !m.me.alive) Son.play('ko');
-        else if (mp && lastHp != null && mp.hp < lastHp - 1 && m.me.alive) Son.play('touche');
+        else if (mp && lastHp != null && mp.hp < lastHp - 1 && m.me.alive) { Son.play('touche'); secousse = Math.min(1, secousse + 0.25 + (lastHp - mp.hp) / 80); flashRouge = 0.3; }
+        if (lastKills != null && m.me.kills > lastKills) { gel = 0.08; secousse = Math.min(1, secousse + 0.3); }
+        lastKills = m.me.kills;
       }
-      if (world.fx.some(f => (f.k === 'slam' || f.k === 'boom' || f.k === 'cri' || f.k === 'souffle') && f.t > f.d - 0.08 && mp && Math.hypot(f.x - mp.x, f.y - mp.y) < 700)) Son.play('boom');
+      if (world.fx.some(f => (f.k === 'slam' || f.k === 'boom' || f.k === 'cri' || f.k === 'souffle') && f.t > f.d - 0.08 && mp && Math.hypot(f.x - mp.x, f.y - mp.y) < 700)) { Son.play('boom'); secousse = Math.min(1, secousse + 0.5); }
       lastHp = mp ? mp.hp : null;
       me = m.me;
     } else if (m.t === 'q') showQuestion(m);
@@ -672,12 +686,90 @@ let lentT = 0;
 function resize() { cv.width = innerWidth * DPR(); cv.height = innerHeight * DPR(); }
 addEventListener('resize', resize); majEco();
 
+// ----- Ambiance : météo qui change toutes les 4 minutes, jour et nuit sur 10 minutes (même horloge pour toute la classe) -----
+const METEO = { village: ['clair', 'clair', 'pluie', 'petales'], foret: ['clair', 'pluie', 'petales', 'clair'], cite: ['clair', 'pluie', 'clair'], colisee: ['clair', 'poussiere'], desert: ['sable', 'clair', 'sable'], hiver: ['neige', 'neige', 'blizzard'], marais: ['brume', 'pluie', 'brume'], donjon: ['poussiere'] };
+const nuitCv = $('nuit'), nuitG = nuitCv.getContext('2d');   // calque à part : le navigateur l'agrandit et le superpose (presque gratuit)
+const halo = document.createElement('canvas'); halo.width = halo.height = 64;   // une lumière dessinée une fois, réutilisée partout
+{ const hg = halo.getContext('2d'), gr = hg.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.5, 'rgba(0,0,0,0.7)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); hg.fillStyle = gr; hg.fillRect(0, 0, 64, 64); }
+let nuitT = 0;
+function ambiance(now, vw, vh, zoom) {
+  const reg = map.theme, mois = new Date().getMonth() + 1;
+  let liste = METEO[reg] || ['clair'];
+  if ((mois === 10 || mois === 11) && (reg === 'village' || reg === 'foret')) liste = ['feuilles', 'clair', 'pluie', 'feuilles'];
+  if ((mois === 12 || mois <= 2) && (reg === 'village' || reg === 'foret' || reg === 'cite')) liste = ['neige', 'clair', 'neige'];
+  const meteo = liste[(Math.floor(Date.now() / 240000) + map.nom.length) % liste.length], n = eco ? 0.3 : 1;
+  ctx.save();
+  if (meteo === 'neige' || meteo === 'blizzard') {
+    const fort = meteo === 'blizzard';
+    ctx.fillStyle = '#ffffffcc';
+    for (let i = 0, nf = Math.round((fort ? 140 : 70) * n); i < nf; i++) {
+      const x = (i * 137 + now * 0.02 * (fort ? 80 : 20 + (i % 5) * 6) + Math.sin(now / 900 + i) * 20) % vw, y = (i * 89 + now * 0.05 * (1 + (i % 3))) % vh;
+      const s = i % 3 ? 3 : 4; ctx.fillRect(Math.round(x), Math.round(y), s, s);
+    }
+    if (fort) { ctx.fillStyle = '#e8f0ff22'; ctx.fillRect(0, 0, vw, vh); }
+  } else if (meteo === 'pluie') {
+    ctx.fillStyle = '#1e284620'; ctx.fillRect(0, 0, vw, vh);
+    ctx.strokeStyle = '#b8d0ff88'; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0, nr = Math.round(110 * n); i < nr; i++) {
+      const x = (i * 97 + now * 0.25) % (vw + 60) - 30, y = (i * 131 + now * (0.9 + (i % 4) * 0.12)) % (vh + 40) - 20;
+      ctx.moveTo(Math.round(x), Math.round(y)); ctx.lineTo(Math.round(x - 5), Math.round(y + 16));
+    }
+    ctx.stroke();
+  } else if (meteo === 'petales' || meteo === 'feuilles') {
+    const cols = meteo === 'petales' ? ['#ffc0d8', '#ffffff', '#ff9ac0'] : ['#e8862a', '#c8641a', '#ffd54a', '#a83a2a'];
+    for (let i = 0, np = Math.round(26 * n); i < np; i++) {
+      const x = (i * 211 + now * 0.04 * (1 + i % 3) + Math.sin(now / 700 + i) * 40) % vw, y = (i * 157 + now * 0.03 * (1 + (i % 4) * 0.3)) % vh;
+      ctx.fillStyle = cols[i % cols.length]; ctx.fillRect(Math.round(x), Math.round(y), 4, Math.floor(now / 200 + i) % 2 ? 3 : 2);
+    }
+  } else if (meteo === 'sable') {
+    ctx.fillStyle = '#ffb34718'; ctx.fillRect(0, 0, vw, vh);
+    ctx.fillStyle = '#f0d8a0aa';
+    for (let i = 0, ns = Math.round(50 * n); i < ns; i++) { const x = (i * 173 + now * 0.5 * (1 + i % 3)) % (vw + 80) - 40, y = (i * 97 + Math.sin(now / 500 + i) * 10) % vh; ctx.fillRect(Math.round(x), Math.round(y), 10 + (i % 3) * 6, 2); }
+  } else if (meteo === 'brume') {
+    ctx.fillStyle = '#d8e4d812';
+    for (let i = 0; i < 6; i++) { const x = ((i * 300 + now * 0.012 * (1 + i % 2)) % (vw + 600)) - 300; ctx.beginPath(); ctx.ellipse(x, (i * 173) % vh, 280, 90, 0, 0, 7); ctx.fill(); }
+  } else if (meteo === 'poussiere') {
+    ctx.fillStyle = '#ffe8b066';
+    for (let i = 0, nd = Math.round(30 * n); i < nd; i++) { const x = (i * 149 + Math.sin(now / 1500 + i) * 30) % vw, y = vh - (i * 113 + now * 0.01 * (1 + i % 3)) % vh; ctx.fillRect(Math.round(x), Math.round(y), 2, 2); }
+  }
+  if (reg === 'donjon') {   // pénombre : on voit mieux autour de soi
+    nuitCv.style.display = 'none';
+    const gr = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.25, vw / 2, vh / 2, Math.max(vw, vh) * 0.7);
+    gr.addColorStop(0, '#0b081200'); gr.addColorStop(1, '#0b0812cc');
+    ctx.fillStyle = gr; ctx.fillRect(0, 0, vw, vh);
+  } else {   // jour → crépuscule → nuit (lanternes et torches éclairent) → aube
+    const ph = (Date.now() % 600000) / 600000;
+    const nuit = ph < 0.6 ? 0 : ph < 0.68 ? (ph - 0.6) / 0.08 : ph < 0.9 ? 1 : Math.max(0, 1 - (ph - 0.9) / 0.08);
+    const crep = ph > 0.5 && ph < 0.72 ? Math.sin((ph - 0.5) / 0.22 * Math.PI) : ph > 0.88 && ph < 0.98 ? Math.sin((ph - 0.88) / 0.1 * Math.PI) * 0.6 : 0;
+    if (crep > 0) { ctx.fillStyle = `rgba(255,120,40,${0.12 * crep})`; ctx.fillRect(0, 0, vw, vh); }
+    nuitCv.style.display = nuit > 0 ? 'block' : 'none';
+    if (nuit > 0 && (nuitT = (nuitT + 1) % 2) === 0) {
+      nuitCv.style.opacity = (0.42 * nuit).toFixed(3);
+      const q = 4, w = Math.ceil(vw / q), h = Math.ceil(vh / q);
+      if (nuitCv.width !== w || nuitCv.height !== h) { nuitCv.width = w; nuitCv.height = h; }
+      nuitG.globalCompositeOperation = 'source-over'; nuitG.fillStyle = 'rgb(10,14,46)'; nuitG.fillRect(0, 0, w, h);
+      if (!eco) {
+        nuitG.globalCompositeOperation = 'destination-out';
+        const sx = x => (vw / 2 + (x - camX) * zoom) / q, sy = y => (vh / 2 + (y - camY) * zoom) / q;
+        const lum = (x, y, r) => { const X = sx(x), Y = sy(y), R = r * zoom / q; if (X < -R || Y < -R || X > w + R || Y > h + R) return; nuitG.drawImage(halo, X - R, Y - R, R * 2, R * 2); };
+        const mine = world.p.find(p => p.id === myId), md = mine && disp.get(mine.id);
+        if (md) lum(md.x, md.y, 230);
+        for (const [x, y] of mapAnim.lamps || []) lum(x, y + 50, 160);
+        for (const [x, y] of mapAnim.torches || []) lum(x, y, 110);
+        if (map.heal) lum(map.heal.x, map.heal.y, map.heal.r + 60);
+      }
+    }
+  }
+  ctx.restore();
+}
+let lastPortrait = '';
 let lastTm = -1, lastFrame = performance.now(), camX = 0, camY = 0, meScreen = { x: innerWidth / 2, y: innerHeight / 2 };
 function frame(now) {
   const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   requestAnimationFrame(frame);
   if (!world || !map) return;
-  const k = Math.min(1, dt * 18);
+  gel = Math.max(0, gel - dt);
+  const k = gel > 0 ? 0 : Math.min(1, dt * 18);
   for (const p of world.p) {
     const d = disp.get(p.id);
     if (!d || Math.hypot(d.x - p.x, d.y - p.y) > 150) disp.set(p.id, { x: p.x, y: p.y });
@@ -698,27 +790,23 @@ function frame(now) {
   camY = map.H > hh * 2 ? Math.max(hh, Math.min(map.H - hh, camY)) : map.H / 2;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#173d1d'; ctx.fillRect(0, 0, vw, vh);
-  ctx.translate(Math.round(vw / 2 - camX * zoom), Math.round(vh / 2 - camY * zoom)); ctx.scale(zoom, zoom);
+  secousse = Math.max(0, secousse - dt * 3);
+  const sx = secousse > 0.02 ? (Math.random() - 0.5) * secousse * 12 : 0, sy = secousse > 0.02 ? (Math.random() - 0.5) * secousse * 12 : 0;
+  ctx.translate(Math.round(vw / 2 - camX * zoom + sx), Math.round(vh / 2 - camY * zoom + sy)); ctx.scale(zoom, zoom);
   const teams = equipesDe(world, equipes());
   if (mine) mine.aim = aim;
   drawWorld(ctx, world, map, mine, disp, PX, teams);
   if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const reg = map.theme;
-  // ambiance : flocons en hiver, pénombre dans le donjon, chaleur au désert
-  if (reg === 'hiver') {
-    ctx.fillStyle = '#ffffffcc';
-    for (let i = 0, nf = eco ? 20 : 70; i < nf; i++) {
-      const x = (i * 137 + now * 0.02 * (20 + (i % 5) * 6) + Math.sin(now / 900 + i) * 20) % vw, y = (i * 89 + now * 0.05 * (1 + (i % 3))) % vh;
-      const s = i % 3 ? 3 : 4; ctx.fillRect(Math.round(x), Math.round(y), s, s);
-    }
-  } else if (reg === 'donjon') {
-    const gr = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.25, vw / 2, vh / 2, Math.max(vw, vh) * 0.7);
-    gr.addColorStop(0, '#0b081200'); gr.addColorStop(1, '#0b0812cc');
+  ambiance(now, vw, vh, zoom);
+  if (flashRouge > 0) {   // touché : bords rouges un court instant
+    flashRouge -= dt;
+    const gr = ctx.createRadialGradient(vw / 2, vh / 2, Math.min(vw, vh) * 0.3, vw / 2, vh / 2, Math.max(vw, vh) * 0.65);
+    gr.addColorStop(0, '#ff1a1a00'); gr.addColorStop(1, `rgba(255,30,30,${Math.min(0.45, flashRouge * 1.5)})`);
     ctx.fillStyle = gr; ctx.fillRect(0, 0, vw, vh);
-  } else if (reg === 'desert') {
-    ctx.fillStyle = '#ffb34714'; ctx.fillRect(0, 0, vw, vh);
   }
+  const dansTempete = world.zt && mine && mine.al && Math.hypot(mine.x - world.zt[0], mine.y - world.zt[1]) > world.zt[2];
+  $('tempete').style.display = dansTempete ? 'block' : 'none';
   const mmW = Math.min(210, vw * 0.3);
   drawMinimap(ctx, world, map, mine, vw - mmW - 14, 14, mmW, teams);
   const tm = world.tm >= 0 ? `   ⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}` : '';
@@ -738,6 +826,16 @@ function frame(now) {
     $('bossbar').classList.toggle('shield', !!B[7]);
   }
 
+  // HUD : portrait de mon héros et sa vie
+  if (mine) {
+    const pk = mine.c + mine.l + mine.g;
+    if (pk !== lastPortrait) {
+      lastPortrait = pk;
+      const spr = heroSprite(mine.c, mine.l || 'm00', 'down', 0, mine.g), pc = $('portrait').getContext('2d');
+      pc.clearRect(0, 0, 16, 16); pc.drawImage(spr, Math.round(spr.width / 2 - 8), 1, 16, 16, 0, 0, 16, 16);
+    }
+    const r = mine.hp / mine.m; $('pv').firstChild.style.width = Math.max(0, r * 100) + '%'; $('pv').firstChild.style.background = r > 0.5 ? '#6fd85a' : r > 0.25 ? '#ffd54a' : '#e04a5a';
+  }
   // HUD
   const c = info.classes[myCls];
   if (me) {
@@ -754,7 +852,7 @@ function frame(now) {
       $('fillF').style.height = (me.cdF / (info.petCd || 15) * 100) + '%';
       $('lblF').textContent = me.cdF > 0 ? Math.ceil(me.cdF) + ' s' : 'E';
     }
-    $('score').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}   🪙 ${monOr}` + (me.sk >= 2 ? `   🔥 ${me.sk}` : '');
+    $('scoreT').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}   🪙 ${monOr}` + (me.sk >= 2 ? `   🔥 ${me.sk}` : '');
     $('buffs').textContent = [me.st ? `💪 ${me.st}` : '', me.fa ? `👢 ${me.fa}` : ''].filter(Boolean).join('  ');
     // équipement trouvé : 4 cases, bordure de la couleur du niveau
     const gk = me.ge ? GEAR_ORDRE.map(k => me.ge[k]).join('') : '';

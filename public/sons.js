@@ -41,7 +41,49 @@ const Son = (() => {
     slime: () => { note(150, 500, 0.15, 'sine', 0.08); bruit(0.1, 0.03, 0.05); },
     fin: () => [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => note(f, f, i === 7 ? 0.5 : 0.12, 'square', 0.06, [0, .14, .28, .42, .62, .82, .96, 1.12][i])),
   };
+  // ----- Musique de fond : un petit air 8 bits par type de carte (chiffres = notes de la gamme, point = silence) -----
+  const pad = t => (t + '.'.repeat(32)).slice(0, 32);
+  const MAJ = [0, 2, 4, 5, 7, 9, 11], MIN = [0, 2, 3, 5, 7, 8, 10];
+  const AIRS = {
+    village: { bpm: 116, root: 60, sc: [0, 2, 4, 7, 9], w: 'square', mel: ['5.6.7.9.8.7.6...5.6.7.5.6.4.5...', '7.8.9.8.7.6.5...6.5.4.3.4.6.5...'], bass: [0, 0, -3, -3, -7, -7, -5, -5, 0, 0, -3, -3, -7, -5, 0, 0] },
+    foret: { bpm: 100, root: 62, sc: [0, 2, 3, 5, 7, 9, 10], w: 'triangle', mel: ['7.9.a.9.7...5.7.9...7.5.4.5....', '9.a.b.a.9.7.9...a.9.7.5.7......'], bass: [0, 0, -2, -2, -4, -4, -2, -2, 0, 0, 3, 3, -2, -2, 0, 0] },
+    desert: { bpm: 96, root: 57, sc: [0, 1, 4, 5, 7, 8, 10], w: 'square', mel: ['7.8.7.5.4.5.7...8.a.8.7.5.4.5...', '4.5.7.8.7.5.4.1.0.1.4.5.4.......'], bass: [0, 0, 0, 0, 1, 1, 0, 0, 0, 0, -2, -2, 1, 1, 0, 0] },
+    donjon: { bpm: 80, root: 57, sc: MIN, w: 'triangle', mel: ['7...8.7.5...4.3.4...5.4.3.2.0...', '7...9.a.9.7.8.7.5.4...3.4.5.....'], bass: [0, 0, -4, -4, -2, -2, -5, -5, 0, 0, -4, -4, -5, -5, 0, 0], calme: 1 },
+    hiver: { bpm: 92, root: 65, sc: MAJ, w: 'sine', mel: ['7.9.b.e.b.9.7...8.9.a.9.7.5.7...', '9.a.b.a.9.8.7...4.5.7.9.8.7.....'], bass: [0, 0, -3, -3, -7, -7, -5, -5, 0, 0, -3, -3, -5, -5, 0, 0], calme: 1 },
+    cite: { bpm: 120, root: 55, sc: MAJ, w: 'square', mel: ['7.7.9.b.a.9.7...8.8.a.c.b.a.9...', 'b.a.9.8.7.9.7.5.4.5.7.8.7.......'], bass: [0, 0, -7, -7, -3, -3, -5, -5, 0, 0, -7, -7, -5, -5, 0, 0] },
+    colisee: { bpm: 132, root: 62, sc: MIN, w: 'square', mel: ['7.7.a.7.9.7.8.7.7.7.b.a.9.8.7...', 'a.b.c.b.a.9.8.9.a.9.8.7.5.7.....'], bass: [0, 0, -2, -2, -4, -4, -5, -5, 0, 0, -2, -2, -5, -5, 0, 0] },
+    marais: { bpm: 88, root: 52, sc: [0, 3, 5, 7, 10], w: 'triangle', mel: ['5...6.7...8.7.6.5...3.5...6....', '8...9.8.7.6...5.6.7.5.3........'], bass: [0, 0, 0, 0, -4, -4, -2, -2, 0, 0, 0, 0, -5, -5, 0, 0], calme: 1 },
+  };
+  let musOn = false, air = null, pas = 0, prochain = 0, boucle = null, musGain = null;
+  try { musOn = localStorage.getItem('arene-musique') === '1'; } catch {}
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  function ton(m, dur, type, vol, t) {
+    const a = ac, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(hz(m), t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    o.connect(g).connect(musGain); o.start(t); o.stop(t + dur + 0.02);
+  }
+  function jouer() {
+    const a = ctx(); if (!a || !air) return;
+    if (!musGain) { musGain = a.createGain(); musGain.gain.value = 0.55; musGain.connect(a.destination); }
+    musGain.gain.value = muted ? 0 : 0.55;
+    const st = 60 / air.bpm / 2, L = air.sc.length, mel = pad(air.mel[0]) + pad(air.mel[1]);
+    if (prochain < a.currentTime) prochain = a.currentTime + 0.05;
+    while (prochain < a.currentTime + 0.3) {
+      const i = pas % 64, ch = mel[i];
+      if (ch !== '.') { const d = parseInt(ch, 36); ton(air.root + air.sc[d % L] + 12 * Math.floor(d / L), st * 0.9, air.w, air.w === 'sine' ? 0.05 : 0.028, prochain); }
+      if (i % 4 === 0) ton(air.root - 24 + air.bass[i / 4], st * 3.6, 'triangle', 0.07, prochain);
+      prochain += st; pas++;
+    }
+  }
+  function majMusique() {
+    if (musOn && air && !boucle) { pas = 0; prochain = 0; boucle = setInterval(jouer, 100); jouer(); }
+    else if ((!musOn || !air) && boucle) { clearInterval(boucle); boucle = null; }
+  }
   return {
+    musique(theme) { const n = AIRS[theme] || AIRS.village; if (n !== air) { air = n; pas = 0; } majMusique(); },
+    get musOn() { return musOn; },
+    toggleMusique(save = true) { musOn = !musOn; if (save) try { localStorage.setItem('arene-musique', musOn ? '1' : '0'); } catch {} majMusique(); return musOn; },
     play(n) { if (!muted && SONS[n]) try { SONS[n](); } catch {} },
     get muted() { return muted; },
     toggle() { muted = !muted; try { localStorage.setItem('arene-muet', muted ? '1' : '0'); } catch {} if (!muted) ctx(); return muted; },

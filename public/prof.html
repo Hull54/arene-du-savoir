@@ -98,6 +98,8 @@
       </div>
       <div class="row"><span>Minuterie :</span>
         <select id="timer"><option value="0">sans limite</option><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select>
+        <label title="Chacun pour soi et équipes : en fin de manche, un cercle rétrécit et la tempête blesse ceux qui restent dehors"><input type="checkbox" id="tempete"> 🌀 Tempête</label>
+        <button class="sec" id="musique" title="Musique de la carte sur le projecteur">🎵 Musique</button>
       </div>
       <div class="row">
         <button id="eclair">⚡ Question éclair</button><select id="eclDur" title="Temps pour répondre à une question éclair"><option value="10">10 s</option><option value="20">20 s</option><option value="30">30 s</option><option value="45">45 s</option></select>
@@ -157,8 +159,8 @@ ws.onopen = () => { send({ t: 'prof' }); if (perso.length) send({ t: 'perso', qs
 ws.onclose = () => { $('urls').textContent = 'Serveur arrêté – rechargez la page dans un instant'; };
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
-  if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; }
-  else if (m.t === 'carte') { map = m.map; mapLayer = null; disp.clear(); }
+  if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); }
+  else if (m.t === 'carte') { map = m.map; mapLayer = null; disp.clear(); if (Son.musOn) Son.musique(map.theme); }
   else if (m.t === 's') {
     world = unpackWorld(m.w);
     $('rgl').style.display = world.rg ? 'flex' : 'none';
@@ -176,6 +178,9 @@ ws.onmessage = e => {
 $('pause').onclick = () => send({ t: 'pause' });
 $('regles').onclick = () => send({ t: 'regles' });
 $('eclDur').onchange = e => send({ t: 'eclairdur', s: +e.target.value });
+$('tempete').onchange = e => send({ t: 'tempete', v: e.target.checked });
+const majMus = () => { $('musique').style.opacity = Son.musOn ? 1 : 0.5; };
+$('musique').onclick = () => { Son.toggleMusique(); if (map) Son.musique(map.theme); majMus(); }; majMus();
 setInterval(() => { if (ws.readyState === 1) send({ t: 'bilans', silent: true }); }, 120000);   // sauvegarde régulière de l'historique
 // ----- Mes questions : gardées dans ce navigateur, envoyées au jeu à chaque connexion -----
 let perso = [];
@@ -294,6 +299,7 @@ function info(m) {
   $('board').querySelectorAll('.nv').forEach(b => b.onclick = () => { const v = { n: 'f', f: 'd', d: 'n' }[b.dataset.v]; niv[b.dataset.n] = v; envoyerNiv({ [b.dataset.n]: v }); b.dataset.v = v; b.textContent = NIV[v]; });
   $('ouvert').checked = !!m.ouvert;
   if (document.activeElement !== $('eclDur')) $('eclDur').value = m.eclairDur || 20;
+  $('tempete').checked = !!m.tempete;
   $('teamsBox').innerHTML = eq ? m.teams.map((t, i) => {
     const mem = m.players.filter(p => p.team === i);
     return `<div><span class="dot" style="background:${t.color}"></span><b>${esc(t.nom)}</b> : ${m.te ? m.te[i] : mem.reduce((s, p) => s + p.k, 0)} ${unite} · ${mem.length} joueurs</div>`;
