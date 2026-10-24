@@ -76,6 +76,8 @@
         <button class="sec" data-mode="equipes" data-nb="2">2 équipes</button>
         <button class="sec" data-mode="equipes" data-nb="3">3</button>
         <button class="sec" data-mode="equipes" data-nb="4">4</button>
+        <button class="sec" data-mode="colline" data-nb="2">⛰️ Colline</button>
+        <button class="sec" data-mode="drapeau" data-nb="2">🚩 Drapeau</button>
         <button class="sec" data-mode="boss">👑 Boss</button>
       </div>
       <div class="row"><span>Minuterie :</span>
@@ -108,6 +110,7 @@
       <h2>Réussite par élève</h2>
       <table id="stats"></table>
       <button class="sec" id="export" style="margin-top:8px">📥 Exporter les résultats (Excel)</button>
+      <button class="sec" id="bilans" style="margin-top:8px">🖨️ Bilans à imprimer (un par élève)</button>
     </div>
   </aside>
 </div>
@@ -131,6 +134,7 @@ ws.onmessage = e => {
   else if (m.t === 'eclairRes') eclairRes(m);
   else if (m.t === 'fin') showFin(m);
   else if (m.t === 'debut') $('fin').style.display = 'none';
+  else if (m.t === 'bilans') bilans(m);
 };
 $('pause').onclick = () => send({ t: 'pause' });
 $('reset').onclick = () => confirm('Commencer une nouvelle manche ? Les scores seront remis à zéro.') && send({ t: 'reset' });
@@ -194,7 +198,8 @@ function info(m) {
     }
   }
   // classement
-  const boss = m.mode === 'boss', eq = m.mode === 'equipes';
+  const boss = m.mode === 'boss', eq = ['equipes', 'colline', 'drapeau'].includes(m.mode);
+  const unite = m.mode === 'colline' ? 'points de colline' : m.mode === 'drapeau' ? 'captures' : 'victoires';
   $('boardHead').innerHTML = `<th>Élève</th><th>${boss ? '👑 dégâts' : '🏆'}</th><th>💀</th><th>✅</th><th>❌</th><th></th>`;
   const ps = [...m.players].sort((a, b) => boss ? b.dm - a.dm : b.k - a.k || b.g - a.g);
   $('board').innerHTML = ps.map(p => `<tr><td>${eq && m.teams[p.team] ? `<span class="dot" style="background:${m.teams[p.team].color}"></span>` : ''}${CLS[p.c].ico} ${esc(p.n)}${p.bot ? ' 🤖' : ''}</td><td>${boss ? p.dm : p.k}</td><td>${p.d}</td><td>${p.g}</td><td>${p.b}</td>
@@ -202,7 +207,7 @@ function info(m) {
   $('board').querySelectorAll('.x').forEach(b => b.onclick = () => send({ t: 'kick', id: +b.dataset.id }));
   $('teamsBox').innerHTML = eq ? m.teams.map((t, i) => {
     const mem = m.players.filter(p => p.team === i);
-    return `<div><span class="dot" style="background:${t.color}"></span><b>${esc(t.nom)}</b> : ${mem.reduce((s, p) => s + p.k, 0)} victoires · ${mem.length} joueurs</div>`;
+    return `<div><span class="dot" style="background:${t.color}"></span><b>${esc(t.nom)}</b> : ${m.te ? m.te[i] : mem.reduce((s, p) => s + p.k, 0)} ${unite} · ${mem.length} joueurs</div>`;
   }).join('') + '<br>' : '';
   // réussite
   const bots = new Set(m.players.filter(p => p.bot).map(p => p.n));
@@ -275,11 +280,11 @@ function showFin(m) {
   $('ecl').style.display = 'none';
   const card = $('finCard'); card.innerHTML = '';
   const h = document.createElement('h1');
-  h.textContent = m.why === 'boss-gagne' ? '🎉 Victoire ! Le Roi Gluant est vaincu !' : m.why === 'boss-perdu' ? '👑 Le Roi Gluant a gagné cette fois…' : '🏁 Fin de la manche !';
+  h.textContent = m.why === 'boss-gagne' ? '🎉 Victoire ! Le Roi Gluant est vaincu !' : m.why === 'boss-perdu' ? '👑 Le Roi Gluant a gagné cette fois…' : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
   card.appendChild(h);
   if (m.teams) {
-    const t = document.createElement('div'); t.className = 'big';
-    t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${esc(m.teams[0].nom)} gagnent !</b><br>` + m.teams.map(e => `${esc(e.nom)} : ${e.score} victoire${e.score > 1 ? 's' : ''}, ${e.good} bonne${e.good > 1 ? 's' : ''} réponse${e.good > 1 ? 's' : ''}`).join('<br>');
+    const t = document.createElement('div'); t.className = 'big'; const u = m.mode === 'colline' ? 'point' : m.mode === 'drapeau' ? 'capture' : 'victoire';
+    t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${esc(m.teams[0].nom)} gagnent !</b><br>` + m.teams.map(e => `${esc(e.nom)} : ${e.score} ${u}${e.score > 1 ? 's' : ''}, ${e.good} bonne${e.good > 1 ? 's' : ''} réponse${e.good > 1 ? 's' : ''}`).join('<br>');
     card.appendChild(t);
   }
   const pod = document.createElement('div'); pod.className = 'podium';
@@ -294,6 +299,48 @@ function showFin(m) {
   if (m.cerveaux.length) { const c = document.createElement('div'); c.className = 'big'; c.textContent = '🧠 Meilleurs cerveaux : ' + m.cerveaux.map(p => `${p.n} (${p.v})`).join(', '); card.appendChild(c); }
   const p = document.createElement('p'); p.textContent = '« Nouvelle manche » pour rejouer · cliquer pour fermer'; card.appendChild(p);
   $('fin').style.display = 'flex';
+}
+
+// ----- Bilans imprimables : une fiche par élève, sur toute la séance -----
+let fenBilans = null;
+$('bilans').onclick = () => {
+  fenBilans = window.open('', '_blank');   // ouverte tout de suite (sinon le navigateur bloque la fenêtre)
+  if (fenBilans) fenBilans.document.write('<p style="font-family:sans-serif">Préparation des bilans…</p>');
+  send({ t: 'bilans' });
+};
+function bilans(m) {
+  const w = fenBilans || window.open('', '_blank');
+  if (!w) return alert('Autorisez les fenêtres surgissantes pour imprimer les bilans.');
+  const date = new Date().toLocaleDateString('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const noms = Object.keys(m.memoire).filter(n => Object.values(m.memoire[n]).some(s => s.ok + s.ko)).sort((a, b) => a.localeCompare(b, 'fr'));
+  const matiere = Object.fromEntries(m.notions.map(n => [n.s, n.m]));
+  const fiche = nom => {
+    const mem = m.memoire[nom], lignes = Object.entries(mem).filter(([, s]) => s.ok + s.ko).sort((a, b) => (matiere[a[0]] || '').localeCompare(matiere[b[0]] || '') || a[0].localeCompare(b[0]));
+    const ok = lignes.reduce((t, [, s]) => t + s.ok, 0), tot = lignes.reduce((t, [, s]) => t + s.ok + s.ko, 0);
+    const pct = s => Math.round(s.ok / (s.ok + s.ko) * 100);
+    const revoir = lignes.filter(([, s]) => s.ok + s.ko >= 2 && pct(s) < 60).map(([n]) => n);
+    const forts = lignes.filter(([, s]) => s.ok + s.ko >= 3 && pct(s) >= 80).map(([n]) => n);
+    const col = p => p >= 75 ? '#2f9e55' : p >= 50 ? '#d9a020' : '#c0392b';
+    return `<section><h2>${esc(nom)}</h2><div class="sous">${tot} question${tot > 1 ? 's' : ''} · <b style="color:${col(Math.round(ok / tot * 100))}">${Math.round(ok / tot * 100)} % de réussite</b>${m.or[nom] ? ` · 🪙 ${m.or[nom]} pièces d'or` : ''}</div>
+      <table><tr><th style="width:55%">Notion</th><th style="width:15%">Réussite</th><th></th></tr>${lignes.map(([n, s]) => `<tr><td><small>${esc(matiere[n] || '')}</small> ${esc(n)}</td><td>${s.ok} / ${s.ok + s.ko}</td><td><span class="barre"><i style="width:${pct(s)}%;background:${col(pct(s))}"></i></span> ${pct(s)} %</td></tr>`).join('')}</table>
+      ${forts.length ? `<p>⭐ <b>Points forts :</b> ${forts.map(esc).join(', ')}</p>` : ''}
+      ${revoir.length ? `<p>📌 <b>À revoir :</b> ${revoir.map(esc).join(', ')}</p>` : `<p>👍 Aucune notion à reprendre en priorité.</p>`}
+      <div class="sign">Commentaire : ________________________________________________</div></section>`;
+  };
+  w.document.open();
+  w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Bilans – Arène du Savoir</title><style>
+    body { font-family: system-ui, sans-serif; color: #222; margin: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; } header button { font-size: 16px; padding: 8px 16px; }
+    section { border: 2px solid #333; border-radius: 8px; padding: 12px 16px; margin: 14px 0; page-break-inside: avoid; }
+    h2 { margin: 0; } .sous { margin: 4px 0 8px; } table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #ddd; } small { color: #777; }
+    .barre { display: inline-block; width: 90px; height: 10px; background: #eee; border: 1px solid #aaa; vertical-align: middle; } .barre i { display: block; height: 100%; }
+    .sign { margin-top: 10px; color: #555; } p { margin: 6px 0; }
+    @media print { header button { display: none; } body { margin: 0; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style></head><body><header><div><h1 style="margin:0">Arène du Savoir : bilans</h1><div>${esc(date)} · toute la séance</div></div><button onclick="print()">🖨️ Imprimer</button></header>
+  ${noms.length ? noms.map(fiche).join('') : '<p>Aucune réponse pour l\'instant.</p>'}</body></html>`);
+  w.document.close();
+  fenBilans = null;
 }
 
 function frame() {
@@ -311,7 +358,7 @@ function frame() {
   const s = Math.min(r.width / (map.W + 40), (r.height - 40) / (map.H + 40));
   ctx.translate((r.width - map.W * s) / 2, 40 + (r.height - 40 - map.H * s) / 2);
   ctx.scale(s, s);
-  const teams = world.mode === 'equipes' && last ? last.teams : null;
+  const teams = ['equipes', 'colline', 'drapeau'].includes(world.mode) && last ? last.teams : null;
   drawWorld(ctx, world, map, null, disp, 7, teams);   // héros plus gros pour être vus de loin au projecteur
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // bandeau du haut : carte, minuterie, scores d'équipes
@@ -320,7 +367,8 @@ function frame() {
   const tag = (t, bg, fg = '#fff') => { const w = ctx.measureText(t).width + 20; ctx.fillStyle = bg; ctx.fillRect(x, 6, w, 30); ctx.fillStyle = fg; ctx.fillText(t, x + 10, 22); x += w + 8; };
   tag('🗺️ ' + map.nom, '#1b1424');
   if (world.tm >= 0) tag(`⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}`, world.tm <= 30 ? '#b8433a' : '#1b1424');
-  if (teams && world.te) world.te.forEach((sc, i) => teams[i] && tag(`${teams[i].nom} ${sc}`, teams[i].color, '#1b1424'));
+  if (teams && world.te) world.te.forEach((sc, i) => teams[i] && tag(`${world.mode === 'colline' ? '⛰️ ' : world.mode === 'drapeau' ? '🚩 ' : ''}${teams[i].nom} ${sc}${world.mode === 'colline' ? '/120' : world.mode === 'drapeau' ? '/3' : ''}`, teams[i].color, '#1b1424'));
+  if (world.hl) tag(`⛰️ La colline bouge dans ${world.hl[4]} s`, '#1b1424');
   ctx.textBaseline = 'alphabetic';
   ctx.font = '18px "Pixelify Sans", monospace';
   world.feed.forEach((t, i) => {

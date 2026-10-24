@@ -13,9 +13,10 @@ const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
 const HAIR = ['#2a1c14', '#7a4422', '#e8b84a', '#c2482e'];
 const nomClasse = (c, look) => CLS[c].nom[look && look[0] === 'f' ? 0 : 1];
 // Personnalisation : couleur de la tenue, accessoire, familier (caractères 4, 5 et 6 du look)
-const OUTFIT = [null, '#d33b3b', '#3a6fd8', '#2f9e55', '#8e4ce0', '#e89a2a', '#e06aa8'];
-const OUTFIT_NOMS = ['Classique', 'Rouge', 'Bleu', 'Vert', 'Violet', 'Orange', 'Rose'];
-const ACCESSOIRES = ['Aucun', 'Cape', 'Lunettes', 'Écharpe'];
+// tenues 7-9, accessoires 4-5 et couleurs de familier 4-5 : à acheter à la boutique (pièces d'or)
+const OUTFIT = [null, '#d33b3b', '#3a6fd8', '#2f9e55', '#8e4ce0', '#e89a2a', '#e06aa8', '#2a2833', '#e0b23a', '#ecebe4'];
+const OUTFIT_NOMS = ['Classique', 'Rouge', 'Bleu', 'Vert', 'Violet', 'Orange', 'Rose', 'Noire', 'Dorée', 'Blanche'];
+const ACCESSOIRES = ['Aucun', 'Cape', 'Lunettes', 'Écharpe', '👑 Couronne', '🪽 Ailes'];
 const FAMILIERS = ['Aucun', '🐱 Chat', '🐺 Loup', '🐲 Dragon', '🦉 Hibou', '🟢 Slime'];
 const PET_ICO = [null, '😺', '🐺', '🔥', '🦉', '🟢'];
 // Équipement : niveaux bronze, argent, or
@@ -100,6 +101,11 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
   const side = dir === 'side', up = dir === 'up', down = dir === 'down';
 
   // ===== derrière le corps =====
+  if (acc === 5) {   // ailes blanches, plumes claires et ombrées
+    const wc = '#f4f2ea', wd = '#c9c6d6', wl = '#ffffff';
+    const wing = (x0, dirx) => { for (let j = 0; j < 7; j++) { const len = 6 - Math.abs(j - 2); for (let i = 0; i < len; i++) P.px(x0 + dirx * i, 8 + j, j > 3 ? wd : i === len - 1 ? wl : wc); } };
+    if (side) wing(4, -1); else { wing(2, -1); wing(13, 1); }
+  }
   if (acc === 1 && !up) { if (side) { P.rect(1, 10, 4, 9, capeC); P.rect(1, 18, 4, 1, shade(capeC, 0.65)); P.rect(2, 11, 1, 6, shade(capeC, 1.2)); } else P.rect(3, 10, 10, 9, shade(capeC, 0.7)); }
   if (up) {
     if (cls === 'guerrier') { P.rect(13, 1, 1, 13, blade); P.rect(12, 14, 3, 1, gold); }
@@ -295,6 +301,11 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
     if (cls === 'voleur') { P.rect(11, 13, 5, 1, blade); P.px(16, 13, bladeD); P.rect(10, 12, 1, 3, '#7a5a2a'); }
     if (cls === 'mage') { P.rect(11, 1, 1, 17, wood); P.px(11, 6, woodH); P.rect(10, -2, 3, 3, crystal); P.px(10, -2, '#ffffff'); P.rect(10, 1, 3, 1, gold); }
     if (cls === 'archer') { P.px(12, 7, wood); P.px(13, 8, wood); P.rect(14, 9, 1, 6, woodH); P.px(13, 15, wood); P.px(12, 16, wood); P.rect(12, 8, 1, 8, '#d8d0c0'); P.rect(8, 12, 6, 1, '#5a3a1e'); P.px(14, 12, '#cfd6de'); }
+  }
+  if (acc === 4) {   // couronne d'or par-dessus tout
+    const cy = cls === 'guerrier' ? -2 : cls === 'mage' ? -3 : -1, cx = side ? 6 : 5;
+    P.rect(cx, cy + 1, 6, 2, '#f2c94c'); P.px(cx, cy, '#f2c94c'); P.px(cx + 2, cy - 1, '#f2c94c'); P.px(cx + 3, cy - 1, '#f2c94c'); P.px(cx + 5, cy, '#f2c94c');
+    P.rect(cx, cy + 1, 6, 1, '#fff2b0'); P.px(cx + 2, cy + 2, '#c0303a'); P.px(cx + 4, cy + 2, '#3a7ae0');
   }
   P.ox = 0; P.oy = 0;
   return (heroCache[key] = P.outline().canvas());
@@ -838,17 +849,31 @@ function buildMapLayers(map) {
 
 // ---------- Petits dessins dynamiques : coffres, objets, boss ----------
 const dynCache = {};
-function chestSprite(open) {
-  const key = 'chest' + open;
+// coffre doré : plus difficile (2 questions de suite), meilleur trésor
+function chestSprite(open, gold = false) {
+  const key = 'chest' + open + gold;
   if (dynCache[key]) return dynCache[key];
   const P = new Painter(18, 16);
+  const body = gold ? '#d9a020' : '#a0642e', top = gold ? '#f2c94c' : '#c08040', line = gold ? '#8a5a10' : '#6b3f1a', band = gold ? '#fff2b0' : '#e3b341', hi = gold ? '#ffe27a' : '#d89a58';
   if (!open) {
-    P.rect(1, 3, 16, 12, '#a0642e'); P.rect(1, 3, 16, 5, '#c08040'); P.rect(1, 8, 16, 1, '#6b3f1a');
-    P.rect(1, 3, 2, 12, '#e3b341'); P.rect(15, 3, 2, 12, '#e3b341'); P.rect(7, 7, 4, 4, '#e3b341'); P.px(8, 9, OUT); P.rect(2, 4, 14, 1, '#d89a58');
+    P.rect(1, 3, 16, 12, body); P.rect(1, 3, 16, 5, top); P.rect(1, 8, 16, 1, line);
+    P.rect(1, 3, 2, 12, band); P.rect(15, 3, 2, 12, band); P.rect(7, 7, 4, 4, band); P.px(8, 9, gold ? '#c0303a' : OUT); P.rect(2, 4, 14, 1, hi);
+    if (gold) { P.px(9, 9, '#c0303a'); P.px(8, 8, '#ff8a8a'); }
   } else {
-    P.rect(1, 7, 16, 8, '#a0642e'); P.rect(1, 0, 16, 5, '#c08040'); P.rect(2, 5, 14, 2, '#3a2214');
-    P.rect(1, 0, 2, 5, '#e3b341'); P.rect(15, 0, 2, 5, '#e3b341'); P.rect(1, 7, 2, 8, '#e3b341'); P.rect(15, 7, 2, 8, '#e3b341');
+    P.rect(1, 7, 16, 8, body); P.rect(1, 0, 16, 5, top); P.rect(2, 5, 14, 2, '#3a2214');
+    P.rect(1, 0, 2, 5, band); P.rect(15, 0, 2, 5, band); P.rect(1, 7, 2, 8, band); P.rect(15, 7, 2, 8, band);
   }
+  return (dynCache[key] = P.outline().canvas());
+}
+function flagSprite(col, fr, hill = false) {
+  const key = 'flag' + col + fr + hill;
+  if (dynCache[key]) return dynCache[key];
+  const P = new Painter(16, 24);
+  P.rect(1, 0, 2, 24, '#6b4a2a'); P.px(1, 0, '#f2c94c'); P.px(2, 0, '#f2c94c');
+  const w = fr ? [0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1] : [1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0];
+  for (let i = 0; i < 11; i++) { P.rect(3 + i, 2 + w[i], 1, 8, col); P.px(3 + i, 2 + w[i], shade(col, 1.3)); P.px(3 + i, 9 + w[i], shade(col, 0.65)); }
+  if (hill) { P.px(7, 6, '#5a4a3a'); P.rect(6, 7, 3, 1, '#5a4a3a'); P.rect(5, 8, 5, 1, '#5a4a3a'); P.px(7, 6, '#ffffff'); }
+  else P.rect(7, 5 + w[4], 3, 2, '#ffffff');
   return (dynCache[key] = P.outline().canvas());
 }
 function itemSprite(k) {
@@ -889,11 +914,11 @@ function portalSprite() {
 }
 // Familiers féroces qui suivent leur héros (1 chat sauvage, 2 loup, 3 dragon, 4 grand-duc, 5 slime), 4 couleurs chacun
 const PET_COULEURS = {
-  1: ['#e8923a', '#9aa0ab', '#4a4550', '#f2eee6'],
-  2: ['#b07a45', '#e0b060', '#4a4550', '#f2eee6'],
-  3: ['#4fbf5a', '#e0503a', '#4a8ae0', '#9a5ae0'],
-  4: ['#8b6a45', '#8a8f99', '#ecebe6', '#c0703a'],
-  5: ['#5ac85a', '#4aa8e8', '#f080b8', '#a070e0'],
+  1: ['#e8923a', '#9aa0ab', '#4a4550', '#f2eee6', '#e8b83a', '#a8eaff'],
+  2: ['#b07a45', '#e0b060', '#4a4550', '#f2eee6', '#e8b83a', '#a8eaff'],
+  3: ['#4fbf5a', '#e0503a', '#4a8ae0', '#9a5ae0', '#e8b83a', '#a8eaff'],
+  4: ['#8b6a45', '#8a8f99', '#ecebe6', '#c0703a', '#e8b83a', '#a8eaff'],
+  5: ['#5ac85a', '#4aa8e8', '#f080b8', '#a070e0', '#e8b83a', '#a8eaff'],
 };
 function petSprite(k, fr, col = 0) {
   const key = 'pet' + k + fr + col;
@@ -1000,11 +1025,32 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   }
   // coffres et objets cachés
   if (map.chests) map.chests.forEach((c, i) => {
-    const open = world.ch && world.ch[i] === '1';
+    const open = world.ch && world.ch[i] === '1', gold = world.gc === i;
+    if (gold && !open) {   // halo doré qui pulse
+      ctx.fillStyle = `rgba(255,214,90,${0.16 + Math.sin(now * 4) * 0.06})`; ctx.beginPath(); ctx.arc(c.x, c.y, 46, 0, 7); ctx.fill();
+      for (let k = 0; k < 4; k++) { const a = now * 1.5 + k * Math.PI / 2; sq(c.x + Math.cos(a) * 34, c.y - 6 + Math.sin(a) * 20, 1 + (Math.floor(now * 6 + k) % 2), '#fff6c0'); }
+    }
     ctx.globalAlpha = open ? 0.55 : 1;
-    img(chestSprite(open), c.x, c.y);
+    img(chestSprite(open, gold), c.x, c.y);
     ctx.globalAlpha = 1;
     if (!open && Math.floor(now * 2 + i) % 3 === 0) sq(c.x + 14 + Math.sin(now * 5 + i) * 6, c.y - 22, 1, '#fff6c0');
+  });
+  // colline : cercle qui pulse, de la couleur de l'équipe qui la tient (blanc : libre, rouge clignotant : contestée)
+  if (world.hl) {
+    const [x, y, r, own] = world.hl;
+    const col = own >= 0 && teams && teams[own] ? teams[own].color : own === -2 ? (Math.floor(now * 4) % 2 ? '#ffffff' : '#ff5a4a') : '#f4ecd8';
+    ctx.save(); ctx.globalAlpha = 0.28 + Math.sin(now * 3) * 0.07; ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.lineWidth = big ? 16 : 7; ctx.strokeStyle = OUT; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
+    ctx.lineWidth = big ? 9 : 4; ctx.strokeStyle = col; ctx.setLineDash([big ? 30 : 18, big ? 14 : 9]); ctx.lineDashOffset = -now * 20; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke(); ctx.restore();
+    for (let k = 0; k < 6; k++) { const t = (now * 0.7 + k / 6) % 1, a = k * 1.7; sq(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.5 - t * 40, big ? 3 : 1, col); }
+    img(flagSprite('#f4ecd8', 0, true), x, y - 20, big ? 6 : PX);
+  }
+  // drapeau : socle de chaque base
+  if (world.fl) world.fl.forEach(([, , , hx, hy], i) => {
+    const col = teams && teams[i] ? teams[i].color : '#ffffff';
+    ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(hx, hy + 10, 70, 44, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.lineWidth = big ? 14 : 6; ctx.strokeStyle = OUT; ctx.beginPath(); ctx.ellipse(hx, hy + 10, 70, 44, 0, 0, 7); ctx.stroke();
+    ctx.lineWidth = big ? 8 : 3; ctx.strokeStyle = col; ctx.beginPath(); ctx.ellipse(hx, hy + 10, 70, 44, 0, 0, 7); ctx.stroke(); ctx.restore();
   });
   for (const [x, y, k] of world.it || []) {
     const d = md ? Math.hypot(md.x - x, md.y - y) : 0;
@@ -1047,7 +1093,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       for (let i = 0; i <= 8; i++) { const a = f.a - f.arc / 2 + f.arc * i / 8; sq(f.x + Math.cos(a) * f.r, f.y + Math.sin(a) * f.r, 2, '#ffffff'); }
     } else if (f.k === 'boom') {
       const r = f.r * (1.1 - t * 0.6);
-      for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, 3, i % 2 ? '#ff8a1e' : '#ffe27a'); sq(f.x + Math.cos(a + 0.1) * r * 0.6, f.y + Math.sin(a + 0.1) * r * 0.6, 2, '#ff4a1a'); }
+      for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, 3, i % 2 ? (f.gold ? '#fff6c0' : '#ff8a1e') : '#ffe27a'); sq(f.x + Math.cos(a + 0.1) * r * 0.6, f.y + Math.sin(a + 0.1) * r * 0.6, 2, f.gold ? '#f2c94c' : '#ff4a1a'); }
     } else if (f.k === 'slam') {
       const r = f.r * (1.1 - t);
       for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + 20 + Math.sin(a) * r * 0.6, 3, i % 2 ? '#5ac85a' : '#9af08a'); }
@@ -1174,6 +1220,12 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.restore();
   }
   if (!bossDrawn) drawBoss();
+  // drapeaux (portés : au-dessus du porteur)
+  if (world.fl) world.fl.forEach(([x, y, carried], i) => {
+    const col = teams && teams[i] ? teams[i].color : '#ffffff';
+    const fs = big ? 6 : PX;
+    img(flagSprite(col, Math.floor(now * 5 + i) % 2), x + (carried ? 14 : 6) * fs / PX, y - (carried ? 52 : 26) * fs / PX, fs);
+  });
   // couche du dessus : feuillages, hauts des objets, buissons
   ctx.imageSmoothingEnabled = big;
   ctx.drawImage(topLayer, 0, 0, topLayer.width * PX, topLayer.height * PX);
@@ -1217,6 +1269,15 @@ function drawMinimap(ctx, world, map, mine, x, y, w, teams = null) {
     ctx.fillStyle = teams && p.tm >= 0 && teams[p.tm] ? teams[p.tm].color : '#ffffff';
     ctx.fillRect(Math.round(x + p.x * s) - 1, Math.round(y + p.y * s) - 1, 3, 3);
   }
+  if (world.hl) {
+    const [hx, hy, hr, own] = world.hl;
+    ctx.strokeStyle = own >= 0 && teams && teams[own] ? teams[own].color : '#ffffff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x + hx * s, y + hy * s, Math.max(5, hr * s), 0, 7); ctx.stroke();
+  }
+  if (world.fl) world.fl.forEach(([fx, fy], i) => {
+    ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + fx * s) - 4, Math.round(y + fy * s) - 5, 8, 8);
+    ctx.fillStyle = teams && teams[i] ? teams[i].color : '#fff'; ctx.fillRect(Math.round(x + fx * s) - 3, Math.round(y + fy * s) - 4, 6, 6);
+  });
   if (world.boss) { ctx.fillStyle = '#5ac85a'; ctx.fillRect(Math.round(x + world.boss[0] * s) - 4, Math.round(y + world.boss[1] * s) - 4, 8, 8); }
   if (mine && mine.al) {
     ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + mine.x * s) - 4, Math.round(y + mine.y * s) - 4, 8, 8);

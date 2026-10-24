@@ -67,7 +67,22 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 
 - **Coffres-questions** : en touchant un coffre, l'élève reçoit une question (il est protégé pendant qu'il répond). Bonne réponse : une pièce d'équipement (6 fois sur 10) ou un objet puissant. Mauvaise réponse : une petite potion quand même. Le coffre se referme et se remplit après 40 secondes.
 - **Objets cachés** : des objets apparaissent dans les buissons, les maisons et les coins secrets. On ne les voit que de près (une petite étincelle de loin).
+- **🌟 Coffre doré** : un seul à la fois sur la carte (il brille). C'est un défi de **2 questions de suite**. Deux bonnes réponses : l'équipement s'améliore deux fois et 🪙 +5 pièces d'or. Une bonne réponse : un objet puissant. Aucune : une petite potion. Une minute après son ouverture, un autre coffre devient doré.
 - **Séries** : 3 bonnes réponses de suite donnent un objet bonus.
+
+### Pièces d'or et boutique
+
+Chaque bonne réponse rapporte 🪙 1 pièce d'or, chaque série de 3 en rapporte 2 de plus, et le coffre doré en donne 5. Les pièces sont gardées dans le navigateur de l'élève, pour son prénom. Sur l'écran de fin de manche, la **boutique** débloque des looks rares, sans aucun effet sur le combat :
+
+| Article | Prix |
+|---|---|
+| Tenue noire | 🪙 20 |
+| Tenue blanche | 🪙 25 |
+| Tenue dorée | 🪙 30 |
+| Familier doré | 🪙 30 |
+| Familier spectral | 🪙 35 |
+| 👑 Couronne | 🪙 40 |
+| 🪽 Ailes | 🪙 60 |
 
 | Objet | Effet |
 |---|---|
@@ -95,6 +110,8 @@ Chaque point d'armure retire 1 % des dégâts reçus, jusqu'à 40 % au maximum. 
 
 - **Chacun pour soi** : le mode classique. Le meneur (seul en tête, au moins 3 victoires) porte une couronne 👑 : le vaincre rapporte 2 points.
 - **Équipes** (2, 3 ou 4) : couleurs d'équipe, pas de dégâts entre coéquipiers, score commun.
+- **⛰️ Roi de la colline** (en équipes) : une zone en cercle apparaît sur la carte. Une équipe seule dans la zone gagne 1 point par seconde. Si deux équipes y sont, la zone est contestée (elle clignote) et personne ne marque. La zone se déplace toutes les 75 secondes. **120 points** pour gagner.
+- **🚩 Capture du drapeau** (2 équipes) : chaque équipe a un drapeau dans sa base, d'un côté de la carte. On prend le drapeau adverse en le touchant (on avance un peu moins vite en le portant) et on le ramène dans sa base, mais seulement si notre propre drapeau y est. Un porteur K.O. laisse tomber le drapeau : un coéquipier le ramène en le touchant, sinon il revient seul après 20 secondes. **3 captures** pour gagner.
 - **👑 Boss coopératif** : toute la classe affronte le Roi Gluant. Les coups l'abîment, et **chaque bonne réponse lui enlève 3 % de sa vie** : les élèves moins à l'aise au combat sont aussi utiles. Les joueurs ne peuvent pas se blesser entre eux.
 
 ## Tableau de bord enseignant (`/prof`)
@@ -107,6 +124,8 @@ Chaque point d'armure retire 1 % des dégâts reçus, jusqu'à 40 % au maximum. 
 - **Robots** pour tester seul ou compléter un petit groupe.
 - **Classement** et bouton ✕ pour retirer un joueur.
 - **Réussite du groupe par notion** et, pour chaque élève, son taux de réussite et la **notion à revoir**.
+- **🖨️ Bilans à imprimer** : une fiche par élève sur toute la séance (pas seulement la manche) : nombre de questions, réussite par notion, points forts, notions à revoir, pièces d'or gagnées et une ligne pour un commentaire.
+- **Révision ciblée** (automatique) : pendant la séance, le jeu note les notions que chaque élève rate. Ces notions reviennent plus souvent dans ses questions (jusqu'à 4 fois plus), et moins souvent celles qu'il réussit bien.
 - **📥 Exporter les résultats** : un fichier qui s'ouvre dans Excel (une ligne par élève, une colonne par notion).
 
 ## Sons
@@ -142,7 +161,7 @@ Dans `questions.json`, chaque question suit ce modèle :
 
 Si deux élèves choisissent le même prénom, le second devient « Léa 2 » pour que leurs résultats ne se mélangent pas.
 
-Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau, une couleur de cheveux, une **couleur de tenue** (7 choix), un **accessoire** (cape, lunettes ou écharpe) et un **familier** qui le suit partout (4 couleurs au choix pour chaque familier). Le look se change dans le menu et aussi sur l'écran de fin de manche, entre deux manches. Tous les dessins sont en pixel art rétro, créés dans le code du jeu (aucune image empruntée).
+Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau, une couleur de cheveux, une **couleur de tenue** (7 choix, plus 3 rares à la boutique), un **accessoire** (cape, lunettes ou écharpe, plus couronne et ailes à la boutique) et un **familier** qui le suit partout (4 couleurs au choix pour chaque familier). Le look se change dans le menu et aussi sur l'écran de fin de manche, entre deux manches. Tous les dessins sont en pixel art rétro, créés dans le code du jeu (aucune image empruntée).
 
 ## Les familiers
 

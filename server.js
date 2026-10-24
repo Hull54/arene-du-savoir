@@ -65,7 +65,11 @@ const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
   { nom: 'Verts', color: '#3fbf5a' }, { nom: 'Jaunes', color: '#f2c94c' },
 ];
-const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', boss: 'Boss coopératif' };
+const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif' };
+const TEAM_MODES = new Set(['equipes', 'colline', 'drapeau']);
+const HILL = { r: 120, move: 75, win: 120 };       // colline : 120 points (1 par seconde tenue seul) pour gagner
+const FLAG = { caps: 3, back: 20, slow: 0.85 };   // drapeau : 3 captures pour gagner, retour auto après 20 s
+const OR = { bonne: 1, serie: 2, dore: 5 };       // pièces d'or gagnées
 
 // ---------- État ----------
 let nextId = 1;
@@ -76,12 +80,17 @@ let fx = [];
 let feed = [];
 let paused = false;
 const subjects = new Set(NOTIONS.map(n => n.s));
-const stats = {};            // nom -> { notion: {ok, ko} }
+const stats = {};            // nom -> { notion: {ok, ko} } pour la manche
+const memoire = {};          // nom -> { notion: {ok, ko} } pour toute la séance (révision ciblée, bilans)
+const orSeance = {};         // nom -> pièces d'or gagnées pendant la séance
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
 let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [];
 let mode = 'libre', nbTeams = 2;
 let boss = null;
+let hill = null;                   // colline : { x, y, t, owner, pts[] }
+let flags = null, caps = [0, 0];   // drapeaux : [{ team, hx, hy, x, y, carrier, back }]
+let goldT = 0, goldFrom = -1;      // coffre doré : délai avant qu'un autre coffre devienne doré
 let timer = { dur: 0, left: 0 };   // minuterie de manche (secondes), dur = 0 : sans limite
 let ended = null;                  // résultats de fin de manche
 let eclair = null;                 // question éclair en cours
@@ -123,6 +132,13 @@ function blockedShot(x, y, r) {
 }
 const inBush = p => tileAt(p.x, p.y + 8) === 'h' || carte.bushes.some(b => Math.hypot(b.x - p.x, b.y - p.y) < b.r);
 function freeSpot(team = -1) {
+  if (mode === 'drapeau' && flags && flags[team]) {   // on revient près de sa base
+    const f = flags[team];
+    for (let i = 0; i < 300; i++) {
+      const x = f.hx + rand(-260, 260), y = f.hy + rand(-260, 260);
+      if (x > 60 && y > 60 && x < W - 60 && y < H - 60 && !blocked(x, y, R + 12) && !WATER.has(tileAt(x, y + 40)) && Math.hypot(x - f.hx, y - f.hy) > 70) return { x, y };
+    }
+  }
   for (let i = 0; i < 500; i++) {
     const x = rand(80, W - 80), y = rand(80, H - 80);
     if (blocked(x, y, R + 12) || WATER.has(tileAt(x, y + 40))) continue;
@@ -149,7 +165,8 @@ function setCarte(c) {
     const t = c.tiles[j][i], x = (i + 0.5) * T, y = (j + 0.5) * T;
     walk.push(!WALL.has(t) && !WATER.has(t) && !c.objs.some(o => circleHitsRect(x, y, 16, o)) && !c.barrels.some(b => Math.hypot(b.x - x, b.y - y) < 30));
   }
-  chests = c.chests.map(ch => ({ ...ch, open: 0, by: 0 }));
+  chests = c.chests.map(ch => ({ ...ch, open: 0, by: 0, gold: false }));
+  pickGold();
   barrels = c.barrels.map(b => ({ ...b, t: 0, fuse: 0, by: null }));
   items = []; itemTimer = 0;
   projectiles = []; fx = []; puddles = [];
@@ -202,11 +219,12 @@ function leaderId() {
   return best && best.kills >= 3 && best.kills > second ? best.id : 0;
 }
 // apparence : f/m, peau, cheveux, tenue (0-6), accessoire (0-3), familier (0-5), couleur du familier (0-3)
+// tenues 7-9, accessoires 4-5 et couleurs de familier 4-5 : achetés à la boutique avec les pièces d'or
 function cleanLook(l) {
   l = String(l || '');
   if (/^[fm][0-3][0-3]$/.test(l)) l += '0000';
   else if (l.length === 6) l += '0';
-  return /^[fm][0-3][0-3][0-6][0-3][0-5][0-3]$/.test(l) ? l : '';
+  return /^[fm][0-3][0-3][0-9][0-5][0-5][0-5]$/.test(l) ? l : '';
 }
 const gearCode = p => p.gear.casque + 4 * p.gear.armure + 16 * p.gear.epee + 64 * p.gear.bottes;
 const armorOf = p => Math.min(40, GEAR.casque.armure * p.gear.casque + GEAR.armure.armure * p.gear.armure);   // % de dégâts en moins
@@ -226,27 +244,33 @@ function giveGear(p, src) {
 }
 function createPlayer(name, cls, bot = false, look = '') {
   const c = CLASSES[cls] || CLASSES.guerrier;
-  const team = mode === 'equipes' ? smallestTeam() : -1;
+  const team = TEAM_MODES.has(mode) ? smallestTeam() : -1;
   const p = {
     id: nextId++, name: uniqueName(name), cls: CLASSES[cls] ? cls : 'guerrier', bot, team,
     hp: c.hp, maxHp: c.hp, alive: true, angle: 0,
     look: cleanLook(look) || (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3) + (bot ? ri(0, 6) + '' + ri(0, 3) + ri(0, 5) + ri(0, 3) : '0000'),
     gear: { casque: 0, armure: 0, epee: 0, bottes: 0 }, portalCd: 0,
     input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, cdD: 0, cdF: 0, slow: 0, dash: null, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
-    fast: 0, strong: 0, busy: false, streak: 0, dmgBoss: 0,
+    fast: 0, strong: 0, busy: false, streak: 0, dmgBoss: 0, obj: 0, carry: null,
     kills: 0, deaths: 0, good: 0, bad: 0, question: null, waitQ: 0, conn: null, botT: 0,
     ...freeSpot(team),
   };
   players.set(p.id, p);
   if (!stats[p.name]) stats[p.name] = {};
+  if (!memoire[p.name] && !bot) memoire[p.name] = {};
   addFeed(`${p.name} entre dans l'arène !`);
   return p;
 }
 
 function newQuestion(p) {
-  // On choisit d'abord une notion au hasard (parmi celles cochées), puis une question de cette notion
+  // On choisit d'abord une notion (parmi celles cochées), puis une question de cette notion.
+  // Révision ciblée : une notion souvent ratée par cet élève revient plus souvent (jusqu'à 4 fois plus).
   const actives = NOTIONS.filter(n => subjects.has(n.s));
-  const notion = pick(actives.length ? actives : NOTIONS).s;
+  const pool = actives.length ? actives : NOTIONS, mem = p.name && memoire[p.name];
+  const poids = pool.map(n => { const s = mem && mem[n.s]; return s ? clamp((s.ko + 1) / (s.ok + 1), 0.5, 4) : 1; });
+  let r = Math.random() * poids.reduce((a, b) => a + b, 0), ni = 0;
+  while (ni < pool.length - 1 && (r -= poids[ni]) > 0) ni++;
+  const notion = pool[ni].s;
   const list = QUESTIONS.filter(q => q.notion === notion);
   const gen = GENERATEURS[notion];
   p.recent = p.recent || [];
@@ -267,16 +291,25 @@ function newQuestion(p) {
 const questionMsg = (Q, kind, extra = {}) => ({ t: 'q', kind, matiere: Q.q.matiere, notion: Q.q.notion, question: Q.q.question, svg: Q.q.svg || '', choix: Q.order.map(i => Q.q.choix[i]), ...extra });
 function askQuestion(p, kind, extra = {}) {
   p.question = { ...newQuestion(p), kind, ...extra };
-  send(p.conn, questionMsg(p.question, kind));
+  send(p.conn, questionMsg(p.question, kind, extra.gold ? { gold: true, step: extra.step } : {}));
   if (p.bot) p.botT = rand(2, 6);
 }
 
 // Note la réponse : statistiques, séries, coup de savoir contre le boss
+function gainOr(p, n) {
+  if (p.bot || !p.name) return;
+  orSeance[p.name] = (orSeance[p.name] || 0) + n;
+  send(p.conn, { t: 'or', n });
+}
 function record(p, q, ok) {
   const s = (stats[p.name][q.notion] = stats[p.name][q.notion] || { ok: 0, ko: 0 });
+  const mem = p.bot ? {} : memoire[p.name] || (memoire[p.name] = {});   // les robots ne comptent pas dans les bilans
+  const sm = (mem[q.notion] = mem[q.notion] || { ok: 0, ko: 0 });
   if (ok) {
-    p.good++; s.ok++; p.streak++;
+    p.good++; s.ok++; sm.ok++; p.streak++;
+    gainOr(p, OR.bonne);
     if (p.streak % 3 === 0) {
+      gainOr(p, OR.serie);
       const k = pick(BONS_OBJETS);
       addFeed(`🔥 ${p.name} : ${p.streak} bonnes réponses de suite !`);
       p.pending = k;   // donné au prochain moment où le joueur est en vie
@@ -288,7 +321,7 @@ function record(p, q, ok) {
       fx.push({ k: 'zap', x: p.x, y: p.y, x2: Math.round(boss.x), y2: Math.round(boss.y), t: 0.5, d: 0.5 });
       if (boss.hp <= 0) bossDefeated(p);
     }
-  } else { p.bad++; s.ko++; p.streak = 0; }
+  } else { p.bad++; s.ko++; sm.ko++; p.streak = 0; }
 }
 
 function giveItem(p, k, src) {
@@ -333,6 +366,7 @@ function answer(p, i) {
   if (!p.question) return;
   const Q = p.question, ok = i === Q.answer;
   record(p, Q.q, ok);
+  if (Q.kind === 'chest' && Q.gold) return answerGold(p, Q, ok);
   if (Q.kind === 'chest') {
     const ch = chests[Q.chest];
     p.question = null; p.busy = false; p.protect = 0.8;
@@ -358,7 +392,44 @@ function answer(p, i) {
   }
 }
 
-const canHit = (a, b) => b.alive && a !== b && mode !== 'boss' && !(mode === 'equipes' && a && a.team === b.team);
+// Coffre doré : 2 questions de suite. 2 bonnes = 2 améliorations d'équipement + 5 pièces d'or.
+function answerGold(p, Q, ok) {
+  const ch = chests[Q.chest];
+  if (Q.step === 1) {
+    send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, suite: true, explication: ok ? '' : Q.q.explication || '' });
+    p.question = null; p.busyT = 25;
+    p.goldNext = { t: ok ? 1.3 : 3, chest: Q.chest, nOk: ok ? 1 : 0 };
+    return;
+  }
+  const total = Q.nOk + (ok ? 1 : 0);
+  p.question = null; p.busy = false; p.protect = 0.8;
+  if (ch) { ch.open = 40; ch.by = 0; ch.gold = false; }
+  goldT = 60; goldFrom = Q.chest;
+  const base = { t: 'res', kind: 'chest', ok, bonne: Q.answer, dore: total, explication: ok ? '' : Q.q.explication || '' };
+  if (total === 2) {
+    let n = 0;
+    if (giveGear(p, 'dore')) n++;
+    if (giveGear(p, 'dore')) n++;
+    if (!n) giveItem(p, 'grandepotion', 'dore');
+    gainOr(p, OR.dore);
+    send(p.conn, { ...base, gear: n });
+    addFeed(`🌟 ${p.name} réussit le coffre doré !`);
+    fx.push({ k: 'boom', x: p.x, y: p.y, r: 60, t: 0.5, d: 0.5, gold: 1 });
+    return;
+  }
+  const k = total === 1 ? pick(BONS_OBJETS) : 'potion';
+  send(p.conn, { ...base, k, nom: ITEMS[k].nom, ico: ITEMS[k].ico });
+  giveItem(p, k, 'dore');
+}
+function pickGold() {
+  chests.forEach(c => { c.gold = false; });
+  const ok = chests.map((c, i) => i).filter(i => i !== goldFrom || chests.length === 1);
+  if (ok.length) chests[pick(ok)].gold = true;
+  goldT = 0;
+}
+
+const teamMode = () => TEAM_MODES.has(mode);
+const canHit = (a, b) => b.alive && a !== b && mode !== 'boss' && !(teamMode() && a && a.team === b.team);
 function damage(target, amount, attacker) {
   if (!target.alive || target.protect > 0 || target.busy || (target.dash && target.dash.inv)) return;
   if (attacker && attacker.strong > 0) amount *= 1.5;
@@ -582,6 +653,7 @@ function updatePortals(dt) {
 // ---------- Coffres et objets cachés ----------
 function updateLoot(dt) {
   for (const ch of chests) if (ch.open > 0) ch.open = Math.max(0, ch.open - dt);
+  if (goldT > 0 && (goldT -= dt) <= 0) pickGold();
   // un objet caché réapparaît de temps en temps, jusqu'à 6 sur la carte
   if ((itemTimer -= dt) <= 0 && items.length < 6 && carte.spots.length) {
     itemTimer = 8;
@@ -596,15 +668,15 @@ function updateLoot(dt) {
     const i = chests.findIndex(ch => !ch.open && !ch.by && Math.hypot(ch.x - p.x, ch.y - p.y) < 50);
     if (i >= 0 && !eclair) {
       chests[i].by = p.id; p.busy = true; p.busyT = 25;
-      askQuestion(p, 'chest', { chest: i });
+      askQuestion(p, 'chest', chests[i].gold ? { chest: i, gold: true, step: 1 } : { chest: i });
     }
   }
 }
 function cancelChest(p) {
   if (!p.busy) return;
-  const ch = p.question && chests[p.question.chest];
+  const ch = chests[p.question ? p.question.chest : p.goldNext ? p.goldNext.chest : -1];
   if (ch) ch.by = 0;
-  p.busy = false; p.question = null;
+  p.busy = false; p.question = null; p.goldNext = null;
   send(p.conn, { t: 'close' });
 }
 
@@ -657,13 +729,92 @@ function bossThink(dt) {
   }
 }
 
+// ---------- Roi de la colline ----------
+// un endroit dégagé, pas trop près du bord (test : condition supplémentaire, abandonnée après 600 essais)
+function openSpot(test) {
+  for (let i = 0; i < 800; i++) {
+    const x = rand(W * 0.18, W * 0.82), y = rand(H * 0.18, H * 0.82);
+    if (blocked(x, y, 50) || WATER.has(tileAt(x, y)) || WATER.has(tileAt(x, y + 40)) || !walk[Math.floor(y / T) * carte.cols + Math.floor(x / T)]) continue;
+    if (!test || test(x, y) || i > 600) return { x: Math.round(x), y: Math.round(y) };
+  }
+  return { x: Math.round(W / 2), y: Math.round(H / 2) };
+}
+function placeHill() {
+  const old = hill;
+  const s = openSpot(old ? (x, y) => Math.hypot(x - old.x, y - old.y) > Math.min(W, H) * 0.35 : null);
+  hill = { x: s.x, y: s.y, t: HILL.move, owner: -1, pts: old ? old.pts : Array(nbTeams).fill(0) };
+}
+function updateHill(dt) {
+  if (!hill) return;
+  if ((hill.t -= dt) <= 0) { placeHill(); addFeed('⛰️ La colline se déplace !'); }
+  const inside = [...players.values()].filter(p => p.alive && !p.busy && p.team >= 0 && Math.hypot(p.x - hill.x, p.y - hill.y) < HILL.r);
+  const ts = new Set(inside.map(p => p.team));
+  hill.owner = ts.size === 1 ? [...ts][0] : ts.size ? -2 : -1;   // -2 : contestée
+  if (hill.owner < 0) return;
+  hill.pts[hill.owner] += dt;
+  for (const p of inside) p.obj += dt;
+  if (hill.pts[hill.owner] >= HILL.win) endRound('colline');
+}
+
+// ---------- Capture du drapeau ----------
+// base : la case libre la plus proche d'un point (gauche ou droite de la carte)
+function baseSpot(tx, ty) {
+  let best = null, bd = Infinity;
+  for (let j = 1; j < carte.rows - 1; j++) for (let i = 1; i < carte.cols - 1; i++) {
+    if (!walk[j * carte.cols + i]) continue;
+    const x = (i + 0.5) * T, y = (j + 0.5) * T, d = Math.hypot(x - tx, y - ty);
+    if (d < bd && !blocked(x, y, 40) && !WATER.has(tileAt(x, y + 40))) { bd = d; best = { x: Math.round(x), y: Math.round(y) }; }
+  }
+  return best || { x: Math.round(tx), y: Math.round(ty) };
+}
+function setupFlags() {
+  flags = [W * 0.1, W * 0.9].map((tx, team) => { const s = baseSpot(tx, H / 2); return { team, hx: s.x, hy: s.y, x: s.x, y: s.y, carrier: 0, back: 0 }; });
+  caps = [0, 0];
+}
+const flagHome = f => { f.x = f.hx; f.y = f.hy; f.carrier = 0; f.back = 0; };
+function updateFlags(dt) {
+  if (!flags) return;
+  for (const f of flags) {
+    const c = f.carrier && players.get(f.carrier);
+    if (f.carrier && (!c || !c.alive)) {   // le porteur tombe : le drapeau reste par terre
+      if (c) c.carry = null;
+      f.carrier = 0; f.back = FLAG.back;
+      addFeed(`🚩 Le drapeau des ${TEAMS[f.team].nom} est tombé !`);
+    }
+    if (f.carrier) {
+      f.x = c.x; f.y = c.y;
+      const mine = flags[c.team];
+      if (mine && !mine.carrier && mine.x === mine.hx && mine.y === mine.hy && Math.hypot(c.x - mine.hx, c.y - mine.hy) < 70) {
+        caps[c.team]++; c.obj += 3; c.carry = null;
+        flagHome(f);
+        addFeed(`🏁 ${c.name} capture le drapeau des ${TEAMS[f.team].nom} ! (${caps[c.team]}/${FLAG.caps})`);
+        fx.push({ k: 'boom', x: mine.hx, y: mine.hy, r: 80, t: 0.6, d: 0.6, gold: 1 });
+        if (caps[c.team] >= FLAG.caps) endRound('drapeau');
+      }
+      continue;
+    }
+    const home = f.x === f.hx && f.y === f.hy;
+    if (!home && (f.back -= dt) <= 0) { flagHome(f); addFeed(`🚩 Le drapeau des ${TEAMS[f.team].nom} revient à sa base`); continue; }
+    for (const p of players.values()) {
+      if (!p.alive || p.busy || p.team < 0 || Math.hypot(p.x - f.x, p.y - f.y) > 40) continue;
+      if (p.team === f.team) {
+        if (!home) { flagHome(f); p.obj += 1; addFeed(`🛡️ ${p.name} ramène le drapeau des ${TEAMS[f.team].nom}`); break; }
+      } else if (!p.carry) {
+        f.carrier = p.id; p.carry = f; p.stealth = 0;
+        addFeed(`🚩 ${p.name} prend le drapeau des ${TEAMS[f.team].nom} !`);
+        break;
+      }
+    }
+  }
+}
+
 // ---------- Manche : modes, minuterie, résultats ----------
 function endRound(why) {
   if (ended) return;
   const ps = [...players.values()];
   const top = (key, n = 3) => [...ps].sort((a, b) => b[key] - a[key] || b.good - a.good).slice(0, n).filter(p => p[key] > 0).map(p => ({ n: p.name, c: p.cls, l: p.look, v: Math.round(p[key]), team: p.team }));
-  ended = { why, mode, top: top(mode === 'boss' ? 'dmgBoss' : 'kills'), cerveaux: top('good') };
-  if (mode === 'equipes') ended.teams = teamScores().map((s, i) => ({ ...TEAMS[i], ...s })).sort((a, b) => b.score - a.score);
+  ended = { why, mode, top: top(mode === 'boss' ? 'dmgBoss' : mode === 'colline' || mode === 'drapeau' ? 'obj' : 'kills'), cerveaux: top('good') };
+  if (teamMode()) ended.teams = teamScores().map((s, i) => ({ ...TEAMS[i], ...s })).sort((a, b) => b.score - a.score);
   paused = true;
   for (const p of players.values()) cancelChest(p);
   sendAll({ t: 'fin', ...ended });
@@ -671,17 +822,20 @@ function endRound(why) {
 function teamScores() {
   const s = Array.from({ length: nbTeams }, () => ({ score: 0, good: 0, n: 0 }));
   for (const p of players.values()) if (p.team >= 0 && p.team < nbTeams) { s[p.team].score += p.kills; s[p.team].good += p.good; s[p.team].n++; }
+  // colline : secondes passées seuls sur la colline ; drapeau : captures
+  if (mode === 'colline' && hill) s.forEach((t, i) => { t.score = Math.floor(hill.pts[i] || 0); });
+  if (mode === 'drapeau') s.forEach((t, i) => { t.score = caps[i] || 0; });
   return s;
 }
 function assignTeams() {
   const ps = [...players.values()].sort(() => Math.random() - 0.5);
-  ps.forEach((p, i) => { p.team = mode === 'equipes' ? i % nbTeams : -1; });
+  ps.forEach((p, i) => { p.team = teamMode() ? i % nbTeams : -1; p.carry = null; });
 }
 let countdown = 0;   // compte à rebours 3-2-1 au début d'une manche
 function newRound() {
   ended = null; paused = false; countdown = 3.5;
   for (const q of players.values()) {
-    q.kills = q.deaths = q.good = q.bad = q.streak = q.dmgBoss = 0;
+    q.kills = q.deaths = q.good = q.bad = q.streak = q.dmgBoss = q.obj = 0; q.carry = null;
     q.fast = q.strong = q.shield = q.stealth = 0; q.pending = null;
     q.gear = { casque: 0, armure: 0, epee: 0, bottes: 0 };
     cancelChest(q);
@@ -689,9 +843,13 @@ function newRound() {
   }
   for (const k in stats) stats[k] = {};
   timer.left = timer.dur;
-  boss = null;
+  boss = null; hill = null; flags = null;
   if (mode === 'boss') spawnBoss();
+  if (mode === 'colline') placeHill();
+  if (mode === 'drapeau') setupFlags();
+  if (flags) for (const q of players.values()) Object.assign(q, freeSpot(q.team));
   chests.forEach(c => { c.open = 0; c.by = 0; });
+  goldFrom = -1; pickGold();
   barrels.forEach(b => { b.t = 0; b.fuse = 0; });
   puddles = [];
   items = [];
@@ -766,6 +924,13 @@ function botThink(p, dt) {
     while (p.path.length > 1 && Math.hypot(p.path[0].x - p.x, p.path[0].y - p.y) < 26) p.path.shift();
     return Math.atan2(p.path[0].y - p.y, p.path[0].x - p.x);
   };
+  // colline et drapeau : aller vers l'objectif quand aucun ennemi n'est tout près
+  const goal = botGoal(p);
+  if (goal && (p.carry || !best || bd > (mode === 'colline' ? 150 : 240))) {
+    if (Math.hypot(goal.x - p.x, goal.y - p.y) < (goal.r || 20)) { p.moveAngle = null; return; }
+    p.moveAngle = p.angle = goTo(goal.x, goal.y);
+    return;
+  }
   if (!best || bd > 900) {
     // Personne en vue : se promener vers un point au hasard
     if (!p.goal || Math.hypot(p.goal.x - p.x, p.goal.y - p.y) < 60 || Math.random() < 0.003) { p.goal = freeSpot(); p.path = null; }
@@ -787,6 +952,17 @@ function botThink(p, dt) {
     if (a.type === 'melee' && bd > 110 && bd < 260) { p.moveAngle = p.angle; dash(p); }
     else if (a.type === 'proj' && bd < 110) { p.moveAngle = p.angle + Math.PI; dash(p); }
   }
+}
+
+function botGoal(p) {
+  if (mode === 'colline' && hill) return { x: hill.x + Math.cos(p.id) * 50, y: hill.y + Math.sin(p.id) * 50, r: 30 };
+  if (mode !== 'drapeau' || !flags || p.team < 0) return null;
+  const mine = flags[p.team], theirs = flags[1 - p.team];
+  if (p.carry) return { x: mine.hx, y: mine.hy };
+  if (mine.carrier) { const c = players.get(mine.carrier); if (c) return c; }        // poursuivre le voleur
+  if (mine.x !== mine.hx || mine.y !== mine.hy) return mine;                           // ramener notre drapeau
+  if (p.id % 3 === 0) return { x: mine.hx + Math.cos(p.id) * 90, y: mine.hy + Math.sin(p.id) * 90, r: 40 };   // un robot sur trois défend
+  return theirs.carrier ? players.get(theirs.carrier) || theirs : theirs;
 }
 
 // ---------- Boucle de jeu ----------
@@ -819,7 +995,11 @@ function step() {
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
     p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt);
     p.hidden = p.revealed <= 0 && inBush(p);
-    if (p.busy) { if ((p.busyT -= dt) <= 0) cancelChest(p); continue; }
+    if (p.busy) {
+      if (p.goldNext && (p.goldNext.t -= dt) <= 0) { const g = p.goldNext; p.goldNext = null; askQuestion(p, 'chest', { chest: g.chest, gold: true, step: 2, nOk: g.nOk }); }
+      if ((p.busyT -= dt) <= 0) cancelChest(p);
+      continue;
+    }
     const hl = carte.heal;
     if (hl && Math.hypot(p.x - hl.x, p.y - hl.y) < hl.r) p.hp = Math.min(p.maxHp, p.hp + hl.heal * dt);
     if (p.dash) { dashStep(p, dt); continue; }
@@ -839,6 +1019,7 @@ function step() {
     if (p.stealth > 0) sp *= 1.2;
     if (p.fast > 0) sp *= 1.35;
     if (p.slow > 0) sp *= 0.5;
+    if (p.carry) sp *= FLAG.slow;
     sp *= 1 + GEAR.bottes.vitesse * p.gear.bottes / 100;
     const bx = blocked(p.x + mx * sp, p.y, R), by = blocked(p.x, p.y + my * sp, R);
     if (!bx) p.x += mx * sp;
@@ -852,6 +1033,8 @@ function step() {
     updateBarrels(dt);
     updatePortals(dt);
     updatePuddles(dt);
+    updateHill(dt);
+    updateFlags(dt);
     projectiles = projectiles.filter(b => {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || blockedShot(b.x, b.y, b.r)) return false;
@@ -893,7 +1076,10 @@ function publicState() {
     it: items.map(it => [it.x, it.y, it.k]),
     boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0] : 0,
     tm: timer.dur ? Math.ceil(timer.left) : -1,
-    mode, te: mode === 'equipes' ? teamScores().map(s => s.score) : 0,
+    mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
+    hl: hill ? [hill.x, hill.y, HILL.r, hill.owner, Math.ceil(hill.t)] : 0,
+    fl: flags ? flags.map(f => [Math.round(f.x), Math.round(f.y), f.carrier ? 1 : 0, f.hx, f.hy]) : 0,
+    gc: chests.findIndex(c => c.gold),
     feed: feed.map(f => f.text), paused, ec: eclair ? Math.ceil(eclair.left) : 0, cd: Math.ceil(countdown - 0.5),
   });
 }
@@ -920,7 +1106,7 @@ setInterval(() => {
     t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
     carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
-    mode, modes: MODES, nbTeams, teams: TEAMS.slice(0, nbTeams), timer: timer.dur,
+    mode, modes: MODES, nbTeams, teams: TEAMS.slice(0, nbTeams), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
     players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss) })),
   });
@@ -983,6 +1169,8 @@ function onMessage(conn, msg) {
       setCarte(c);
       for (const q of players.values()) { cancelChest(q); if (q.alive) respawn(q); }
       if (boss) { const s = freeSpot(); boss.x = s.x; boss.y = s.y; boss.path = null; }
+      if (hill) { const pts = hill.pts; hill = null; placeHill(); hill.pts = pts; }
+      if (flags) { const c = caps; for (const q of players.values()) q.carry = null; setupFlags(); caps = c; for (const q of players.values()) if (q.alive) Object.assign(q, freeSpot(q.team)); }
       sendAll({ t: 'carte', map: carte });
       addFeed(`🗺️ Nouvelle carte : ${carte.nom}`);
       break;
@@ -991,9 +1179,10 @@ function onMessage(conn, msg) {
       if (!MODES[m.mode]) break;
       mode = m.mode;
       if (m.nb >= 2 && m.nb <= 4) nbTeams = m.nb;
+      if (mode === 'drapeau') nbTeams = 2;
       assignTeams();
       newRound();
-      addFeed(`🎮 Mode : ${MODES[mode]}${mode === 'equipes' ? ' (' + nbTeams + ')' : ''}`);
+      addFeed(`🎮 Mode : ${MODES[mode]}${mode === 'equipes' || mode === 'colline' ? ' (' + nbTeams + ' équipes)' : ''}`);
       break;
     case 'timer':
       timer.dur = [0, 3, 5, 10, 15, 20].includes(m.min) ? m.min * 60 : 0;
@@ -1001,6 +1190,7 @@ function onMessage(conn, msg) {
       break;
     case 'finir': endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); break;
     case 'eclair': startEclair(); break;
+    case 'bilans': send(conn, { t: 'bilans', memoire, or: orSeance, notions: NOTIONS }); break;
   }
 }
 
