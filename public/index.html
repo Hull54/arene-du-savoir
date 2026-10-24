@@ -211,6 +211,8 @@
         <div class="wstep" data-s="3"><div class="classes" id="classes"></div><div class="keys" id="clsInfo"></div></div>
         <div class="look" id="lookPanel">
           <div class="seg" id="gender" data-s="2"><button data-g="f"><canvas width="96" height="120"></canvas>👧 Fille</button><button data-g="m"><canvas width="96" height="120"></canvas>👦 Garçon</button></div>
+          <div class="lrow" data-s="2"><span>Race</span><div class="seg small" id="races"></div></div>
+          <div class="keys" id="raceInfo" data-s="2"></div>
           <div class="sw" id="skins" data-s="4"><span>Peau</span></div>
           <div class="sw" id="hairs" data-s="4"><span>Cheveux</span></div>
           <div class="sw" id="outfits" data-s="4"><span>Tenue</span></div>
@@ -252,15 +254,16 @@ const DASH_ICO = { guerrier: '💨', voleur: '🌀', mage: '✨', archer: '🦘'
 const ATK_ICO = { guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹', druide: '🌰' };
 
 // pouvoirs des familiers (affichés avant d'entrer ; le serveur a les mêmes)
+const RACES = [['🧑 Humain', 'Polyvalent : pouvoir rechargé 10 % plus vite'], ['🧝 Elfe', 'Agile : 5 % plus rapide, oreilles pointues'], ['🧔 Nain', 'Robuste : +10 points de vie, belle barbe'], ['👹 Orc', 'Fort : 5 % de dégâts en plus, peau verte']];
 const info0 = [null, 'Ronron : +25 points de vie', 'Hurlement : repousse les ennemis proches', 'Petite boule de feu', 'Œil perçant : révèle les joueurs cachés', 'Flaque gluante : ralentit les ennemis'];
 // ----- Écran de sélection -----
 let chosen = null;
 const $ = id => document.getElementById(id);
-let look = 'f000000';
+let look = 'f0000000';
 try {
   let l = localStorage.getItem('arene-look') || '';
-  if (/^[fm][0-3][0-3]$/.test(l)) l += '0000'; else if (l.length === 6) l += '0';
-  if (/^[fm][0-3][0-3][0-9][0-5][0-5][0-5]$/.test(l)) look = l;
+  if (/^[fm][0-3][0-3]$/.test(l)) l += '00000'; else if (l.length === 6) l += '00'; else if (l.length === 7) l += '0';
+  if (/^[fm][0-3][0-3][0-9][0-5][0-5][0-5][0-3]$/.test(l)) look = l;
 } catch {}
 // ----- Pièces d'or et boutique (gardées dans ce navigateur, pour chaque prénom) -----
 const BOUTIQUE = [
@@ -289,6 +292,7 @@ SKIN.forEach((c, i) => { const b = document.createElement('b'); b.style.backgrou
 HAIR.forEach((c, i) => { const b = document.createElement('b'); b.style.background = c; b.onclick = () => setLook(2, i); $('hairs').appendChild(b); });
 OUTFIT.forEach((c, i) => { const b = document.createElement('b'); if (c) b.style.background = c; else b.className = 'def'; b.title = OUTFIT_NOMS[i]; b.onclick = () => setLook(3, i); $('outfits').appendChild(b); });
 ACCESSOIRES.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => setLook(4, i); $('accs').appendChild(b); });
+RACES.forEach((r, i) => { const b = document.createElement('button'); b.textContent = r[0]; b.onclick = () => setLook(7, i); $('races').appendChild(b); });
 FAMILIERS.forEach((n, i) => { const b = document.createElement('button'); b.textContent = n; b.onclick = () => setLook(5, i); $('pets').appendChild(b); });
 for (let i = 0; i < 6; i++) { const b = document.createElement('b'); b.onclick = () => setLook(6, i); $('petcols').appendChild(b); }
 const cards = {};
@@ -308,6 +312,8 @@ function renderLook() {
   [...$('outfits').querySelectorAll('b')].forEach((b, i) => { b.classList.toggle('on', i === +look[3]); b.style.display = possede(3, i) ? '' : 'none'; });
   [...$('accs').children].forEach((b, i) => { b.classList.toggle('on', i === +look[4]); b.style.display = possede(4, i) ? '' : 'none'; });
   [...$('pets').children].forEach((b, i) => b.classList.toggle('on', i === +look[5]));
+  [...$('races').children].forEach((b, i) => b.classList.toggle('on', i === (+look[7] || 0)));
+  $('raceInfo').textContent = RACES[+look[7] || 0][1];
   $('petcols').style.display = +look[5] ? '' : 'none';
   if (+look[5]) [...$('petcols').querySelectorAll('b')].forEach((b, i) => { b.style.background = PET_COULEURS[+look[5]][i]; b.classList.toggle('on', i === +look[6]); b.style.display = possede(6, i) ? '' : 'none'; });
   $('petInfo').textContent = +look[5] && info0[+look[5]] ? `${FAMILIERS[+look[5]]} · touche E : ${info0[+look[5]]}` : '';
@@ -358,7 +364,7 @@ function animFinLook() {
 }
 // ----- Menu en étapes : prénom → fille/garçon → classe → look → familier -----
 let step = 1;
-const STEPS = ['Quel est ton prénom ?', 'Fille ou garçon ?', 'Choisis ta classe', 'Ton look', 'Ton familier'];
+const STEPS = ['Quel est ton prénom ?', 'Fille ou garçon ? Et ta race ?', 'Choisis ta classe', 'Ton look', 'Ton familier'];
 STEPS.forEach(() => $('dots').appendChild(document.createElement('i')));
 function check() {
   const id = !!($('name').value.trim() || $('code').value.trim());

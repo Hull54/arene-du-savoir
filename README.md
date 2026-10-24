@@ -269,6 +269,17 @@ Si deux élèves choisissent le même prénom, le second devient « Léa 2 » po
 
 Chaque élève choisit une version **fille ou garçon** de sa classe (Guerrière/Guerrier, Voleuse/Voleur, Mage, Archère/Archer), une teinte de peau, une couleur de cheveux, une **couleur de tenue** (7 choix, plus 3 rares à la boutique), un **accessoire** (cape, lunettes ou écharpe, plus couronne et ailes à la boutique) et un **familier** qui le suit partout (4 couleurs au choix pour chaque familier). Le look se change dans le menu et aussi sur l'écran de fin de manche, entre deux manches. Tous les dessins sont en pixel art rétro, créés dans le code du jeu (aucune image empruntée).
 
+## Les races
+
+Au 2e écran du menu, sous Fille ou garçon. Chaque race a son apparence et un petit bonus, sans déséquilibrer le jeu :
+
+| Race | Apparence | Bonus |
+|---|---|---|
+| 🧑 Humain | — | Polyvalent : pouvoir (K) rechargé 10 % plus vite |
+| 🧝 Elfe | Longues oreilles pointues | Agile : 5 % plus rapide |
+| 🧔 Nain | Grosse barbe tressée (garçon), deux tresses (fille) | Robuste : +10 points de vie |
+| 👹 Orc | Peau verte, oreilles larges, petites défenses | Fort : 5 % de dégâts en plus aux attaques de base |
+
 ## Les familiers
 
 Chaque familier a un mini pouvoir sur la touche **E**, rechargé en 15 secondes.

@@ -11,6 +11,7 @@ const CLS = {
   archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail', dash: '🦘 Saut arrière : recule en tirant' },
 };
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
+const ORC_SKIN = ['#9cc47a', '#7fa85c', '#648c46', '#4a6a34'];   // peau des orcs (selon la teinte choisie)
 const HAIR = ['#2a1c14', '#7a4422', '#e8b84a', '#c2482e'];
 const nomClasse = (c, look) => CLS[c].nom[look && look[0] === 'f' ? 0 : 1];
 // Personnalisation : couleur de la tenue, accessoire, familier (caractères 4, 5 et 6 du look)
@@ -124,7 +125,8 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
   if (heroCache[key]) return heroCache[key];
   const P = new Painter(24, 30); P.ox = 4; P.oy = 8;
   const fem = look[0] === 'f', out = OUTFIT[+look[3] || 0], acc = +look[4] || 0, G = gearOf(gearCode);
-  const s = SKIN[+look[1]] || SKIN[0], sD = shade(s, 0.78), sH = shade(s, 1.12);
+  const race = +look[7] || 0;   // 0 humain, 1 elfe, 2 nain, 3 orc
+  const s = (race === 3 ? ORC_SKIN : SKIN)[+look[1]] || SKIN[0], sD = shade(s, 0.78), sH = shade(s, 1.12);
   const h = HAIR[+look[2]] || HAIR[0], hD = shade(h, 0.68), hH = shade(h, 1.4);
   const E = '#1b1424', line = '#2a1d2e';
   // trois tons par matière : clair (haut, gauche), moyen, sombre (bas, droite)
@@ -339,6 +341,31 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
     if (side) { P.rect(5, 3, 7, 1, tc); P.rect(5, 4, 7, 1, shade(tc, 0.7)); }
     else if (cls !== 'voleur' || up) { P.rect(4, 3, 8, 1, tc); P.rect(4, 4, 8, 1, shade(tc, 0.7)); if (down) P.px(7, 3, G.casque === 3 ? '#c0303a' : shade(tc, 1.3)); }
     else { P.rect(4, 2, 8, 1, tc); P.px(7, 2, G.casque === 3 ? '#c0303a' : shade(tc, 1.3)); }
+  }
+
+  // ===== race : oreilles d'elfe, barbe de nain, défenses d'orc =====
+  if (race === 1 || race === 3) {   // oreilles pointues (longues pour l'elfe, petites pour l'orc)
+    const lg = race === 1;
+    if (side) { P.px(6, 5, sD); P.px(6, 4, s); if (lg) { P.px(5, 3, s); P.px(4, 2, sH); } }
+    else {
+      P.px(3, 5, s); P.px(2, 4, s); P.px(12, 5, sD); P.px(13, 4, sD); P.px(2, 5, sD); P.px(13, 5, sD);
+      if (lg) { P.px(1, 3, sH); P.px(14, 3, sD); } else { P.px(1, 4, sD); P.px(14, 4, sD); P.px(1, 5, shade(s, 0.6)); P.px(14, 5, shade(s, 0.6)); }   // orc : oreilles larges, vers le côté
+    }
+  }
+  if (race === 2 && !up) {
+    const b = h, bD = hD;
+    if (!fem) {   // grosse barbe tressée
+      if (side) { P.rect(8, 7, 4, 3, b); P.rect(9, 10, 3, 2, b); P.px(10, 12, bD); P.rect(9, 7, 3, 1, bD); }
+      else { P.rect(4, 7, 8, 4, b); P.rect(5, 11, 6, 1, b); P.rect(6, 12, 4, 1, bD); P.rect(6, 7, 4, 1, bD); P.px(7, 9, bD); P.px(8, 10, bD); P.px(7, 13, '#d9a93a'); P.px(8, 13, '#d9a93a'); }
+    } else {   // deux tresses et joues roses
+      if (side) { P.rect(5, 6, 1, 7, b); P.px(5, 13, '#d9a93a'); }
+      else { P.rect(3, 6, 1, 7, b); P.rect(12, 6, 1, 7, bD); P.px(3, 13, '#d9a93a'); P.px(12, 13, '#d9a93a'); if (down) { P.px(5, 8, '#e88a8a'); P.px(10, 8, '#e88a8a'); } }
+    }
+  }
+  if (race === 3 && !up) {   // petites défenses
+    const ivoire = '#f4efe0';
+    if (side) P.px(11, 8, ivoire);
+    else if (down) { P.px(6, 8, ivoire); P.px(9, 8, ivoire); }
   }
 
   // ===== armes devant =====

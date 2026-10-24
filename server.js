@@ -113,6 +113,14 @@ const PETS = {
   5: { nom: 'Slime', pouvoir: 'Flaque gluante : ralentit les ennemis', r: 90, dur: 4 },
 };
 const PET_CD = 15;
+// Races (8e caractère du look) : un petit bonus chacune, pour le plaisir sans déséquilibrer
+const RACES = {
+  0: { nom: 'Humain', bonus: 'Polyvalent : pouvoir rechargé 10 % plus vite', pouvoir: 0.9 },
+  1: { nom: 'Elfe', bonus: 'Agile : 5 % plus rapide', vitesse: 1.05 },
+  2: { nom: 'Nain', bonus: 'Robuste : +10 points de vie', pv: 10 },
+  3: { nom: 'Orc', bonus: 'Fort : 5 % de dégâts en plus', degats: 1.05 },
+};
+const raceDe = p => RACES[+p.look[7]] || RACES[0];
 const BARREL = { r: 20, radius: 120, dmg: 30, back: 30 };   // tonneaux explosifs
 const OBJETS_CACHES = ['potion', 'potion', 'vitesse', 'force', 'equip', 'piege', 'fumee'];
 
@@ -338,9 +346,10 @@ function leaderId() {
 // tenues 7-9, accessoires 4-5 et couleurs de familier 4-5 : achetés à la boutique avec les pièces d'or
 function cleanLook(l) {
   l = String(l || '');
-  if (/^[fm][0-3][0-3]$/.test(l)) l += '0000';
-  else if (l.length === 6) l += '0';
-  return /^[fm][0-3][0-3][0-9][0-5][0-5][0-5]$/.test(l) ? l : '';
+  if (/^[fm][0-3][0-3]$/.test(l)) l += '00000';
+  else if (l.length === 6) l += '00';
+  else if (l.length === 7) l += '0';   // ancien look, sans race : humain
+  return /^[fm][0-3][0-3][0-9][0-5][0-5][0-5][0-3]$/.test(l) ? l : '';
 }
 const gearCode = p => p.gear.casque + 4 * p.gear.armure + 16 * p.gear.epee + 64 * p.gear.bottes;
 const armorOf = p => Math.min(40, GEAR.casque.armure * p.gear.casque + GEAR.armure.armure * p.gear.armure);   // % de dégâts en moins
@@ -364,13 +373,14 @@ function createPlayer(name, cls, bot = false, look = '') {
   const p = {
     id: nextId++, name: uniqueName(name), cls: CLASSES[cls] ? cls : 'guerrier', bot, team,
     hp: c.hp, maxHp: c.hp, alive: true, angle: 0,
-    look: cleanLook(look) || (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3) + (bot ? ri(0, 6) + '' + ri(0, 3) + ri(0, 5) + ri(0, 3) : '0000'),
+    look: cleanLook(look) || (Math.random() < 0.5 ? 'f' : 'm') + ri(0, 3) + ri(0, 3) + (bot ? ri(0, 6) + '' + ri(0, 3) + ri(0, 5) + ri(0, 3) + ri(0, 3) : '00000'),
     gear: { casque: 0, armure: 0, epee: 0, bottes: 0 }, portalCd: 0,
     input: { u: 0, d: 0, l: 0, r: 0 }, cdA: 0, cdP: 0, cdD: 0, cdF: 0, slow: 0, dash: null, shield: 0, stealth: 0, revealed: 0, hidden: false, protect: SPAWN_PROTECT,
     fast: 0, strong: 0, busy: false, streak: 0, dmgBoss: 0, obj: 0, carry: null,
     kills: 0, deaths: 0, good: 0, bad: 0, question: null, waitQ: 0, conn: null, botT: 0,
     ...freeSpot(team),
   };
+  p.hp = p.maxHp = c.hp + (raceDe(p).pv || 0);
   players.set(p.id, p);
   if (!stats[p.name]) stats[p.name] = {};
   if (!memoire[p.name] && !bot) memoire[p.name] = {};
@@ -665,7 +675,7 @@ function hitBoss(amount, attacker) {
   bossCheck(attacker);
 }
 
-const sword = p => 1 + GEAR.epee.degats * p.gear.epee / 100;   // l'épée multiplie les dégâts des attaques de base
+const sword = p => (1 + GEAR.epee.degats * p.gear.epee / 100) * (raceDe(p).degats || 1);   // l'épée multiplie les dégâts des attaques de base
 function shoot(p, angle, a, bonus = 0) {
   projectiles.push({
     x: p.x + Math.cos(angle) * (R + 4), y: p.y + Math.sin(angle) * (R + 4),
@@ -713,7 +723,7 @@ function power(p) {
   if (!p.alive || p.cdP > 0 || paused || p.busy || p.stun > 0) return;
   if (mode === 'zombie' && p.team === 1) return;   // les zombies n'ont pas de pouvoir
   const pw = CLASSES[p.cls].power;
-  p.cdP = pw.cd;
+  p.cdP = pw.cd * (raceDe(p).pouvoir || 1);
   if (p.cls === 'guerrier') {
     p.shield = pw.dur;
   } else if (p.cls === 'mage') {
@@ -1695,6 +1705,7 @@ function step() {
     if (p.slow > 0) sp *= 0.5;
     if (p.carry) sp *= FLAG.slow;
     sp *= 1 + GEAR.bottes.vitesse * p.gear.bottes / 100;
+    sp *= raceDe(p).vitesse || 1;
     const bx = blocked(p.x + mx * sp, p.y, R), by = blocked(p.x, p.y + my * sp, R);
     if (!bx) p.x += mx * sp;
     if (!by) p.y += my * sp;
@@ -1803,7 +1814,7 @@ const infoT = setInterval(() => {
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
 
-const welcome = () => ({ t: 'welcome', map: carte, classes: CLASSES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
+const welcome = () => ({ t: 'welcome', map: carte, classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
 setCarte(CARTES[0]);
 const stepT = setInterval(step, solo ? TICK * 2 : TICK);   // une partie à la maison coûte deux fois moins au serveur
 
@@ -1853,7 +1864,10 @@ function onMessage(conn, msg) {
     case 'super': if (p && !(p.gele > 0)) superPower(p); break;
     case 'pet': if (p && !(p.gele > 0)) petPower(p); break;
     case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 30) : undefined); break;
-    case 'look': if (p && cleanLook(m.look)) p.look = cleanLook(m.look); break;
+    case 'look': if (p && cleanLook(m.look)) {
+      p.look = cleanLook(m.look);
+      p.maxHp = CLASSES[p.cls].hp + (raceDe(p).pv || 0); p.hp = Math.min(p.hp, p.maxHp);
+    } break;
     case 'achat': {   // achat à la boutique : l'or est retiré du compte de l'élève (s'il a un code)
       const rec = codeDe(p), prix = Math.max(0, Math.round(+m.prix || 0)), it = String(m.it || '').slice(0, 12);
       if (rec && rec.or >= prix && it && !rec.achats.includes(it)) { rec.or -= prix; rec.achats.push(it); majCode(rec); }
