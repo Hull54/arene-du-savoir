@@ -120,6 +120,23 @@ function line2(P, x0, y0, x1, y1, c) {
   const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
   for (let i = 0; i <= n; i++) P.px(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), c);
 }
+// Nain : silhouette trapue. On retire 3 rangées (milieu du torse, haut des jambes) en gardant les pieds au sol,
+// et on élargit le corps de 2 colonnes au centre.
+function trapu(P) {
+  const W = P.w, H = P.h, enlever = new Set([20, 24, 25]), g = new Array(W * H).fill(null);
+  let ny = H - 1;
+  for (let y = H - 1; y >= 0; y--) {
+    if (enlever.has(y)) continue;
+    for (let x = 0; x < W; x++) {
+      const c = P.g[y * W + x];
+      if (!c) continue;
+      if (x <= 11) { if (x >= 1) g[ny * W + x - 1] = c; if (x === 11) g[ny * W + x] = c; }
+      else { if (x + 1 < W) g[ny * W + x + 1] = c; if (x === 12) g[ny * W + x] = c; }
+    }
+    ny--;
+  }
+  P.g = g;
+}
 function heroSprite(cls, look, dir, frame, gearCode = 0) {
   const key = cls + look + dir + frame + 'g' + gearCode;
   if (heroCache[key]) return heroCache[key];
@@ -460,6 +477,7 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
     P.rect(cx, cy + 1, 6, 1, '#fff2b0'); P.px(cx + 2, cy + 2, '#c0303a'); P.px(cx + 4, cy + 2, '#3a7ae0');
   }
   P.ox = 0; P.oy = 0;
+  if (race === 2) trapu(P);
   return (heroCache[key] = P.outline().canvas());
 }
 function dirFromAngle(a) {
