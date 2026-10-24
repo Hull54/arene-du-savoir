@@ -89,6 +89,11 @@
         <button class="sec" data-mode="colline" data-nb="2">⛰️ Colline</button>
         <button class="sec" data-mode="drapeau" data-nb="2">🚩 Drapeau</button>
         <button class="sec" data-mode="boss">👑 Boss</button>
+        <button class="sec" data-mode="runes" data-nb="2">✨ Runes</button>
+        <button class="sec" data-mode="chariot">🛒 Chariot</button>
+        <button class="sec" data-mode="survie">🌊 Survie</button>
+        <button class="sec" data-mode="zombie">🧟 Contagion</button>
+        <button class="sec" data-mode="entrainement">🎯 Entraînement</button>
         <select id="bossSel" title="Boss du mois"></select>
       </div>
       <div class="row"><span>Minuterie :</span>
@@ -165,6 +170,7 @@ ws.onmessage = e => {
   else if (m.t === 'eclairRes') eclairRes(m);
   else if (m.t === 'fin') { showFin(m); send({ t: 'bilans', silent: true }); }   // l'historique des séances se met à jour à chaque fin de manche
   else if (m.t === 'debut') $('fin').style.display = 'none';
+  else if (m.t === 'route') ROUTE = m.pts;
   else if (m.t === 'bilans') { sauverHisto(m.memoire); if (!m.silent) bilans(m); }
 };
 $('pause').onclick = () => send({ t: 'pause' });
@@ -278,7 +284,7 @@ function info(m) {
     }
   }
   // classement
-  const boss = m.mode === 'boss', eq = ['equipes', 'colline', 'drapeau'].includes(m.mode);
+  const boss = m.mode === 'boss', eq = MODES_EQUIPE.includes(m.mode);
   const unite = m.mode === 'colline' ? 'points de colline' : m.mode === 'drapeau' ? 'captures' : 'victoires';
   $('boardHead').innerHTML = `<th>Élève</th><th>${boss ? '👑 dégâts' : '🏆'}</th><th>💀</th><th>✅</th><th>❌</th><th title="Niveau des questions : clique pour changer">Niveau</th><th></th>`;
   const ps = [...m.players].sort((a, b) => boss ? b.dm - a.dm : b.k - a.k || b.g - a.g);
@@ -364,11 +370,11 @@ function showFin(m) {
   const card = $('finCard'); card.innerHTML = '';
   const h = document.createElement('h1');
   const bn = m.boss ? m.boss.nom : 'Le Roi Gluant';
-  h.textContent = m.why === 'boss-gagne' ? `🎉 Victoire ! ${bn} est vaincu !` : m.why === 'boss-perdu' ? `${m.boss ? BOSS_INFO[m.boss.k].ico : '👑'} ${bn} a gagné cette fois…` : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
+  h.textContent = m.titre ? m.titre : m.why === 'boss-gagne' ? `🎉 Victoire ! ${bn} est vaincu !` : m.why === 'boss-perdu' ? `${m.boss ? BOSS_INFO[m.boss.k].ico : '👑'} ${bn} a gagné cette fois…` : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
   card.appendChild(h);
   if (m.teams) {
-    const t = document.createElement('div'); t.className = 'big'; const u = m.mode === 'colline' ? 'point' : m.mode === 'drapeau' ? 'capture' : 'victoire';
-    t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${esc(m.teams[0].nom)} gagnent !</b><br>` + m.teams.map(e => `${esc(e.nom)} : ${e.score} ${u}${e.score > 1 ? 's' : ''}, ${e.good} bonne${e.good > 1 ? 's' : ''} réponse${e.good > 1 ? 's' : ''}`).join('<br>');
+    const t = document.createElement('div'); t.className = 'big'; const u = m.unite || (m.mode === 'colline' ? 'point' : m.mode === 'drapeau' ? 'capture' : 'victoire'), pl = u.includes('%') ? '' : 's';
+    t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${esc(m.teams[0].nom)} gagnent !</b><br>` + m.teams.map(e => `${esc(e.nom)} : ${e.score} ${u}${e.score > 1 ? pl : ''}, ${e.good} bonne${e.good > 1 ? 's' : ''} réponse${e.good > 1 ? 's' : ''}`).join('<br>');
     card.appendChild(t);
   }
   const pod = document.createElement('div'); pod.className = 'podium';
@@ -462,7 +468,7 @@ function frame() {
   const s = Math.min(r.width / (map.W + 40), (r.height - 40) / (map.H + 40));
   ctx.translate((r.width - map.W * s) / 2, 40 + (r.height - 40 - map.H * s) / 2);
   ctx.scale(s, s);
-  const teams = ['equipes', 'colline', 'drapeau'].includes(world.mode) && last ? last.teams : null;
+  const teams = equipesDe(world, last && last.teams);
   drawWorld(ctx, world, map, null, disp, 7, teams);   // héros plus gros pour être vus de loin au projecteur
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // bandeau du haut : carte, minuterie, scores d'équipes
@@ -471,7 +477,8 @@ function frame() {
   const tag = (t, bg, fg = '#fff') => { const w = ctx.measureText(t).width + 20; ctx.fillStyle = bg; ctx.fillRect(x, 6, w, 30); ctx.fillStyle = fg; ctx.fillText(t, x + 10, 22); x += w + 8; };
   tag('🗺️ ' + map.nom, '#1b1424');
   if (world.tm >= 0) tag(`⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}`, world.tm <= 30 ? '#b8433a' : '#1b1424');
-  if (teams && world.te) world.te.forEach((sc, i) => teams[i] && tag(`${world.mode === 'colline' ? '⛰️ ' : world.mode === 'drapeau' ? '🚩 ' : ''}${teams[i].nom} ${sc}${world.mode === 'colline' ? '/120' : world.mode === 'drapeau' ? '/3' : ''}`, teams[i].color, '#1b1424'));
+  scoresEquipes(world, teams).forEach(([txt, col]) => tag(txt, col, '#1b1424'));
+  if (world.sv) tag(infoMode(world).trim(), '#2a8ad8', '#ffffff');
   if (world.hl) tag(`⛰️ La colline bouge dans ${world.hl[4]} s`, '#1b1424');
   // grande barre de vie du boss, en bas du projecteur
   if (world.boss) {

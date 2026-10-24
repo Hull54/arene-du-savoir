@@ -88,7 +88,7 @@
   .cd .fill { position: absolute; left: 0; right: 0; bottom: 0; background: #000a; }
   #score { position: fixed; top: 10px; left: 12px; padding: 6px 12px; font-size: 16px; }
   #zone { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); padding: 4px 14px; font-size: 18px; color: #ffd54a; white-space: nowrap; }
-  #hidden { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: none; }
+  #hidden { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: none; }
   #feed { position: fixed; top: 170px; right: 12px; text-align: right; font-size: 15px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
   #feed div { background: #1b1424cc; padding: 3px 10px; border: 2px solid #44386a; }
   #pause { position: fixed; top: 40%; width: 100%; text-align: center; font-size: 48px; font-weight: 700; color: #ffd54a; text-shadow: 4px 4px 0 #1b1424; display: none; }
@@ -419,6 +419,7 @@ function connect(name, cls) {
     else if (m.t === 'super') { toast('🌟 Super-pouvoir prêt ! Appuie sur R'); Son.play('serie'); }
     else if (m.t === 'serie') { toast(`🔥 Série de ${m.n} bonnes réponses ! Bonus : ${m.ico} ${m.nom}`); Son.play('serie'); }
     else if (m.t === 'fin') showFin(m);
+    else if (m.t === 'route') ROUTE = m.pts;
     else if (m.t === 'debut') { $('fin').style.display = 'none'; document.querySelector('.wcontent').appendChild($('lookPanel')); }
     else if (m.t === 'kicked') { alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
   };
@@ -499,6 +500,11 @@ function showResult(m) {
       $('qMsg').textContent = (m.ok ? '✅ Bravo ! ' : '❌ Pas tout à fait. ') + 'Deuxième question…';
       return;
     }
+    if (m.special) {   // rune, chariot, contagion
+      $('qMsg').textContent = m.special;
+      setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.ok ? 1500 : m.explication ? 4500 : 3000);
+      return;
+    }
     if (m.releve) {
       $('qMsg').textContent = m.ok ? `💚 Bravo ! ${m.nom} revient au combat grâce à toi !` : '❌ Pas tout à fait… Essaie encore dans 3 secondes.';
       setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.ok ? 1500 : m.explication ? 4500 : 3000);
@@ -541,17 +547,17 @@ function showFin(m) {
   const card = $('finCard'); card.innerHTML = '';
   const h = document.createElement('h2');
   const bn = m.boss ? m.boss.nom : 'Le Roi Gluant';
-  h.textContent = m.why === 'boss-gagne' ? `🎉 Victoire ! ${bn} est vaincu !` : m.why === 'boss-perdu' ? `${m.boss ? BOSS_INFO[m.boss.k].ico : '👑'} ${bn} a gagné cette fois…` : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
+  h.textContent = m.titre ? m.titre : m.why === 'boss-gagne' ? `🎉 Victoire ! ${bn} est vaincu !` : m.why === 'boss-perdu' ? `${m.boss ? BOSS_INFO[m.boss.k].ico : '👑'} ${bn} a gagné cette fois…` : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
   card.appendChild(h);
   if (m.teams) {
     const t = document.createElement('div'); t.className = 'finlist';
     t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${m.teams[0].nom} gagnent !</b>`;
-    const unite = m.mode === 'colline' ? 'point' : m.mode === 'drapeau' ? 'capture' : 'victoire';
-    m.teams.forEach(e => { const d = document.createElement('div'); d.textContent = `${e.nom} : ${e.score} ${unite}${e.score > 1 ? 's' : ''}, ${e.good} bonne${e.good > 1 ? 's' : ''} réponse${e.good > 1 ? 's' : ''}`; t.appendChild(d); });
+    const unite = m.unite || (m.mode === 'colline' ? 'point' : m.mode === 'drapeau' ? 'capture' : 'victoire'), pl = unite.includes('%') ? '' : 's';
+    m.teams.forEach(e => { const d = document.createElement('div'); d.textContent = `${e.nom} : ${e.score} ${unite}${e.score > 1 ? pl : ''}, ${e.good} bonne${e.good > 1 ? 's' : ''} réponse${e.good > 1 ? 's' : ''}`; t.appendChild(d); });
     card.appendChild(t);
   }
   const sub = document.createElement('div'); sub.className = 'tag';
-  sub.textContent = m.mode === 'boss' ? 'Plus gros dégâts au boss' : m.mode === 'colline' ? 'Le plus de secondes sur la colline' : m.mode === 'drapeau' ? 'Meilleurs porteurs de drapeau' : 'Le plus de victoires';
+  sub.textContent = m.sous ? m.sous : m.mode === 'boss' ? 'Plus gros dégâts au boss' : m.mode === 'colline' ? 'Le plus de secondes sur la colline' : m.mode === 'drapeau' ? 'Meilleurs porteurs de drapeau' : 'Le plus de victoires';
   card.appendChild(sub);
   const pod = document.createElement('div'); pod.className = 'podium';
   [1, 0, 2].forEach(i => {
@@ -693,7 +699,7 @@ function frame(now) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#173d1d'; ctx.fillRect(0, 0, vw, vh);
   ctx.translate(Math.round(vw / 2 - camX * zoom), Math.round(vh / 2 - camY * zoom)); ctx.scale(zoom, zoom);
-  const teams = ['equipes', 'colline', 'drapeau'].includes(world.mode) ? equipes() : null;
+  const teams = equipesDe(world, equipes());
   if (mine) mine.aim = aim;
   drawWorld(ctx, world, map, mine, disp, PX, teams);
   if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };
@@ -718,9 +724,9 @@ function frame(now) {
   const tm = world.tm >= 0 ? `   ⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}` : '';
   if (world.tm === 60 && lastTm !== 60) { toast('⏱ Plus qu\'une minute ! Termine ta question.'); Son.play('eclair'); }
   $('zone').classList.toggle('fin10', world.tm >= 0 && world.tm <= 10); lastTm = world.tm;
-  $('zone').textContent = map.nom + tm + (world.hl ? `   ⛰️ bouge dans ${world.hl[4]} s` : '');
+  $('zone').textContent = map.nom + tm + (world.hl ? `   ⛰️ bouge dans ${world.hl[4]} s` : '') + infoMode(world) + (world.mode === 'zombie' && mine ? (mine.tm === 1 ? '   🧟 Tu es un zombie' : '   🧄 Tu es humain') : world.mode === 'chariot' && mine ? (mine.tm === 0 ? '   🛒 Pousse le chariot' : '   🛡️ Arrête le chariot') : '');
   $('teams').innerHTML = '';
-  if (teams && world.te) world.te.forEach((sc, i) => { const s = document.createElement('span'); s.style.background = teams[i].color; s.textContent = `${world.mode === 'colline' ? '⛰️ ' : world.mode === 'drapeau' ? '🚩 ' : ''}${teams[i].nom} ${sc}${world.mode === 'colline' ? '/120' : world.mode === 'drapeau' ? '/3' : ''}`; if (me && me.team === i) s.style.outline = '3px solid #fff'; $('teams').appendChild(s); });
+  scoresEquipes(world, teams).forEach(([txt, col], i) => { const s = document.createElement('span'); s.style.background = col; s.textContent = txt; if (me && me.team === i && world.mode !== 'chariot') s.style.outline = '3px solid #fff'; $('teams').appendChild(s); });
   $('hidden').style.display = mine && mine.hd ? 'block' : 'none';
   // grande barre de vie du boss
   const B = world.boss;

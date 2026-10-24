@@ -47,6 +47,33 @@ const REGLES = {
   drapeau: { ico: '🚩', titre: 'Capture du drapeau', but: 'Ramène le drapeau adverse dans ta base !', pts: ['Touche le drapeau adverse pour le prendre (tu avances un peu moins vite).', 'Tu marques seulement si ton propre drapeau est dans ta base.', 'Un porteur K.O. lâche le drapeau : touche-le pour le ramener. 3 captures pour gagner.'] },
   boss: { ico: '👑', titre: 'Boss coopératif', but: 'Toute la classe ensemble contre le Boss !', pts: ['On ne peut pas se blesser entre nous.', 'Chaque bonne réponse enlève 3 % de vie au Boss : tout le monde est utile !', '🛡️ Bouclier du savoir : répondez juste ensemble pour le briser.', 'À la moitié de sa vie, il s\'enrage et appelle des sbires.'] },
 };
+Object.assign(REGLES, {
+  runes: { ico: '✨', titre: 'Course aux runes', but: 'Capture 12 runes avec ton équipe !', pts: ['Des runes brillantes apparaissent sur la carte.', 'Touche une rune : une question s\'ouvre. Bonne réponse = la rune est à ton équipe.', 'Mauvaise réponse : la rune t\'échappe 3 secondes.', 'Défends les runes et empêche l\'autre équipe de les prendre !'] },
+  chariot: { ico: '🛒', titre: 'Escorte du chariot', but: 'Pousseurs : amenez le chariot au bout du chemin. Défenseurs : arrêtez-le !', pts: ['Le chariot avance quand il y a plus de Pousseurs que de Défenseurs autour de lui.', 'Près du chariot, tu reçois une question toutes les 8 secondes.', 'Bonne réponse d\'un Pousseur : le chariot reçoit de l\'énergie. Bonne réponse d\'un Défenseur : il en perd.', 'Sans énergie, le chariot s\'arrête !'] },
+  survie: { ico: '🌊', titre: 'Survie coopérative', but: 'Toute la classe ensemble contre 8 vagues de monstres !', pts: ['On ne peut pas se blesser entre nous.', 'Chaque vague est plus forte que la précédente.', 'Entre deux vagues : une question éclair. Bonne réponse = bonus de force.', 'Si tout le monde tombe en même temps, les monstres gagnent.'] },
+  zombie: { ico: '🧟', titre: 'Contagion', but: 'Humains : survivez ! Zombies : attrapez tout le monde !', pts: ['Un zombie qui te touche te pose une question : bonne réponse = tu résistes 3 secondes.', 'Mauvaise réponse : tu deviens un zombie à ton tour.', 'Les coups des humains repoussent et étourdissent les zombies.', 'Survivre rapporte des points. Les zombies vont un peu plus vite.'] },
+  entrainement: { ico: '🎯', titre: 'Entraînement', but: 'Entraîne-toi contre les robots !', pts: ['Les élèves ne peuvent pas se blesser entre eux : seulement les robots.', 'Les robots frappent moins fort.', 'Les questions reviennent plus souvent sur les notions que tu rates.'] },
+});
+// Modes en équipes : noms et scores affichés en haut de l'écran
+const MODES_EQUIPE = ['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie'];
+function equipesDe(world, base) {
+  if (!world || !MODES_EQUIPE.includes(world.mode)) return null;
+  if (world.tn) { const c = world.mode === 'zombie' ? ['#3a7ae0', '#5ac85a'] : ['#e0a03a', '#3a7ae0']; return world.tn.map((nom, i) => ({ nom, color: c[i] })); }
+  return base || null;
+}
+function scoresEquipes(world, teams) {
+  const m = world.mode;
+  if (m === 'chariot' && world.ca) return [[`🛒 ${world.ca[2]} % du chemin · ⚡ ${world.ca[3]}${['', '', ' · bloqué !', ' · plus d\'énergie !'][world.ca[4]]}`, '#e0a03a']];
+  if (!teams || !world.te) return [];
+  const ico = { colline: '⛰️ ', drapeau: '🚩 ', runes: '✨ ', zombie: '' }[m] || '', max = { colline: '/120', drapeau: '/3', runes: '/12' }[m] || '';
+  return world.te.map((sc, i) => teams[i] ? [`${ico}${teams[i].nom} ${sc}${max}`, teams[i].color] : null).filter(Boolean);
+}
+function infoMode(world) {
+  if (!world.sv) return '';
+  const [v, repos, n] = world.sv;
+  return repos > 0 ? `   🌊 Vague ${v + 1} dans ${repos} s` : `   🌊 Vague ${v}/8 · ${n} monstre${n > 1 ? 's' : ''}`;
+}
+let ROUTE = null;   // chemin du chariot (reçu au début de la manche)
 const REGLE_KO = 'Tu tombes ? Réponds à une question pour revenir au combat.';
 function reglesHTML(mode, extra = '') {
   const R = REGLES[mode] || REGLES.libre;
@@ -983,6 +1010,27 @@ function itemSprite(k) {
   else if (k === 'ombre') { P.rect(3, 1, 6, 3, '#4a4f5a'); P.rect(2, 4, 8, 8, '#33363e'); P.rect(4, 4, 4, 2, '#1b1424'); }
   return (dynCache[key] = P.outline().canvas());
 }
+// Rune : pierre dressée avec un symbole lumineux
+function runeSprite(fr) {
+  const key = 'rune' + fr;
+  if (dynCache[key]) return dynCache[key];
+  const P = new Painter(14, 18);
+  P.rect(3, 2, 8, 14, '#6a6e7a'); P.rect(4, 1, 6, 1, '#6a6e7a'); P.rect(3, 2, 2, 14, '#8a8e9a'); P.rect(9, 3, 2, 13, '#4a4e5a'); P.rect(2, 15, 10, 2, '#4a4e5a');
+  const g = fr ? '#bff4ff' : '#7fe0ff';
+  P.rect(6, 4, 2, 8, g); P.px(5, 6, g); P.px(8, 6, g); P.px(5, 9, g); P.px(8, 10, g); P.px(4, 11, g); P.px(9, 5, g);
+  return (dynCache[key] = P.outline().canvas());
+}
+// Chariot de bois à deux roues, chargé d'un coffre
+function cartSprite(fr) {
+  const key = 'cart' + fr;
+  if (dynCache[key]) return dynCache[key];
+  const P = new Painter(30, 22);
+  P.rect(2, 6, 26, 9, '#7a4b25'); P.rect(2, 6, 26, 2, '#a8743f'); P.rect(2, 14, 26, 1, '#4a2c14'); for (const x of [8, 15, 22]) P.rect(x, 8, 1, 6, '#5a3418');
+  P.rect(9, 1, 12, 5, '#d9a93a'); P.rect(9, 1, 12, 1, '#ffe27a'); P.rect(14, 3, 2, 2, '#7a4b25');
+  P.rect(27, 10, 3, 2, '#5a3418');
+  for (const cx of [7, 22]) { P.disc(cx, 17, 4, '#3a2a1a'); P.disc(cx, 17, 2, '#8a6a3a'); P.px(cx + (fr ? 1 : -1), 15, '#c8a060'); P.px(cx - (fr ? 1 : -1), 19, '#c8a060'); }
+  return (dynCache[key] = P.outline().canvas());
+}
 function barrelSprite(lit) {
   const key = 'barrel' + lit;
   if (dynCache[key]) return dynCache[key];
@@ -1509,6 +1557,26 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.globalAlpha = 1;
     if (!open && Math.floor(now * 2 + i) % 3 === 0) sq(c.x + 14 + Math.sin(now * 5 + i) * 6, c.y - 22, 1, '#fff6c0');
   });
+  // escorte : le chemin du chariot, puis le chariot
+  if (world.ca && ROUTE) {
+    ctx.save(); ctx.strokeStyle = '#e0a03a88'; ctx.lineWidth = big ? 10 : 6; ctx.setLineDash([14, 12]); ctx.beginPath();
+    ROUTE.forEach(([x, y], i) => i ? ctx.lineTo(x, y + 10) : ctx.moveTo(x, y + 10)); ctx.stroke(); ctx.setLineDash([]);
+    const [ex, ey] = ROUTE[ROUTE.length - 1]; img(flagSprite('#e0a03a'), ex, ey - 20, big ? 6 : PX); ctx.restore();
+  }
+  if (world.ca) {
+    const [x, y, pc, en, st] = world.ca;
+    ctx.fillStyle = '#00000044'; ctx.beginPath(); ctx.ellipse(x, y + 26, 40, 10, 0, 0, 7); ctx.fill();
+    img(cartSprite(st === 1 ? Math.floor(now * 8) % 2 : 0), x, y, big ? 6 : PX);
+    ctx.strokeStyle = st === 1 ? '#e0a03a' : st === 2 ? '#ff5a4a' : '#ffffff55'; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
+    ctx.beginPath(); ctx.ellipse(x, y + 10, 140, 90, 0, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // runes à capturer
+  for (const [x, y] of world.ru || []) {
+    const fl = Math.sin(now * 3 + x) * 4;
+    ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(x, y + 18, 16, 5, 0, 0, 7); ctx.fill();
+    ctx.save(); ctx.globalAlpha = 0.35 + Math.sin(now * 4 + y) * 0.15; ctx.fillStyle = '#7fe0ff'; ctx.beginPath(); ctx.arc(x, y - 4 + fl, big ? 70 : 30, 0, 7); ctx.fill(); ctx.restore();
+    img(runeSprite(Math.floor(now * 3 + x) % 2), x, y - 4 + fl, big ? 6 : PX);
+  }
   // colline : cercle qui pulse, de la couleur de l'équipe qui la tient (blanc : libre, rouge clignotant : contestée)
   if (world.hl) {
     const [x, y, r, own] = world.hl;
@@ -1715,7 +1783,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     bossDrawn = true;
   };
   // sbires
-  const mk = B ? SBIRE_DE[B[6]] || 'slime' : 'slime';
+  const mk = B ? SBIRE_DE[B[6]] || 'slime' : world.mk || 'slime';
   for (const [x, y, hp, fl, a] of world.mn) {
     const ms = big ? 6 : PX;
     ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(x, y + 22, 20, 6, 0, 0, 7); ctx.fill();
@@ -1779,7 +1847,10 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     }
     // au repos, le héros respire (1 pixel) ; le cristal du mage luit doucement
     const breathe = !d.ph && Math.sin(now * 2.6 + p.id) > 0.3 ? -heroScale / 3 : 0;
+    const zom = world.mode === 'zombie' && p.tm === 1;
+    if (zom) ctx.filter = 'hue-rotate(75deg) saturate(1.7) brightness(0.85)';   // les zombies deviennent verdâtres
     drawHeroSprite(ctx, d.x, d.y + breathe, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, p.at);
+    if (zom) { ctx.filter = 'none'; const S = heroScale; sq(d.x - 4 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); sq(d.x + 2 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); }
     if (p.c === 'mage') {
       const dd = dirFromAngle(p.a), S = heroScale, gx = d.x + (dd === 'down' ? 6 * S : dd === 'up' ? 5 * S : dd === 'right' ? 2 * S : -2 * S), gy = d.y + breathe + 22 - (dd === 'up' ? 22 : 21) * S;
       const pul = 0.18 + Math.sin(now * 3 + p.id) * 0.06;
@@ -1867,6 +1938,8 @@ function drawMinimap(ctx, world, map, mine, x, y, w, teams = null) {
     ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + fx * s) - 4, Math.round(y + fy * s) - 5, 8, 8);
     ctx.fillStyle = teams && teams[i] ? teams[i].color : '#fff'; ctx.fillRect(Math.round(x + fx * s) - 3, Math.round(y + fy * s) - 4, 6, 6);
   });
+  for (const [rx, ry] of world.ru || []) { ctx.fillStyle = '#7fe0ff'; ctx.fillRect(Math.round(x + rx * s) - 3, Math.round(y + ry * s) - 3, 6, 6); }
+  if (world.ca) { ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + world.ca[0] * s) - 5, Math.round(y + world.ca[1] * s) - 5, 10, 10); ctx.fillStyle = '#e0a03a'; ctx.fillRect(Math.round(x + world.ca[0] * s) - 4, Math.round(y + world.ca[1] * s) - 4, 8, 8); }
   for (const [mx, my] of world.mn || []) { ctx.fillStyle = '#e04a5a'; ctx.fillRect(Math.round(x + mx * s) - 2, Math.round(y + my * s) - 2, 4, 4); }
   if (world.boss) { ctx.fillStyle = '#5ac85a'; ctx.fillRect(Math.round(x + world.boss[0] * s) - 4, Math.round(y + world.boss[1] * s) - 4, 8, 8); }
   if (mine && mine.al) {

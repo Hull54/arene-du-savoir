@@ -68,8 +68,17 @@ const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
   { nom: 'Verts', color: '#3fbf5a' }, { nom: 'Jaunes', color: '#f2c94c' },
 ];
-const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif' };
-const TEAM_MODES = new Set(['equipes', 'colline', 'drapeau']);
+const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement' };
+const TEAM_MODES = new Set(['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie']);
+const coop = () => mode === 'boss' || mode === 'survie';   // toute la classe ensemble : pas de dégâts entre joueurs
+// noms d'équipes propres à certains modes
+const teamsNow = () => mode === 'zombie' ? [{ nom: 'Humains', color: '#3a7ae0' }, { nom: 'Zombies', color: '#5ac85a' }]
+  : mode === 'chariot' ? [{ nom: 'Pousseurs', color: '#e0a03a' }, { nom: 'Défenseurs', color: '#3a7ae0' }] : TEAMS.slice(0, nbTeams);
+const RUNES = { max: 3, win: 12, respawn: 4 };     // course aux runes : 12 runes pour gagner
+const CART = { energie: 120, bonne: 70, contre: 40, vitesse: 45, zone: 140, every: 8, duree: 300 };   // escorte du chariot
+const SURVIE = { vagues: 8, repos: 12 };
+const VAGUE_SBIRES = ['slime', 'gobelin', 'citrouille', 'ombre', 'glace', 'pieuvre', 'livre', 'chevalier'];
+let runes = [], runePts = [], runeT = 0, cart = null, surv = null, zomb = null;
 const HILL = { r: 120, move: 75, win: 120 };       // colline : 120 points (1 par seconde tenue seul) pour gagner
 const FLAG = { caps: 3, back: 20, slow: 0.85 };   // drapeau : 3 captures pour gagner, retour auto après 20 s
 const OR = { bonne: 1, serie: 2, dore: 5 };       // pièces d'or gagnées
@@ -147,8 +156,10 @@ function blockedShot(x, y, r) {
 }
 const inBush = p => tileAt(p.x, p.y + 8) === 'h' || carte.bushes.some(b => Math.hypot(b.x - p.x, b.y - p.y) < b.r);
 function freeSpot(team = -1) {
-  if (mode === 'drapeau' && flags && flags[team]) {   // on revient près de sa base
-    const f = flags[team];
+  const base = mode === 'drapeau' && flags && flags[team] ? flags[team]
+    : mode === 'chariot' && cart && team >= 0 ? (team === 0 ? { hx: cart.x, hy: cart.y } : (({ x, y }) => ({ hx: x, hy: y }))(cartAhead(450))) : null;
+  if (base) {   // on revient près de sa base (drapeau) ou du chariot
+    const f = base;
     for (let i = 0; i < 300; i++) {
       const x = f.hx + rand(-260, 260), y = f.hy + rand(-260, 260);
       if (x > 60 && y > 60 && x < W - 60 && y < H - 60 && !blocked(x, y, R + 12) && !WATER.has(tileAt(x, y + 40)) && Math.hypot(x - f.hx, y - f.hy) > 70) return { x, y };
@@ -387,7 +398,7 @@ function kill(target, killer) {
     killer.serieK = (killer.serieK || 0) + 1;
   } else if (killer === null && boss) addFeed(`${boss.nom} a vaincu ${target.name}`);
   fx.push({ k: 'death', x: target.x, y: target.y, t: 0.6, d: 0.6 });
-  if (teamMode() || mode === 'boss') { ames = ames.filter(a => a.id !== target.id); ames.push({ id: target.id, x: Math.round(target.x), y: Math.round(target.y), team: target.team, t: 20, prog: 0, cd: 0 }); }
+  if (teamMode() || coop()) { ames = ames.filter(a => a.id !== target.id); ames.push({ id: target.id, x: Math.round(target.x), y: Math.round(target.y), team: target.team, t: 20, prog: 0, cd: 0 }); }
   target.waitQ = 1;  // petite pause avant la question
 }
 
@@ -420,6 +431,40 @@ function answer(p, i, txt) {
   const ok = i === Q.answer;
   record(p, Q.q, ok);
   if (Q.kind === 'chest' && Q.gold) return answerGold(p, Q, ok);
+  const res = (special, extra = {}) => send(p.conn, { t: 'res', kind: 'chest', special, ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, explication: ok ? '' : expl(Q.q), ...extra });
+  if (Q.kind === 'rune') {
+    p.question = null; p.busy = false; p.protect = 0.8;
+    const r = Q.rune; r.by = 0;
+    if (ok && runes.includes(r)) {
+      runes.splice(runes.indexOf(r), 1); runePts[p.team] = (runePts[p.team] || 0) + 1; p.obj++;
+      res('✨ Rune capturée pour ton équipe !');
+      addFeed(`✨ ${p.name} capture une rune pour les ${teamsNow()[p.team].nom} ! (${runePts[p.team]}/${RUNES.win})`);
+      fx.push({ k: 'boom', x: r.x, y: r.y, r: 60, t: 0.5, d: 0.5, gold: 1 });
+      if (runePts[p.team] >= RUNES.win) endRound('runes');
+    } else { p.runeCd = 3; res('❌ Pas tout à fait… La rune t\'échappe pour 3 secondes.'); }
+    return;
+  }
+  if (Q.kind === 'chariot') {
+    p.question = null; p.busy = false; p.protect = 0.8;
+    if (ok && cart) {
+      p.obj++;
+      if (p.team === 0) { cart.energie += CART.bonne; res('🛒 Bravo ! Le chariot reçoit de l\'énergie.'); }
+      else { cart.energie = Math.max(0, cart.energie - CART.contre); res('🛑 Bravo ! Tu freines le chariot.'); }
+    } else res(p.team === 0 ? '❌ Pas tout à fait… Le chariot ne reçoit rien cette fois.' : '❌ Pas tout à fait… Le chariot continue.');
+    return;
+  }
+  if (Q.kind === 'zombie') {
+    p.question = null; p.busy = false;
+    const z = players.get(Q.par);
+    if (ok || p.team !== 0) { p.protect = 3; res('🧄 Bravo ! Tu résistes à la contagion.'); addFeed(`🧄 ${p.name} résiste à la contagion !`); }
+    else {
+      p.team = 1; p.hp = p.maxHp; p.carry = null; p.protect = 1;
+      if (z) { z.kills++; z.obj += 2; }
+      res('🧟 Oh non ! Tu deviens un zombie. Attrape les humains !');
+      addFeed(`🧟 ${p.name} devient un zombie !`);
+    }
+    return;
+  }
   if (Q.kind === 'releve') {   // un coéquipier répond pour relever un K.O.
     p.question = null; p.busy = false; p.protect = 0.8;
     const a = ames.find(a => a.id === Q.ame), o = players.get(Q.ame);
@@ -495,9 +540,11 @@ function pickGold() {
 }
 
 const teamMode = () => TEAM_MODES.has(mode);
-const canHit = (a, b) => b.alive && a !== b && mode !== 'boss' && !(teamMode() && a && a.team === b.team);
+const canHit = (a, b) => b.alive && a !== b && !coop() && !(teamMode() && a && a.team === b.team) && !(mode === 'entrainement' && a && !a.bot === !b.bot);   // entraînement : les élèves contre les robots seulement
 function damage(target, amount, attacker) {
   if (!target.alive || target.protect > 0 || target.busy || (target.dash && target.dash.inv)) return;
+  if (mode === 'zombie' && attacker && attacker.team !== target.team) return zombieHit(target, attacker);   // contagion : pas de dégâts
+  if (mode === 'entrainement' && attacker && attacker.bot) amount *= 0.6;   // robots d'entraînement moins forts
   if (attacker && attacker.strong > 0) amount *= 1.5;
   if (target.shield > 0) amount *= 0.25;
   amount *= 1 - armorOf(target) / 100;
@@ -561,6 +608,7 @@ function attack(p) {
 
 function power(p) {
   if (!p.alive || p.cdP > 0 || paused || p.busy || p.stun > 0) return;
+  if (mode === 'zombie' && p.team === 1) return;   // les zombies n'ont pas de pouvoir
   const pw = CLASSES[p.cls].power;
   p.cdP = pw.cd;
   if (p.cls === 'guerrier') {
@@ -579,7 +627,7 @@ function power(p) {
     fx.push({ k: 'cercle', x: p.x, y: p.y, r: pw.radius, t: 0.6, d: 0.6 });
     for (const o of players.values()) {
       if (!o.alive || Math.hypot(o.x - p.x, o.y - p.y) > pw.radius + R) continue;
-      if (o !== p && !(mode === 'boss' || (teamMode() && o.team === p.team))) continue;
+      if (o !== p && !(coop() || (teamMode() && o.team === p.team))) continue;
       const avant = o.hp; o.hp = Math.min(o.maxHp, o.hp + pw.soin);
       if (o.hp > avant) fx.push({ k: 'heal', x: o.x, y: o.y, t: 0.9, d: 0.9 });
       if (o !== p && o.hp > avant) p.soins = (p.soins || 0) + Math.round(o.hp - avant);
@@ -599,7 +647,7 @@ function zone(p, x, y, r, dmg) {   // dégâts autour d'un point : joueurs ennem
   if (minions.length) hitMinions(m => Math.hypot(m.x - x, m.y - y) < r + SBIRE.r, dmg, p);
 }
 function superPower(p) {
-  if (!p.superP || !p.alive || paused || p.busy || p.stun > 0) return;
+  if (!p.superP || !p.alive || paused || p.busy || p.stun > 0 || (mode === 'zombie' && p.team === 1)) return;
   p.superP = false; p.protect = 0; p.revealed = 1;
   addFeed(`🌟 ${p.name} : ${SUPER[p.cls]} !`);
   if (p.cls === 'guerrier') {
@@ -617,7 +665,7 @@ function superPower(p) {
     for (let i = 0; i < 16; i++) shoot(p, p.angle + i / 16 * Math.PI * 2, CLASSES.archer.atk, 6);
   } else if (p.cls === 'druide') {
     fx.push({ k: 'cercle', x: p.x, y: p.y, r: 260, t: 0.8, d: 0.8 });
-    for (const o of players.values()) if (o.alive && (o === p || mode === 'boss' || (teamMode() && o.team === p.team))) { o.hp = Math.min(o.maxHp, o.hp + 70); fx.push({ k: 'heal', x: o.x, y: o.y, t: 0.9, d: 0.9 }); }
+    for (const o of players.values()) if (o.alive && (o === p || coop() || (teamMode() && o.team === p.team))) { o.hp = Math.min(o.maxHp, o.hp + 70); fx.push({ k: 'heal', x: o.x, y: o.y, t: 0.9, d: 0.9 }); }
     puddles.push({ x: Math.round(p.x), y: Math.round(p.y + 14), r: 150, t: 5, owner: p.id, team: p.team, racines: true });
   }
 }
@@ -654,7 +702,7 @@ function updateTraps(dt) {
     if ((tr.arm -= dt) > 0) return true;
     const owner = players.get(tr.owner);
     for (const o of players.values()) {
-      if (!o.alive || o.id === tr.owner || (owner ? !canHit(owner, o) : mode === 'boss') || Math.hypot(o.x - tr.x, o.y - 14 - tr.y + 14) > 26) continue;
+      if (!o.alive || o.id === tr.owner || (owner ? !canHit(owner, o) : coop()) || Math.hypot(o.x - tr.x, o.y - 14 - tr.y + 14) > 26) continue;
       o.stun = Math.max(o.stun || 0, 1.5); damage(o, 10, owner || null);
       fx.push({ k: 'piege', x: tr.x, y: tr.y, t: 0.5, d: 0.5 }); return false;
     }
@@ -737,7 +785,7 @@ function explode(b) {
   fx.push({ k: 'boom', x: b.x, y: b.y, r: BARREL.radius, t: 0.45, d: 0.45, c: 'feu' });
   for (const o of players.values()) {
     if (!o.alive || Math.hypot(o.x - b.x, o.y - b.y) > BARREL.radius + R) continue;
-    if (o === by || (by && !canHit(by, o)) || mode === 'boss') continue;   // jamais soi-même, ni les coéquipiers, ni en mode boss
+    if (o === by || (by && !canHit(by, o)) || coop()) continue;   // jamais soi-même, ni les coéquipiers, ni en mode boss
     damage(o, BARREL.dmg, by);
   }
   if (boss && boss.hp > 0 && Math.hypot(boss.x - b.x, boss.y - b.y) < BARREL.radius + boss.r) hitBoss(BARREL.dmg * 2, by);
@@ -805,7 +853,7 @@ function updateAmes(dt) {
   for (const a of ames) {
     a.cd = Math.max(0, a.cd - dt);
     if (a.by || a.cd > 0 || eclair) continue;
-    const r = [...players.values()].find(q => q.alive && !q.bot && !q.busy && q.id !== a.id && (mode === 'boss' || q.team === a.team) && Math.hypot(q.x - a.x, q.y - a.y) < 60);
+    const r = [...players.values()].find(q => q.alive && !q.bot && !q.busy && q.id !== a.id && (coop() || q.team === a.team) && Math.hypot(q.x - a.x, q.y - a.y) < 60);
     if (!r) { a.prog = Math.max(0, a.prog - dt); continue; }
     if ((a.prog += dt) >= 2) { a.by = r.id; r.busy = true; r.busyT = 25; askQuestion(r, 'releve', { ame: a.id }); }
   }
@@ -813,6 +861,7 @@ function updateAmes(dt) {
 function cancelChest(p) {
   if (!p.busy) return;
   const am = ames.find(a => a.by === p.id); if (am) { am.by = 0; am.prog = 0; }
+  for (const r of runes) if (r.by === p.id) r.by = 0;
   const ch = chests[p.question ? p.question.chest : p.goldNext ? p.goldNext.chest : -1];
   if (ch) ch.by = 0;
   p.busy = false; p.question = null; p.goldNext = null;
@@ -947,7 +996,7 @@ function updateMinions(dt) {
       if (!blocked(m.x + mx, m.y, SBIRE.r)) m.x += mx;
       if (!blocked(m.x, m.y + my, SBIRE.r)) m.y += my;
     }
-    if (bd < R + SBIRE.r + 8 && m.cd <= 0) { m.cd = 1; damage(best, SBIRE.dmg, null); }
+    if (bd < R + SBIRE.r + 8 && m.cd <= 0) { m.cd = 1; damage(best, m.dmg || SBIRE.dmg, null); }
   }
   // objets qui tombent (citrouilles, livres, rochers, tentacules, éclairs) : un cercle rouge prévient
   bombs = bombs.filter(b => {
@@ -1144,13 +1193,148 @@ function updateFlags(dt) {
   }
 }
 
+
+// ---------- Course aux runes : toucher une rune ouvre une question ; bonne réponse = la rune pour l'équipe ----------
+function placeRune() {
+  for (let t = 0; t < 40; t++) { const s = freeSpot(); if (!runes.some(r => Math.hypot(r.x - s.x, r.y - s.y) < 300) || t > 30) { runes.push({ x: Math.round(s.x), y: Math.round(s.y), by: 0 }); return; } }
+}
+function setupRunes() { runes = []; runePts = Array(nbTeams).fill(0); runeT = 0; for (let i = 0; i < RUNES.max; i++) placeRune(); }
+function updateRunes(dt) {
+  if (runes.length < RUNES.max && (runeT -= dt) <= 0) { placeRune(); runeT = RUNES.respawn; }
+  for (const p of players.values()) {
+    p.runeCd = Math.max(0, (p.runeCd || 0) - dt);
+    if (!p.alive || p.busy || p.team < 0 || p.runeCd > 0 || eclair) continue;
+    const r = runes.find(r => !r.by && Math.hypot(r.x - p.x, r.y - p.y) < 44);
+    if (!r) continue;
+    r.by = p.id; p.busy = true; p.busyT = 25;
+    askQuestion(p, 'rune', { rune: r });
+  }
+}
+
+// ---------- Escorte du chariot : les Pousseurs l'amènent au bout du chemin, les Défenseurs le freinent ----------
+function setupCart() {
+  const a = baseSpot(W * 0.08, H / 2), b = baseSpot(W * 0.92, H / 2);
+  const pts = [{ x: a.x, y: a.y }, ...(pathTo(a.x, a.y, b.x, b.y) || [b])];
+  let total = 0; for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  cart = { pts, i: 1, x: a.x, y: a.y, prog: 0, total: Math.max(1, total), energie: CART.energie, left: timer.dur ? Infinity : CART.duree, done: false, etat: 0 };
+  sendAll({ t: 'route', pts: pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
+}
+function cartAhead(d) {   // un point du chemin, d pixels devant le chariot
+  let x = cart.x, y = cart.y, i = cart.i;
+  while (i < cart.pts.length && d > 0) { const p = cart.pts[i], l = Math.hypot(p.x - x, p.y - y); if (l > d) { x += (p.x - x) * d / l; y += (p.y - y) * d / l; d = 0; } else { d -= l; x = p.x; y = p.y; i++; } }
+  return { x, y };
+}
+function updateCart(dt) {
+  if (!cart || cart.done) return;
+  if ((cart.left -= dt) <= 0) return endRound('chariot-defense');
+  let att = 0, def = 0;
+  for (const p of players.values()) {
+    if (!p.alive || p.team < 0 || Math.hypot(p.x - cart.x, p.y - cart.y) > CART.zone) continue;
+    if (p.team === 0) att++; else def++;
+    // près du chariot : une question toutes les 8 secondes (pousser ou freiner)
+    p.cartQ = (p.cartQ ?? 2) - dt;
+    if (!p.busy && !eclair && p.cartQ <= 0) { p.cartQ = CART.every; p.busy = true; p.busyT = 25; askQuestion(p, 'chariot'); }
+  }
+  cart.etat = att && att > def ? (cart.energie > 0 ? 1 : 3) : att ? 2 : 0;   // 1 avance, 2 bloqué par les défenseurs, 3 plus d'énergie
+  if (cart.etat !== 1) return;
+  let st = Math.min(cart.energie, CART.vitesse * dt);
+  cart.energie -= st;
+  while (st > 0 && cart.i < cart.pts.length) {
+    const p = cart.pts[cart.i], l = Math.hypot(p.x - cart.x, p.y - cart.y);
+    if (l > st) { cart.x += (p.x - cart.x) * st / l; cart.y += (p.y - cart.y) * st / l; cart.prog += st; st = 0; }
+    else { cart.x = p.x; cart.y = p.y; cart.prog += l; st -= l; cart.i++; }
+  }
+  if (cart.i >= cart.pts.length) { cart.done = true; cart.prog = cart.total; endRound('chariot'); }
+}
+
+// ---------- Survie coopérative : des vagues de monstres de plus en plus fortes ----------
+function setupSurvie() { surv = { vague: 0, repos: 6, kosT: 0 }; }
+function spawnVague() {
+  surv.vague++;
+  const n = 3 + surv.vague * 2, hp = 40 + surv.vague * 10;
+  for (let i = 0; i < n; i++) {
+    const s = freeSpot();
+    minions.push({ x: s.x, y: s.y, hp, max: hp, cd: 1.5, flash: 0, dmg: 6 + surv.vague });
+    fx.push({ k: 'spawn', x: s.x, y: s.y, t: 0.6, d: 0.6 });
+  }
+  addFeed(`🌊 Vague ${surv.vague} sur ${SURVIE.vagues} : ${n} monstres !`);
+}
+function updateSurvie(dt) {
+  if (!surv) return;
+  updateMinions(dt);
+  const ps = [...players.values()];
+  surv.kosT = ps.length && ps.every(p => !p.alive) ? surv.kosT + dt : 0;
+  if (surv.kosT > 4) return endRound('survie-perdu');
+  if (surv.repos > 0) { if ((surv.repos -= dt) <= 0) spawnVague(); return; }
+  if (minions.length) return;
+  if (surv.vague >= SURVIE.vagues) return endRound('survie-gagne');
+  surv.repos = SURVIE.repos;
+  addFeed(`✅ Vague ${surv.vague} repoussée ! Question éclair : bonne réponse = bonus de force.`);
+  startEclair();
+}
+
+// ---------- Contagion : les zombies transforment les humains, qui peuvent résister en répondant juste ----------
+function setupZombie() {
+  const ps = [...players.values()].sort(() => Math.random() - 0.5);
+  ps.forEach(p => { p.team = 0; });
+  ps.slice(0, Math.min(ps.length >= 8 ? 2 : 1, Math.max(0, ps.length - 1))).forEach(p => { p.team = 1; });
+  zomb = { left: timer.dur ? Infinity : 240, t: 0 };
+}
+function zombieHit(target, attacker) {
+  if (attacker.team === 1 && target.team === 0) {
+    if (target.busy) return;
+    target.busy = true; target.busyT = 25;
+    askQuestion(target, 'zombie', { par: attacker.id });
+    fx.push({ k: 'hit', x: target.x, y: target.y, t: 0.25, d: 0.25 });
+  } else if (attacker.team === 0 && target.team === 1) {   // un humain repousse et étourdit un zombie
+    target.stun = Math.max(target.stun || 0, 1.2);
+    const a = Math.atan2(target.y - attacker.y, target.x - attacker.x);
+    for (let k = 50; k > 0; k -= 10) { const nx = target.x + Math.cos(a) * k, ny = target.y + Math.sin(a) * k; if (!blocked(nx, ny, R)) { target.x = nx; target.y = ny; break; } }
+    fx.push({ k: 'hit', x: target.x, y: target.y, t: 0.25, d: 0.25 });
+  }
+}
+function updateZombie(dt) {
+  if (!zomb) return;
+  const ps = [...players.values()];
+  if (ps.length < 2) return;
+  if ((zomb.left -= dt) <= 0) return endRound('zombie-humains');
+  if ((zomb.t += dt) >= 20) { zomb.t = 0; for (const p of ps) if (p.team === 0) p.obj++; }   // survivre rapporte des points
+  if (!ps.some(p => p.team === 0)) return endRound('zombie');
+  if (!ps.some(p => p.team === 1)) { const h = pick(ps); h.team = 1; addFeed(`🧟 ${h.name} devient un zombie !`); }
+}
+function addBot() {
+  const used = new Set([...players.values()].map(q => q.name));
+  const free = BOT_NAMES.filter(n => !used.has(n));
+  return createPlayer(free.length ? pick(free) : 'Robot ' + nextId, pick(Object.keys(CLASSES)), true);
+}
+// Entraînement : au moins un robot par élève (minimum 3)
+function ensureBots() {
+  const ps = [...players.values()], h = ps.filter(p => !p.bot).length;
+  for (let i = ps.filter(p => p.bot).length; i < Math.max(3, h); i++) addBot();
+}
+
 // ---------- Manche : modes, minuterie, résultats ----------
 function endRound(why) {
   if (ended) return;
   const ps = [...players.values()];
   const top = (key, n = 3) => [...ps].sort((a, b) => b[key] - a[key] || b.good - a.good).slice(0, n).filter(p => p[key] > 0).map(p => ({ n: p.name, c: p.cls, l: p.look, v: Math.round(p[key]), team: p.team }));
-  ended = { why, mode, boss: mode === 'boss' && boss ? { k: boss.k, nom: boss.nom } : null, top: top(mode === 'boss' ? 'dmgBoss' : mode === 'colline' || mode === 'drapeau' ? 'obj' : 'kills'), cerveaux: top('good') };
-  if (teamMode()) ended.teams = teamScores().map((s, i) => ({ ...TEAMS[i], ...s })).sort((a, b) => b.score - a.score);
+  const cle = mode === 'boss' || mode === 'survie' ? 'dmgBoss' : ['colline', 'drapeau', 'runes', 'chariot', 'zombie'].includes(mode) ? 'obj' : 'kills';
+  ended = { why, mode, boss: mode === 'boss' && boss ? { k: boss.k, nom: boss.nom } : null, top: top(cle), cerveaux: top('good') };
+  if (teamMode()) ended.teams = teamScores().map((s, i) => ({ ...teamsNow()[i], ...s })).sort((a, b) => b.score - a.score);
+  // titres des nouveaux modes (le gagnant d'abord)
+  if (mode === 'runes') Object.assign(ended, { titre: '✨ Course aux runes terminée !', unite: 'rune', sous: 'Le plus de runes capturées' });
+  if (mode === 'chariot' && cart) {
+    const pc = Math.round(cart.prog / cart.total * 100), [att, def] = teamScores().map((s, i) => ({ ...teamsNow()[i], ...s }));
+    ended.teams = cart.done ? [att, def] : [def, att];
+    Object.assign(ended, { titre: cart.done ? '🛒 Le chariot est arrivé : les Pousseurs gagnent !' : `🛡️ Les Défenseurs gagnent : le chariot s'arrête à ${pc} % du chemin.`, unite: '% du chemin', sous: 'Les plus actifs autour du chariot' });
+  }
+  if (mode === 'survie' && surv) Object.assign(ended, { titre: why === 'survie-gagne' ? `🏆 Les ${SURVIE.vagues} vagues sont repoussées : victoire de toute la classe !` : why === 'survie-perdu' ? `💀 Les monstres l'emportent à la vague ${surv.vague}…` : `⏱ Temps écoulé : la classe a tenu ${Math.max(0, surv.vague - (minions.length ? 1 : 0))} vague(s).`, sous: 'Le plus de monstres vaincus' });
+  if (mode === 'zombie') {
+    const hum = ps.filter(p => p.team === 0).length;
+    if (hum && ended.teams && ended.teams[0].nom !== 'Humains') ended.teams.reverse();
+    Object.assign(ended, { titre: hum ? `🧄 ${hum} humain${hum > 1 ? 's ont' : ' a'} survécu : les Humains gagnent !` : '🧟 Les zombies ont contaminé tout le monde !', unite: 'joueur', sous: 'Survie et contagion' });
+  }
+  if (mode === 'entrainement') Object.assign(ended, { sous: 'Le plus de robots vaincus' });
   paused = true;
   for (const p of players.values()) cancelChest(p);
   sendAll({ t: 'fin', ...ended });
@@ -1161,6 +1345,9 @@ function teamScores() {
   // colline : secondes passées seuls sur la colline ; drapeau : captures
   if (mode === 'colline' && hill) s.forEach((t, i) => { t.score = Math.floor(hill.pts[i] || 0); });
   if (mode === 'drapeau') s.forEach((t, i) => { t.score = caps[i] || 0; });
+  if (mode === 'runes') s.forEach((t, i) => { t.score = runePts[i] || 0; });
+  if (mode === 'zombie') s.forEach(t => { t.score = t.n; });
+  if (mode === 'chariot' && cart) { const pc = Math.round(cart.prog / cart.total * 100); s[0].score = pc; s[1].score = cart.done ? 0 : 100 - pc; }
   return s;
 }
 function assignTeams() {
@@ -1182,10 +1369,16 @@ function newRound() {
   for (const k in stats) stats[k] = {};
   timer.left = timer.dur;
   boss = null; hill = null; flags = null; minions = []; bombs = []; beams = [];
+  runes = []; cart = null; surv = null; zomb = null;
   if (mode === 'boss') spawnBoss();
   if (mode === 'colline') placeHill();
   if (mode === 'drapeau') setupFlags();
-  if (flags) for (const q of players.values()) Object.assign(q, freeSpot(q.team));
+  if (mode === 'runes') setupRunes();
+  if (mode === 'chariot') setupCart();
+  if (mode === 'survie') setupSurvie();
+  if (mode === 'zombie') setupZombie();
+  if (mode === 'entrainement') ensureBots();
+  if (flags || cart) for (const q of players.values()) Object.assign(q, freeSpot(q.team));
   chests.forEach(c => { c.open = 0; c.by = 0; });
   goldFrom = -1; pickGold();
   barrels.forEach(b => { b.t = 0; b.fuse = 0; });
@@ -1244,9 +1437,15 @@ function botThink(p, dt) {
     if (p.botT <= 0) answer(p, Math.random() < 0.7 ? p.question.answer : (p.question.answer + 1) % p.question.order.length);
     return;
   }
+  if (p.busy && p.question) {   // question de rune, de chariot ou de contagion
+    p.input = { u: 0, d: 0, l: 0, r: 0 }; p.moveAngle = null;
+    if ((p.botT -= dt) <= 0) answer(p, Math.random() < 0.7 ? p.question.answer : (p.question.answer + 1) % p.question.order.length);
+    return;
+  }
   // cible : le boss, ou l'adversaire le plus proche
   let best = null, bd = Infinity;
   if (mode === 'boss' && boss && boss.hp > 0) { best = boss; bd = Math.hypot(boss.x - p.x, boss.y - p.y) - boss.r + R; }
+  else if (mode === 'survie') for (const m of minions) { const d = Math.hypot(m.x - p.x, m.y - p.y); if (d < bd) { bd = d; best = m; } }
   else for (const o of players.values()) {
     if (!canHit(p, o) || o.busy) continue;
     const d = Math.hypot(o.x - p.x, o.y - p.y);
@@ -1295,6 +1494,8 @@ function botThink(p, dt) {
 }
 
 function botGoal(p) {
+  if (mode === 'runes' && runes.length) { const r = runes.filter(r => !r.by).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y))[0]; return r ? { x: r.x, y: r.y, r: 10 } : null; }
+  if (mode === 'chariot' && cart) return { x: cart.x + Math.cos(p.id) * 60, y: cart.y + Math.sin(p.id) * 60, r: 30 };
   if (mode === 'colline' && hill) return { x: hill.x + Math.cos(p.id) * 50, y: hill.y + Math.sin(p.id) * 50, r: 30 };
   if (mode !== 'drapeau' || !flags || p.team < 0) return null;
   const mine = flags[p.team], theirs = flags[1 - p.team];
@@ -1358,6 +1559,7 @@ function step() {
     else if (under === '=') sp *= 0.7;      // gué : on traverse l'eau lentement
     else if (under === 'i') sp *= 1.4;      // glace : on glisse plus vite !
     if (p.stealth > 0) sp *= 1.2;
+    if (mode === 'zombie' && p.team === 1) sp *= 1.1;
     if (p.fast > 0) sp *= 1.35;
     if (p.slow > 0) sp *= 0.5;
     if (p.carry) sp *= FLAG.slow;
@@ -1376,6 +1578,10 @@ function step() {
     updatePuddles(dt); updateTraps(dt); updateAmes(dt);
     updateHill(dt);
     updateFlags(dt);
+    if (mode === 'runes') updateRunes(dt);
+    if (mode === 'chariot') updateCart(dt);
+    if (mode === 'survie') updateSurvie(dt);
+    if (mode === 'zombie') updateZombie(dt);
     projectiles = projectiles.filter(b => {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || blockedShot(b.x, b.y, b.r)) return false;
@@ -1403,7 +1609,7 @@ function step() {
 }
 
 function publicState() {
-  const lead = mode === 'boss' ? 0 : leaderId();
+  const lead = coop() || mode === 'zombie' ? 0 : leaderId();
   return JSON.stringify({
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
@@ -1417,11 +1623,15 @@ function publicState() {
     tb: barrels.map(b => (b.t ? 0 : b.fuse ? 2 : 1)).join(''),
     pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1), z.boss ? 1 : z.racines ? 2 : 0]),
     it: items.map(it => [it.x, it.y, it.k]),
+    ru: runes.map(r => [r.x, r.y]),
+    ca: cart ? [Math.round(cart.x), Math.round(cart.y), Math.round(cart.prog / cart.total * 100), Math.round(cart.energie), cart.etat] : 0,
+    sv: surv ? [surv.vague, Math.ceil(Math.max(0, surv.repos)), minions.length] : 0, mk: surv ? VAGUE_SBIRES[Math.max(0, surv.vague - 1) % 8] : 0,
+    tn: mode === 'zombie' || mode === 'chariot' ? teamsNow().map(t => t.nom) : 0,
     am: ames.map(a => [a.x, a.y, a.team, Math.min(1, a.prog / 2).toFixed(2) * 1, a.id]),
     tr: traps.map(tr => [tr.x, tr.y, tr.owner, tr.arm > 0 ? 1 : 0]), sm: smokes.map(z => [z.x, z.y, z.r, +z.t.toFixed(1)]),
     boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase, (boss.anim > 0 ? 1 : 0) | (boss.moving ? 2 : 0)] : 0,
-    mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / SBIRE.hp * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),
-    tm: timer.dur ? Math.ceil(timer.left) : -1,
+    mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / (m.max || SBIRE.hp) * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),
+    tm: timer.dur ? Math.ceil(timer.left) : cart && isFinite(cart.left) ? Math.ceil(cart.left) : zomb && isFinite(zomb.left) ? Math.ceil(zomb.left) : -1,
     mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
     hl: hill ? [hill.x, hill.y, HILL.r, hill.owner, Math.ceil(hill.t)] : 0,
     fl: flags ? flags.map(f => [Math.round(f.x), Math.round(f.y), f.carrier ? 1 : 0, f.hx, f.hy]) : 0,
@@ -1453,7 +1663,7 @@ setInterval(() => {
     t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
     carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
-    eclairDur, mode, modes: MODES, nbTeams, teams: TEAMS.slice(0, nbTeams), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
+    eclairDur, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
     players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n' })), ouvert: ouvertTous,
@@ -1477,6 +1687,7 @@ function onMessage(conn, msg) {
       conn.player.conn = conn;
       send(conn, { ...welcome(), id: conn.player.id, nom: conn.player.name });
       if (ended) send(conn, { t: 'fin', ...ended });
+      if (cart) send(conn, { t: 'route', pts: cart.pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
       break;
     case 'in':
       if (p) { p.input = { u: +!!m.u, d: +!!m.d, l: +!!m.l, r: +!!m.r }; if (typeof m.a === 'number') p.angle = m.a; }
@@ -1492,6 +1703,7 @@ function onMessage(conn, msg) {
       conn.role = 'prof';
       send(conn, welcome());
       if (ended) send(conn, { t: 'fin', ...ended });
+      if (cart) send(conn, { t: 'route', pts: cart.pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
       break;
   }
   if (conn.role !== 'prof') return;
@@ -1501,13 +1713,7 @@ function onMessage(conn, msg) {
     case 'niveaux': if (m.v && typeof m.v === 'object') for (const [n, v] of Object.entries(m.v)) if (['f', 'n', 'd'].includes(v)) niveaux[String(n).slice(0, 20)] = v; if (typeof m.ouvert === 'boolean') ouvertTous = m.ouvert; break;
     case 'pause': if (!ended) { paused = !paused; regles = false; addFeed(paused ? '⏸ Partie en pause' : '▶ La partie reprend !'); } break;
     case 'regles': if (!ended) { regles = !regles; paused = regles; } break;
-    case 'addbot': {
-      const cls = pick(Object.keys(CLASSES));
-      const used = new Set([...players.values()].map(q => q.name));
-      const free = BOT_NAMES.filter(n => !used.has(n));
-      createPlayer(free.length ? pick(free) : 'Robot ' + nextId, cls, true);
-      break;
-    }
+    case 'addbot': addBot(); break;
     case 'rmbots': for (const [id, q] of players) if (q.bot) players.delete(id); break;
     case 'kick': {
       const q = players.get(m.id);
@@ -1531,7 +1737,7 @@ function onMessage(conn, msg) {
       if (!MODES[m.mode]) break;
       mode = m.mode;
       if (m.nb >= 2 && m.nb <= 4) nbTeams = m.nb;
-      if (mode === 'drapeau') nbTeams = 2;
+      if (mode === 'drapeau' || mode === 'chariot' || mode === 'zombie') nbTeams = 2;
       assignTeams();
       newRound();
       addFeed(`🎮 Mode : ${MODES[mode]}${mode === 'equipes' || mode === 'colline' ? ' (' + nbTeams + ' équipes)' : ''}`);
