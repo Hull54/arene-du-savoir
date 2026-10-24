@@ -1887,6 +1887,17 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.restore();
   }
   if (!bossDrawn) drawBoss();
+  // bulles des messages rapides
+  for (const [id, i] of world.bu || []) {
+    const p = world.p.find(q => q.id === id); if (!p || !p.al) continue;
+    const d = disp.get(id) || p, txt = BULLES[i] || '';
+    ctx.save(); ctx.font = (big ? 30 : 15) + 'px "Pixelify Sans", monospace'; ctx.textAlign = 'center';
+    const w = ctx.measureText(txt).width + 14, h = big ? 40 : 22, y = d.y - (big ? 150 : 74);
+    ctx.fillStyle = OUT; ctx.fillRect(Math.round(d.x - w / 2) - 2, Math.round(y - h) - 2, Math.round(w) + 4, h + 4);
+    ctx.fillStyle = '#fffaf0'; ctx.fillRect(Math.round(d.x - w / 2), Math.round(y - h), Math.round(w), h);
+    ctx.fillStyle = OUT; ctx.fillRect(Math.round(d.x) - 3, Math.round(y) + 2, 6, 4);
+    ctx.fillStyle = '#2a1f3d'; ctx.fillText(txt, d.x, y - h * 0.28); ctx.restore();
+  }
   // nuages de bombe fumigène (par-dessus les joueurs)
   for (const [x, y, r, t] of world.sm || []) {
     ctx.save(); ctx.globalAlpha = Math.min(1, t / 1.2) * 0.82;
@@ -1997,6 +2008,7 @@ function drawTempete(ctx, [x, y, r], map, sq, now, big) {
 // Petits animaux qui se sauvent quand un héros approche
 let bestioles = null;
 const BESTIOLES = { village: ['papillon', 'papillon', 'lapin', 'oiseau'], foret: ['papillon', 'lapin', 'oiseau', 'lapin'], cite: ['oiseau', 'papillon', 'oiseau'], colisee: ['oiseau', 'papillon'], desert: ['lezard', 'lezard', 'papillon'], hiver: ['lapinB', 'oiseau', 'lapinB'], marais: ['luciole', 'luciole', 'grenouille', 'papillon'], donjon: ['chauve', 'rat', 'rat'] };
+const BULLES = ['🆘 Aide-moi !', '🎯 À l\'objectif !', '⚔️ On attaque !', '🛡️ Je défends', '👍 Bravo !'];
 const VOLANTS = new Set(['papillon', 'luciole', 'chauve']);
 function drawBestioles(ctx, world, map, sq, dt, now) {
   const H = mapAnim && mapAnim.herbe;

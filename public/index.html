@@ -86,6 +86,15 @@
   .cd .ico { font-size: 28px; }
   .cd.super { pointer-events: auto; cursor: pointer; background: #6a4a10; box-shadow: 0 0 0 3px #ffd54a, 0 0 18px #ffd54a; animation: brille 0.8s ease-in-out infinite alternate; } @keyframes brille { to { box-shadow: 0 0 0 3px #fff2b0, 0 0 30px #ffd54a; } }
   .cd .fill { position: absolute; left: 0; right: 0; bottom: 0; background: #000a; }
+  #code { font: 600 16px "Pixelify Sans", monospace; width: 100%; padding: 8px 10px; margin-top: 8px; text-transform: uppercase; letter-spacing: 2px; border: 3px solid #1b1424; background: #fffaf0; }
+  #codeMsg { font-size: 14px; color: #ffd54a; min-height: 18px; margin-top: 4px; }
+  #gele { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #9fd6ff55; font-size: 28px; color: #fff; text-shadow: 3px 3px 0 #1b1424; text-align: center; pointer-events: none; z-index: 5; }
+  #msgBtn { position: fixed; left: 12px; bottom: 100px; font-size: 22px; padding: 6px 10px; cursor: pointer; display: none; }
+  #msgMenu { position: fixed; left: 12px; bottom: 150px; display: none; flex-direction: column; gap: 6px; z-index: 4; }
+  #msgMenu button { font: 600 16px "Pixelify Sans", monospace; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; }
+  #joy { position: fixed; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 4px solid #ffffff66; background: #1b142433; display: none; pointer-events: none; }
+  #joy i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: #ffd54acc; border: 3px solid #1b1424; }
+  #c { touch-action: none; }
   #nuit { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; display: none; }
   #score { position: fixed; top: 10px; left: 12px; padding: 3px 12px 3px 4px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
   #portrait { width: 30px; height: 30px; image-rendering: pixelated; background: #44386a; border: 2px solid #1b1424; }
@@ -165,6 +174,10 @@
 <div id="bossbar" class="panel"><div id="bossName"></div><div class="bar"><i id="bossHp"></i></div></div>
 <div id="toast"></div>
 <div id="hidden">🌿 Tu es caché</div>
+<div id="gele"></div>
+<button id="msgBtn" class="panel" title="Messages rapides à ton équipe (touches 5 à 9)">💬</button>
+<div id="msgMenu"></div>
+<div id="joy"><i></i></div>
 <div id="tempete">🌀 Tu es dans la tempête ! Reviens dans le cercle</div>
 <div id="loading">Chargement de la carte…</div>
 <div id="feed"></div>
@@ -189,6 +202,8 @@
       <div class="wcontent">
         <div class="wstep" data-s="1">
           <input id="name" maxlength="16" placeholder="Ton prénom" autocomplete="off">
+          <input id="code" maxlength="12" placeholder="Code secret (si tu en as un)" autocomplete="off">
+          <div id="codeMsg"></div>
           <button class="btn alt" id="quick" style="display:none"></button>
         </div>
         <div class="wstep" data-s="3"><div class="classes" id="classes"></div><div class="keys" id="clsInfo"></div></div>
@@ -344,8 +359,9 @@ let step = 1;
 const STEPS = ['Quel est ton prénom ?', 'Fille ou garçon ?', 'Choisis ta classe', 'Ton look', 'Ton familier'];
 STEPS.forEach(() => $('dots').appendChild(document.createElement('i')));
 function check() {
-  const ok = step === 1 ? !!$('name').value.trim() : step === 3 ? !!chosen : true;
-  $('next').disabled = !ok; $('go').disabled = !(chosen && $('name').value.trim());
+  const id = !!($('name').value.trim() || $('code').value.trim());
+  const ok = step === 1 ? id : step === 3 ? !!chosen : true;
+  $('next').disabled = !ok; $('go').disabled = !(chosen && id);
 }
 function showStep(n) {
   step = Math.max(1, Math.min(STEPS.length, n));
@@ -370,11 +386,14 @@ $('name').oninput = () => { check(); chargerOr(); renderLook(); majQuick(); };
 $('name').value = localStorage.getItem('arene-nom') || '';
 if (savedCls && cards[savedCls]) cards[savedCls].click();
 chargerOr(); renderLook(); majQuick(); showStep(1); animPreview();
+$('code').oninput = () => { $('codeMsg').textContent = $('code').value.trim() ? '🔑 Avec ton code, tes pièces, achats et badges te suivent sur tous les appareils.' : ''; check(); };
+try { $('code').value = localStorage.getItem('arene-code') || ''; } catch {}
+$('code').oninput();
 $('go').onclick = () => {
-  const name = $('name').value.trim();
-  if (!name || !chosen) return;
-  try { localStorage.setItem('arene-nom', name); localStorage.setItem('arene-classe', chosen); } catch {}
-  connect(name, chosen);
+  const name = $('name').value.trim(), code = $('code').value.trim().toUpperCase();
+  if (!(name || code) || !chosen) return;
+  try { localStorage.setItem('arene-nom', name); localStorage.setItem('arene-classe', chosen); localStorage.setItem('arene-code', code); } catch {}
+  connect(name || 'Héros', chosen, code);
 };
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('next').disabled) showStep(2); };
 
@@ -396,14 +415,15 @@ let secousse = 0, gel = 0, flashRouge = 0, lastKills = null;
 const disp = new Map();   // positions affichées (lissage)
 const fxLocal = [];
 
-function connect(name, cls) {
+let mesBadges = [], badgesJour = [];
+function connect(name, cls, code = '') {
   myCls = cls;
   ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined }));
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     if (m.t === 'welcome' || m.t === 'carte') {
-      if (m.t === 'welcome') { myId = m.id; info = m; if (m.nom && m.nom !== $('name').value.trim()) setTimeout(() => toast(`Ce prénom est déjà pris : tu t'appelles « ${m.nom} » dans le jeu`), 800); }
+      if (m.t === 'welcome') { myId = m.id; info = m; if (m.nom && !code && m.nom !== $('name').value.trim()) setTimeout(() => toast(`Ce prénom est déjà pris : tu t'appelles « ${m.nom} » dans le jeu`), 800); }
       map = m.map; mapLayer = null;
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
@@ -428,7 +448,14 @@ function connect(name, cls) {
     else if (m.t === 'close') { answering = false; $('quiz').style.display = 'none'; }
     else if (m.t === 'item') { if (m.gear) toast(`${m.ico} ${m.nom} ! (${m.bonus})`); else if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play(m.gear ? 'serie' : 'objet'); }
     else if (m.t === 'portail') Son.play('tp');
-    else if (m.t === 'or') { monOr += m.n; sauverOr(); if (m.n > 1) toast(`🪙 +${m.n} pièces d'or !`); }
+    else if (m.t === 'or') { monOr = Math.max(0, monOr + m.n); sauverOr(); if (m.n > 1) toast(`🪙 +${m.n} pièces d'or !`); }
+    else if (m.t === 'compte') { $('name').value = m.nom; monOr = m.or; achats = m.achats || []; mesBadges = m.badges || []; sauverOr(); toast(`🔑 Bienvenue ${m.nom} ! Tu as ${m.or} pièce${m.or > 1 ? 's' : ''} d'or.`); }
+    else if (m.t === 'codeFaux') { alert('Ce code secret est inconnu. Vérifie-le avec ton enseignant, ou efface-le pour jouer avec ton prénom.'); try { localStorage.removeItem('arene-code'); } catch {} location.reload(); }
+    else if (m.t === 'badge') { if (!mesBadges.includes(m.id)) mesBadges.push(m.id); badgesJour.push(`${m.ico} ${m.nom}`); toast(`🏅 Nouveau badge : ${m.ico} ${m.nom} (${m.txt})`); Son.play('coffre'); }
+    else if (m.t === 'bravo') { toast('⭐ Bravo pour ta belle attitude : +5 pièces d\'or !'); Son.play('serie'); }
+    else if (m.t === 'moins') toast('🪙 L\'enseignant t\'a retiré 5 pièces d\'or.');
+    else if (m.t === 'gele') { geleFin = m.s ? performance.now() + m.s * 1000 : 0; }
+    else if (m.t === 'msg') toast(`💬 ${m.de} : ${m.txt}`);
     else if (m.t === 'releve') { toast(`💚 ${m.par} t'a relevé !`); Son.play('retour'); answering = false; }
     else if (m.t === 'super') { toast('🌟 Super-pouvoir prêt ! Appuie sur R'); Son.play('serie'); }
     else if (m.t === 'serie') { toast(`🔥 Série de ${m.n} bonnes réponses ! Bonus : ${m.ico} ${m.nom}`); Son.play('serie'); }
@@ -588,6 +615,7 @@ function showFin(m) {
     c.textContent = '🧠 Meilleurs cerveaux : ' + m.cerveaux.map(p => `${p.n} (${p.v})`).join(', ');
     card.appendChild(c);
   }
+  if (badgesJour.length) { const c = document.createElement('div'); c.className = 'finlist'; c.textContent = '🏅 Tes badges aujourd\'hui : ' + badgesJour.join(', '); card.appendChild(c); }
   const w = document.createElement('div'); w.className = 'msg'; w.textContent = 'En attente de la prochaine manche… Tu peux changer ton look !';
   card.appendChild(w);
   if (myCls) {
@@ -614,7 +642,7 @@ function renderShop() {
     b.title = own ? 'Déjà acheté : choisis-le dans ton look' : monOr < it.prix ? `Encore ${it.prix - monOr} pièces` : 'Acheter';
     b.onclick = () => {
       if (own || monOr < it.prix) return;
-      monOr -= it.prix; achats.push(it.slot + ':' + it.v); sauverOr();
+      monOr -= it.prix; achats.push(it.slot + ':' + it.v); sauverOr(); sendMsg({ t: 'achat', it: it.slot + ':' + it.v, prix: it.prix });
       Son.play('serie'); toast(`🛍️ ${it.nom} acheté !`);
       if (it.slot === 6 && !+look[5]) setLook(5, 1);
       setLook(it.slot, it.v);
@@ -638,6 +666,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
   if (e.code === 'KeyE' && !e.repeat) petPow();
   if (e.code === 'KeyR' && !e.repeat) sendMsg({ t: 'super' });
+  if (!answering && /^Digit[5-9]$/.test(e.code) && !e.repeat && msgPermis()) envoyerMsgRapide(+e.code.slice(5) - 5);
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
 const cv = $('c'), ctx = cv.getContext('2d');
@@ -650,21 +679,30 @@ cv.addEventListener('contextmenu', e => e.preventDefault());
 
 // Tactile : glisser n'importe où à gauche pour bouger
 let touchId = null, touchStart = null;
-cv.addEventListener('touchstart', e => { for (const t of e.changedTouches) if (touchId === null) { touchId = t.identifier; touchStart = { x: t.clientX, y: t.clientY }; } });
+cv.addEventListener('touchstart', e => { for (const t of e.changedTouches) if (touchId === null) { touchId = t.identifier; touchStart = { x: t.clientX, y: t.clientY }; const j = $('joy'); j.style.left = t.clientX + 'px'; j.style.top = t.clientY + 'px'; j.firstChild.style.transform = ''; j.style.display = 'block'; } });
 cv.addEventListener('touchmove', e => {
   for (const t of e.changedTouches) if (t.identifier === touchId) {
     const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
     keys.l = dx < -15 ? 1 : 0; keys.r = dx > 15 ? 1 : 0; keys.u = dy < -15 ? 1 : 0; keys.d = dy > 15 ? 1 : 0;
+    const l = Math.hypot(dx, dy), k = l > 40 ? 40 / l : 1; $('joy').firstChild.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
   }
   e.preventDefault();
 }, { passive: false });
-cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; } });
+cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; $('joy').style.display = 'none'; } });
 $('tAtk').ontouchstart = e => { e.preventDefault(); Son.unlock(); attackSound(); sendMsg({ t: 'atk' }); };
 $('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
 $('tSuper').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'super' }); };
 $('cdS').onclick = () => sendMsg({ t: 'super' });
 $('tPet').ontouchstart = e => { e.preventDefault(); Son.unlock(); petPow(); };
 $('tDash').ontouchstart = e => { e.preventDefault(); Son.unlock(); dashSound(); sendMsg({ t: 'dash' }); };
+// messages rapides aux coéquipiers (équipes, Boss, Survie)
+const MSGS = ['🆘 Aide-moi !', '🎯 À l\'objectif !', '⚔️ On attaque !', '🛡️ Je défends', '👍 Bravo !'];
+const msgPermis = () => world && (MODES_EQUIPE.includes(world.mode) || world.mode === 'boss' || world.mode === 'survie');
+let msgT = 0;
+function envoyerMsgRapide(i) { if (performance.now() < msgT) return; msgT = performance.now() + 2500; sendMsg({ t: 'msg', i }); $('msgMenu').style.display = 'none'; }
+MSGS.forEach((t, i) => { const b = document.createElement('button'); b.className = 'panel'; b.textContent = `${i + 5}  ${t}`; b.onclick = () => envoyerMsgRapide(i); $('msgMenu').appendChild(b); });
+$('msgBtn').onclick = () => { $('msgMenu').style.display = $('msgMenu').style.display === 'flex' ? 'none' : 'flex'; };
+let geleFin = 0;
 
 setInterval(() => {
   if (!map) return;
@@ -816,6 +854,10 @@ function frame(now) {
   $('teams').innerHTML = '';
   scoresEquipes(world, teams).forEach(([txt, col], i) => { const s = document.createElement('span'); s.style.background = col; s.textContent = txt; if (me && me.team === i && world.mode !== 'chariot') s.style.outline = '3px solid #fff'; $('teams').appendChild(s); });
   $('hidden').style.display = mine && mine.hd ? 'block' : 'none';
+  $('msgBtn').style.display = msgPermis() ? 'block' : 'none'; if (!msgPermis()) $('msgMenu').style.display = 'none';
+  const gs = geleFin ? Math.ceil((geleFin - performance.now()) / 1000) : 0;
+  $('gele').style.display = gs > 0 ? 'flex' : 'none';
+  if (gs > 0) $('gele').textContent = `❄️ Petite pause demandée par l'enseignant : ${gs} s`; else geleFin = 0;
   // grande barre de vie du boss
   const B = world.boss;
   $('bossbar').style.display = B ? 'block' : 'none';

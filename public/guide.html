@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arène du Savoir : guide de l'enseignant</title>
+<style>
+  :root { --encre: #2a1f3d; --or: #c8901a; --fond: #fffdf7; --ligne: #d9c9a3; }
+  body { font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--encre); background: var(--fond); max-width: 900px; margin: 0 auto; padding: 24px 18px 60px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 21px; margin: 32px 0 8px; padding-bottom: 4px; border-bottom: 3px solid var(--or); }
+  h3 { font-size: 17px; margin: 18px 0 6px; }
+  .sous { color: #6a5a7a; margin-bottom: 18px; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  th, td { border: 1px solid var(--ligne); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f4ecd8; }
+  td.c { text-align: center; }
+  table.modes { table-layout: fixed; font-size: 12.5px; } table.modes th:first-child { width: 120px; } table.modes td, table.modes th { padding: 5px 4px; overflow-wrap: anywhere; }
+  ol li, ul li { margin: 4px 0; }
+  .note { background: #fff7d6; border-left: 5px solid var(--or); padding: 8px 12px; margin: 10px 0; }
+  .barre { position: sticky; top: 0; background: var(--fond); padding: 8px 0; display: flex; gap: 8px; z-index: 1; }
+  .barre button { font: inherit; padding: 6px 14px; border: 2px solid var(--encre); background: #ffd54a; cursor: pointer; border-radius: 6px; }
+  .affiche { border: 4px solid var(--encre); border-radius: 12px; padding: 22px 28px; margin-top: 18px; }
+  .affiche h2 { border: 0; text-align: center; font-size: 30px; margin: 0 0 12px; }
+  .affiche ol { font-size: 22px; line-height: 1.6; }
+  @media print {
+    .barre { display: none; }
+    body { padding: 0; max-width: none; font-size: 13px; }
+    h2 { break-after: avoid; }
+    table, .affiche { break-inside: avoid; }
+    .saut { break-before: page; }
+  }
+</style>
+</head>
+<body>
+<div class="barre"><button onclick="print()">🖨️ Imprimer le guide</button><button onclick="location.href='/prof'">← Tableau de bord</button></div>
+
+<h1>⚔️ Arène du Savoir</h1>
+<div class="sous">Guide de l'enseignant : préparer, animer et suivre une séance de révision en jeu (5e et 6e année).</div>
+
+<h2>1. Avant la première séance</h2>
+<ol>
+  <li>Ouvrir le <b>tableau de bord</b> (<code>/prof</code>) sur l'ordinateur relié au projecteur. L'adresse à donner aux élèves s'affiche en haut.</li>
+  <li><b>Créer les codes des élèves</b> (boîte 🔑 Codes des élèves) : coller la liste des prénoms, puis imprimer les cartes. Avec son code, l'élève retrouve ses pièces d'or, ses achats et ses badges sur n'importe quel appareil.</li>
+  <li><b>Choisir les notions</b> à réviser (boîte Notions des questions). Ajouter au besoin ses propres questions (boîte ✍️ Mes questions) ou une banque prête (Halloween, Noël, hiver, Saint-Valentin).</li>
+  <li>Régler le <b>niveau de chaque élève</b> dans le Classement (🙂 Facile = 3 choix, Normal = 4 choix, 🔥 Défi = réponse à taper).</li>
+  <li>Faire un essai avec quelques 🤖 robots pour voir la carte et les modes.</li>
+</ol>
+<div class="note">Les codes, les questions de l'enseignant, les niveaux et l'historique des séances sont gardés dans le navigateur de l'ordinateur de l'enseignant. Utiliser toujours le même ordinateur et le même navigateur pour le tableau de bord.</div>
+
+<h2>2. Routine d'une séance (45 à 60 minutes)</h2>
+<ol>
+  <li><b>Accueil (3 min)</b> : les élèves ouvrent l'adresse, entrent leur code secret et choisissent leur héros. Le bouton ⚡ Rejouer permet de revenir en un clic.</li>
+  <li><b>Échauffement (3 à 5 min)</b> : mode 🎯 Entraînement. Les élèves se familiarisent avec les touches contre des robots, sans pression.</li>
+  <li><b>Règles</b> : bouton 📜 Règles. La partie se met en pause et les règles du mode s'affichent au projecteur et sur chaque écran.</li>
+  <li><b>Manche de révision (8 min)</b> : un mode où les questions comptent beaucoup (Runes, Chariot, Boss). Minuterie de 5 à 10 minutes.</li>
+  <li><b>Question éclair</b> pour toute la classe entre deux manches (bouton ⚡).</li>
+  <li><b>Manche plaisir (5 à 8 min)</b> : Drapeau, Contagion ou Chacun pour soi avec la 🌀 tempête. C'est la récompense.</li>
+  <li><b>Retour (5 min)</b> : regarder la réussite par notion au projecteur, féliciter les « meilleurs cerveaux » et les badges du jour.</li>
+  <li><b>Après la séance</b> : 🖨️ Bilans à imprimer (une fiche par élève, avec la comparaison à la séance précédente) ou 📥 Exporter vers Excel.</li>
+</ol>
+
+<h2>3. Quel mode choisir ?</h2>
+<table>
+  <tr><th>Intention</th><th>Modes conseillés</th><th>Pourquoi</th><th>Réglages conseillés</th></tr>
+  <tr><td><b>📘 Apprentissage</b><br>notion nouvelle, élèves anxieux</td><td>🎯 Entraînement, 🌊 Survie coopérative, 👑 Boss</td><td>Personne ne se fait vaincre par un camarade. On gagne ensemble, chaque bonne réponse aide la classe.</td><td>Niveau Facile pour ceux qui en ont besoin, pas de réponses à taper, éclair de 30 s, pas de tempête.</td></tr>
+  <tr><td><b>📗 Révision</b><br>beaucoup de questions</td><td>✨ Course aux runes, 🛒 Escorte du chariot, 👑 Boss, 🧟 Contagion</td><td>L'objectif ne s'atteint qu'en répondant juste : les questions sont au cœur du jeu.</td><td>Niveau Normal ou Défi, ✏️ réponses à taper pour les nombres, éclair de 20 s.</td></tr>
+  <tr><td><b>🎉 Plaisir</b><br>récompense, fin de séance</td><td>🚩 Drapeau, ⛰️ Colline, 🧟 Contagion, Chacun pour soi, Équipes</td><td>Plus d'action et de stratégie. Les questions restent présentes au retour en jeu et dans les coffres.</td><td>Minuterie de 5 à 8 min, 🌀 tempête en Chacun pour soi ou en Équipes, éclair de 10 à 20 s.</td></tr>
+</table>
+
+<h2>4. Réglages selon le mode</h2>
+<p>Les règles s'adaptent toutes seules au mode choisi : certains ajustements ne servent que là où ils aident l'apprentissage ou le plaisir de jouer.</p>
+<table class="modes">
+  <tr><th>Règle</th><th>Libre</th><th>Équipes</th><th>Colline</th><th>Drapeau</th><th>Runes</th><th>Chariot</th><th>Boss</th><th>Survie</th><th>Contagion</th><th>Entraîn.</th></tr>
+  <tr><td>Dégâts entre élèves</td><td class="c">✔</td><td class="c">adversaires</td><td class="c">adversaires</td><td class="c">adversaires</td><td class="c">adversaires</td><td class="c">adversaires</td><td class="c">—</td><td class="c">—</td><td class="c">toucher = question</td><td class="c">robots seulement</td></tr>
+  <tr><td>Question au retour en jeu</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">—</td><td class="c">✔</td></tr>
+  <tr><td>Questions du mode</td><td class="c">—</td><td class="c">—</td><td class="c">—</td><td class="c">—</td><td class="c">chaque rune</td><td class="c">toutes les 8 s près du chariot</td><td class="c">3 % de vie par bonne réponse, bouclier du savoir</td><td class="c">éclair entre les vagues</td><td class="c">résister au zombie</td><td class="c">—</td></tr>
+  <tr><td>Relever un coéquipier</td><td class="c">—</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">—</td><td class="c">—</td></tr>
+  <tr><td>Prime sur le meneur 👑</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">—</td><td class="c">—</td><td class="c">—</td><td class="c">✔</td></tr>
+  <tr><td>Super-pouvoir (3 bonnes réponses de suite)</td><td class="c" colspan="10">✔ dans tous les modes</td></tr>
+  <tr><td>Coffres, objets, pièges et fumée</td><td class="c" colspan="10">✔ dans tous les modes</td></tr>
+  <tr><td>🌀 Tempête (si cochée)</td><td class="c">✔</td><td class="c">✔</td><td class="c" colspan="8">— (l'objectif du mode suffit à rassembler les joueurs)</td></tr>
+  <tr><td>Messages rapides 💬</td><td class="c">—</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">✔</td><td class="c">—</td></tr>
+  <tr><td>Niveaux, réponses à taper, question éclair</td><td class="c" colspan="10">✔ dans tous les modes (au choix de l'enseignant)</td></tr>
+</table>
+
+<h2>5. Gestion de classe dans le jeu</h2>
+<ul>
+  <li><b>⏸ Pause</b> : tout s'arrête sur tous les écrans (pour donner une consigne).</li>
+  <li><b>Attitude</b> (Classement) : ⭐ donne 5 pièces pour une belle attitude (annoncé à toute la classe), ❄️ met l'élève en pause 30 secondes (un deuxième clic l'arrête), 🪙 retire 5 pièces.</li>
+  <li><b>✕</b> retire un élève de la partie.</li>
+  <li><b>Messages rapides</b> : les élèves communiquent seulement avec 5 messages prédéfinis (aucun clavier libre).</li>
+  <li><b>Badges</b> : série de 5 et de 10 bonnes réponses, 25 bonnes réponses dans la séance, sans faute, sauveur d'équipe, chasseur de couronne, pilleur de coffres, gardien des runes, tueur de boss, héros des vagues, roi du chariot, survivant. Ils s'affichent dans le Classement et restent avec le code de l'élève.</li>
+</ul>
+
+<h2>6. Dépannage</h2>
+<table>
+  <tr><th>Problème</th><th>Solution</th></tr>
+  <tr><td>Le jeu met 30 secondes à s'ouvrir</td><td>Le serveur gratuit s'endort quand personne ne joue. Ouvrir le tableau de bord quelques minutes avant la séance.</td></tr>
+  <tr><td>Un appareil rame</td><td>Le bouton ✨ / 🐢 (en haut à gauche) active le mode économie. Il s'active aussi tout seul.</td></tr>
+  <tr><td>« Ce code secret est inconnu »</td><td>Vérifier le code dans la boîte 🔑, ou faire jouer l'élève avec son prénom seulement.</td></tr>
+  <tr><td>Un élève est déconnecté</td><td>Il recharge la page et revient avec ⚡ Rejouer (son code garde ses pièces).</td></tr>
+  <tr><td>Trop de bruit</td><td>La musique est coupée par défaut chez les élèves. Le bouton 🔊 coupe tous les sons de l'appareil.</td></tr>
+</table>
+
+<div class="affiche saut">
+  <h2>⚔️ Les règles de l'Arène</h2>
+  <ol>
+    <li>Je lis la question en entier avant de répondre.</li>
+    <li>Je joue avec mon propre héros et je garde mon code secret.</li>
+    <li>Je reste assis et je parle à voix basse.</li>
+    <li>J'encourage mes coéquipiers, je félicite les autres.</li>
+    <li>Quand l'enseignant met la pause, je lâche le clavier.</li>
+    <li>Une erreur, c'est pour apprendre : je lis l'explication.</li>
+  </ol>
+</div>
+</body>
+</html>

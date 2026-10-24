@@ -31,6 +31,8 @@
   td, th { padding: 4px 3px; text-align: left; }
   th { color: #aab; font-weight: 600; font-size: 12px; }
   tr + tr td { border-top: 1px solid #ffffff14; }
+  .cpt { display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 4px 10px; font-size: 14px; align-items: center; margin-top: 6px; } .cpt b { font-family: monospace; letter-spacing: 1px; }
+  .cmp { background: none; padding: 0 3px; margin: 0; font-size: 15px; cursor: pointer; } .gele { opacity: .5; }
   .x { background: none; color: #f77; padding: 0 4px; margin: 0; }
   .pct { font-variant-numeric: tabular-nums; }
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
@@ -81,6 +83,7 @@
       <button class="sec" id="reset">🔄 Nouvelle manche</button>
       <button class="sec" id="finir">🏁 Finir la manche</button>
       <button class="sec" id="plein">⛶ Plein écran</button>
+      <a class="sec" href="/guide" target="_blank" style="text-decoration:none"><button class="sec">📘 Guide</button></a>
       <div class="row"><span>Mode :</span>
         <button class="sec" data-mode="libre">Chacun pour soi</button>
         <button class="sec" data-mode="equipes" data-nb="2">2 équipes</button>
@@ -95,6 +98,7 @@
         <button class="sec" data-mode="zombie">🧟 Contagion</button>
         <button class="sec" data-mode="entrainement">🎯 Entraînement</button>
         <select id="bossSel" title="Boss du mois"></select>
+        <div id="conseil" class="pbanks" style="width:100%"></div>
       </div>
       <div class="row"><span>Minuterie :</span>
         <select id="timer"><option value="0">sans limite</option><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select>
@@ -129,6 +133,15 @@
       </div>
     </div>
     <div class="box">
+      <h2>🔑 Codes des élèves</h2>
+      <div class="perso">
+        <div class="pbanks">Avec son code secret, l'élève retrouve ses pièces d'or, ses achats et ses badges sur n'importe quel appareil. Les codes restent dans ce navigateur.</div>
+        <textarea id="cNoms" rows="3" placeholder="Un prénom par ligne, puis « Créer les codes »"></textarea>
+        <div class="prow"><button id="cAdd">🔑 Créer les codes</button><button class="sec" id="cPrint">🖨️ Imprimer les cartes</button><span id="cMsg"></span></div>
+        <div id="cList"></div>
+      </div>
+    </div>
+    <div class="box">
       <h2>Classement</h2>
       <div id="teamsBox"></div>
       <table><thead><tr id="boardHead"></tr></thead><tbody id="board"></tbody></table>
@@ -155,12 +168,13 @@ let map = null, world = null, W0 = null, last = null;
 const disp = new Map();
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
-ws.onopen = () => { send({ t: 'prof' }); if (perso.length) send({ t: 'perso', qs: perso }); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
+ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
 ws.onclose = () => { $('urls').textContent = 'Serveur arrêté – rechargez la page dans un instant'; };
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); }
   else if (m.t === 'carte') { map = m.map; mapLayer = null; disp.clear(); if (Son.musOn) Son.musique(map.theme); }
+  else if (m.t === 'codeMaj') { const i = codes.findIndex(r => r.code === m.rec.code); if (i >= 0 && (m.rec.v || 0) >= (codes[i].v || 0)) { codes[i] = m.rec; sauverCodes(false); } }
   else if (m.t === 's') {
     world = unpackWorld(m.w);
     $('rgl').style.display = world.rg ? 'flex' : 'none';
@@ -182,6 +196,48 @@ $('tempete').onchange = e => send({ t: 'tempete', v: e.target.checked });
 const majMus = () => { $('musique').style.opacity = Son.musOn ? 1 : 0.5; };
 $('musique').onclick = () => { Son.toggleMusique(); if (map) Son.musique(map.theme); majMus(); }; majMus();
 setInterval(() => { if (ws.readyState === 1) send({ t: 'bilans', silent: true }); }, 120000);   // sauvegarde régulière de l'historique
+// conseil de réglages selon le mode (voir le guide)
+const CONSEILS = {
+  libre: '🎉 Plaisir · Conseil : minuterie de 5 à 8 min, 🌀 tempête possible.',
+  equipes: '🎉 Plaisir · Conseil : minuterie de 5 à 8 min, 🌀 tempête possible, relèvement entre coéquipiers.',
+  colline: '🎉 Plaisir · Conseil : 120 points ou minuterie de 8 min.',
+  drapeau: '🎉 Plaisir · Conseil : minuterie de 8 à 10 min (3 captures pour gagner).',
+  runes: '📗 Révision · Conseil : niveau Normal ou Défi, ✏️ réponses à taper pour les nombres.',
+  chariot: '📗 Révision · Conseil : sans minuterie (5 min par défaut), questions toutes les 8 s près du chariot.',
+  boss: '📘📗 Apprentissage et révision · Conseil : éclair de 20 à 30 s, chaque bonne réponse blesse le boss.',
+  survie: '📘 Apprentissage · Conseil : niveau Facile pour qui en a besoin, éclair de 30 s entre les vagues.',
+  zombie: '📗🎉 Révision et plaisir · Conseil : manche courte (4 min par défaut).',
+  entrainement: '📘 Échauffement · Conseil : 3 à 5 min en début de séance, contre des robots seulement.',
+};
+// ----- Codes des élèves : gardés dans ce navigateur, envoyés au jeu à chaque connexion -----
+const BADGE_ICO = { serie5: '🔥', serie10: '🌋', studieux: '📚', sansFaute: '🎯', sauveur: '💚', couronne: '👑', coffres: '🗝️', runes: '✨', boss: '🐉', vagues: '🌊', chariot: '🛒', survivant: '🧄' };
+const MOTS = ['LOUP', 'OURS', 'RENARD', 'HIBOU', 'LYNX', 'CERF', 'AIGLE', 'CASTOR', 'ORIGNAL', 'HARFANG', 'BISON', 'DRAGON', 'GRIFFON', 'LICORNE', 'GOLEM', 'PHENIX', 'TORTUE', 'COMETE'];
+let codes = [];
+try { codes = JSON.parse(localStorage.getItem('arene-codes') || '[]'); } catch {}
+const sauverCodes = (envoi = true) => { try { localStorage.setItem('arene-codes', JSON.stringify(codes)); } catch {} if (envoi) send({ t: 'codes', list: codes, remplace: true }); renderCodes(); };
+function renderCodes() {
+  $('cList').innerHTML = codes.length ? '<div class="cpt"><span>Élève</span><span>Code</span><span>🪙</span><span>🏅</span><span></span>' + codes.map((r, i) => `<span>${esc(r.nom)}</span><b>${r.code}</b><span>${r.or}</span><span title="${r.badges.length} badge(s)">${r.badges.map(b => BADGE_ICO[b] || '').join('') || '·'}</span><button class="x" data-i="${i}" title="Supprimer">✕</button>`).join('') + '</div>' : '';
+  $('cList').querySelectorAll('.x').forEach(b => b.onclick = () => { const r = codes[+b.dataset.i]; if (confirm(`Supprimer le code de ${r.nom} ? Ses pièces et badges seront perdus.`)) { codes.splice(+b.dataset.i, 1); sauverCodes(); } });
+}
+$('cAdd').onclick = () => {
+  const noms = $('cNoms').value.split('\n').map(n => n.trim()).filter(Boolean);
+  let n = 0;
+  for (const nom of noms) {
+    if (codes.some(r => r.nom.toLowerCase() === nom.toLowerCase())) continue;
+    let code; do code = MOTS[Math.floor(Math.random() * MOTS.length)] + (10 + Math.floor(Math.random() * 90)); while (codes.some(r => r.code === code));
+    codes.push({ code, nom: nom.slice(0, 16), or: 0, achats: [], badges: [], v: 0 }); n++;
+  }
+  $('cNoms').value = ''; $('cMsg').textContent = n ? `✅ ${n} code${n > 1 ? 's' : ''} créé${n > 1 ? 's' : ''}` : 'Aucun nouveau prénom';
+  sauverCodes();
+};
+$('cPrint').onclick = () => {
+  if (!codes.length) return;
+  const w = open('', '_blank');
+  w.document.write(`<!doctype html><meta charset="utf-8"><title>Codes des élèves</title><style>body{font-family:sans-serif;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px}div{border:2px dashed #555;padding:14px;text-align:center;border-radius:8px}b{display:block;font-size:26px;letter-spacing:2px;margin-top:6px;font-family:monospace}small{color:#555}</style>` + codes.map(r => `<div>⚔️ Arène du Savoir<br><big>${esc(r.nom)}</big><b>${r.code}</b><small>Ton code secret : ne le donne à personne !</small></div>`).join(''));
+  w.document.close(); w.print();
+};
+setTimeout(renderCodes, 0);   // après la définition de esc()
+
 // ----- Mes questions : gardées dans ce navigateur, envoyées au jeu à chaque connexion -----
 let perso = [];
 try { perso = JSON.parse(localStorage.getItem('arene-perso') || '[]'); } catch {}
@@ -248,6 +304,7 @@ function info(m) {
   $('urls').innerHTML = local && m.urls.length ? m.urls.map(esc).join('<br>') : esc(location.origin);
   $('pause').textContent = m.paused ? '▶ Reprendre' : '⏸ Pause';
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m.mode && (m.mode !== 'equipes' || +b.dataset.nb === m.nbTeams)));
+  $('conseil').textContent = CONSEILS[m.mode] || '';
   if (document.activeElement !== $('timer')) $('timer').value = String(m.timer / 60);
   if (m.bosses && $('bossSel').options.length !== Object.keys(m.bosses).length) $('bossSel').innerHTML = Object.entries(m.bosses).map(([k, n]) => `<option value="${k}">${BOSS_INFO[k] ? BOSS_INFO[k].ico : ''} ${esc(n)}</option>`).join('');
   if (document.activeElement !== $('bossSel')) $('bossSel').value = m.bossKind;
@@ -291,11 +348,12 @@ function info(m) {
   // classement
   const boss = m.mode === 'boss', eq = MODES_EQUIPE.includes(m.mode);
   const unite = m.mode === 'colline' ? 'points de colline' : m.mode === 'drapeau' ? 'captures' : 'victoires';
-  $('boardHead').innerHTML = `<th>Élève</th><th>${boss ? '👑 dégâts' : '🏆'}</th><th>💀</th><th>✅</th><th>❌</th><th title="Niveau des questions : clique pour changer">Niveau</th><th></th>`;
+  $('boardHead').innerHTML = `<th>Élève</th><th>${boss ? '👑 dégâts' : '🏆'}</th><th>💀</th><th>✅</th><th>❌</th><th title="Niveau des questions : clique pour changer">Niveau</th><th title="⭐ +5 pièces · ❄️ pause de 30 s · 🪙 −5 pièces">Attitude</th><th></th>`;
   const ps = [...m.players].sort((a, b) => boss ? b.dm - a.dm : b.k - a.k || b.g - a.g);
-  $('board').innerHTML = ps.map(p => `<tr><td>${eq && m.teams[p.team] ? `<span class="dot" style="background:${m.teams[p.team].color}"></span>` : ''}${CLS[p.c].ico} ${esc(p.n)}${p.bot ? ' 🤖' : ''}</td><td>${boss ? p.dm : p.k}</td><td>${p.d}</td><td>${p.g}</td><td>${p.b}</td>
-    <td>${p.bot ? '' : `<button class="nv" data-n="${esc(p.n)}" data-v="${p.nv}">${NIV[p.nv]}</button>`}</td><td><button class="x" title="Retirer" data-id="${p.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="7">En attente des élèves…</td></tr>';
+  $('board').innerHTML = ps.map(p => `<tr class="${p.ge ? 'gele' : ''}"><td>${eq && m.teams[p.team] ? `<span class="dot" style="background:${m.teams[p.team].color}"></span>` : ''}${CLS[p.c].ico} ${esc(p.n)}${p.bot ? ' 🤖' : ''}${p.cd ? ' 🔑' : ''}${p.ge ? ' ❄️' : ''} <small>${(p.bg || []).map(b => BADGE_ICO[b] || '').join('')}</small></td><td>${boss ? p.dm : p.k}</td><td>${p.d}</td><td>${p.g}</td><td>${p.b}</td>
+    <td>${p.bot ? '' : `<button class="nv" data-n="${esc(p.n)}" data-v="${p.nv}">${NIV[p.nv]}</button>`}</td><td>${p.bot ? '' : `<button class="cmp" data-k="bravo" data-id="${p.id}" title="Belle attitude : +5 pièces">⭐</button><button class="cmp" data-k="gele" data-id="${p.id}" title="${p.ge ? 'Fin de la pause' : 'Pause de 30 secondes'}">❄️</button><button class="cmp" data-k="moins" data-id="${p.id}" title="Retirer 5 pièces">🪙</button>`}</td><td><button class="x" title="Retirer" data-id="${p.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="8">En attente des élèves…</td></tr>';
   $('board').querySelectorAll('.x').forEach(b => b.onclick = () => send({ t: 'kick', id: +b.dataset.id }));
+  $('board').querySelectorAll('.cmp').forEach(b => b.onclick = () => send({ t: 'comportement', id: +b.dataset.id, k: b.dataset.k }));
   $('board').querySelectorAll('.nv').forEach(b => b.onclick = () => { const v = { n: 'f', f: 'd', d: 'n' }[b.dataset.v]; niv[b.dataset.n] = v; envoyerNiv({ [b.dataset.n]: v }); b.dataset.v = v; b.textContent = NIV[v]; });
   $('ouvert').checked = !!m.ouvert;
   if (document.activeElement !== $('eclDur')) $('eclDur').value = m.eclairDur || 20;

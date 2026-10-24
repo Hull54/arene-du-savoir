@@ -107,6 +107,39 @@ function setPerso(qs) {
 const stats = {};            // nom -> { notion: {ok, ko} } pour la manche
 const memoire = {};          // nom -> { notion: {ok, ko} } pour toute la séance (révision ciblée, bilans)
 const orSeance = {};         // nom -> pièces d'or gagnées pendant la séance
+// Codes des élèves : la liste vient du tableau de bord (gardée dans le navigateur de l'enseignant)
+// code -> { code, nom, or, achats: [], badges: [], v } ; v augmente à chaque changement (la version la plus récente gagne)
+const CODES = new Map();
+const badgesSeance = {};     // nom -> Set des badges gagnés pendant la séance
+const BADGES = {
+  serie5: { ico: '🔥', nom: 'Série de 5', txt: '5 bonnes réponses de suite' },
+  serie10: { ico: '🌋', nom: 'Cerveau en feu', txt: '10 bonnes réponses de suite' },
+  studieux: { ico: '📚', nom: 'Studieux', txt: '25 bonnes réponses dans la séance' },
+  sansFaute: { ico: '🎯', nom: 'Sans faute', txt: '10 bonnes réponses dans une manche, sans erreur' },
+  sauveur: { ico: '💚', nom: "Sauveur d'équipe", txt: 'Relever 3 coéquipiers' },
+  couronne: { ico: '👑', nom: 'Chasseur de couronne', txt: 'Vaincre le meneur' },
+  coffres: { ico: '🗝️', nom: 'Pilleur de coffres', txt: 'Ouvrir 5 coffres' },
+  runes: { ico: '✨', nom: 'Gardien des runes', txt: 'Capturer 3 runes' },
+  boss: { ico: '🐉', nom: 'Tueur de boss', txt: 'Vaincre le boss du mois avec la classe' },
+  vagues: { ico: '🌊', nom: 'Héros des vagues', txt: 'Repousser les 8 vagues de la Survie' },
+  chariot: { ico: '🛒', nom: 'Roi du chariot', txt: 'Amener le chariot au bout du chemin' },
+  survivant: { ico: '🧄', nom: 'Survivant', txt: 'Rester humain jusqu\'à la fin de la Contagion' },
+};
+const MSGS = ['🆘 Aide-moi !', '🎯 À l\'objectif !', '⚔️ On attaque !', '🛡️ Je défends', '👍 Bravo !'];   // messages rapides (pas de clavier libre)
+let bulles = [];             // { id, i, t } bulles au-dessus des joueurs
+const codeDe = p => p && p.code && CODES.get(p.code);
+function majCode(rec) { rec.v = (rec.v || 0) + 1; for (const c of conns) if (c.role === 'prof') send(c, { t: 'codeMaj', rec }); }
+function badge(p, id) {
+  if (!p || p.bot || !p.name || !BADGES[id]) return;
+  const set = badgesSeance[p.name] || (badgesSeance[p.name] = new Set()), rec = codeDe(p);
+  if (set.has(id) || (rec && rec.badges.includes(id))) return;
+  set.add(id);
+  if (rec) { rec.badges.push(id); majCode(rec); }
+  const B = BADGES[id];
+  send(p.conn, { t: 'badge', id, ...B });
+  addFeed(`🏅 ${p.name} gagne le badge ${B.ico} ${B.nom} !`);
+}
+const badgesDe = p => [...new Set([...(badgesSeance[p.name] || []), ...((codeDe(p) || {}).badges || [])])];
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
 let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [], traps = [], smokes = [], ames = [];   // ames : coéquipiers K.O. qu'on peut relever
@@ -344,6 +377,8 @@ function askQuestion(p, kind, extra = {}) {
 function gainOr(p, n) {
   if (p.bot || !p.name) return;
   orSeance[p.name] = (orSeance[p.name] || 0) + n;
+  const rec = codeDe(p);
+  if (rec) { rec.or = Math.max(0, rec.or + n); majCode(rec); }
   send(p.conn, { t: 'or', n });
 }
 function record(p, q, ok) {
@@ -352,6 +387,10 @@ function record(p, q, ok) {
   const sm = (mem[q.notion] = mem[q.notion] || { ok: 0, ko: 0 });
   if (ok) {
     p.good++; s.ok++; sm.ok++; p.streak++;
+    if (p.streak === 5) badge(p, 'serie5');
+    if (p.streak === 10) badge(p, 'serie10');
+    if (p.good >= 10 && !p.bad) badge(p, 'sansFaute');
+    if (!p.bot && Object.values(stats[p.name]).reduce((t, x) => t + x.ok, 0) >= 25) badge(p, 'studieux');
     gainOr(p, OR.bonne);
     if (p.streak % 3 === 0) {
       if (!p.bot && !p.superP) { p.superP = true; send(p.conn, { t: 'super' }); }   // super-pouvoir : 3 bonnes réponses de suite
@@ -393,7 +432,7 @@ function kill(target, killer) {
     if (target.id === leaderId()) {
       const pr = prime(target);
       killer.kills += pr;   // prime au meneur
-      addFeed(`👑 ${killer.name} a vaincu le meneur ${target.name} ! (+${pr})`);
+      addFeed(`👑 ${killer.name} a vaincu le meneur ${target.name} ! (+${pr})`); badge(killer, 'couronne');
     } else {
       killer.kills++;
       addFeed(`${killer.name} a vaincu ${target.name}`);
@@ -440,6 +479,7 @@ function answer(p, i, txt) {
     const r = Q.rune; r.by = 0;
     if (ok && runes.includes(r)) {
       runes.splice(runes.indexOf(r), 1); runePts[p.team] = (runePts[p.team] || 0) + 1; p.obj++;
+      if ((p.runesT = (p.runesT || 0) + 1) >= 3) badge(p, 'runes');
       res('✨ Rune capturée pour ton équipe !');
       addFeed(`✨ ${p.name} capture une rune pour les ${teamsNow()[p.team].nom} ! (${runePts[p.team]}/${RUNES.win})`);
       fx.push({ k: 'boom', x: r.x, y: r.y, r: 60, t: 0.5, d: 0.5, gold: 1 });
@@ -477,6 +517,7 @@ function answer(p, i, txt) {
       respawn(o); o.x = a.x; o.y = a.y; o.question = null; o.busy = false;
       send(o.conn, { t: 'close' }); send(o.conn, { t: 'releve', par: p.name });
       ames = ames.filter(x => x !== a); gainOr(p, 1);
+      if ((p.releves = (p.releves || 0) + 1) >= 3) badge(p, 'sauveur');
       addFeed(`💚 ${p.name} relève ${o.name} !`); fx.push({ k: 'heal', x: a.x, y: a.y, t: 0.9, d: 0.9 });
     }
     return;
@@ -485,6 +526,7 @@ function answer(p, i, txt) {
     const ch = chests[Q.chest];
     p.question = null; p.busy = false; p.protect = 0.8;
     if (ch) { ch.open = 40; ch.by = 0; }
+    if ((p.coffres = (p.coffres || 0) + 1) >= 5) badge(p, 'coffres');
     if (ok && Math.random() < 0.6 && GEAR_KEYS.some(k => p.gear[k] < 3)) {
       send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, explication: '', gear: true });
       giveGear(p, 'coffre');
@@ -1338,6 +1380,13 @@ function endRound(why) {
     Object.assign(ended, { titre: hum ? `🧄 ${hum} humain${hum > 1 ? 's ont' : ' a'} survécu : les Humains gagnent !` : '🧟 Les zombies ont contaminé tout le monde !', unite: 'joueur', sous: 'Survie et contagion' });
   }
   if (mode === 'entrainement') Object.assign(ended, { sous: 'Le plus de robots vaincus' });
+  // badges de fin de manche
+  for (const p of ps) {
+    if (why === 'boss-gagne') badge(p, 'boss');
+    if (why === 'survie-gagne') badge(p, 'vagues');
+    if (mode === 'chariot' && cart && cart.done && p.team === 0) badge(p, 'chariot');
+    if (mode === 'zombie' && p.team === 0) badge(p, 'survivant');
+  }
   paused = true;
   for (const p of players.values()) cancelChest(p);
   sendAll({ t: 'fin', ...ended });
@@ -1566,6 +1615,7 @@ function step() {
     const hl = carte.heal;
     if (hl && Math.hypot(p.x - hl.x, p.y - hl.y) < hl.r) p.hp = Math.min(p.maxHp, p.hp + hl.heal * dt);
     if (p.dash) { dashStep(p, dt); continue; }
+    if (p.gele > 0) { p.gele -= dt; if (p.gele <= 0) send(p.conn, { t: 'gele', s: 0 }); continue; }   // pause de comportement
     if (p.stun > 0) continue;   // étourdi par le cri du Gobelin du Bruit
     let mx, my;
     if (p.bot) {
@@ -1627,6 +1677,7 @@ function step() {
   }
   fx = fx.filter(f => (f.t -= dt) > 0);
   feed = feed.filter(f => (f.t -= dt) > 0);
+  bulles = bulles.filter(b => (b.t -= dt) > 0);
 
   if ((tickCount = (tickCount + 1) % 2) === 0) broadcast();   // 15 envois/s : assez fluide, moins lourd pour le Wi-Fi
 }
@@ -1658,6 +1709,7 @@ function publicState() {
     mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
     hl: hill ? [hill.x, hill.y, HILL.r, hill.owner, Math.ceil(hill.t)] : 0,
     zt: tempete ? [tempete.x, tempete.y, Math.round(tempete.r)] : 0,
+    bu: bulles.map(b => [b.id, b.i]),
     fl: flags ? flags.map(f => [Math.round(f.x), Math.round(f.y), f.carrier ? 1 : 0, f.hx, f.hy]) : 0,
     gc: chests.findIndex(c => c.gold),
     pm: lead && players.get(lead) ? prime(players.get(lead)) : 0,
@@ -1690,7 +1742,7 @@ setInterval(() => {
     eclairDur, tempete: tempeteOn, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
-    players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n' })), ouvert: ouvertTous,
+    players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n', bg: p.bot ? [] : badgesDe(p), ge: p.gele > 0 ? 1 : 0, cd: p.code ? 1 : 0 })), ouvert: ouvertTous,
   });
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
@@ -1707,22 +1759,40 @@ function onMessage(conn, msg) {
   switch (m.t) {
     case 'join':
       if (p) return;
-      conn.player = createPlayer(m.name, m.cls, false, String(m.look || ''));
+    {
+      const rec = typeof m.code === 'string' && CODES.get(m.code.trim().toUpperCase());
+      if (m.code && !rec) { send(conn, { t: 'codeFaux' }); return; }
+      conn.player = createPlayer(rec ? rec.nom : m.name, m.cls, false, String(m.look || ''));
       conn.player.conn = conn;
+      if (rec) conn.player.code = rec.code;
       send(conn, { ...welcome(), id: conn.player.id, nom: conn.player.name });
+      if (rec) send(conn, { t: 'compte', nom: rec.nom, or: rec.or, achats: rec.achats, badges: rec.badges });
+    }
       if (ended) send(conn, { t: 'fin', ...ended });
       if (cart) send(conn, { t: 'route', pts: cart.pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
       break;
     case 'in':
       if (p) { p.input = { u: +!!m.u, d: +!!m.d, l: +!!m.l, r: +!!m.r }; if (typeof m.a === 'number') p.angle = m.a; }
       break;
-    case 'atk': if (p) attack(p); break;
-    case 'dash': if (p) dash(p); break;
-    case 'pow': if (p) power(p); break;
-    case 'super': if (p) superPower(p); break;
-    case 'pet': if (p) petPower(p); break;
+    case 'atk': if (p && !(p.gele > 0)) attack(p); break;
+    case 'dash': if (p && !(p.gele > 0)) dash(p); break;
+    case 'pow': if (p && !(p.gele > 0)) power(p); break;
+    case 'super': if (p && !(p.gele > 0)) superPower(p); break;
+    case 'pet': if (p && !(p.gele > 0)) petPower(p); break;
     case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 30) : undefined); break;
     case 'look': if (p && cleanLook(m.look)) p.look = cleanLook(m.look); break;
+    case 'achat': {   // achat à la boutique : l'or est retiré du compte de l'élève (s'il a un code)
+      const rec = codeDe(p), prix = Math.max(0, Math.round(+m.prix || 0)), it = String(m.it || '').slice(0, 12);
+      if (rec && rec.or >= prix && it && !rec.achats.includes(it)) { rec.or -= prix; rec.achats.push(it); majCode(rec); }
+      break;
+    }
+    case 'msg': {   // message rapide aux coéquipiers
+      if (!p || !p.alive || !Number.isInteger(m.i) || !MSGS[m.i] || (p.msgT || 0) > Date.now()) break;
+      p.msgT = Date.now() + 2500;
+      bulles = bulles.filter(b => b.id !== p.id); bulles.push({ id: p.id, i: m.i, t: 3 });
+      for (const q of players.values()) if (q !== p && q.conn && (coop() || (teamMode() && q.team === p.team))) send(q.conn, { t: 'msg', de: p.name, txt: MSGS[m.i] });
+      break;
+    }
     case 'prof':
       conn.role = 'prof';
       send(conn, welcome());
@@ -1734,6 +1804,23 @@ function onMessage(conn, msg) {
   switch (m.t) {
     case 'subject': m.on ? subjects.add(m.s) : subjects.delete(m.s); break;
     case 'perso': setPerso(m.qs); break;
+    case 'codes':   // liste des codes (au chargement du tableau de bord) : on garde la version la plus récente de chaque fiche
+      if (Array.isArray(m.list)) for (const r of m.list.slice(0, 60)) {
+        if (!r || typeof r.code !== 'string' || typeof r.nom !== 'string') continue;
+        const code = r.code.trim().toUpperCase().slice(0, 12), old = CODES.get(code);
+        if (old && (old.v || 0) > (r.v || 0)) { send(conn, { t: 'codeMaj', rec: old }); continue; }
+        CODES.set(code, { code, nom: r.nom.slice(0, 16), or: Math.max(0, Math.round(+r.or || 0)), achats: Array.isArray(r.achats) ? r.achats.map(String).slice(0, 40) : [], badges: Array.isArray(r.badges) ? r.badges.filter(b => BADGES[b]) : [], v: r.v || 0 });
+      }
+      if (m.remplace) for (const c of [...CODES.keys()]) if (!m.list.some(r => r && String(r.code).toUpperCase() === c)) CODES.delete(c);
+      break;
+    case 'comportement': {   // ⭐ donner de l'or, 🪙 en retirer, ❄️ pause de 30 s
+      const q = players.get(m.id);
+      if (!q || q.bot) break;
+      if (m.k === 'bravo') { gainOr(q, 5); send(q.conn, { t: 'bravo' }); addFeed(`⭐ ${q.name} reçoit 5 pièces pour sa belle attitude !`); }
+      else if (m.k === 'moins') { gainOr(q, -5); send(q.conn, { t: 'moins' }); }
+      else if (m.k === 'gele') { q.gele = q.gele > 0 ? 0 : 30; q.input = { u: 0, d: 0, l: 0, r: 0 }; send(q.conn, { t: 'gele', s: q.gele }); }
+      break;
+    }
     case 'niveaux': if (m.v && typeof m.v === 'object') for (const [n, v] of Object.entries(m.v)) if (['f', 'n', 'd'].includes(v)) niveaux[String(n).slice(0, 20)] = v; if (typeof m.ouvert === 'boolean') ouvertTous = m.ouvert; break;
     case 'pause': if (!ended) { paused = !paused; regles = false; addFeed(paused ? '⏸ Partie en pause' : '▶ La partie reprend !'); } break;
     case 'tempete': tempeteOn = !!m.v; if (!tempeteOn) tempete = null; break;
@@ -1794,6 +1881,7 @@ const server = http.createServer((req, res) => {
   let file = decodeURIComponent(req.url.split('?')[0]);
   if (file === '/') file = '/index.html';
   if (file === '/prof') file = '/prof.html';
+  if (file === '/guide') file = '/guide.html';
   const full = path.join(PUBLIC, path.normalize(file));
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(full, (err, data) => {

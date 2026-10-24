@@ -174,6 +174,15 @@ Les Boss viennent des cartes du système d'émulation de la classe (un par mois)
 - **Révision ciblée** (automatique) : pendant la séance, le jeu note les notions que chaque élève rate. Ces notions reviennent plus souvent dans ses questions (jusqu'à 4 fois plus), et moins souvent celles qu'il réussit bien.
 - **📥 Exporter les résultats** : un fichier qui s'ouvre dans Excel (une ligne par élève, une colonne par notion).
 
+## En classe : codes, badges, attitude
+
+- **🔑 Codes des élèves** (tableau de bord) : coller la liste des prénoms, puis **🖨️ Imprimer les cartes**. L'élève entre son code secret dans le menu (le prénom devient facultatif) : ses pièces d'or, ses achats et ses badges le suivent sur n'importe quel appareil. Les codes sont gardés dans le navigateur de l'enseignant et envoyés au jeu à chaque ouverture du tableau de bord. Un code inconnu est refusé avec un message clair.
+- **🏅 Badges** : série de 5 et de 10 bonnes réponses, Studieux (25 bonnes réponses dans la séance), Sans faute (10 bonnes réponses dans une manche sans erreur), Sauveur d'équipe (3 coéquipiers relevés), Chasseur de couronne (vaincre le meneur), Pilleur de coffres (5 coffres), Gardien des runes (3 runes), Tueur de boss, Héros des vagues, Roi du chariot, Survivant. Chaque badge est annoncé à la classe, s'affiche dans le Classement et sur l'écran de fin de l'élève.
+- **Attitude** (colonne du Classement) : ⭐ +5 pièces pour une belle attitude (annoncé à la classe), ❄️ pause de 30 secondes (l'élève ne peut plus bouger ni attaquer ; un deuxième clic l'arrête), 🪙 −5 pièces.
+- **💬 Messages rapides** (en équipes, Boss et Survie) : bouton 💬 ou touches 5 à 9 : « Aide-moi ! », « À l'objectif ! », « On attaque ! », « Je défends », « Bravo ! ». Une bulle s'affiche au-dessus du héros et les coéquipiers reçoivent le message. Aucun clavier libre.
+- **Tablette** : la manette apparaît là où le doigt touche l'écran (cercle et bouton jaune), avec les boutons d'attaque, de pouvoir, d'élan, de familier et de super-pouvoir.
+- **📘 Guide de l'enseignant** (`/guide`, bouton sur le tableau de bord) : préparation, routine d'une séance, quel mode choisir (apprentissage, révision, plaisir), tableau des règles selon le mode, gestion de classe, dépannage et une affiche des règles à imprimer. Sous les boutons de mode, une ligne rappelle le réglage conseillé pour le mode choisi.
+
 ## Ambiance
 
 - **Secousses et petit gel** : l'écran tremble un peu quand on est touché ou qu'une explosion éclate tout près, et l'image se fige une fraction de seconde quand on gagne un duel. Les bords rougissent quand on perd de la vie.
