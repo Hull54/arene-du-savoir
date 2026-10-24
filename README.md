@@ -112,7 +112,16 @@ Chaque point d'armure retire 1 % des dégâts reçus, jusqu'à 40 % au maximum. 
 - **Équipes** (2, 3 ou 4) : couleurs d'équipe, pas de dégâts entre coéquipiers, score commun.
 - **⛰️ Roi de la colline** (en équipes) : une zone en cercle apparaît sur la carte. Une équipe seule dans la zone gagne 1 point par seconde. Si deux équipes y sont, la zone est contestée (elle clignote) et personne ne marque. La zone se déplace toutes les 75 secondes. **120 points** pour gagner.
 - **🚩 Capture du drapeau** (2 équipes) : chaque équipe a un drapeau dans sa base, d'un côté de la carte. On prend le drapeau adverse en le touchant (on avance un peu moins vite en le portant) et on le ramène dans sa base, mais seulement si notre propre drapeau y est. Un porteur K.O. laisse tomber le drapeau : un coéquipier le ramène en le touchant, sinon il revient seul après 20 secondes. **3 captures** pour gagner.
-- **👑 Boss coopératif** : toute la classe affronte le Roi Gluant. Les coups l'abîment, et **chaque bonne réponse lui enlève 3 % de sa vie** : les élèves moins à l'aise au combat sont aussi utiles. Les joueurs ne peuvent pas se blesser entre eux.
+- **👑 Boss coopératif** : toute la classe affronte le **Boss du mois**, choisi dans la liste à côté du bouton Boss (le jeu propose celui du mois en cours). Les coups l'abîment, et **chaque bonne réponse lui enlève 3 % de sa vie** : les élèves moins à l'aise au combat sont aussi utiles. Les joueurs ne peuvent pas se blesser entre eux.
+  - **À 75 % et 25 % de sa vie**, il lève le **🛡️ Bouclier du savoir** : plus aucun coup ne passe et toute la classe reçoit une question éclair. Si la majorité répond juste, le bouclier se brise et le boss perd 8 % de sa vie. Sinon, il reprend un peu de vie et le bouclier tient encore 8 secondes.
+  - **À la moitié de sa vie, il s'enrage** : plus rapide, attaques plus fréquentes, et il appelle des sbires (puis de nouveaux toutes les 18 secondes).
+  - Une grande barre de vie s'affiche en haut de l'écran des élèves et en bas du projecteur. Le podium de fin classe les plus gros dégâts au boss.
+
+| Boss | Attaques | Sbires |
+|---|---|---|
+| 📢 Gobelin du Bruit (septembre) | Cri assourdissant (dégâts et étourdit un instant), notes de musique en éventail | Gobelins tapageurs |
+| 🎃 Dragon des Citrouilles (octobre) | Souffle de feu en cône, citrouilles explosives (un cercle rouge montre où elles tombent) | Citrouilles-monstres |
+| 👑 Roi Gluant | Onde de choc, boules de slime | Petits slimes |
 
 ## Tableau de bord enseignant (`/prof`)
 

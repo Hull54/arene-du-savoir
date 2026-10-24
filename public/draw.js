@@ -41,7 +41,8 @@ function shade(hex, f) {
 // Décode l'état compact envoyé par le serveur
 function unpackWorld(w) {
   w.pz = w.pz || [];
-  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024) }));
+  w.mn = w.mn || [];
+  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024), sz: !!(f & 2048) }));
   return w;
 }
 
@@ -972,22 +973,93 @@ function petSprite(k, fr, col = 0) {
   }
   return (dynCache[key] = P.outline().canvas());
 }
-function bossSprite(frame, flash) {
-  const key = 'boss' + frame + flash;
+// Boss du mois : noms et couleurs affichés (le serveur a les mêmes)
+const BOSS_INFO = {
+  gobelin: { nom: 'Gobelin du Bruit', ico: '📢', col: '#9be05a' },
+  dragon:  { nom: 'Dragon des Citrouilles', ico: '🎃', col: '#ffa040' },
+  gluant:  { nom: 'Roi Gluant', ico: '👑', col: '#9af08a' },
+};
+function bossSprite(frame, flash, k = 'gluant') {
+  const key = 'boss' + k + frame + flash;
   if (dynCache[key]) return dynCache[key];
   const P = new Painter(52, 46), sq = frame ? 1 : 0;
-  const b = flash ? '#c8ffc0' : '#5ac85a', bd = flash ? '#8ae08a' : '#3a9a44', bl = flash ? '#ffffff' : '#9af08a';
-  P.ellipse(26, 30 + sq, 23 + sq, 14 - sq, bd);
-  P.ellipse(26, 28 + sq, 22 + sq, 14 - sq, b);
-  P.ellipse(17, 22 + sq, 6, 3, bl); P.px(12, 24, bl);
-  P.rect(16, 25, 5, 6, '#ffffff'); P.rect(31, 25, 5, 6, '#ffffff'); P.rect(18, 27, 3, 4, OUT); P.rect(33, 27, 3, 4, OUT);
-  P.rect(14, 23, 7, 1, OUT); P.rect(31, 23, 7, 1, OUT);
-  P.rect(21, 35, 10, 2, OUT); P.rect(23, 37, 6, 1, '#e04a5a');
-  // couronne
-  P.rect(17, 9 + sq * 2, 18, 6, '#f2c94c'); P.rect(17, 5 + sq * 2, 3, 4, '#f2c94c'); P.rect(24, 3 + sq * 2, 4, 6, '#f2c94c'); P.rect(32, 5 + sq * 2, 3, 4, '#f2c94c');
-  P.px(25, 11 + sq * 2, '#e04a5a'); P.px(19, 11 + sq * 2, '#3a7ae0'); P.px(32, 11 + sq * 2, '#3fbf5a');
+  const F = c => flash ? shade(c, 1.55) : c;   // flash blanc quand il est touché
+  if (k === 'gobelin') {
+    // Gobelin du Bruit : grandes oreilles, bouche grande ouverte qui crie, mégaphone et cymbale
+    const sk = F('#6fae3a'), skD = F('#4a8226'), skL = F('#9be05a'), gold = F('#e8b83a'), goldD = F('#a87a1a');
+    P.rect(17, 37 + sq, 6, 6, skD); P.rect(29, 37 - sq, 6, 6, skD); P.rect(15, 42, 9, 3, F('#5a3a20')); P.rect(28, 42, 9, 3, F('#5a3a20'));
+    P.ellipse(26, 31, 13, 9, F('#7a3a2a')); P.ellipse(23, 28, 6, 3, F('#9a4a34')); P.rect(14, 33, 24, 2, F('#3a2414'));
+    P.ellipse(26, 36, 6, 4, F('#c9a06a')); P.rect(20, 34, 13, 1, F('#8a2a2a')); P.rect(20, 38, 13, 1, F('#8a2a2a')); P.px(26, 33, gold);
+    P.rect(9, 24 - sq, 5, 10, sk); P.disc(8, 36 - sq, 5, gold); P.disc(8, 36 - sq, 2, goldD); P.px(6, 34 - sq, F('#fff6c0'));
+    P.rect(38, 24, 5, 7, sk);
+    for (let i = 0; i < 9; i++) { const h = 4 + i; P.rect(42 + i, 25 - (h >> 1), 1, h, i === 8 ? goldD : gold); P.px(42 + i, 25 - (h >> 1), F('#fff2b0')); }
+    for (let i = 0; i < 10; i++) { P.rect(4 + i, 8 + (i >> 2), 1, 3 + (i >> 1), i < 2 ? skD : sk); P.rect(47 - i, 8 + (i >> 2), 1, 3 + (i >> 1), i < 2 ? skD : sk); }
+    P.ellipse(26, 15, 12, 10, sk); P.ellipse(21, 10, 5, 3, skL);
+    P.rect(15, 4, 22, 3, F('#c0303a')); P.rect(15, 4, 22, 1, F('#e85a5a')); P.rect(11, 5, 4, 2, F('#c0303a')); P.px(10, 7, F('#c0303a'));
+    P.rect(18, 11, 4, 3, '#ffe27a'); P.rect(30, 11, 4, 3, '#ffe27a'); P.px(20, 12, OUT); P.px(31, 12, OUT);
+    P.rect(17, 9, 3, 1, OUT); P.rect(20, 10, 2, 1, OUT); P.rect(32, 9, 3, 1, OUT); P.rect(30, 10, 2, 1, OUT);
+    P.rect(25, 14, 2, 2, skD);
+    P.ellipse(26, 20, 6, 3 + sq, '#3a1414'); P.rect(21, 17, 10, 1, '#ffffff'); P.px(22, 18, '#ffffff'); P.px(29, 18, '#ffffff'); P.rect(24, 21 + sq, 4, 1, '#e04a5a');
+  } else if (k === 'dragon') {
+    // Dragon des Citrouilles : corps-citrouille sculpté qui luit, ailes de chauve-souris, cornes en vrilles
+    const o = F('#e8781e'), oD = F('#b8521a'), oL = F('#ffa040'), glow = '#ffe27a', vine = F('#3a6a2a'), vineL = F('#5a9a3a'), wing = F('#4a2a5a'), wingL = F('#6a3f80');
+    for (let i = 0; i < 13; i++) { const h = 13 - Math.floor(i * 0.7); P.rect(2 + i, 6 + Math.floor(i * 0.5) + sq, 1, h, i % 4 === 0 ? wingL : wing); P.rect(49 - i, 6 + Math.floor(i * 0.5) + sq, 1, h, i % 4 === 0 ? wingL : wing); }
+    P.rect(4, 38, 8, 2, vine); P.rect(3, 34, 2, 5, vine); P.rect(4, 33, 3, 1, vineL);
+    P.rect(15, 40, 6, 5, oD); P.rect(31, 40, 6, 5, oD); P.px(15, 44, '#e8e2d0'); P.px(17, 44, '#e8e2d0'); P.px(31, 44, '#e8e2d0'); P.px(33, 44, '#e8e2d0');
+    P.ellipse(26, 32, 17, 11, o); P.ellipse(26, 33, 17, 10, o);
+    for (const x of [15, 21, 31, 37]) P.rect(x, 24, 1, 18, oD);
+    P.ellipse(19, 27, 4, 2, oL);
+    P.rect(18, 29, 5, 1, glow); P.rect(19, 30, 3, 1, glow); P.px(20, 31, glow);
+    P.rect(30, 29, 5, 1, glow); P.rect(31, 30, 3, 1, glow); P.px(32, 31, glow);
+    P.rect(18, 35, 16, 3, glow); P.px(21, 35, oD); P.px(26, 35, oD); P.px(31, 35, oD); P.px(23, 37, oD); P.px(29, 37, oD);
+    P.ellipse(26, 14, 10, 7, o); P.rect(32, 13, 9, 6, o); P.rect(32, 13, 9, 1, oL); P.rect(36, 19, 5, 1, oD); P.px(40, 14, OUT);
+    P.rect(35, 18, 1, 1, '#ffffff'); P.rect(38, 18, 1, 1, '#ffffff');
+    for (const x of [21, 26, 31]) P.rect(x, 8, 1, 12, oD);
+    P.rect(25, 3, 3, 4, vine); P.px(28, 3, vineL); P.px(29, 2, vineL);
+    P.rect(18, 7, 2, 2, vine); P.px(17, 5, vine); P.px(16, 4, vine); P.px(16, 3, vineL); P.rect(32, 7, 2, 2, vine); P.px(34, 5, vine); P.px(35, 4, vine); P.px(36, 3, vineL);
+    P.rect(22, 12, 3, 2, '#9aff5a'); P.rect(29, 12, 3, 2, '#9aff5a'); P.px(23, 13, OUT); P.px(30, 13, OUT);
+    P.rect(21, 11, 4, 1, OUT); P.rect(29, 11, 4, 1, OUT);
+  } else {
+    const b = flash ? '#c8ffc0' : '#5ac85a', bd = flash ? '#8ae08a' : '#3a9a44', bl = flash ? '#ffffff' : '#9af08a';
+    P.ellipse(26, 30 + sq, 23 + sq, 14 - sq, bd);
+    P.ellipse(26, 28 + sq, 22 + sq, 14 - sq, b);
+    P.ellipse(17, 22 + sq, 6, 3, bl); P.px(12, 24, bl);
+    P.rect(16, 25, 5, 6, '#ffffff'); P.rect(31, 25, 5, 6, '#ffffff'); P.rect(18, 27, 3, 4, OUT); P.rect(33, 27, 3, 4, OUT);
+    P.rect(14, 23, 7, 1, OUT); P.rect(31, 23, 7, 1, OUT);
+    P.rect(21, 35, 10, 2, OUT); P.rect(23, 37, 6, 1, '#e04a5a');
+    P.rect(17, 9 + sq * 2, 18, 6, '#f2c94c'); P.rect(17, 5 + sq * 2, 3, 4, '#f2c94c'); P.rect(24, 3 + sq * 2, 4, 6, '#f2c94c'); P.rect(32, 5 + sq * 2, 3, 4, '#f2c94c');
+    P.px(25, 11 + sq * 2, '#e04a5a'); P.px(19, 11 + sq * 2, '#3a7ae0'); P.px(32, 11 + sq * 2, '#3fbf5a');
+  }
   return (dynCache[key] = P.outline().canvas());
 }
+// Sbires appelés par le boss enragé
+function minionSprite(k, fr, flash) {
+  const key = 'mn' + k + fr + flash;
+  if (dynCache[key]) return dynCache[key];
+  const P = new Painter(18, 18), b = fr ? 1 : 0;
+  const F = c => flash ? shade(c, 1.6) : c;
+  if (k === 'gobelin') {
+    const sk = F('#6fae3a');
+    P.rect(6, 14, 2, 3 - b, F('#4a8226')); P.rect(10, 14, 2, 2 + b, F('#4a8226'));
+    P.rect(5, 10, 8, 5, F('#7a3a2a')); P.rect(5, 12, 8, 1, F('#3a2414'));
+    P.rect(4, 3, 10, 7, sk); P.rect(1, 4, 3, 2, sk); P.px(0, 3, sk); P.rect(14, 4, 3, 2, sk); P.px(17, 3, sk);
+    P.rect(4, 1, 10, 2, F('#c0303a'));
+    P.px(6, 5, '#ffe27a'); P.px(11, 5, '#ffe27a'); P.rect(7, 7, 4, 2, '#3a1414'); P.px(7, 7, '#ffffff'); P.px(10, 7, '#ffffff');
+    P.rect(14, 9 - b, 1, 5, F('#8a5a2a')); P.px(14, 8 - b, F('#e8b83a'));
+  } else if (k === 'citrouille') {
+    const o = F('#e8781e'), oD = F('#b8521a');
+    P.rect(5, 15, 2, 2 - b, F('#3a6a2a')); P.rect(11, 15, 2, 1 + b, F('#3a6a2a'));
+    P.ellipse(9, 10 - b, 7, 5, o); P.rect(6, 6 - b, 1, 9, oD); P.rect(12, 6 - b, 1, 9, oD);
+    P.rect(8, 2 - b, 2, 3, F('#3a6a2a')); P.px(10, 2 - b, F('#5a9a3a'));
+    P.rect(5, 8 - b, 2, 2, '#ffe27a'); P.rect(11, 8 - b, 2, 2, '#ffe27a'); P.rect(6, 12 - b, 6, 1, '#ffe27a'); P.px(8, 12 - b, oD);
+  } else {
+    const c = F('#5ac85a');
+    P.ellipse(9, 12, 7 + b, 5 - b, F('#3a9a44')); P.ellipse(9, 11, 7 + b, 5 - b, c); P.ellipse(7, 9, 2, 1, F('#9af08a'));
+    P.rect(6, 10, 2, 2, OUT); P.rect(11, 10, 2, 2, OUT); P.rect(8, 13, 3, 1, OUT);
+  }
+  return (dynCache[key] = P.outline().canvas());
+}
+const SBIRE_DE = { gobelin: 'gobelin', dragon: 'citrouille', gluant: 'slime' };
 
 // ---------- Rendu d'une image ----------
 // mine = mon joueur (élève) ou null (vue enseignant : voit tout le monde)
@@ -1097,6 +1169,24 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     } else if (f.k === 'slam') {
       const r = f.r * (1.1 - t);
       for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + 20 + Math.sin(a) * r * 0.6, 3, i % 2 ? '#5ac85a' : '#9af08a'); }
+    } else if (f.k === 'cri') {   // cri assourdissant : ondes sonores
+      for (const m of [1, 0.7, 0.4]) {
+        const r = f.r * Math.min(1, (1 - t) * 1.3 + (1 - m) * 0.2) * m;
+        for (let i = 0; i < 30; i++) { if (i % 3 === 2) continue; const a = i / 30 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y - 10 + Math.sin(a) * r * 0.7, big ? 4 : 2, m === 1 ? '#ffd54a' : '#ffffff'); }
+      }
+    } else if (f.k === 'souffle') {   // souffle de feu du dragon
+      for (let i = 0; i < 46; i++) {
+        const u = ((i * 37) % 100) / 100, d = f.r * u * Math.min(1, (1 - t) * 2), a = f.a + (((i * 53) % 100) / 100 - 0.5) * 0.9 * u;
+        sq(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, u < 0.3 ? 4 : 3, u < 0.35 ? '#fff2a0' : u < 0.7 ? '#ff8a1e' : '#c23b1a');
+      }
+    } else if (f.k === 'cible') {   // citrouille qui va tomber ici
+      ctx.globalAlpha = 1;
+      ctx.save(); ctx.globalAlpha = 0.18 + (1 - t) * 0.3; ctx.fillStyle = '#ff3a2a'; ctx.beginPath(); ctx.ellipse(f.x, f.y + 10, f.r, f.r * 0.6, 0, 0, 7); ctx.fill(); ctx.restore();
+      for (let i = 0; i < 24; i++) { if (i % 2) continue; const a = i / 24 * Math.PI * 2 + now; sq(f.x + Math.cos(a) * f.r, f.y + 10 + Math.sin(a) * f.r * 0.6, big ? 4 : 2, '#ff5a3a'); }
+    } else if (f.k === 'lob') {
+      ctx.globalAlpha = 1;
+      const u = 1 - t, px = f.x + (f.x2 - f.x) * u, py = f.y + (f.y2 - f.y) * u - Math.sin(u * Math.PI) * 140;
+      img(minionSprite('citrouille', 0, 0), px, py, big ? 5 : 2);
     } else if (f.k === 'zap') {
       for (let i = 0; i <= 14; i++) { const u = i / 14; sq(f.x + (f.x2 - f.x) * u + Math.sin(i * 2 + now * 30) * 6, f.y - 30 + (f.y2 - f.y) * u, 2, i % 2 ? '#ffe27a' : '#ffffff'); }
     } else if (f.k === 'dust') {
@@ -1134,6 +1224,9 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       sq(x - Math.cos(a) * 14, y - Math.sin(a) * 14, 2, '#ff8a1e'); sq(x - Math.cos(a) * 24, y - Math.sin(a) * 24, 1, '#ffb347');
     } else if (c === 'pet') {
       sq(x - 4, y - 4, 3, '#ff8a1e'); sq(x - 2, y - 2, 1, '#ffe27a'); sq(x - Math.cos(a) * 10, y - Math.sin(a) * 10, 2, '#ffb347');
+    } else if (c === 'note') {   // notes de musique du Gobelin du Bruit
+      const col = Math.floor(now * 8 + x) % 2 ? '#ffd54a' : '#ffffff';
+      sq(x - 6, y + 3, 3, OUT); sq(x - 5, y + 4, 2, col); sq(x, y - 12, 1, col); sq(x, y - 9, 1, col); sq(x, y - 6, 1, col); sq(x, y - 3, 1, col); sq(x + 3, y - 12, 1, col); sq(x + 6, y - 9, 1, col);
     } else if (c === 'boss') {
       sq(x - 9, y - 9, 6, '#3a9a44'); sq(x - 6, y - 6, 4, '#5ac85a'); sq(x - 6, y - 6, 1, '#d0ffc0');
     } else {
@@ -1145,11 +1238,30 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   const B = world.boss;
   let bossDrawn = !B;
   const drawBoss = () => {
-    const [x, y, , , , fl] = B, fr = Math.floor(now * 3) % 2;
+    const [x, y, , , ang, fl, bk, shield, phase] = B, fr = Math.floor(now * 3) % 2, bs = big ? 7 : PX;
     ctx.fillStyle = '#00000044'; ctx.beginPath(); ctx.ellipse(x, y + 40, 70, 16, 0, 0, 7); ctx.fill();
-    img(bossSprite(fr, fl && Math.floor(now * 20) % 2 ? 1 : 0), x, y - 10, big ? 7 : PX);
+    if (phase === 2) for (let k = 0; k < 10; k++) { const t = (now * 0.8 + k / 10) % 1; sq(x + Math.sin(k * 2.7) * 70, y + 30 - t * 120, big ? 4 : 2, t < 0.5 ? '#ff5a3a' : '#a8201a'); }
+    const spr = bossSprite(fr, fl && Math.floor(now * 20) % 2 ? 1 : 0, bk);
+    ctx.save(); ctx.translate(Math.round(x), Math.round(y - 10)); if (Math.cos(ang) < -0.2) ctx.scale(-1, 1);
+    ctx.drawImage(spr, Math.round(-spr.width * bs / 2), Math.round(-spr.height * bs / 2), spr.width * bs, spr.height * bs); ctx.restore();
+    if (shield) {   // Bouclier du savoir : bulle bleue
+      ctx.save(); ctx.globalAlpha = 0.22 + Math.sin(now * 5) * 0.08; ctx.fillStyle = '#9fd6ff'; ctx.beginPath(); ctx.arc(x, y - 6, big ? 200 : 92, 0, 7); ctx.fill();
+      ctx.globalAlpha = 0.9; ctx.lineWidth = big ? 10 : 4; ctx.strokeStyle = '#dff2ff'; ctx.setLineDash([14, 8]); ctx.lineDashOffset = now * 30; ctx.beginPath(); ctx.arc(x, y - 6, big ? 200 : 92, 0, 7); ctx.stroke(); ctx.restore();
+    }
     bossDrawn = true;
   };
+  // sbires
+  const mk = B ? SBIRE_DE[B[6]] || 'slime' : 'slime';
+  for (const [x, y, hp, fl, a] of world.mn) {
+    const ms = big ? 6 : PX;
+    ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(x, y + 22, 20, 6, 0, 0, 7); ctx.fill();
+    const spr = minionSprite(mk, Math.floor(now * 6 + x) % 2, fl && Math.floor(now * 20) % 2 ? 1 : 0);
+    ctx.save(); ctx.translate(Math.round(x), Math.round(y)); if (Math.cos(a) < -0.2) ctx.scale(-1, 1);
+    ctx.drawImage(spr, Math.round(-spr.width * ms / 2), Math.round(-spr.height * ms / 2), spr.width * ms, spr.height * ms); ctx.restore();
+    const bw = big ? 70 : 28;
+    ctx.fillStyle = OUT; ctx.fillRect(Math.round(x - bw / 2) - 2, Math.round(y - 9 * ms) - 2, bw + 4, big ? 12 : 6);
+    ctx.fillStyle = '#e04a5a'; ctx.fillRect(Math.round(x - bw / 2), Math.round(y - 9 * ms), Math.round(bw * hp / 100), big ? 8 : 2);
+  }
   for (const p of list) {
     if (!bossDrawn && B[1] < p.y) drawBoss();
     const d = disp.get(p.id) || p;
@@ -1172,6 +1284,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     else if (isMe) sq(d.x - 3, d.y + 30, 2, '#ffd54a');
     else { ctx.fillStyle = CLS[p.c].color; ctx.fillRect(Math.round(d.x) - 15, Math.round(d.y) + 24, 30, 3); }
     if (p.st) for (let i = 0; i < 4; i++) sq(d.x - 20 + i * 13, d.y + 10 - ((now * 60 + i * 17) % 50), 1, '#ff8a1e');
+    if (p.sz) for (let i = 0; i < 3; i++) { const a = now * 6 + i * 2.1; sq(d.x + Math.cos(a) * 18, d.y + 26 - 27 * heroScale + Math.sin(a) * 6, 2, '#ffe27a'); }
     if (p.sl) for (let i = 0; i < 3; i++) sq(d.x - 14 + i * 14, d.y + 6 + ((now * 30 + i * 7) % 16), 2, '#6fd85a');
     if (p.fa) for (let i = 0; i < 3; i++) sq(d.x - 30 - i * 8, d.y + 14 - i * 5, 1, '#9fd6ff');
     if (p.dz) { const dx = d.x - (d.px ?? d.x), dy = d.y - (d.py ?? d.y), l = Math.hypot(dx, dy) || 1; for (let i = 1; i <= 3; i++) sq(d.x - dx / l * i * 16 + (i % 2 ? 8 : -8), d.y - 20 - dy / l * i * 16, 2, '#ffffffaa'); }
@@ -1248,8 +1361,8 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.fillRect(Math.round(d.x - bw / 2), ny + 9, Math.round(bw * r / 3) * 3, big ? 14 : 3);
   }
   if (B) {
-    const [x, y, hp, max] = B, bw = big ? 300 : 140, ny = y - (big ? 150 : 95);
-    ctx.lineWidth = big ? 9 : 4; ctx.strokeStyle = OUT; ctx.strokeText('👑 Roi Gluant', x, ny - 8); ctx.fillStyle = '#9af08a'; ctx.fillText('👑 Roi Gluant', x, ny - 8);
+    const [x, y, hp, max, , , bk] = B, bw = big ? 300 : 140, ny = y - (big ? 150 : 95), BI = BOSS_INFO[bk] || BOSS_INFO.gluant, lbl = BI.ico + ' ' + BI.nom;
+    ctx.lineWidth = big ? 9 : 4; ctx.strokeStyle = OUT; ctx.strokeText(lbl, x, ny - 8); ctx.fillStyle = BI.col; ctx.fillText(lbl, x, ny - 8);
     ctx.fillStyle = OUT; ctx.fillRect(x - bw / 2 - 3, ny, bw + 6, big ? 24 : 12);
     ctx.fillStyle = '#3a2a3a'; ctx.fillRect(x - bw / 2, ny + 3, bw, big ? 18 : 6);
     ctx.fillStyle = '#e04a5a'; ctx.fillRect(x - bw / 2, ny + 3, Math.round(bw * Math.max(0, hp) / max), big ? 18 : 6);
@@ -1278,6 +1391,7 @@ function drawMinimap(ctx, world, map, mine, x, y, w, teams = null) {
     ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + fx * s) - 4, Math.round(y + fy * s) - 5, 8, 8);
     ctx.fillStyle = teams && teams[i] ? teams[i].color : '#fff'; ctx.fillRect(Math.round(x + fx * s) - 3, Math.round(y + fy * s) - 4, 6, 6);
   });
+  for (const [mx, my] of world.mn || []) { ctx.fillStyle = '#e04a5a'; ctx.fillRect(Math.round(x + mx * s) - 2, Math.round(y + my * s) - 2, 4, 4); }
   if (world.boss) { ctx.fillStyle = '#5ac85a'; ctx.fillRect(Math.round(x + world.boss[0] * s) - 4, Math.round(y + world.boss[1] * s) - 4, 8, 8); }
   if (mine && mine.al) {
     ctx.fillStyle = OUT; ctx.fillRect(Math.round(x + mine.x * s) - 4, Math.round(y + mine.y * s) - 4, 8, 8);

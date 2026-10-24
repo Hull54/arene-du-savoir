@@ -315,11 +315,11 @@ function record(p, q, ok) {
       p.pending = k;   // donné au prochain moment où le joueur est en vie
       send(p.conn, { t: 'serie', n: p.streak, k, nom: ITEMS[k].nom, ico: ITEMS[k].ico });
     }
-    if (boss && boss.hp > 0) {
+    if (boss && boss.hp > 0 && !boss.shield) {
       const d = Math.round(boss.max * 0.03);
       boss.hp -= d; p.dmgBoss += d;
       fx.push({ k: 'zap', x: p.x, y: p.y, x2: Math.round(boss.x), y2: Math.round(boss.y), t: 0.5, d: 0.5 });
-      if (boss.hp <= 0) bossDefeated(p);
+      bossCheck(p);
     }
   } else { p.bad++; s.ko++; sm.ko++; p.streak = 0; }
 }
@@ -349,7 +349,7 @@ function kill(target, killer) {
       killer.kills++;
       addFeed(`${killer.name} a vaincu ${target.name}`);
     }
-  } else if (killer === null && boss) addFeed(`Le Roi Gluant a vaincu ${target.name}`);
+  } else if (killer === null && boss) addFeed(`${boss.nom} a vaincu ${target.name}`);
   fx.push({ k: 'death', x: target.x, y: target.y, t: 0.6, d: 0.6 });
   target.waitQ = 1;  // petite pause avant la question
 }
@@ -357,7 +357,7 @@ function kill(target, killer) {
 function respawn(p) {
   Object.assign(p, freeSpot(p.team));
   p.hp = p.maxHp; p.alive = true; p.protect = SPAWN_PROTECT; p.question = null;
-  p.cdA = 0; p.cdP = 0; p.cdD = 0; p.dash = null;
+  p.cdA = 0; p.cdP = 0; p.cdD = 0; p.dash = null; p.stun = 0;
   fx.push({ k: 'spawn', x: p.x, y: p.y, t: 0.6, d: 0.6 });
 }
 
@@ -441,11 +441,12 @@ function damage(target, amount, attacker) {
 }
 function hitBoss(amount, attacker) {
   if (!boss || boss.hp <= 0) return;
+  if (boss.shield) { fx.push({ k: 'crit', x: boss.x, y: boss.y - 40, txt: '🛡️', t: 0.4, d: 0.4 }); return; }   // le Bouclier du savoir bloque les coups
   if (attacker && attacker.strong > 0) amount *= 1.5;
   boss.hp -= amount; boss.flash = 0.15;
   if (attacker) attacker.dmgBoss += amount;
   fx.push({ k: 'hit', x: boss.x + rand(-30, 30), y: boss.y - 20, t: 0.25, d: 0.25 });
-  if (boss.hp <= 0) bossDefeated(attacker);
+  bossCheck(attacker);
 }
 
 const sword = p => GEAR.epee.degats * p.gear.epee;   // l'épée ajoute des dégâts aux attaques de base
@@ -458,7 +459,7 @@ function shoot(p, angle, a, bonus = 0) {
 }
 
 function attack(p) {
-  if (!p.alive || p.cdA > 0 || paused || p.busy) return;
+  if (!p.alive || p.cdA > 0 || paused || p.busy || p.stun > 0) return;
   const a = CLASSES[p.cls].atk;
   p.cdA = a.cd;
   p.revealed = 1;                       // attaquer révèle le joueur caché dans un buisson
@@ -471,6 +472,7 @@ function attack(p) {
     const dx = boss.x - p.x, dy = boss.y - p.y;
     if (Math.hypot(dx, dy) < a.range + R + boss.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.5) hitBoss(base * (fromShadow ? 1.5 : 1), p);
   }
+  if (minions.length) hitMinions(m => Math.hypot(m.x - p.x, m.y - p.y) < a.range + R + SBIRE.r && angDiff(Math.atan2(m.y - p.y, m.x - p.x), p.angle) < a.arc / 2 + 0.4, base, p);
   for (const b of barrels) {
     const dx = b.x - p.x, dy = b.y - p.y;
     if (!b.t && Math.hypot(dx, dy) < a.range + R + BARREL.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.3) lightBarrel(b, p);
@@ -492,7 +494,7 @@ function attack(p) {
 }
 
 function power(p) {
-  if (!p.alive || p.cdP > 0 || paused || p.busy) return;
+  if (!p.alive || p.cdP > 0 || paused || p.busy || p.stun > 0) return;
   const pw = CLASSES[p.cls].power;
   p.cdP = pw.cd;
   if (p.cls === 'guerrier') {
@@ -502,6 +504,7 @@ function power(p) {
     for (const o of players.values())
       if (canHit(p, o) && Math.hypot(o.x - p.x, o.y - p.y) < pw.radius + R) damage(o, pw.dmg, p);
     if (boss && Math.hypot(boss.x - p.x, boss.y - p.y) < pw.radius + boss.r) hitBoss(pw.dmg, p);
+    if (minions.length) hitMinions(m => Math.hypot(m.x - p.x, m.y - p.y) < pw.radius + SBIRE.r, pw.dmg, p);
   } else if (p.cls === 'archer') {
     const a = CLASSES.archer.atk;
     for (let i = 0; i < pw.count; i++) shoot(p, p.angle - pw.spread / 2 + (pw.spread * i) / (pw.count - 1), a);
@@ -552,7 +555,7 @@ function updatePuddles(dt) {
 
 // ---------- Habileté de déplacement (Espace) ----------
 function dash(p) {
-  if (!p.alive || p.cdD > 0 || paused || p.busy || p.dash) return;
+  if (!p.alive || p.cdD > 0 || paused || p.busy || p.dash || p.stun > 0) return;
   const d = CLASSES[p.cls].dash;
   // direction : celle du mouvement, sinon celle de la visée (l'archer saute vers l'arrière)
   let a = p.angle;
@@ -615,6 +618,7 @@ function explode(b) {
     damage(o, BARREL.dmg, by);
   }
   if (boss && boss.hp > 0 && Math.hypot(boss.x - b.x, boss.y - b.y) < BARREL.radius + boss.r) hitBoss(BARREL.dmg * 2, by);
+  if (minions.length) hitMinions(m => Math.hypot(m.x - b.x, m.y - b.y) < BARREL.radius + SBIRE.r, BARREL.dmg * 2, by);
   // réaction en chaîne
   for (const o of barrels) if (o !== b && !o.t && Math.hypot(o.x - b.x, o.y - b.y) < BARREL.radius + 20) lightBarrel(o, by, 0.25);
 }
@@ -680,24 +684,120 @@ function cancelChest(p) {
   send(p.conn, { t: 'close' });
 }
 
-// ---------- Boss coopératif : le Roi Gluant ----------
+// ---------- Boss coopératif : les Boss du mois ----------
+// Chaque Boss a deux attaques. À la moitié de sa vie, il s'enrage (plus rapide, attaques plus fréquentes) et appelle
+// des sbires. À 75 % et 25 %, il lève le Bouclier du savoir : une question éclair pour toute la classe le brise.
+const BOSSES = {
+  gobelin: { nom: 'Gobelin du Bruit', ico: '📢', mois: 'Septembre', speed: 90, r: 50, sbire: 'Gobelin tapageur' },
+  dragon:  { nom: 'Dragon des Citrouilles', ico: '🎃', mois: 'Octobre', speed: 70, r: 60, sbire: 'Citrouille-monstre' },
+  gluant:  { nom: 'Roi Gluant', ico: '👑', mois: '', speed: 75, r: 56, sbire: 'Petit slime' },
+};
+const SBIRE = { hp: 40, dmg: 8, speed: 115, r: 18, max: 8 };
+const bossDuMois = () => ({ 8: 'gobelin', 9: 'dragon' })[new Date().getMonth()] || 'gluant';
+let bossKind = bossDuMois();
+let minions = [], bombs = [];
 function spawnBoss() {
-  const n = Math.max(1, players.size);
+  const B = BOSSES[bossKind], n = Math.max(1, players.size);
   const spot = freeSpot();
-  boss = { x: carte.heal ? carte.heal.x + 220 : spot.x, y: carte.heal ? carte.heal.y : spot.y, r: 56, hp: 0, max: 0, cdSlam: 3, cdShot: 2, flash: 0, angle: 0, path: null, pathT: 0 };
+  boss = { k: bossKind, nom: B.nom, ico: B.ico, x: carte.heal ? carte.heal.x + 220 : spot.x, y: carte.heal ? carte.heal.y : spot.y, r: B.r, hp: 0, max: 0,
+    cdA: 3, cdB: 2, flash: 0, angle: 0, path: null, pathT: 0, phase: 1, shield: 0, shields: [0.75, 0.25], cdSbire: 0 };
   if (blocked(boss.x, boss.y, 44)) Object.assign(boss, freeSpot());
   boss.max = boss.hp = 400 + 140 * n;
-  addFeed('👑 Le Roi Gluant arrive ! Unissez vos forces !');
+  minions = []; bombs = [];
+  addFeed(`${B.ico} ${B.nom} arrive ! Unissez vos forces !`);
 }
 function bossDefeated(by) {
   if (ended) return;
-  addFeed(`🎉 Le Roi Gluant est vaincu${by ? ' (coup final : ' + by.name + ')' : ''} !`);
+  addFeed(`🎉 ${boss.nom} est vaincu${by ? ' (coup final : ' + by.name + ')' : ''} !`);
   fx.push({ k: 'boom', x: boss.x, y: boss.y, r: 200, t: 0.8, d: 0.8 });
+  minions = []; bombs = [];
   endRound('boss-gagne');
+}
+// Après chaque coup : phase 2, Bouclier du savoir, victoire
+function bossCheck(by) {
+  if (!boss || ended) return;
+  if (boss.hp <= 0) return bossDefeated(by);
+  if (boss.phase === 1 && boss.hp <= boss.max / 2) {
+    boss.phase = 2;
+    addFeed(`😡 ${boss.nom} est enragé ! Attention aux sbires !`);
+    summon(3 + Math.floor(players.size / 4));
+  }
+  if (boss.shields.length && !boss.shield && boss.hp <= boss.max * boss.shields[0]) {
+    boss.shields.shift();
+    boss.shield = Infinity;   // jusqu'à la fin de la question éclair
+    addFeed('🛡️ Bouclier du savoir ! Répondez tous pour le briser !');
+    startEclair(true);
+    if (!eclair) boss.shield = 0;
+  }
+}
+function shieldResult(nbOk, total) {
+  if (!boss || !boss.shield) return;
+  if (nbOk * 2 > total) {
+    boss.shield = 0;
+    const d = Math.round(boss.max * 0.08);
+    boss.hp -= d; boss.flash = 0.3;
+    fx.push({ k: 'boom', x: boss.x, y: boss.y, r: 140, t: 0.6, d: 0.6, gold: 1 });
+    addFeed(`💥 Bouclier brisé par la classe ! (${nbOk}/${total}) −${d} PV`);
+    bossCheck(null);
+  } else {
+    boss.shield = 8;   // le bouclier tient encore 8 secondes
+    boss.hp = Math.min(boss.max, boss.hp + Math.round(boss.max * 0.05));
+    addFeed(`🛡️ Le bouclier tient (${nbOk}/${total})… ${boss.nom} reprend des forces`);
+  }
+}
+function summon(nb) {
+  const B = boss;
+  for (let i = 0; i < nb && minions.length < SBIRE.max; i++) {
+    for (let t = 0; t < 30; t++) {
+      const a = rand(0, Math.PI * 2), x = B.x + Math.cos(a) * rand(80, 160), y = B.y + Math.sin(a) * rand(60, 130);
+      if (!blocked(x, y, SBIRE.r) && !WATER.has(tileAt(x, y + 20))) { minions.push({ x, y, hp: SBIRE.hp, cd: 1, flash: 0 }); fx.push({ k: 'spawn', x, y, t: 0.6, d: 0.6 }); break; }
+    }
+  }
+}
+// Frapper les sbires : test(m) dit si le sbire est touché
+function hitMinions(test, dmg, attacker) {
+  let n = 0;
+  minions = minions.filter(m => {
+    if (!test(m)) return true;
+    n++;
+    m.hp -= dmg * (attacker && attacker.strong > 0 ? 1.5 : 1); m.flash = 0.15;
+    fx.push({ k: 'hit', x: m.x, y: m.y, t: 0.25, d: 0.25 });
+    if (m.hp > 0) return true;
+    fx.push({ k: 'death', x: m.x, y: m.y, t: 0.5, d: 0.5 });
+    if (attacker) attacker.dmgBoss += 10;
+    return false;
+  });
+  return n;
+}
+function updateMinions(dt) {
+  for (const m of minions) {
+    m.cd -= dt; m.flash = Math.max(0, m.flash - dt);
+    let best = null, bd = Infinity;
+    for (const p of players.values()) { if (!p.alive || p.busy) continue; const d = Math.hypot(p.x - m.x, p.y - m.y); if (d < bd) { bd = d; best = p; } }
+    if (!best) continue;
+    m.a = Math.atan2(best.y - m.y, best.x - m.x);
+    if (bd > R + SBIRE.r) {
+      const sp = SBIRE.speed * dt, mx = Math.cos(m.a) * sp, my = Math.sin(m.a) * sp;
+      if (!blocked(m.x + mx, m.y, SBIRE.r)) m.x += mx;
+      if (!blocked(m.x, m.y + my, SBIRE.r)) m.y += my;
+    }
+    if (bd < R + SBIRE.r + 8 && m.cd <= 0) { m.cd = 1; damage(best, SBIRE.dmg, null); }
+  }
+  // citrouilles explosives du dragon
+  bombs = bombs.filter(b => {
+    if ((b.t -= dt) > 0) return true;
+    fx.push({ k: 'boom', x: b.x, y: b.y, r: 90, t: 0.45, d: 0.45, c: 'feu' });
+    for (const p of players.values()) if (p.alive && Math.hypot(p.x - b.x, p.y - b.y) < 90 + R) damage(p, 18, null);
+    return false;
+  });
 }
 function bossThink(dt) {
   if (!boss || boss.hp <= 0) return;
-  boss.cdSlam -= dt; boss.cdShot -= dt; boss.flash = Math.max(0, boss.flash - dt); boss.pathT -= dt;
+  const cm = boss.phase === 2 ? 0.7 : 1;   // enragé : attaques plus fréquentes
+  boss.cdA -= dt; boss.cdB -= dt; boss.flash = Math.max(0, boss.flash - dt); boss.pathT -= dt;
+  if (boss.shield > 0 && boss.shield !== Infinity && (boss.shield -= dt) <= 0) { boss.shield = 0; addFeed('🛡️ Le bouclier disparaît !'); }
+  if (boss.phase === 2 && (boss.cdSbire -= dt) <= 0) { boss.cdSbire = 18; summon(2); }
+  updateMinions(dt);
   let best = null, bd = Infinity;
   for (const p of players.values()) {
     if (!p.alive || p.busy) continue;
@@ -705,7 +805,7 @@ function bossThink(dt) {
     if (d < bd) { bd = d; best = p; }
   }
   if (!best) return;
-  // se déplace lentement vers le joueur le plus proche
+  // se déplace vers le joueur le plus proche
   let tx = best.x, ty = best.y;
   if (!clearLine(boss.x, boss.y, tx, ty)) {
     if (boss.pathT <= 0) { boss.path = pathTo(boss.x, boss.y, tx, ty); boss.pathT = 0.6; }
@@ -713,19 +813,55 @@ function bossThink(dt) {
   }
   boss.angle = Math.atan2(ty - boss.y, tx - boss.x);
   if (bd > 90) {
-    const sp = 75 * dt, mx = Math.cos(boss.angle) * sp, my = Math.sin(boss.angle) * sp;
+    const sp = BOSSES[boss.k].speed * (boss.phase === 2 ? 1.35 : 1) * dt, mx = Math.cos(boss.angle) * sp, my = Math.sin(boss.angle) * sp;
     if (!blocked(boss.x + mx, boss.y, 30)) boss.x += mx;
     if (!blocked(boss.x, boss.y + my, 30)) boss.y += my;
   }
-  if (bd < 170 && boss.cdSlam <= 0) {
-    boss.cdSlam = 3.2;
-    fx.push({ k: 'slam', x: Math.round(boss.x), y: Math.round(boss.y), r: 180, t: 0.5, d: 0.5 });
-    for (const p of players.values()) if (p.alive && Math.hypot(p.x - boss.x, p.y - boss.y) < 180 + R) damage(p, 22, null);
-  }
-  if (bd < 750 && boss.cdShot <= 0) {
-    boss.cdShot = 1.4;
-    const a = Math.atan2(best.y - boss.y, best.x - boss.x);
-    for (const da of [-0.25, 0, 0.25]) projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(a + da) * 300, vy: Math.sin(a + da) * 300, r: 14, dmg: 13, life: 2.4, owner: -1, cls: 'boss' });
+  const aim = Math.atan2(best.y - boss.y, best.x - boss.x), bx = Math.round(boss.x), by = Math.round(boss.y);
+  if (boss.k === 'gobelin') {
+    // Cri assourdissant : dégâts et étourdit un instant
+    if (bd < 220 && boss.cdA <= 0) {
+      boss.cdA = 4 * cm;
+      fx.push({ k: 'cri', x: bx, y: by, r: 230, t: 0.6, d: 0.6 });
+      for (const p of players.values()) if (p.alive && Math.hypot(p.x - boss.x, p.y - boss.y) < 230 + R) { damage(p, 14, null); if (p.alive && p.protect <= 0) p.stun = 0.8; }
+    }
+    // Notes de musique en éventail
+    if (bd < 700 && boss.cdB <= 0) {
+      boss.cdB = 1.6 * cm;
+      for (const da of [-0.5, -0.25, 0, 0.25, 0.5]) projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(aim + da) * 320, vy: Math.sin(aim + da) * 320, r: 12, dmg: 10, life: 2.2, owner: -1, cls: 'note' });
+    }
+  } else if (boss.k === 'dragon') {
+    // Souffle de feu en cône
+    if (bd < 270 && boss.cdA <= 0) {
+      boss.cdA = 3.5 * cm;
+      fx.push({ k: 'souffle', x: bx, y: by - 20, a: +aim.toFixed(2), r: 290, t: 0.6, d: 0.6 });
+      for (const p of players.values()) {
+        if (!p.alive) continue;
+        const d = Math.hypot(p.x - boss.x, p.y - boss.y);
+        if (d < 290 + R && angDiff(Math.atan2(p.y - boss.y, p.x - boss.x), aim) < 0.5) damage(p, 20, null);
+      }
+    }
+    // Citrouilles explosives lancées sur 1 à 3 joueurs (un cercle rouge prévient)
+    if (bd < 800 && boss.cdB <= 0) {
+      boss.cdB = 2.4 * cm;
+      const cibles = [...players.values()].filter(p => p.alive && !p.busy && Math.hypot(p.x - boss.x, p.y - boss.y) < 800).sort(() => Math.random() - 0.5).slice(0, boss.phase === 2 ? 3 : 2);
+      for (const p of cibles) {
+        const x = Math.round(p.x + rand(-30, 30)), y = Math.round(p.y + rand(-30, 30));
+        bombs.push({ x, y, t: 1.3 });
+        fx.push({ k: 'lob', x: bx, y: by - 30, x2: x, y2: y, t: 1.3, d: 1.3 });
+        fx.push({ k: 'cible', x, y, r: 90, t: 1.3, d: 1.3 });
+      }
+    }
+  } else {
+    if (bd < 170 && boss.cdA <= 0) {
+      boss.cdA = 3.2 * cm;
+      fx.push({ k: 'slam', x: bx, y: by, r: 180, t: 0.5, d: 0.5 });
+      for (const p of players.values()) if (p.alive && Math.hypot(p.x - boss.x, p.y - boss.y) < 180 + R) damage(p, 22, null);
+    }
+    if (bd < 750 && boss.cdB <= 0) {
+      boss.cdB = 1.4 * cm;
+      for (const da of [-0.25, 0, 0.25]) projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(aim + da) * 300, vy: Math.sin(aim + da) * 300, r: 14, dmg: 13, life: 2.4, owner: -1, cls: 'boss' });
+    }
   }
 }
 
@@ -813,7 +949,7 @@ function endRound(why) {
   if (ended) return;
   const ps = [...players.values()];
   const top = (key, n = 3) => [...ps].sort((a, b) => b[key] - a[key] || b.good - a.good).slice(0, n).filter(p => p[key] > 0).map(p => ({ n: p.name, c: p.cls, l: p.look, v: Math.round(p[key]), team: p.team }));
-  ended = { why, mode, top: top(mode === 'boss' ? 'dmgBoss' : mode === 'colline' || mode === 'drapeau' ? 'obj' : 'kills'), cerveaux: top('good') };
+  ended = { why, mode, boss: mode === 'boss' && boss ? { k: boss.k, nom: boss.nom } : null, top: top(mode === 'boss' ? 'dmgBoss' : mode === 'colline' || mode === 'drapeau' ? 'obj' : 'kills'), cerveaux: top('good') };
   if (teamMode()) ended.teams = teamScores().map((s, i) => ({ ...TEAMS[i], ...s })).sort((a, b) => b.score - a.score);
   paused = true;
   for (const p of players.values()) cancelChest(p);
@@ -834,6 +970,7 @@ function assignTeams() {
 let countdown = 0;   // compte à rebours 3-2-1 au début d'une manche
 function newRound() {
   ended = null; paused = false; countdown = 3.5;
+  if (eclair) { eclair = null; for (const c of conns) if (c.player) send(c, { t: 'close' }); }
   for (const q of players.values()) {
     q.kills = q.deaths = q.good = q.bad = q.streak = q.dmgBoss = q.obj = 0; q.carry = null;
     q.fast = q.strong = q.shield = q.stealth = 0; q.pending = null;
@@ -843,7 +980,7 @@ function newRound() {
   }
   for (const k in stats) stats[k] = {};
   timer.left = timer.dur;
-  boss = null; hill = null; flags = null;
+  boss = null; hill = null; flags = null; minions = []; bombs = [];
   if (mode === 'boss') spawnBoss();
   if (mode === 'colline') placeHill();
   if (mode === 'drapeau') setupFlags();
@@ -858,16 +995,16 @@ function newRound() {
 }
 
 // ---------- Question éclair : la même question pour toute la classe ----------
-function startEclair() {
+function startEclair(bouclier = false) {
   if (eclair || ended) return;
   const Q = newQuestion({});
-  eclair = { ...Q, left: 20, answers: new Map(), ids: [] };
+  eclair = { ...Q, left: 20, answers: new Map(), ids: [], bouclier };
   for (const p of players.values()) {
     cancelChest(p);
     eclair.ids.push(p.id);
     p.question = null;
     if (p.bot) p.botT = rand(3, 12);
-    else send(p.conn, questionMsg(Q, 'eclair', { temps: 20 }));
+    else send(p.conn, questionMsg(Q, 'eclair', { temps: 20, bouclier }));
   }
   addFeed('⚡ Question éclair pour toute la classe !');
 }
@@ -890,6 +1027,7 @@ function finishEclair() {
   for (const c of conns) if (c.role === 'prof') send(c, res);
   addFeed(`⚡ ${nbOk} bonne${nbOk > 1 ? 's' : ''} réponse${nbOk > 1 ? 's' : ''} sur ${E.ids.length}`);
   eclair = null;
+  shieldResult(nbOk, E.ids.length);
 }
 
 // ---------- Robots (pour tester ou compléter la classe) ----------
@@ -993,7 +1131,7 @@ function step() {
     p.cdA = Math.max(0, p.cdA - dt); p.cdP = Math.max(0, p.cdP - dt); p.cdD = Math.max(0, p.cdD - dt); p.cdF = Math.max(0, p.cdF - dt);
     p.shield = Math.max(0, p.shield - dt); p.protect = Math.max(0, p.protect - dt);
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
-    p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt);
+    p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt); p.stun = Math.max(0, (p.stun || 0) - dt);
     p.hidden = p.revealed <= 0 && inBush(p);
     if (p.busy) {
       if (p.goldNext && (p.goldNext.t -= dt) <= 0) { const g = p.goldNext; p.goldNext = null; askQuestion(p, 'chest', { chest: g.chest, gold: true, step: 2, nOk: g.nOk }); }
@@ -1003,6 +1141,7 @@ function step() {
     const hl = carte.heal;
     if (hl && Math.hypot(p.x - hl.x, p.y - hl.y) < hl.r) p.hp = Math.min(p.maxHp, p.hp + hl.heal * dt);
     if (p.dash) { dashStep(p, dt); continue; }
+    if (p.stun > 0) continue;   // étourdi par le cri du Gobelin du Bruit
     let mx, my;
     if (p.bot) {
       mx = p.moveAngle == null ? 0 : Math.cos(p.moveAngle);
@@ -1042,6 +1181,7 @@ function step() {
       const bar = b.owner !== -1 && barrels.find(o => !o.t && Math.hypot(o.x - b.x, o.y - b.y) < BARREL.r + b.r);
       if (bar) { lightBarrel(bar, owner); return false; }
       if (b.owner !== -1 && boss && boss.hp > 0 && Math.hypot(boss.x - b.x, boss.y - 20 - b.y) < boss.r + b.r) { hitBoss(b.dmg, owner); return false; }
+      if (b.owner !== -1 && minions.length && hitMinions(m => Math.hypot(m.x - b.x, m.y - b.y) < SBIRE.r + b.r + 6, b.dmg, owner)) return false;
       for (const o of players.values()) {
         if (o.id === b.owner || !o.alive) continue;
         if (b.owner === -1 ? false : !canHit(owner, o)) continue;
@@ -1065,7 +1205,7 @@ function publicState() {
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0),
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0),
       p.team, gearCode(p),
     ]),
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
@@ -1074,7 +1214,8 @@ function publicState() {
     tb: barrels.map(b => (b.t ? 0 : b.fuse ? 2 : 1)).join(''),
     pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1)]),
     it: items.map(it => [it.x, it.y, it.k]),
-    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0] : 0,
+    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase] : 0,
+    mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / SBIRE.hp * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),
     tm: timer.dur ? Math.ceil(timer.left) : -1,
     mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
     hl: hill ? [hill.x, hill.y, HILL.r, hill.owner, Math.ceil(hill.t)] : 0,
@@ -1107,6 +1248,7 @@ setInterval(() => {
     stats, urls: lanAddresses(), paused,
     carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
     mode, modes: MODES, nbTeams, teams: TEAMS.slice(0, nbTeams), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
+    bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
     players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss) })),
   });
@@ -1190,6 +1332,11 @@ function onMessage(conn, msg) {
       break;
     case 'finir': endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); break;
     case 'eclair': startEclair(); break;
+    case 'boss':
+      if (!BOSSES[m.k]) break;
+      bossKind = m.k;
+      if (mode === 'boss') newRound();
+      break;
     case 'bilans': send(conn, { t: 'bilans', memoire, or: orSeance, notions: NOTIONS }); break;
   }
 }

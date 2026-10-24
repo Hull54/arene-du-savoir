@@ -79,6 +79,7 @@
         <button class="sec" data-mode="colline" data-nb="2">⛰️ Colline</button>
         <button class="sec" data-mode="drapeau" data-nb="2">🚩 Drapeau</button>
         <button class="sec" data-mode="boss">👑 Boss</button>
+        <select id="bossSel" title="Boss du mois"></select>
       </div>
       <div class="row"><span>Minuterie :</span>
         <select id="timer"><option value="0">sans limite</option><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select>
@@ -148,6 +149,10 @@ $('timer').onchange = () => send({ t: 'timer', min: +$('timer').value });
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
   if (confirm('Changer de mode commence une nouvelle manche. Continuer ?')) send({ t: 'mode', mode: b.dataset.mode, nb: +b.dataset.nb || 2 });
 });
+$('bossSel').onchange = () => {
+  if (last && last.mode === 'boss' && !confirm('Changer de boss commence une nouvelle manche. Continuer ?')) { $('bossSel').value = last.bossKind; return; }
+  send({ t: 'boss', k: $('bossSel').value });
+};
 $('fin').onclick = () => $('fin').style.display = 'none';
 $('ecl').onclick = () => { if (!last || !last.eclair) $('ecl').style.display = 'none'; };
 
@@ -160,6 +165,8 @@ function info(m) {
   $('pause').textContent = m.paused ? '▶ Reprendre' : '⏸ Pause';
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m.mode && (m.mode !== 'equipes' || +b.dataset.nb === m.nbTeams)));
   if (document.activeElement !== $('timer')) $('timer').value = String(m.timer / 60);
+  if (m.bosses && $('bossSel').options.length !== Object.keys(m.bosses).length) $('bossSel').innerHTML = Object.entries(m.bosses).map(([k, n]) => `<option value="${k}">${BOSS_INFO[k] ? BOSS_INFO[k].ico : ''} ${esc(n)}</option>`).join('');
+  if (document.activeElement !== $('bossSel')) $('bossSel').value = m.bossKind;
   // cartes
   const ck = m.carte + JSON.stringify(m.cartes.map(c => c.id));
   if (ck !== cartesKey) {
@@ -280,7 +287,8 @@ function showFin(m) {
   $('ecl').style.display = 'none';
   const card = $('finCard'); card.innerHTML = '';
   const h = document.createElement('h1');
-  h.textContent = m.why === 'boss-gagne' ? '🎉 Victoire ! Le Roi Gluant est vaincu !' : m.why === 'boss-perdu' ? '👑 Le Roi Gluant a gagné cette fois…' : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
+  const bn = m.boss ? m.boss.nom : 'Le Roi Gluant';
+  h.textContent = m.why === 'boss-gagne' ? `🎉 Victoire ! ${bn} est vaincu !` : m.why === 'boss-perdu' ? `${m.boss ? BOSS_INFO[m.boss.k].ico : '👑'} ${bn} a gagné cette fois…` : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
   card.appendChild(h);
   if (m.teams) {
     const t = document.createElement('div'); t.className = 'big'; const u = m.mode === 'colline' ? 'point' : m.mode === 'drapeau' ? 'capture' : 'victoire';
@@ -369,6 +377,17 @@ function frame() {
   if (world.tm >= 0) tag(`⏱ ${Math.floor(world.tm / 60)}:${String(world.tm % 60).padStart(2, '0')}`, world.tm <= 30 ? '#b8433a' : '#1b1424');
   if (teams && world.te) world.te.forEach((sc, i) => teams[i] && tag(`${world.mode === 'colline' ? '⛰️ ' : world.mode === 'drapeau' ? '🚩 ' : ''}${teams[i].nom} ${sc}${world.mode === 'colline' ? '/120' : world.mode === 'drapeau' ? '/3' : ''}`, teams[i].color, '#1b1424'));
   if (world.hl) tag(`⛰️ La colline bouge dans ${world.hl[4]} s`, '#1b1424');
+  // grande barre de vie du boss, en bas du projecteur
+  if (world.boss) {
+    const B = world.boss, BI = BOSS_INFO[B[6]] || BOSS_INFO.gluant, bw = r.width * 0.6, bx = (r.width - bw) / 2, by = r.height - 40;
+    ctx.fillStyle = '#1b1424'; ctx.fillRect(bx - 6, by - 30, bw + 12, 62);
+    ctx.fillStyle = '#3a2a3a'; ctx.fillRect(bx, by + 4, bw, 20);
+    ctx.fillStyle = B[7] ? '#7fd3ff' : '#e04a5a'; ctx.fillRect(bx, by + 4, bw * Math.max(0, B[2] / B[3]), 20);
+    ctx.fillStyle = '#ffffff55'; ctx.fillRect(bx + bw / 2 - 1, by + 4, 2, 20);
+    ctx.font = '20px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = BI.col;
+    ctx.fillText(`${BI.ico} ${BI.nom}` + (B[7] ? ' · 🛡️ Bouclier du savoir !' : B[8] === 2 ? ' · 😡 Enragé !' : ''), r.width / 2, by - 12);
+    ctx.textAlign = 'left';
+  }
   ctx.textBaseline = 'alphabetic';
   ctx.font = '18px "Pixelify Sans", monospace';
   world.feed.forEach((t, i) => {
