@@ -273,14 +273,20 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
   if (cls === 'guerrier') {
     const [hi, m, lo] = T3(steel);
     if (fem) { if (down) { P.rect(3, 6, 1, 7, h); P.rect(12, 6, 1, 7, hD); } else if (up) P.rect(4, 8, 8, 4, h); else P.rect(4, 6, 2, 7, h); }
+    // casque ouvert à nasal : le visage (et la race) reste visible
     if (side) {
-      P.rect(5, 1, 7, 8, m); P.rect(6, 0, 5, 1, m); P.rect(5, 1, 7, 1, hi); P.rect(5, 8, 7, 1, lo); P.rect(5, 2, 1, 6, hi);
-      P.rect(9, 4, 3, 1, E); P.rect(10, 3, 1, 5, gold); P.rect(5, 5, 4, 1, lo);
+      P.rect(5, 1, 7, 4, m); P.rect(6, 0, 5, 1, m); P.rect(5, 1, 7, 1, hi); P.rect(5, 2, 1, 6, hi);
+      P.rect(5, 5, 3, 4, m); P.rect(5, 8, 3, 1, lo); P.rect(5, 4, 7, 1, lo); P.px(11, 5, m); P.px(11, 6, lo); P.px(8, 4, gold);
       P.rect(5, -3, 3, 3, K.acc); P.px(4, -2, K.acc); P.px(3, -1, K.acc); P.px(6, -3, shade(K.acc, 1.3));
+    } else if (down) {
+      P.rect(4, 1, 8, 4, m); P.rect(5, 0, 6, 1, m); P.rect(4, 1, 8, 1, hi); P.rect(4, 2, 1, 3, hi); P.rect(11, 2, 1, 3, lo);
+      P.rect(4, 4, 8, 1, lo); P.px(5, 4, gold); P.px(10, 4, gold);   // bandeau et rivets
+      P.rect(4, 5, 1, 4, m); P.px(4, 5, hi); P.rect(11, 5, 1, 4, lo);   // protège-joues
+      P.rect(7, 3, 2, 4, m); P.px(7, 3, gold); P.px(7, 4, shade(gold, 1.3)); P.px(8, 6, lo);   // nasal
+      P.rect(7, -3, 2, 3, K.acc); P.px(9, -2, K.acc); P.px(9, -1, K.acc); P.px(7, -3, shade(K.acc, 1.3));
     } else {
       P.rect(4, 1, 8, 8, m); P.rect(5, 0, 6, 1, m); P.rect(4, 1, 8, 1, hi); P.rect(4, 2, 1, 6, hi); P.rect(11, 2, 1, 7, lo); P.rect(4, 8, 8, 1, lo);
-      if (down) { P.rect(5, 5, 6, 1, E); P.rect(7, 2, 2, 7, gold); P.px(7, 2, shade(gold, 1.3)); P.rect(5, 7, 2, 1, lo); P.rect(9, 7, 2, 1, lo); P.px(8, 5, E); P.px(7, 5, E); }
-      else { P.rect(7, 1, 2, 7, lo); }
+      { P.rect(7, 1, 2, 7, lo); }
       P.rect(7, -3, 2, 3, K.acc); P.px(9, -2, K.acc); P.px(9, -1, K.acc); P.px(7, -3, shade(K.acc, 1.3));
     }
   } else if (cls === 'voleur') {
