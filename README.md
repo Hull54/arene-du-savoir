@@ -48,8 +48,18 @@ Les règles du mode s'affichent la première fois qu'un élève y joue (bouton �
 | 🗡️ Voleur | 105 | très rapide | Dague, corps à corps. **Dégâts ×2 dans le dos** | 👤 Ombre : invisible 4 s, plus rapide, prochaine attaque +50 % | 🌀 Roulade : esquive, invincible pendant la roulade (2 s) |
 | 🔮 Mage | 90 | moyenne | Boule de feu à distance | 💥 Explosion autour de lui | ✨ Téléportation : 3 cases plus loin, même par-dessus l'eau (3 s) |
 | 🏹 Archer | 100 | rapide | Flèche longue portée | 🌧️ Pluie de 7 flèches | 🦘 Saut arrière : recule en tirant une flèche (3 s) |
+| 🌿 Druide | 115 | moyenne | Graine magique à distance | 🌿 Cercle de soin : +40 PV à lui et à ses coéquipiers proches (à toute la classe contre le Boss) | 🍃 Bond : saute et laisse des racines qui ralentissent les adversaires (3 s) |
 
 Sans souris, on vise dans la direction où l'on marche : une petite flèche jaune sous son héros montre la visée.
+
+**🌟 Super-pouvoir (touche R)** : 3 bonnes réponses de suite le donnent (une charge). Guerrier : Tourbillon autour de lui. Voleur : Danse des lames (10 dagues tout autour). Mage : Météore devant lui. Archer : Tempête de flèches (16 flèches). Druide : Forêt guérisseuse (gros soin d'équipe et grandes racines).
+
+**Relever un coéquipier** (modes en équipes et Boss) : un joueur K.O. laisse une petite âme pendant 20 secondes. Un coéquipier qui reste 2 secondes à côté reçoit une question : bonne réponse = le coéquipier revient tout de suite à cet endroit (+1 pièce d'or).
+
+**Prime sur le meneur** : le vaincre rapporte 2 points, +1 toutes les 3 victoires de suite du meneur (jusqu'à 5). La prime s'affiche à côté de sa couronne.
+
+**Retour en jeu** : 2,5 secondes de protection avec un halo doré ; attaquer y met fin.
+
 
 ## Les cartes (au choix de l'enseignant)
 
@@ -72,6 +82,8 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 - **Le lieu de soin** (fontaine, source, autel ou feu de camp) redonne de la vie.
 
 ## Coffres et objets cachés
+
+- **Nouveaux objets** : 🪤 piège à ressort (posé à tes pieds, invisible pour l'équipe adverse : il immobilise 1,5 s), 💨 bombe fumigène (nuage où tout le monde est caché comme dans un buisson, 6 s).
 
 - **Coffres-questions** : en touchant un coffre, l'élève reçoit une question (il est protégé pendant qu'il répond). Bonne réponse : une pièce d'équipement (6 fois sur 10) ou un objet puissant. Mauvaise réponse : une petite potion quand même. Le coffre se referme et se remplit après 40 secondes.
 - **Objets cachés** : des objets apparaissent dans les buissons, les maisons et les coins secrets. On ne les voit que de près (une petite étincelle de loin).

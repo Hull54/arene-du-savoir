@@ -27,6 +27,7 @@ const CLASSES = {
   guerrier: { nom: 'Guerrier', hp: 170, speed: 150, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
   voleur:   { nom: 'Voleur',   hp: 105, speed: 200, atk: { type: 'melee', range: 55, arc: 1.2, dmg: 18, cd: 0.35, backstab: 2 }, power: { nom: 'Ombre', cd: 9, dur: 4 }, dash: { nom: 'Roulade', cd: 2, dist: 140, dur: 0.24 } },
   mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 380, dmg: 22, cd: 0.65, r: 10, life: 1.6 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
+  druide:   { nom: 'Druide',   hp: 115, speed: 165, atk: { type: 'proj', speed: 460, dmg: 16, cd: 0.5, r: 8, life: 1.25 }, power: { nom: 'Cercle de soin', cd: 10, radius: 170, soin: 40 }, dash: { nom: 'Bond', cd: 3, dist: 140, dur: 0.24, racines: 70, rdur: 3 } },
   archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 
@@ -38,8 +39,10 @@ const ITEMS = {
   force:        { nom: 'Potion de force', ico: '💪' },
   bouclier:     { nom: 'Bouclier magique', ico: '🛡️' },
   ombre:        { nom: 'Cape d\'ombre', ico: '🌑' },
+  piege:        { nom: 'Piège à ressort', ico: '🪤' },
+  fumee:        { nom: 'Bombe fumigène', ico: '💨' },
 };
-const BONS_OBJETS = ['grandepotion', 'vitesse', 'force', 'bouclier', 'ombre'];
+const BONS_OBJETS = ['grandepotion', 'vitesse', 'force', 'bouclier', 'ombre', 'fumee'];
 // Équipement : toujours un bonus, gardé jusqu'à la fin de la manche. 3 niveaux : bronze, argent, or.
 const GEAR = {
   casque: { nom: 'Casque', ico: '🪖', armure: 5 },
@@ -59,7 +62,7 @@ const PETS = {
 };
 const PET_CD = 15;
 const BARREL = { r: 20, radius: 120, dmg: 30, back: 30 };   // tonneaux explosifs
-const OBJETS_CACHES = ['potion', 'potion', 'vitesse', 'force', 'equip'];
+const OBJETS_CACHES = ['potion', 'potion', 'vitesse', 'force', 'equip', 'piege', 'fumee'];
 
 const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
@@ -96,7 +99,7 @@ const memoire = {};          // nom -> { notion: {ok, ko} } pour toute la séanc
 const orSeance = {};         // nom -> pièces d'or gagnées pendant la séance
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
-let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [];
+let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [], traps = [], smokes = [], ames = [];   // ames : coéquipiers K.O. qu'on peut relever
 let mode = 'libre', nbTeams = 2;
 let boss = null;
 let hill = null;                   // colline : { x, y, t, owner, pts[] }
@@ -181,7 +184,7 @@ function setCarte(c) {
   pickGold();
   barrels = c.barrels.map(b => ({ ...b, t: 0, fuse: 0, by: null }));
   items = []; itemTimer = 0;
-  projectiles = []; fx = []; puddles = [];
+  projectiles = []; fx = []; puddles = []; traps = []; smokes = []; ames = [];
 }
 // Plus court chemin (en tuiles) d'un point à un autre
 function pathTo(x0, y0, x1, y1) {
@@ -224,6 +227,8 @@ function uniqueName(name) {
   if (!taken.has(base.toLowerCase())) return base;
   for (let i = 2; ; i++) { const n = base.slice(0, 13) + ' ' + i; if (!taken.has(n.toLowerCase())) return n; }
 }
+// prime sur le meneur : 2 points, +1 toutes les 3 victoires de suite (sans être vaincu), jusqu'à 5
+const prime = p => Math.min(5, 2 + Math.floor((p.serieK || 0) / 3));
 function leaderId() {
   // le meneur : seul en tête, avec au moins 3 victoires
   let best = null, second = -1;
@@ -335,6 +340,7 @@ function record(p, q, ok) {
     p.good++; s.ok++; sm.ok++; p.streak++;
     gainOr(p, OR.bonne);
     if (p.streak % 3 === 0) {
+      if (!p.bot && !p.superP) { p.superP = true; send(p.conn, { t: 'super' }); }   // super-pouvoir : 3 bonnes réponses de suite
       gainOr(p, OR.serie);
       const k = pick(BONS_OBJETS);
       addFeed(`🔥 ${p.name} : ${p.streak} bonnes réponses de suite !`);
@@ -357,6 +363,8 @@ function giveItem(p, k, src) {
   else if (k === 'force') p.strong = 10;
   else if (k === 'bouclier') p.shield = 4;
   else if (k === 'ombre') p.stealth = 5;
+  else if (k === 'piege') traps.push({ x: Math.round(p.x), y: Math.round(p.y + 14), owner: p.id, team: p.team, arm: 1.2, t: 40 });   // posé à ses pieds, armé après 1 s
+  else if (k === 'fumee') smokes.push({ x: Math.round(p.x), y: Math.round(p.y), r: 120, t: 6 });   // nuage : on s'y cache comme dans un buisson
   fx.push({ k: 'item', x: p.x, y: p.y, t: 0.7, d: 0.7 });
   send(p.conn, { t: 'item', k, nom: ITEMS[k].nom, ico: ITEMS[k].ico, src });
   if (src === 'coffre') addFeed(`${p.name} ouvre un coffre : ${ITEMS[k].ico} ${ITEMS[k].nom}`);
@@ -366,17 +374,20 @@ function kill(target, killer) {
   target.alive = false;
   target.hp = 0;
   target.deaths++;
-  target.shield = 0; target.stealth = 0; target.fast = 0; target.strong = 0; target.dash = null;
+  target.shield = 0; target.stealth = 0; target.fast = 0; target.strong = 0; target.dash = null; target.serieK = 0;
   if (killer && killer !== target) {
     if (target.id === leaderId()) {
-      killer.kills += 2;   // prime au meneur
-      addFeed(`👑 ${killer.name} a vaincu le meneur ${target.name} ! (+2)`);
+      const pr = prime(target);
+      killer.kills += pr;   // prime au meneur
+      addFeed(`👑 ${killer.name} a vaincu le meneur ${target.name} ! (+${pr})`);
     } else {
       killer.kills++;
       addFeed(`${killer.name} a vaincu ${target.name}`);
     }
+    killer.serieK = (killer.serieK || 0) + 1;
   } else if (killer === null && boss) addFeed(`${boss.nom} a vaincu ${target.name}`);
   fx.push({ k: 'death', x: target.x, y: target.y, t: 0.6, d: 0.6 });
+  if (teamMode() || mode === 'boss') { ames = ames.filter(a => a.id !== target.id); ames.push({ id: target.id, x: Math.round(target.x), y: Math.round(target.y), team: target.team, t: 20, prog: 0, cd: 0 }); }
   target.waitQ = 1;  // petite pause avant la question
 }
 
@@ -409,6 +420,19 @@ function answer(p, i, txt) {
   const ok = i === Q.answer;
   record(p, Q.q, ok);
   if (Q.kind === 'chest' && Q.gold) return answerGold(p, Q, ok);
+  if (Q.kind === 'releve') {   // un coéquipier répond pour relever un K.O.
+    p.question = null; p.busy = false; p.protect = 0.8;
+    const a = ames.find(a => a.id === Q.ame), o = players.get(Q.ame);
+    send(p.conn, { t: 'res', kind: 'chest', releve: true, ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, explication: ok ? '' : expl(Q.q), nom: o ? o.name : '' });
+    if (a) { a.by = 0; a.prog = 0; a.cd = ok ? 0 : 3; }
+    if (ok && a && o && !o.alive) {
+      respawn(o); o.x = a.x; o.y = a.y; o.question = null; o.busy = false;
+      send(o.conn, { t: 'close' }); send(o.conn, { t: 'releve', par: p.name });
+      ames = ames.filter(x => x !== a); gainOr(p, 1);
+      addFeed(`💚 ${p.name} relève ${o.name} !`); fx.push({ k: 'heal', x: a.x, y: a.y, t: 0.9, d: 0.9 });
+    }
+    return;
+  }
   if (Q.kind === 'chest') {
     const ch = chests[Q.chest];
     p.question = null; p.busy = false; p.protect = 0.8;
@@ -503,7 +527,7 @@ function shoot(p, angle, a, bonus = 0) {
 function attack(p) {
   if (!p.alive || p.cdA > 0 || paused || p.busy || p.stun > 0) return;
   const a = CLASSES[p.cls].atk;
-  p.cdA = a.cd; p.atkT = 0.25;
+  p.cdA = a.cd; p.atkT = 0.25; p.protect = 0;   // attaquer met fin à la protection du retour en jeu
   p.revealed = 1;                       // attaquer révèle le joueur caché dans un buisson
   const fromShadow = p.stealth > 0;
   p.stealth = 0;
@@ -550,10 +574,51 @@ function power(p) {
   } else if (p.cls === 'archer') {
     const a = CLASSES.archer.atk;
     for (let i = 0; i < pw.count; i++) shoot(p, p.angle - pw.spread / 2 + (pw.spread * i) / (pw.count - 1), a);
+  } else if (p.cls === 'druide') {
+    // Cercle de soin : le druide et ses alliés proches (coéquipiers, ou toute la classe contre le boss)
+    fx.push({ k: 'cercle', x: p.x, y: p.y, r: pw.radius, t: 0.6, d: 0.6 });
+    for (const o of players.values()) {
+      if (!o.alive || Math.hypot(o.x - p.x, o.y - p.y) > pw.radius + R) continue;
+      if (o !== p && !(mode === 'boss' || (teamMode() && o.team === p.team))) continue;
+      const avant = o.hp; o.hp = Math.min(o.maxHp, o.hp + pw.soin);
+      if (o.hp > avant) fx.push({ k: 'heal', x: o.x, y: o.y, t: 0.9, d: 0.9 });
+      if (o !== p && o.hp > avant) p.soins = (p.soins || 0) + Math.round(o.hp - avant);
+    }
   } else if (p.cls === 'voleur') {
     // Ombre : invisible et plus rapide ; la prochaine attaque fait +50 %
     p.stealth = pw.dur;
     fx.push({ k: 'smoke', x: p.x, y: p.y, t: 0.5, d: 0.5 });
+  }
+}
+
+// ---------- Super-pouvoir (R) : gagné avec 3 bonnes réponses de suite ----------
+const SUPER = { guerrier: 'Tourbillon', voleur: 'Danse des lames', mage: 'Météore', archer: 'Tempête de flèches', druide: 'Forêt guérisseuse' };
+function zone(p, x, y, r, dmg) {   // dégâts autour d'un point : joueurs ennemis, boss et sbires
+  for (const o of players.values()) if (canHit(p, o) && Math.hypot(o.x - x, o.y - y) < r + R) damage(o, dmg, p);
+  if (boss && boss.hp > 0 && Math.hypot(boss.x - x, boss.y - y) < r + boss.r) hitBoss(dmg, p);
+  if (minions.length) hitMinions(m => Math.hypot(m.x - x, m.y - y) < r + SBIRE.r, dmg, p);
+}
+function superPower(p) {
+  if (!p.superP || !p.alive || paused || p.busy || p.stun > 0) return;
+  p.superP = false; p.protect = 0; p.revealed = 1;
+  addFeed(`🌟 ${p.name} : ${SUPER[p.cls]} !`);
+  if (p.cls === 'guerrier') {
+    fx.push({ k: 'slash', x: p.x, y: p.y, a: 0, r: 120, arc: Math.PI * 2, t: 0.35, d: 0.35 });
+    zone(p, p.x, p.y, 120, 40);
+  } else if (p.cls === 'voleur') {
+    for (let i = 0; i < 10; i++) shoot(p, p.angle + i / 10 * Math.PI * 2, { speed: 520, dmg: 18, r: 6, life: 0.7 });
+    p.stealth = 2;
+  } else if (p.cls === 'mage') {
+    let d = 200; while (d > 0 && blocked(p.x + Math.cos(p.angle) * d, p.y + Math.sin(p.angle) * d, 4)) d -= 20;
+    const x = p.x + Math.cos(p.angle) * d, y = p.y + Math.sin(p.angle) * d;
+    fx.push({ k: 'boom', x, y, r: 160, t: 0.5, d: 0.5 }); fx.push({ k: 'boom', x, y, r: 90, t: 0.35, d: 0.35 });
+    zone(p, x, y, 160, 55);
+  } else if (p.cls === 'archer') {
+    for (let i = 0; i < 16; i++) shoot(p, p.angle + i / 16 * Math.PI * 2, CLASSES.archer.atk, 6);
+  } else if (p.cls === 'druide') {
+    fx.push({ k: 'cercle', x: p.x, y: p.y, r: 260, t: 0.8, d: 0.8 });
+    for (const o of players.values()) if (o.alive && (o === p || mode === 'boss' || (teamMode() && o.team === p.team))) { o.hp = Math.min(o.maxHp, o.hp + 70); fx.push({ k: 'heal', x: o.x, y: o.y, t: 0.9, d: 0.9 }); }
+    puddles.push({ x: Math.round(p.x), y: Math.round(p.y + 14), r: 150, t: 5, owner: p.id, team: p.team, racines: true });
   }
 }
 
@@ -581,6 +646,21 @@ function petPower(p) {
   } else if (k === 5) {
     puddles.push({ x: Math.round(p.x), y: Math.round(p.y + 14), r: pet.r, t: pet.dur, owner: p.id, team: p.team });
   }
+}
+function updateTraps(dt) {
+  smokes = smokes.filter(z => (z.t -= dt) > 0);
+  traps = traps.filter(tr => {
+    if ((tr.t -= dt) <= 0) return false;
+    if ((tr.arm -= dt) > 0) return true;
+    const owner = players.get(tr.owner);
+    for (const o of players.values()) {
+      if (!o.alive || o.id === tr.owner || (owner ? !canHit(owner, o) : mode === 'boss') || Math.hypot(o.x - tr.x, o.y - 14 - tr.y + 14) > 26) continue;
+      o.stun = Math.max(o.stun || 0, 1.5); damage(o, 10, owner || null);
+      fx.push({ k: 'piege', x: tr.x, y: tr.y, t: 0.5, d: 0.5 }); return false;
+    }
+    if (minions.length && owner) { const m = minions.find(m => Math.hypot(m.x - tr.x, m.y - tr.y) < 30); if (m) { hitMinions(x => x === m, 30, owner); fx.push({ k: 'piege', x: tr.x, y: tr.y, t: 0.5, d: 0.5 }); return false; } }
+    return true;
+  });
 }
 function updatePuddles(dt) {
   puddles = puddles.filter(z => (z.t -= dt) > 0);
@@ -624,6 +704,7 @@ function dash(p) {
   p.dash = { vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, t: d.dur, inv: p.cls === 'voleur', hit: new Set() };
   fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.35, d: 0.35 });
   if (p.cls === 'archer') shoot(p, p.angle, CLASSES.archer.atk);
+  if (p.cls === 'druide') puddles.push({ x: Math.round(p.x), y: Math.round(p.y + 14), r: d.racines, t: d.rdur, owner: p.id, team: p.team, racines: true });   // racines qui ralentissent
 }
 function dashStep(p, dt) {
   const D = p.dash;
@@ -718,8 +799,20 @@ function updateLoot(dt) {
     }
   }
 }
+// Relever un coéquipier : rester 2 s près de son âme, puis répondre à une question à sa place
+function updateAmes(dt) {
+  ames = ames.filter(a => { const o = players.get(a.id); return o && !o.alive && (a.t -= dt) > 0; });
+  for (const a of ames) {
+    a.cd = Math.max(0, a.cd - dt);
+    if (a.by || a.cd > 0 || eclair) continue;
+    const r = [...players.values()].find(q => q.alive && !q.bot && !q.busy && q.id !== a.id && (mode === 'boss' || q.team === a.team) && Math.hypot(q.x - a.x, q.y - a.y) < 60);
+    if (!r) { a.prog = Math.max(0, a.prog - dt); continue; }
+    if ((a.prog += dt) >= 2) { a.by = r.id; r.busy = true; r.busyT = 25; askQuestion(r, 'releve', { ame: a.id }); }
+  }
+}
 function cancelChest(p) {
   if (!p.busy) return;
+  const am = ames.find(a => a.by === p.id); if (am) { am.by = 0; am.prog = 0; }
   const ch = chests[p.question ? p.question.chest : p.goldNext ? p.goldNext.chest : -1];
   if (ch) ch.by = 0;
   p.busy = false; p.question = null; p.goldNext = null;
@@ -1080,7 +1173,7 @@ function newRound() {
   ended = null; paused = false; countdown = 3.5;
   if (eclair) { eclair = null; for (const c of conns) if (c.player) send(c, { t: 'close' }); }
   for (const q of players.values()) {
-    q.kills = q.deaths = q.good = q.bad = q.streak = q.dmgBoss = q.obj = 0; q.carry = null;
+    q.kills = q.deaths = q.good = q.bad = q.streak = q.dmgBoss = q.obj = q.serieK = 0; q.carry = null; q.superP = false;
     q.fast = q.strong = q.shield = q.stealth = 0; q.pending = null;
     q.gear = { casque: 0, armure: 0, epee: 0, bottes: 0 };
     cancelChest(q);
@@ -1096,7 +1189,7 @@ function newRound() {
   chests.forEach(c => { c.open = 0; c.by = 0; });
   goldFrom = -1; pickGold();
   barrels.forEach(b => { b.t = 0; b.fuse = 0; });
-  puddles = [];
+  puddles = []; traps = []; smokes = []; ames = [];
   items = [];
   sendAll({ t: 'debut' });
   addFeed('🔄 Nouvelle manche !');
@@ -1192,6 +1285,7 @@ function botThink(p, dt) {
   p.moveAngle = dir ? (dir > 0 ? ang : ang + Math.PI) : null;
   if (seen && bd < want + 30 && Math.random() < 0.5) attack(p);
   if (seen && bd < 200 && Math.random() < 0.01) power(p);
+  if (p.cls === 'druide' && p.hp < p.maxHp * 0.5 && Math.random() < 0.05) power(p);   // le druide robot se soigne
   if (seen && bd < 260 && Math.random() < 0.006) petPower(p);
   // habileté : foncer (corps à corps) ou s'éloigner (à distance)
   if (seen && Math.random() < 0.02) {
@@ -1240,7 +1334,7 @@ function step() {
     p.shield = Math.max(0, p.shield - dt); p.protect = Math.max(0, p.protect - dt);
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
     p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt); p.stun = Math.max(0, (p.stun || 0) - dt); p.atkT = Math.max(0, (p.atkT || 0) - dt);
-    p.hidden = p.revealed <= 0 && inBush(p);
+    p.hidden = p.revealed <= 0 && (inBush(p) || smokes.some(z => Math.hypot(z.x - p.x, z.y - p.y) < z.r));
     if (p.busy) {
       if (p.goldNext && (p.goldNext.t -= dt) <= 0) { const g = p.goldNext; p.goldNext = null; askQuestion(p, 'chest', { chest: g.chest, gold: true, step: 2, nOk: g.nOk }); }
       if ((p.busyT -= dt) <= 0) cancelChest(p);
@@ -1279,7 +1373,7 @@ function step() {
     updateLoot(dt);
     updateBarrels(dt);
     updatePortals(dt);
-    updatePuddles(dt);
+    updatePuddles(dt); updateTraps(dt); updateAmes(dt);
     updateHill(dt);
     updateFlags(dt);
     projectiles = projectiles.filter(b => {
@@ -1321,8 +1415,10 @@ function publicState() {
     fx: fx.map(f => { const o = {}; for (const k in f) o[k] = typeof f[k] === 'number' ? Math.round(f[k] * 100) / 100 : f[k]; return o; }),
     ch: chests.map(c => (c.open > 0 ? 1 : 0)).join(''),
     tb: barrels.map(b => (b.t ? 0 : b.fuse ? 2 : 1)).join(''),
-    pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1), z.boss ? 1 : 0]),
+    pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1), z.boss ? 1 : z.racines ? 2 : 0]),
     it: items.map(it => [it.x, it.y, it.k]),
+    am: ames.map(a => [a.x, a.y, a.team, Math.min(1, a.prog / 2).toFixed(2) * 1, a.id]),
+    tr: traps.map(tr => [tr.x, tr.y, tr.owner, tr.arm > 0 ? 1 : 0]), sm: smokes.map(z => [z.x, z.y, z.r, +z.t.toFixed(1)]),
     boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase, (boss.anim > 0 ? 1 : 0) | (boss.moving ? 2 : 0)] : 0,
     mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / SBIRE.hp * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),
     tm: timer.dur ? Math.ceil(timer.left) : -1,
@@ -1330,6 +1426,7 @@ function publicState() {
     hl: hill ? [hill.x, hill.y, HILL.r, hill.owner, Math.ceil(hill.t)] : 0,
     fl: flags ? flags.map(f => [Math.round(f.x), Math.round(f.y), f.carrier ? 1 : 0, f.hx, f.hy]) : 0,
     gc: chests.findIndex(c => c.gold),
+    pm: lead && players.get(lead) ? prime(players.get(lead)) : 0,
     feed: feed.map(f => f.text), paused, rg: regles ? 1 : 0, ec: eclair ? Math.ceil(eclair.left) : 0, cd: Math.ceil(countdown - 0.5),
   });
 }
@@ -1340,7 +1437,7 @@ function broadcast() {
     if (c.role === 'prof') c.send(`{"t":"s","w":${common}}`);
     else if (c.player) {
       const p = c.player;
-      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, team: p.team, ar: armorOf(p), ge: p.gear };
+      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear };
       c.send(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
     }
   }
@@ -1387,6 +1484,7 @@ function onMessage(conn, msg) {
     case 'atk': if (p) attack(p); break;
     case 'dash': if (p) dash(p); break;
     case 'pow': if (p) power(p); break;
+    case 'super': if (p) superPower(p); break;
     case 'pet': if (p) petPower(p); break;
     case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 30) : undefined); break;
     case 'look': if (p && cleanLook(m.look)) p.look = cleanLook(m.look); break;
@@ -1404,7 +1502,7 @@ function onMessage(conn, msg) {
     case 'pause': if (!ended) { paused = !paused; regles = false; addFeed(paused ? '⏸ Partie en pause' : '▶ La partie reprend !'); } break;
     case 'regles': if (!ended) { regles = !regles; paused = regles; } break;
     case 'addbot': {
-      const cls = Object.keys(CLASSES)[Math.floor(Math.random() * 4)];
+      const cls = pick(Object.keys(CLASSES));
       const used = new Set([...players.values()].map(q => q.name));
       const free = BOT_NAMES.filter(n => !used.has(n));
       createPlayer(free.length ? pick(free) : 'Robot ' + nextId, cls, true);

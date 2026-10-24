@@ -44,7 +44,7 @@
   .wnav .btn { font-size: 20px; padding: 8px 22px; } .btn.alt { background: #c9bfe6; box-shadow: inset -4px -4px 0 #9a8fc0, inset 4px 4px 0 #ece6ff, 4px 4px 0 #0008; }
   .btn:disabled { opacity: .45; cursor: default; }
   details.keys summary { cursor: pointer; font-weight: 700; }
-  .wiz .classes { width: 100%; }
+  .wiz .classes { width: 100%; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); } .wiz .cls { padding: 8px 6px; }
   .classes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; width: min(780px, 100%); }
   .cls { padding: 10px; cursor: pointer; text-align: center; }
   .cls:hover { transform: translateY(-3px); }
@@ -84,6 +84,7 @@
   #hud { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 10px; pointer-events: none; }
   .cd { width: 76px; height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; font-size: 13px; }
   .cd .ico { font-size: 28px; }
+  .cd.super { pointer-events: auto; cursor: pointer; background: #6a4a10; box-shadow: 0 0 0 3px #ffd54a, 0 0 18px #ffd54a; animation: brille 0.8s ease-in-out infinite alternate; } @keyframes brille { to { box-shadow: 0 0 0 3px #fff2b0, 0 0 30px #ffd54a; } }
   .cd .fill { position: absolute; left: 0; right: 0; bottom: 0; background: #000a; }
   #score { position: fixed; top: 10px; left: 12px; padding: 6px 12px; font-size: 16px; }
   #zone { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); padding: 4px 14px; font-size: 18px; color: #ffd54a; white-space: nowrap; }
@@ -165,9 +166,10 @@
   <div class="cd panel"><div class="ico" id="icoA">⚔️</div><span>J</span><div class="fill" id="fillA"></div></div>
   <div class="cd panel"><div class="ico" id="icoP">✨</div><span id="lblP">K</span><div class="fill" id="fillP"></div></div>
   <div class="cd panel"><div class="ico" id="icoD">💨</div><span id="lblD">Espace</span><div class="fill" id="fillD"></div></div>
+  <div class="cd panel super" id="cdS" style="display:none"><div class="ico">🌟</div><span>R</span></div>
   <div class="cd panel" id="cdF" style="display:none"><div class="ico" id="icoF">🐾</div><span id="lblF">E</span><div class="fill" id="fillF"></div></div>
 </div>
-<div id="touch"><button id="tPet" class="btn" style="display:none">🐾</button><button id="tDash" class="btn">💨</button><button id="tAtk" class="btn">⚔️</button><button id="tPow" class="btn">✨</button></div>
+<div id="touch"><button id="tSuper" class="btn" style="display:none">🌟</button><button id="tPet" class="btn" style="display:none">🐾</button><button id="tDash" class="btn">💨</button><button id="tAtk" class="btn">⚔️</button><button id="tPow" class="btn">✨</button></div>
 
 <div id="join" class="screen">
   <h1>Arène du Savoir</h1>
@@ -220,9 +222,9 @@
 <script src="draw.js"></script>
 <script>
 
-const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️' };
-const DASH_ICO = { guerrier: '💨', voleur: '🌀', mage: '✨', archer: '🦘' };
-const ATK_ICO = { guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹' };
+const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️', druide: '🌿' };
+const DASH_ICO = { guerrier: '💨', voleur: '🌀', mage: '✨', archer: '🦘', druide: '🍃' };
+const ATK_ICO = { guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹', druide: '🌰' };
 
 // pouvoirs des familiers (affichés avant d'entrer ; le serveur a les mêmes)
 const info0 = [null, 'Ronron : +25 points de vie', 'Hurlement : repousse les ennemis proches', 'Petite boule de feu', 'Œil perçant : révèle les joueurs cachés', 'Flaque gluante : ralentit les ennemis'];
@@ -413,6 +415,8 @@ function connect(name, cls) {
     else if (m.t === 'item') { if (m.gear) toast(`${m.ico} ${m.nom} ! (${m.bonus})`); else if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play(m.gear ? 'serie' : 'objet'); }
     else if (m.t === 'portail') Son.play('tp');
     else if (m.t === 'or') { monOr += m.n; sauverOr(); if (m.n > 1) toast(`🪙 +${m.n} pièces d'or !`); }
+    else if (m.t === 'releve') { toast(`💚 ${m.par} t'a relevé !`); Son.play('retour'); answering = false; }
+    else if (m.t === 'super') { toast('🌟 Super-pouvoir prêt ! Appuie sur R'); Son.play('serie'); }
     else if (m.t === 'serie') { toast(`🔥 Série de ${m.n} bonnes réponses ! Bonus : ${m.ico} ${m.nom}`); Son.play('serie'); }
     else if (m.t === 'fin') showFin(m);
     else if (m.t === 'debut') { $('fin').style.display = 'none'; document.querySelector('.wcontent').appendChild($('lookPanel')); }
@@ -435,6 +439,7 @@ function showQuestion(m) {
   head.className = 'ko ' + qKind;
   clearInterval(qTimer);
   if (qKind === 'chest' && m.gold) { head.className = 'ko gold'; head.textContent = `🌟 Coffre doré ! Question ${m.step} sur 2 : deux bonnes réponses = trésor légendaire.`; if (m.step === 1) Son.play('coffre'); }
+  else if (qKind === 'releve') { head.className = 'ko chest'; head.textContent = '💚 Réponds juste pour relever ton coéquipier !'; Son.play('coffre'); }
   else if (qKind === 'chest') { head.textContent = '🎁 Un coffre au trésor ! Bonne réponse = meilleur objet.'; Son.play('coffre'); }
   else if (qKind === 'eclair') {
     let t = m.temps || 20; Son.play('eclair');
@@ -492,6 +497,11 @@ function showResult(m) {
     Son.play(m.ok ? 'bon' : 'faux');
     if (m.suite) {   // coffre doré : la 2e question arrive
       $('qMsg').textContent = (m.ok ? '✅ Bravo ! ' : '❌ Pas tout à fait. ') + 'Deuxième question…';
+      return;
+    }
+    if (m.releve) {
+      $('qMsg').textContent = m.ok ? `💚 Bravo ! ${m.nom} revient au combat grâce à toi !` : '❌ Pas tout à fait… Essaie encore dans 3 secondes.';
+      setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.ok ? 1500 : m.explication ? 4500 : 3000);
       return;
     }
     if (m.dore != null) {
@@ -607,6 +617,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { dashSound(); sendMsg({ t: 'dash' }); } }
   if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') sendMsg({ t: 'pow' });
   if (e.code === 'KeyE' && !e.repeat) petPow();
+  if (e.code === 'KeyR' && !e.repeat) sendMsg({ t: 'super' });
 });
 addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
 const cv = $('c'), ctx = cv.getContext('2d');
@@ -614,7 +625,7 @@ cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; 
 cv.addEventListener('mousedown', e => { Son.unlock(); if (e.button === 2) sendMsg({ t: 'pow' }); else { attackSound(); sendMsg({ t: 'atk' }); } });
 function petPow() { if (me && me.alive && me.pet && me.cdF <= 0.05) Son.play(['', 'miaou', 'ouaf', 'feu', 'hibou', 'slime'][me.pet]); sendMsg({ t: 'pet' }); }
 function dashSound() { if (me && me.alive && me.cdD <= 0.05) Son.play(myCls === 'mage' ? 'tp' : 'dash'); }
-function attackSound() { if (me && me.alive && me.cdA <= 0.05) Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' ? 'tir' : 'atk'); }
+function attackSound() { if (me && me.alive && me.cdA <= 0.05) Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' || myCls === 'druide' ? 'tir' : 'atk'); }
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
 // Tactile : glisser n'importe où à gauche pour bouger
@@ -630,6 +641,8 @@ cv.addEventListener('touchmove', e => {
 cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; } });
 $('tAtk').ontouchstart = e => { e.preventDefault(); Son.unlock(); attackSound(); sendMsg({ t: 'atk' }); };
 $('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
+$('tSuper').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'super' }); };
+$('cdS').onclick = () => sendMsg({ t: 'super' });
 $('tPet').ontouchstart = e => { e.preventDefault(); Son.unlock(); petPow(); };
 $('tDash').ontouchstart = e => { e.preventDefault(); Son.unlock(); dashSound(); sendMsg({ t: 'dash' }); };
 
@@ -724,6 +737,7 @@ function frame(now) {
   if (me) {
     $('fillA').style.height = (me.cdA / c.atk.cd * 100) + '%';
     $('fillP').style.height = (me.cdP / c.power.cd * 100) + '%';
+    $('cdS').style.display = me.su ? '' : 'none'; $('tSuper').style.display = me.su && $('touch').style.display !== 'none' ? '' : 'none';
     $('lblP').textContent = me.cdP > 0 ? Math.ceil(me.cdP) + ' s' : 'K';
     $('fillD').style.height = ((me.cdD || 0) / c.dash.cd * 100) + '%';
     $('lblD').textContent = me.cdD > 0 ? Math.ceil(me.cdD) + ' s' : 'Espace';
