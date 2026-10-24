@@ -96,11 +96,18 @@
   .card .ko { font-size: 17px; color: #b8433a; font-weight: 700; }
   .card .tag { display: inline-block; background: #44386a; color: #ffd54a; padding: 3px 12px; font-size: 15px; border: 3px solid #1b1424; margin-top: 6px; }
   .card h2 { font-size: clamp(21px, 3.6vw, 29px); margin: 14px 0 16px; font-weight: 700; }
+  #quiz .card { position: relative; }
+  #qVoix { position: absolute; top: 8px; right: 8px; font-size: 22px; background: #44386a; border: 3px solid #1b1424; cursor: pointer; padding: 2px 8px; }
+  .ouvert { grid-column: 1 / -1; display: flex; gap: 10px; justify-content: center; }
+  .ouvert input { font: 700 28px "Pixelify Sans", monospace; width: 180px; text-align: center; padding: 8px; border: 4px solid #1b1424; background: #fffaf0; outline: none; }
+  .ouvert input:focus { border-color: #d9a93a; } .ouvert.good input { background: #a8e6a1; } .ouvert.bad input { background: #ffb3a7; }
   .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .choices button { font: 600 19px "Pixelify Sans", monospace; padding: 12px 10px; border: 4px solid #1b1424; background: #fffaf0; color: #2a1f3d; cursor: pointer; box-shadow: inset -3px -3px 0 #d9c9a3; }
   .choices button:hover { background: #ffe9a8; }
   .choices button.good { background: #a8e6a1; }
   .choices button.bad { background: #ffb3a8; }
+  .exp { display: none; margin-top: 10px; padding: 10px 14px; background: #fff7d6; border: 3px solid #d9a93a; font-size: 18px; text-align: left; }
+  .exp.on { display: block; }
   .msg { min-height: 26px; margin-top: 12px; font-weight: 600; font-size: 17px; }
   #qSvg svg { max-width: 100%; height: auto; margin: -4px 0 12px; }
   #qSvg:empty { display: none; }
@@ -193,12 +200,14 @@
 
 <div id="quiz" class="screen">
   <div class="card">
+    <button id="qVoix" title="Lire la question à voix haute">🔊</button>
     <div class="ko" id="qHead">💫 Tu es K.O. ! Réponds pour revenir au combat.</div>
     <div class="tag" id="qTag"></div>
     <h2 id="qText"></h2>
     <div id="qSvg"></div>
     <div class="choices" id="qChoices"></div>
     <div class="msg" id="qMsg"></div>
+    <div class="exp" id="qExp"></div>
   </div>
 </div>
 
@@ -432,8 +441,18 @@ function showQuestion(m) {
   $('qTag').textContent = m.notion ? `${m.matiere} · ${m.notion}` : m.matiere;
   $('qSvg').innerHTML = m.svg || '';
   $('qText').textContent = m.question;
-  $('qMsg').textContent = '';
+  $('qMsg').textContent = ''; $('qExp').className = 'exp';
   const box = $('qChoices'); box.innerHTML = '';
+  qOuvert = !!m.ouvert; qVoixTxt = m.question + (qOuvert ? '' : ' … ' + m.choix.join(' … ou … '));
+  if (qOuvert) {   // niveau défi : on tape la réponse
+    const d = document.createElement('div'); d.className = 'ouvert';
+    d.innerHTML = '<input id="qIn" inputmode="decimal" autocomplete="off" placeholder="?"><button class="btn" id="qOk">Valider</button>';
+    box.appendChild(d);
+    const valider = () => { if (!answering || !$('qIn').value.trim()) return; answering = false; $('qIn').disabled = true; sendMsg({ t: 'ans', i: -1, txt: $('qIn').value }); };
+    $('qOk').onclick = valider; $('qIn').onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') valider(); };
+    setTimeout(() => $('qIn') && $('qIn').focus(), 50);
+    return;
+  }
   m.choix.forEach((c, i) => {
     const b = document.createElement('button');
     b.innerHTML = `<b>${i + 1}.</b> `;
@@ -448,7 +467,18 @@ function choose(i) {
   $('qChoices').children[i].classList.add('chosen');
   sendMsg({ t: 'ans', i });
 }
+let qOuvert = false, qVoixTxt = '';
+$('qVoix').onclick = () => {
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(qVoixTxt); u.lang = 'fr-CA'; u.rate = 0.9;
+    const v = speechSynthesis.getVoices().find(v => v.lang === 'fr-CA') || speechSynthesis.getVoices().find(v => v.lang.startsWith('fr')); if (v) u.voice = v;
+    speechSynthesis.speak(u); } catch {}
+};
 function showResult(m) {
+  if (qOuvert) {
+    const d = document.querySelector('.ouvert'); if (d) d.classList.add(m.ok ? 'good' : 'bad');
+    if (!m.ok && m.bonneTxt) m.explication = `La bonne réponse est ${m.bonneTxt}.` + (m.explication ? ' ' + m.explication : '');
+  }
+  if (!m.ok && m.explication) { $('qExp').textContent = '💡 À retenir : ' + m.explication; $('qExp').className = 'exp on'; }
   const btns = [...$('qChoices').children];
   const chosenBtn = btns.find(b => b.classList.contains('chosen'));
   clearInterval(qTimer);
@@ -458,20 +488,20 @@ function showResult(m) {
     else { chosenBtn && chosenBtn.classList.add('bad'); btns[m.bonne] && btns[m.bonne].classList.add('good'); }
     Son.play(m.ok ? 'bon' : 'faux');
     if (m.suite) {   // coffre doré : la 2e question arrive
-      $('qMsg').textContent = (m.ok ? '✅ Bravo ! ' : '❌ Pas tout à fait. ') + 'Deuxième question…' + (m.explication ? ' ' + m.explication : '');
+      $('qMsg').textContent = (m.ok ? '✅ Bravo ! ' : '❌ Pas tout à fait. ') + 'Deuxième question…';
       return;
     }
     if (m.dore != null) {
       $('qMsg').textContent = m.dore === 2 ? `🌟 Trésor légendaire ! ${m.gear ? 'Ton équipement s\'améliore' + (m.gear > 1 ? ' deux fois' : '') : 'Grande potion'} et 🪙 +5 pièces d'or !`
-        : (m.dore === 1 ? '✨ Une bonne réponse sur deux. ' : '❌ Aucune bonne réponse. ') + `Tu obtiens : ${m.ico} ${m.nom}` + (m.explication ? ' ' + m.explication : '');
+        : (m.dore === 1 ? '✨ Une bonne réponse sur deux. ' : '❌ Aucune bonne réponse. ') + `Tu obtiens : ${m.ico} ${m.nom}`;
       if (m.dore === 2) Son.play('serie');
       setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.dore === 2 ? 2200 : 3000);
       return;
     }
     $('qMsg').textContent = m.kind === 'chest'
-      ? m.gear ? '✅ Bravo ! Tu trouves une pièce d\'équipement !' : (m.ok ? `✅ Bravo ! Tu obtiens : ${m.ico} ${m.nom}` : `❌ Pas tout à fait… Tu obtiens quand même : ${m.ico} ${m.nom}`) + (m.explication ? ' ' + m.explication : '')
-      : m.ok ? '✅ Bravo ! Bonus de force à ton retour au combat.' : (m.repondu ? '❌ Pas tout à fait. Regarde la bonne réponse.' : '⏱ Temps écoulé !') + (m.explication ? ' ' + m.explication : '');
-    setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.ok ? 1500 : 3000);
+      ? m.gear ? '✅ Bravo ! Tu trouves une pièce d\'équipement !' : (m.ok ? `✅ Bravo ! Tu obtiens : ${m.ico} ${m.nom}` : `❌ Pas tout à fait… Tu obtiens quand même : ${m.ico} ${m.nom}`)
+      : m.ok ? '✅ Bravo ! Bonus de force à ton retour au combat.' : (m.repondu ? '❌ Pas tout à fait. Regarde la bonne réponse.' : '⏱ Temps écoulé !');
+    setTimeout(() => { if (!answering) $('quiz').style.display = 'none'; }, m.ok ? 1500 : m.explication ? 4500 : 3000);
     return;
   }
   if (m.ok) {
@@ -483,7 +513,7 @@ function showResult(m) {
     Son.play('faux');
     chosenBtn && chosenBtn.classList.add('bad');
     btns[m.bonne] && btns[m.bonne].classList.add('good');
-    $('qMsg').textContent = '❌ Pas tout à fait. Regarde la bonne réponse… nouvelle question dans 3 secondes.' + (m.explication ? ' ' + m.explication : '');
+    $('qMsg').textContent = '❌ Pas tout à fait. Regarde la bonne réponse… nouvelle question dans quelques secondes.';
   }
 }
 
@@ -567,7 +597,7 @@ const KEYMAP = { KeyW: 'u', ArrowUp: 'u', KeyS: 'd', ArrowDown: 'd', KeyA: 'l', 
 let aim = 0, mouseAim = false, lastMouse = 0, mouse = { x: 0, y: 0 };
 addEventListener('keydown', e => {
   if (!map) return;
-  if (answering && /^Digit[1-4]$/.test(e.code)) return choose(+e.code.slice(5) - 1);
+  if (answering && !qOuvert && /^Digit[1-4]$/.test(e.code)) return choose(+e.code.slice(5) - 1);
   if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 1; e.preventDefault(); }
   Son.unlock();
   if (e.code === 'KeyJ') { attackSound(); sendMsg({ t: 'atk' }); }

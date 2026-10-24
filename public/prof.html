@@ -50,6 +50,12 @@
   .podium canvas { width: 120px; height: 150px; display: block; margin: 0 auto; image-rendering: pixelated; }
   .podium i { display: block; background: #8b5a2b; color: #ffd54a; border: 3px solid #1b1424; font-style: normal; font-size: 34px; }
   .big { font-size: 24px; line-height: 1.5; }
+  .perso { display: flex; flex-direction: column; gap: 6px; } .prow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .perso input, .perso select, .perso textarea { font: inherit; font-size: 14px; padding: 5px 7px; border-radius: 6px; border: 0; } .perso input { flex: 1; min-width: 160px; }
+  .perso textarea { width: 100%; box-sizing: border-box; resize: vertical; } #pMsg { font-size: 13px; opacity: .9; }
+  .pbanks { font-size: 13px; } .pbanks button { margin: 2px; } .pitem { display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding: 3px 0; border-top: 1px solid #ffffff1a; }
+  .nv { font: inherit; font-size: 12px; padding: 2px 6px; border-radius: 6px; border: 0; cursor: pointer; } .nv[data-v="f"] { background: #a8e6a1; } .nv[data-v="d"] { background: #ffb36b; }
+  .pitem button { background: none; border: 0; cursor: pointer; font-size: 16px; }
   #rglCard { text-align: left; } #rglCard .rgT { color: #2a1f3d; text-align: center; font-size: 46px; margin: 0 0 8px; } #rglCard .rgB { text-align: center; font-size: 32px; font-weight: 700; color: #8b5a2b; margin-bottom: 10px; }
   #rglCard .rgL { font-size: 28px; line-height: 1.5; } #rglCard .big { text-align: center; font-size: 18px; opacity: .7; margin-top: 10px; }
   @media (max-width: 900px) { .wrap { grid-template-columns: 1fr; grid-template-rows: 55vh auto; } }
@@ -103,6 +109,19 @@
       <div id="subjects"></div>
     </div>
     <div class="box">
+      <h2>✍️ Mes questions</h2>
+      <div class="perso">
+        <div class="prow"><input id="pNotion" placeholder="Nom de la notion (ex. : Vocabulaire semaine 8)" maxlength="60">
+        <select id="pMat"><option>Français</option><option>Mathématiques</option><option>Univers social</option><option>Sciences</option><option>Anglais</option><option>Autre</option></select></div>
+        <textarea id="pTexte" rows="5" placeholder="Une question par ligne :&#10;question ; bonne réponse ; mauvaise ; mauvaise ; mauvaise&#10;Pour une explication : ajoute | et le texte à la fin.&#10;Tu peux aussi coller des colonnes copiées d'Excel."></textarea>
+        <div class="prow"><button id="pAdd">➕ Ajouter</button><span id="pMsg"></span></div>
+        <div class="pbanks">Banques prêtes : <span id="pBanks"></span></div>
+        <div id="pList"></div>
+        <label class="pbanks"><input type="checkbox" id="ouvert"> ✏️ Réponses à taper pour tous (questions dont la réponse est un nombre)</label>
+        <div class="pbanks">Niveau de chaque élève : clique sur son niveau dans le Classement. 🙂 Facile = 3 choix · Normal = 4 choix · 🔥 Défi = réponse à taper.</div>
+      </div>
+    </div>
+    <div class="box">
       <h2>Classement</h2>
       <div id="teamsBox"></div>
       <table><thead><tr id="boardHead"></tr></thead><tbody id="board"></tbody></table>
@@ -121,6 +140,7 @@
 </div>
 <script src="sons.js"></script>
 <script src="draw.js"></script>
+<script src="banques.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const cv = $('c'), ctx = cv.getContext('2d');
@@ -128,7 +148,7 @@ let map = null, world = null, W0 = null, last = null;
 const disp = new Map();
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
-ws.onopen = () => send({ t: 'prof' });
+ws.onopen = () => { send({ t: 'prof' }); if (perso.length) send({ t: 'perso', qs: perso }); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
 ws.onclose = () => { $('urls').textContent = 'Serveur arrêté – rechargez la page dans un instant'; };
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
@@ -143,12 +163,53 @@ ws.onmessage = e => {
   }
   else if (m.t === 'info') info(m);
   else if (m.t === 'eclairRes') eclairRes(m);
-  else if (m.t === 'fin') showFin(m);
+  else if (m.t === 'fin') { showFin(m); send({ t: 'bilans', silent: true }); }   // l'historique des séances se met à jour à chaque fin de manche
   else if (m.t === 'debut') $('fin').style.display = 'none';
-  else if (m.t === 'bilans') bilans(m);
+  else if (m.t === 'bilans') { sauverHisto(m.memoire); if (!m.silent) bilans(m); }
 };
 $('pause').onclick = () => send({ t: 'pause' });
 $('regles').onclick = () => send({ t: 'regles' });
+setInterval(() => { if (ws.readyState === 1) send({ t: 'bilans', silent: true }); }, 120000);   // sauvegarde régulière de l'historique
+// ----- Mes questions : gardées dans ce navigateur, envoyées au jeu à chaque connexion -----
+let perso = [];
+try { perso = JSON.parse(localStorage.getItem('arene-perso') || '[]'); } catch {}
+const envoyerPerso = () => { try { localStorage.setItem('arene-perso', JSON.stringify(perso)); } catch {} send({ t: 'perso', qs: perso }); renderPerso(); };
+function renderPerso() {
+  const par = {};
+  for (const q of perso) (par[q.notion] = par[q.notion] || { m: q.matiere, n: 0 }).n++;
+  $('pList').innerHTML = '';
+  for (const [notion, { m, n }] of Object.entries(par)) {
+    const d = document.createElement('div'); d.className = 'pitem';
+    d.innerHTML = `<span>${esc(notion)} <small>(${esc(m)}, ${n} question${n > 1 ? 's' : ''})</small></span><button title="Supprimer cette notion">🗑️</button>`;
+    d.querySelector('button').onclick = () => { if (confirm(`Supprimer la notion « ${notion} » et ses ${n} questions ?`)) { perso = perso.filter(q => q.notion !== notion); envoyerPerso(); } };
+    $('pList').appendChild(d);
+  }
+}
+$('pAdd').onclick = () => {
+  const notion = $('pNotion').value.trim();
+  if (!notion) { $('pMsg').textContent = 'Donne un nom à la notion.'; return; }
+  const { out, erreurs } = lireQuestions($('pTexte').value, notion, $('pMat').value);
+  if (!out.length) { $('pMsg').textContent = 'Aucune question trouvée : il faut au moins une question, une bonne et une mauvaise réponse.'; return; }
+  perso = perso.concat(out); envoyerPerso();
+  $('pTexte').value = '';
+  $('pMsg').textContent = `✅ ${out.length} question${out.length > 1 ? 's' : ''} ajoutée${out.length > 1 ? 's' : ''}` + (erreurs.length ? ` · lignes ignorées : ${erreurs.join(', ')}` : '');
+};
+for (const [k, b] of Object.entries(BANQUES)) {
+  const bt = document.createElement('button'); bt.textContent = b.nom; bt.className = 'sec';
+  bt.onclick = () => {
+    if (perso.some(q => q.notion === b.nom)) { $('pMsg').textContent = 'Cette banque est déjà ajoutée.'; return; }
+    perso = perso.concat(lireQuestions(b.lignes.join('\n'), b.nom, b.matiere).out); envoyerPerso();
+    $('pMsg').textContent = `✅ ${b.nom} ajoutée : ${b.lignes.length} questions.`;
+  };
+  $('pBanks').appendChild(bt);
+}
+renderPerso();
+// niveaux des élèves (gardés dans ce navigateur, par prénom)
+const NIV = { f: '🙂 Facile', n: 'Normal', d: '🔥 Défi' };
+let niv = {}, ouvertOn = false;
+try { niv = JSON.parse(localStorage.getItem('arene-niveaux') || '{}'); ouvertOn = localStorage.getItem('arene-ouvert') === '1'; } catch {}
+const envoyerNiv = v => { try { localStorage.setItem('arene-niveaux', JSON.stringify(niv)); localStorage.setItem('arene-ouvert', ouvertOn ? '1' : '0'); } catch {} send({ t: 'niveaux', v, ouvert: ouvertOn }); };
+$('ouvert').onchange = e => { ouvertOn = e.target.checked; envoyerNiv({}); };
 $('reset').onclick = () => confirm('Commencer une nouvelle manche ? Les scores seront remis à zéro.') && send({ t: 'reset' });
 $('finir').onclick = () => confirm('Terminer la manche maintenant et afficher les gagnants ?') && send({ t: 'finir' });
 $('addbot').onclick = () => send({ t: 'addbot' });
@@ -218,11 +279,13 @@ function info(m) {
   // classement
   const boss = m.mode === 'boss', eq = ['equipes', 'colline', 'drapeau'].includes(m.mode);
   const unite = m.mode === 'colline' ? 'points de colline' : m.mode === 'drapeau' ? 'captures' : 'victoires';
-  $('boardHead').innerHTML = `<th>Élève</th><th>${boss ? '👑 dégâts' : '🏆'}</th><th>💀</th><th>✅</th><th>❌</th><th></th>`;
+  $('boardHead').innerHTML = `<th>Élève</th><th>${boss ? '👑 dégâts' : '🏆'}</th><th>💀</th><th>✅</th><th>❌</th><th title="Niveau des questions : clique pour changer">Niveau</th><th></th>`;
   const ps = [...m.players].sort((a, b) => boss ? b.dm - a.dm : b.k - a.k || b.g - a.g);
   $('board').innerHTML = ps.map(p => `<tr><td>${eq && m.teams[p.team] ? `<span class="dot" style="background:${m.teams[p.team].color}"></span>` : ''}${CLS[p.c].ico} ${esc(p.n)}${p.bot ? ' 🤖' : ''}</td><td>${boss ? p.dm : p.k}</td><td>${p.d}</td><td>${p.g}</td><td>${p.b}</td>
-    <td><button class="x" title="Retirer" data-id="${p.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="6">En attente des élèves…</td></tr>';
+    <td>${p.bot ? '' : `<button class="nv" data-n="${esc(p.n)}" data-v="${p.nv}">${NIV[p.nv]}</button>`}</td><td><button class="x" title="Retirer" data-id="${p.id}">✕</button></td></tr>`).join('') || '<tr><td colspan="7">En attente des élèves…</td></tr>';
   $('board').querySelectorAll('.x').forEach(b => b.onclick = () => send({ t: 'kick', id: +b.dataset.id }));
+  $('board').querySelectorAll('.nv').forEach(b => b.onclick = () => { const v = { n: 'f', f: 'd', d: 'n' }[b.dataset.v]; niv[b.dataset.n] = v; envoyerNiv({ [b.dataset.n]: v }); b.dataset.v = v; b.textContent = NIV[v]; });
+  $('ouvert').checked = !!m.ouvert;
   $('teamsBox').innerHTML = eq ? m.teams.map((t, i) => {
     const mem = m.players.filter(p => p.team === i);
     return `<div><span class="dot" style="background:${t.color}"></span><b>${esc(t.nom)}</b> : ${m.te ? m.te[i] : mem.reduce((s, p) => s + p.k, 0)} ${unite} · ${mem.length} joueurs</div>`;
@@ -327,6 +390,25 @@ $('bilans').onclick = () => {
   if (fenBilans) fenBilans.document.write('<p style="font-family:sans-serif">Préparation des bilans…</p>');
   send({ t: 'bilans' });
 };
+// Historique des séances (dans ce navigateur) : pour comparer les progrès d'une séance à l'autre
+const jour = () => new Date().toLocaleDateString('fr-CA');
+function lireHisto() { try { return JSON.parse(localStorage.getItem('arene-historique') || '[]'); } catch { return []; } }
+function sauverHisto(mem) {
+  const h = lireHisto(), d = jour();
+  let e = h.find(x => x.d === d); if (!e) { e = { d, mem: {} }; h.push(e); }
+  for (const [nom, notions] of Object.entries(mem)) for (const [n, s] of Object.entries(notions)) {
+    const o = ((e.mem[nom] = e.mem[nom] || {})[n] = e.mem[nom][n] || { ok: 0, ko: 0 });
+    if (s.ok + s.ko >= o.ok + o.ko) { o.ok = s.ok; o.ko = s.ko; }   // si le serveur a redémarré, on garde le plus complet
+  }
+  h.sort((a, b) => a.d.localeCompare(b.d));
+  try { localStorage.setItem('arene-historique', JSON.stringify(h.slice(-40))); } catch {}
+}
+// dernière séance avant aujourd'hui où l'élève a répondu à cette notion
+function avant(nom, n) {
+  const h = lireHisto().filter(x => x.d < jour()).reverse();
+  for (const e of h) { const s = e.mem[nom] && e.mem[nom][n]; if (s && s.ok + s.ko) return { d: e.d, p: Math.round(s.ok / (s.ok + s.ko) * 100) }; }
+  return null;
+}
 function bilans(m) {
   const w = fenBilans || window.open('', '_blank');
   if (!w) return alert('Autorisez les fenêtres surgissantes pour imprimer les bilans.');
@@ -341,7 +423,8 @@ function bilans(m) {
     const forts = lignes.filter(([, s]) => s.ok + s.ko >= 3 && pct(s) >= 80).map(([n]) => n);
     const col = p => p >= 75 ? '#2f9e55' : p >= 50 ? '#d9a020' : '#c0392b';
     return `<section><h2>${esc(nom)}</h2><div class="sous">${tot} question${tot > 1 ? 's' : ''} · <b style="color:${col(Math.round(ok / tot * 100))}">${Math.round(ok / tot * 100)} % de réussite</b>${m.or[nom] ? ` · 🪙 ${m.or[nom]} pièces d'or` : ''}</div>
-      <table><tr><th style="width:55%">Notion</th><th style="width:15%">Réussite</th><th></th></tr>${lignes.map(([n, s]) => `<tr><td><small>${esc(matiere[n] || '')}</small> ${esc(n)}</td><td>${s.ok} / ${s.ok + s.ko}</td><td><span class="barre"><i style="width:${pct(s)}%;background:${col(pct(s))}"></i></span> ${pct(s)} %</td></tr>`).join('')}</table>
+      <table><tr><th style="width:45%">Notion</th><th style="width:12%">Réussite</th><th></th><th>Séance précédente</th></tr>${lignes.map(([n, s]) => { const a = avant(nom, n), dp = a ? pct(s) - a.p : 0;
+        return `<tr><td><small>${esc(matiere[n] || '')}</small> ${esc(n)}</td><td>${s.ok} / ${s.ok + s.ko}</td><td><span class="barre"><i style="width:${pct(s)}%;background:${col(pct(s))}"></i></span> ${pct(s)} %</td><td>${a ? `${a.p} % <small>(${a.d})</small> <b style="color:${dp > 5 ? '#2f9e55' : dp < -5 ? '#c0392b' : '#777'}">${dp > 5 ? '▲' : dp < -5 ? '▼' : '='}</b>` : '<small>—</small>'}</td></tr>`; }).join('')}</table>
       ${forts.length ? `<p>⭐ <b>Points forts :</b> ${forts.map(esc).join(', ')}</p>` : ''}
       ${revoir.length ? `<p>📌 <b>À revoir :</b> ${revoir.map(esc).join(', ')}</p>` : `<p>👍 Aucune notion à reprendre en priorité.</p>`}
       <div class="sign">Commentaire : ________________________________________________</div></section>`;

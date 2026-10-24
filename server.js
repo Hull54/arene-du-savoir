@@ -80,6 +80,17 @@ let fx = [];
 let feed = [];
 let paused = false;
 const subjects = new Set(NOTIONS.map(n => n.s));
+// Questions de l'enseignant (gardées dans son navigateur et renvoyées à chaque connexion de /prof)
+let PERSO = [];
+const str = (v, n) => typeof v === 'string' ? v.trim().slice(0, n) : '';
+function setPerso(qs) {
+  if (!Array.isArray(qs)) return;
+  const avant = new Set(PERSO.map(q => q.notion));
+  PERSO = qs.slice(0, 1000).map(q => ({ matiere: str(q.matiere, 40) || 'Mes questions', notion: str(q.notion, 60), question: str(q.question, 300), choix: (Array.isArray(q.choix) ? q.choix : []).slice(0, 4).map(c => str(c, 120)).filter(Boolean), reponse: 0, explication: str(q.explication, 300) }))
+    .filter(q => q.notion && q.question && q.choix.length >= 2 && new Set(q.choix).size === q.choix.length);
+  for (let i = NOTIONS.length - 1; i >= 0; i--) if (NOTIONS[i].perso) NOTIONS.splice(i, 1);
+  for (const q of PERSO) if (!NOTIONS.some(n => n.s === q.notion)) { NOTIONS.push({ s: q.notion, m: q.matiere, perso: true }); if (!avant.has(q.notion)) subjects.add(q.notion); }
+}
 const stats = {};            // nom -> { notion: {ok, ko} } pour la manche
 const memoire = {};          // nom -> { notion: {ok, ko} } pour toute la séance (révision ciblée, bilans)
 const orSeance = {};         // nom -> pièces d'or gagnées pendant la séance
@@ -271,7 +282,7 @@ function newQuestion(p) {
   let r = Math.random() * poids.reduce((a, b) => a + b, 0), ni = 0;
   while (ni < pool.length - 1 && (r -= poids[ni]) > 0) ni++;
   const notion = pool[ni].s;
-  const list = QUESTIONS.filter(q => q.notion === notion);
+  const list = QUESTIONS.filter(q => q.notion === notion).concat(PERSO.filter(q => q.notion === notion));
   const gen = GENERATEURS[notion];
   p.recent = p.recent || [];
   let q;
@@ -289,9 +300,23 @@ function newQuestion(p) {
   return { q, order, answer: order.indexOf(q.reponse) };
 }
 const questionMsg = (Q, kind, extra = {}) => ({ t: 'q', kind, matiere: Q.q.matiere, notion: Q.q.notion, question: Q.q.question, svg: Q.q.svg || '', choix: Q.order.map(i => Q.q.choix[i]), ...extra });
+// Niveau choisi par l'enseignant pour chaque élève : f = facile (3 choix), n = normal, d = défi (réponse à taper si c'est un nombre)
+const niveaux = {};
+let ouvertTous = false;   // réponses à taper pour tous (questions dont la réponse est un nombre)
+const norm = t => String(t).toLowerCase().replace(/[\s\u00a0$]/g, '').replace(',', '.').replace(/\.0+$/, '');
+function adapter(p, Q) {
+  const nv = niveaux[p.name] || 'n', bon = Q.q.choix[Q.q.reponse];
+  if ((nv === 'd' || ouvertTous) && /^[\d\s\u00a0.,]+$/.test(bon)) Q.ouvert = true;
+  else if (nv === 'f' && Q.order.length > 3) {
+    const faux = Q.order.filter(i => i !== Q.q.reponse);
+    Q.order.splice(Q.order.indexOf(faux[Math.floor(Math.random() * faux.length)]), 1);
+    Q.answer = Q.order.indexOf(Q.q.reponse);
+  }
+  return Q;
+}
 function askQuestion(p, kind, extra = {}) {
-  p.question = { ...newQuestion(p), kind, ...extra };
-  send(p.conn, questionMsg(p.question, kind, extra.gold ? { gold: true, step: extra.step } : {}));
+  p.question = { ...adapter(p, newQuestion(p)), kind, ...extra };
+  send(p.conn, questionMsg(p.question, kind, { ...(extra.gold ? { gold: true, step: extra.step } : {}), ...(p.question.ouvert ? { ouvert: true } : {}) }));
   if (p.bot) p.botT = rand(2, 6);
 }
 
@@ -361,10 +386,26 @@ function respawn(p) {
   fx.push({ k: 'spawn', x: p.x, y: p.y, t: 0.6, d: 0.6 });
 }
 
-function answer(p, i) {
+// Rappel court de la règle quand l'élève se trompe (si la question n'a pas sa propre explication)
+const RAPPELS = {
+  'Phrase de base': 'La phrase de base contient un groupe sujet (GS) suivi d\'un groupe du verbe (GV). Le complément de phrase (GCP) est facultatif et se déplace.',
+  'Classes de mots variables': 'Les 5 classes de mots variables : nom, déterminant, adjectif, pronom et verbe. Elles changent selon le genre, le nombre ou la personne.',
+  'Construction du GN': 'Le groupe du nom (GN) a toujours un nom comme noyau. On peut ajouter un déterminant avant, et un adjectif ou un groupe prépositionnel comme expansion.',
+  'Accords dans le GN': 'Dans le GN, le nom donne son genre et son nombre au déterminant et à l\'adjectif.',
+  'Accord des verbes': 'Le verbe s\'accorde avec le noyau du sujet. Trouve le sujet avec « C\'est… qui » et remplace-le par un pronom (il, elle, ils…).',
+  'Angles': 'Angle aigu : moins de 90°. Angle droit : 90°. Angle obtus : entre 90° et 180°. Angle plat : 180°.',
+  'Fractions': 'Le dénominateur (en bas) dit en combien de parties égales on partage le tout. Le numérateur (en haut) dit combien de parties on prend.',
+  'Triangles': 'Équilatéral : 3 côtés égaux. Isocèle : 2 côtés égaux. Scalène : aucun côté égal. Rectangle : un angle droit.',
+  'Numération': 'De droite à gauche : unités, dizaines, centaines, unités de mille, dizaines de mille.',
+};
+const expl = q => q.explication || RAPPELS[q.notion] || '';
+
+function answer(p, i, txt) {
   if (eclair) { if (eclair.ids.includes(p.id) && !eclair.answers.has(p.id)) eclair.answers.set(p.id, i); return; }
   if (!p.question) return;
-  const Q = p.question, ok = i === Q.answer;
+  const Q = p.question;
+  if (Q.ouvert && typeof txt === 'string') i = norm(txt) === norm(Q.q.choix[Q.q.reponse]) ? Q.answer : -1;
+  const ok = i === Q.answer;
   record(p, Q.q, ok);
   if (Q.kind === 'chest' && Q.gold) return answerGold(p, Q, ok);
   if (Q.kind === 'chest') {
@@ -372,12 +413,12 @@ function answer(p, i) {
     p.question = null; p.busy = false; p.protect = 0.8;
     if (ch) { ch.open = 40; ch.by = 0; }
     if (ok && Math.random() < 0.6 && GEAR_KEYS.some(k => p.gear[k] < 3)) {
-      send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, explication: '', gear: true });
+      send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, explication: '', gear: true });
       giveGear(p, 'coffre');
       return;
     }
     const k = ok ? pick(BONS_OBJETS) : 'potion';
-    send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, explication: ok ? '' : Q.q.explication || '', k, nom: ITEMS[k].nom, ico: ITEMS[k].ico });
+    send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, explication: ok ? '' : expl(Q.q), k, nom: ITEMS[k].nom, ico: ITEMS[k].ico });
     giveItem(p, k, 'coffre');
     return;
   }
@@ -386,9 +427,9 @@ function answer(p, i) {
     send(p.conn, { t: 'res', ok: true });
     respawn(p);
   } else {
-    send(p.conn, { t: 'res', ok: false, bonne: Q.answer, explication: Q.q.explication || '' });
+    send(p.conn, { t: 'res', ok: false, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, explication: expl(Q.q) });
     p.question = null;
-    p.waitQ = WRONG_DELAY;
+    p.waitQ = expl(Q.q) ? WRONG_DELAY + 1.5 : WRONG_DELAY;   // le temps de lire la règle
   }
 }
 
@@ -396,7 +437,7 @@ function answer(p, i) {
 function answerGold(p, Q, ok) {
   const ch = chests[Q.chest];
   if (Q.step === 1) {
-    send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, suite: true, explication: ok ? '' : Q.q.explication || '' });
+    send(p.conn, { t: 'res', kind: 'chest', ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, suite: true, explication: ok ? '' : expl(Q.q) });
     p.question = null; p.busyT = 25;
     p.goldNext = { t: ok ? 1.3 : 3, chest: Q.chest, nOk: ok ? 1 : 0 };
     return;
@@ -405,7 +446,7 @@ function answerGold(p, Q, ok) {
   p.question = null; p.busy = false; p.protect = 0.8;
   if (ch) { ch.open = 40; ch.by = 0; ch.gold = false; }
   goldT = 60; goldFrom = Q.chest;
-  const base = { t: 'res', kind: 'chest', ok, bonne: Q.answer, dore: total, explication: ok ? '' : Q.q.explication || '' };
+  const base = { t: 'res', kind: 'chest', ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, dore: total, explication: ok ? '' : expl(Q.q) };
   if (total === 2) {
     let n = 0;
     if (giveGear(p, 'dore')) n++;
@@ -1086,7 +1127,7 @@ function finishEclair() {
     const ok = i === E.answer;
     if (i >= 0) record(p, E.q, ok);
     if (ok) { nbOk++; p.pending = 'force'; }
-    send(p.conn, { t: 'res', kind: 'eclair', ok, bonne: E.answer, explication: ok ? '' : E.q.explication || '', repondu: i >= 0 });
+    send(p.conn, { t: 'res', kind: 'eclair', ok, bonne: E.answer, explication: ok ? '' : expl(E.q), repondu: i >= 0 });
     if (!p.alive) { p.question = null; p.waitQ = 2.5; }
   }
   const res = { t: 'eclairRes', question: E.q.question, svg: E.q.svg || '', choix: E.order.map(i => E.q.choix[i]), counts, bonne: E.answer, nbOk, total: E.ids.length };
@@ -1317,7 +1358,7 @@ setInterval(() => {
     mode, modes: MODES, nbTeams, teams: TEAMS.slice(0, nbTeams), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
-    players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss) })),
+    players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n' })), ouvert: ouvertTous,
   });
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
@@ -1346,7 +1387,7 @@ function onMessage(conn, msg) {
     case 'dash': if (p) dash(p); break;
     case 'pow': if (p) power(p); break;
     case 'pet': if (p) petPower(p); break;
-    case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i); break;
+    case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 30) : undefined); break;
     case 'look': if (p && cleanLook(m.look)) p.look = cleanLook(m.look); break;
     case 'prof':
       conn.role = 'prof';
@@ -1357,6 +1398,8 @@ function onMessage(conn, msg) {
   if (conn.role !== 'prof') return;
   switch (m.t) {
     case 'subject': m.on ? subjects.add(m.s) : subjects.delete(m.s); break;
+    case 'perso': setPerso(m.qs); break;
+    case 'niveaux': if (m.v && typeof m.v === 'object') for (const [n, v] of Object.entries(m.v)) if (['f', 'n', 'd'].includes(v)) niveaux[String(n).slice(0, 20)] = v; if (typeof m.ouvert === 'boolean') ouvertTous = m.ouvert; break;
     case 'pause': if (!ended) { paused = !paused; regles = false; addFeed(paused ? '⏸ Partie en pause' : '▶ La partie reprend !'); } break;
     case 'regles': if (!ended) { regles = !regles; paused = regles; } break;
     case 'addbot': {
@@ -1405,7 +1448,7 @@ function onMessage(conn, msg) {
       bossKind = m.k;
       if (mode === 'boss') newRound();
       break;
-    case 'bilans': send(conn, { t: 'bilans', memoire, or: orSeance, notions: NOTIONS }); break;
+    case 'bilans': send(conn, { t: 'bilans', memoire, or: orSeance, notions: NOTIONS, silent: !!m.silent }); break;
   }
 }
 

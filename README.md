@@ -20,6 +20,14 @@ Le jeu est hébergé gratuitement sur **Render** à partir de ce dépôt GitHub.
 
 `node server.js`, puis ouvrir `http://localhost:3000/prof`. Les élèves doivent alors être sur le même réseau.
 
+## Menu des élèves
+
+Un écran à la fois : prénom, fille ou garçon, classe, look (peau, cheveux, tenue, accessoire), puis familier et sa couleur. Un élève qui revient sur le même appareil peut **⚡ rejouer avec son héros** en un clic.
+
+## Règles selon le mode
+
+Les règles du mode s'affichent la première fois qu'un élève y joue (bouton « Compris ! ») et pendant le 3-2-1. Dans `/prof`, le bouton **📜 Règles** met le jeu en pause et affiche les règles en grand au projecteur et sur tous les écrans ; **▶ Jouer !** relance la partie.
+
 ## Commandes des élèves
 
 | Action | Clavier / souris | Tablette |
@@ -163,6 +171,22 @@ Il y a deux sortes de questions :
 - **Questions fixes**, dans `questions.json` (82 questions).
 - **Questions générées** à l'infini par `generateurs.js` : conjugaisons, additions, soustractions, multiplications et divisions, valeur de position, arrondis, fractions illustrées, angles et triangles dessinés. Chaque partie propose donc des questions différentes.
 
+### Questions de l'enseignant (sans GitHub)
+
+Dans `/prof`, la boîte **✍️ Mes questions** :
+
+- Donner un nom à la notion, choisir la matière, puis coller les questions, une par ligne : `question ; bonne réponse ; mauvaise ; mauvaise ; mauvaise`. Pour une explication, ajouter `|` et le texte à la fin de la ligne. On peut aussi coller des colonnes copiées d'Excel.
+- **Banques prêtes** en un clic : 🎃 Halloween, 🎄 Noël, ❄️ Hiver, ❤️ Saint-Valentin.
+- Ces questions sont gardées dans le navigateur de l'enseignant et renvoyées au jeu à chaque ouverture de `/prof`. La nouvelle notion apparaît dans la liste et dans les bilans.
+
+### Aider chaque élève
+
+- **💡 À retenir** : après une erreur, la bonne réponse s'affiche avec la règle à retenir (l'explication de la question, ou un rappel de la notion). L'élève a un peu plus de temps pour la lire.
+- **🔊 Lecture à voix haute** : un bouton lit la question et les choix (voix française du navigateur).
+- **Niveau par élève**, en cliquant sur son niveau dans le Classement de `/prof` : 🙂 Facile (3 choix au lieu de 4), Normal, 🔥 Défi (on tape la réponse quand c'est un nombre). Les questions éclair restent les mêmes pour tous.
+- **✏️ Réponses à taper pour tous** : une case dans `/prof` pour les questions dont la réponse est un nombre.
+- **Séance précédente** : les bilans imprimables comparent chaque notion avec la séance précédente (▲ ▼). L'historique des séances est gardé dans le navigateur de l'enseignant.
+
 ### Ajouter ou modifier une question fixe
 
 Dans `questions.json`, chaque question suit ce modèle :
@@ -203,4 +227,5 @@ Chaque familier a un mini pouvoir sur la touche **E**, rechargé en 15 secondes.
 - `public/draw.js` : le dessin en pixel art des cartes et des héros (partagé par les deux écrans).
 - `public/sons.js` : les sons 8 bits.
 - `questions.json` : les questions fixes.
+- `public/banques.js` : les banques de questions thématiques et la lecture des questions collées par l'enseignant.
 - `generateurs.js` : les questions générées (verbes, tables, numération, fractions, angles, triangles).
