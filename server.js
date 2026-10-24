@@ -547,8 +547,8 @@ function updatePuddles(dt) {
     if (!o.alive) continue;
     for (const z of puddles) {
       const owner = players.get(z.owner);
-      if (o.id === z.owner || (owner && !canHit(owner, o)) || (!owner && mode === 'boss')) continue;
-      if (Math.hypot(o.x - z.x, (o.y - z.y) * 1.6) < z.r) o.slow = 1;   // ralenti tant qu'on y marche, et 1 s après
+      if (o.id === z.owner || (owner && !canHit(owner, o)) || (!owner && mode === 'boss' && !z.boss)) continue;   // encre du Kraken : touche tout le monde
+      if (Math.hypot(o.x - z.x, (o.y - z.y) * 1.6) < z.r) o.slow = Math.max(o.slow, 1);   // ralenti tant qu'on y marche, et 1 s après
     }
   }
 }
@@ -687,30 +687,52 @@ function cancelChest(p) {
 // ---------- Boss coopératif : les Boss du mois ----------
 // Chaque Boss a deux attaques. À la moitié de sa vie, il s'enrage (plus rapide, attaques plus fréquentes) et appelle
 // des sbires. À 75 % et 25 %, il lève le Bouclier du savoir : une question éclair pour toute la classe le brise.
+// pv : les points de vie de la carte du Boss (système d'émulation), qui rendent le Boss plus ou moins coriace.
+// A : attaque de près, B : attaque de loin. Types : cri, eventail, cercle, souffle, chute, onde, ombre, sablier, rayon, charge, tourbillon, encre.
 const BOSSES = {
-  gobelin: { nom: 'Gobelin du Bruit', ico: '📢', mois: 'Septembre', speed: 90, r: 50, sbire: 'Gobelin tapageur' },
-  dragon:  { nom: 'Dragon des Citrouilles', ico: '🎃', mois: 'Octobre', speed: 70, r: 60, sbire: 'Citrouille-monstre' },
-  gluant:  { nom: 'Roi Gluant', ico: '👑', mois: '', speed: 75, r: 56, sbire: 'Petit slime' },
+  gobelin:   { nom: 'Gobelin du Bruit', ico: '🥁', mois: 'Septembre', pv: 40, speed: 90, r: 50, sbire: 'gobelin',
+    A: { t: 'cri', portee: 220, r: 230, dmg: 14, stun: 0.8, cd: 4 }, B: { t: 'eventail', portee: 700, n: 5, ecart: 1, vit: 320, dmg: 10, cls: 'note', cd: 1.6 } },
+  dragon:    { nom: 'Dragon des Citrouilles', ico: '🎃', mois: 'Octobre', pv: 50, speed: 70, r: 60, sbire: 'citrouille',
+    A: { t: 'souffle', portee: 270, r: 290, dmg: 20, cd: 3.5, fx: 'feu' }, B: { t: 'chute', portee: 800, n: 2, r: 90, dmg: 18, delai: 1.3, cd: 2.4, obj: 'citrouille' } },
+  ombres:    { nom: 'Seigneur des Ombres', ico: '👻', mois: 'Novembre', pv: 50, speed: 80, r: 50, sbire: 'ombre',
+    A: { t: 'ombre', portee: 900, r: 150, dmg: 16, cd: 6 }, B: { t: 'eventail', portee: 700, n: 3, ecart: 0.5, vit: 260, dmg: 12, cls: 'ombre', ralenti: 1.5, cd: 1.8 } },
+  givre:     { nom: 'Dragon du Givre', ico: '❄️', mois: 'Décembre', pv: 60, speed: 70, r: 60, sbire: 'glace',
+    A: { t: 'souffle', portee: 270, r: 290, dmg: 16, ralenti: 2, cd: 3.5, fx: 'glace' }, B: { t: 'cercle', portee: 600, n: 12, vit: 280, dmg: 10, cls: 'glace', ralenti: 1, cd: 2.6 } },
+  cyclope:   { nom: 'Cyclope du Temps perdu', ico: '⏳', mois: 'Janvier', pv: 60, speed: 75, r: 55, sbire: 'sablier',
+    A: { t: 'sablier', portee: 280, r: 300, dmg: 6, ralenti: 2.5, cd: 6 }, B: { t: 'rayon', portee: 750, long: 800, l: 34, dmg: 24, delai: 0.8, cd: 3 } },
+  minotaure: { nom: 'Minotaure de la Discorde', ico: '🐂', mois: 'Février', pv: 70, speed: 85, r: 55, sbire: 'diablotin',
+    A: { t: 'tourbillon', portee: 170, r: 175, dmg: 22, cd: 3 }, B: { t: 'charge', portee: 600, dist: 450, dmg: 26, cd: 5 } },
+  kraken:    { nom: 'Kraken du Chaos', ico: '🐙', mois: 'Mars', pv: 80, speed: 65, r: 60, sbire: 'pieuvre',
+    A: { t: 'encre', portee: 450, n: 3, r: 90, dur: 5, cd: 5 }, B: { t: 'chute', portee: 800, n: 3, r: 70, dmg: 16, delai: 1.1, cd: 2.2, obj: 'tentacule' } },
+  golem:     { nom: 'Golem des Devoirs', ico: '📚', mois: 'Avril', pv: 90, speed: 60, r: 58, sbire: 'livre',
+    A: { t: 'onde', portee: 190, r: 200, dmg: 24, stun: 0.5, cd: 3.5 }, B: { t: 'chute', portee: 800, n: 2, r: 100, dmg: 20, delai: 1.4, cd: 2.6, obj: 'livre' } },
+  titan:     { nom: 'Titan du Bruit', ico: '💪', mois: 'Mai', pv: 100, speed: 75, r: 60, sbire: 'gobelin', bruit: true,
+    A: { t: 'onde', portee: 220, r: 230, dmg: 24, stun: 1, cd: 4 }, B: { t: 'chute', portee: 800, n: 2, r: 100, dmg: 20, delai: 1.3, cd: 2.4, obj: 'rocher' } },
+  empereur:  { nom: 'Empereur du Chaos', ico: '😈', mois: 'Juin', pv: 200, speed: 85, r: 60, sbire: 'chevalier', boucliers: [0.75, 0.5, 0.25],
+    A: { t: 'tourbillon', portee: 190, r: 195, dmg: 26, cd: 3 }, B: { t: 'chute', portee: 850, n: 3, r: 80, dmg: 20, delai: 1, cd: 2.2, obj: 'eclair' } },
+  gluant:    { nom: 'Roi Gluant', ico: '👑', mois: '', pv: 50, speed: 75, r: 56, sbire: 'slime',
+    A: { t: 'onde', portee: 170, r: 180, dmg: 22, cd: 3.2 }, B: { t: 'eventail', portee: 750, n: 3, ecart: 0.5, vit: 300, dmg: 13, cls: 'boss', cd: 1.4 } },
 };
 const SBIRE = { hp: 40, dmg: 8, speed: 115, r: 18, max: 8 };
-const bossDuMois = () => ({ 8: 'gobelin', 9: 'dragon' })[new Date().getMonth()] || 'gluant';
+// un Boss par mois de l'année scolaire (juillet et août : Roi Gluant)
+const bossDuMois = () => ['cyclope', 'minotaure', 'kraken', 'golem', 'titan', 'empereur', 'gluant', 'gluant', 'gobelin', 'dragon', 'ombres', 'givre'][new Date().getMonth()];
 let bossKind = bossDuMois();
-let minions = [], bombs = [];
+let minions = [], bombs = [], beams = [];
 function spawnBoss() {
   const B = BOSSES[bossKind], n = Math.max(1, players.size);
   const spot = freeSpot();
   boss = { k: bossKind, nom: B.nom, ico: B.ico, x: carte.heal ? carte.heal.x + 220 : spot.x, y: carte.heal ? carte.heal.y : spot.y, r: B.r, hp: 0, max: 0,
-    cdA: 3, cdB: 2, flash: 0, angle: 0, path: null, pathT: 0, phase: 1, shield: 0, shields: [0.75, 0.25], cdSbire: 0 };
+    cdA: 3, cdB: 2, flash: 0, angle: 0, path: null, pathT: 0, phase: 1, shield: 0, shields: [...(B.boucliers || [0.75, 0.25])], cdSbire: 0, charge: null };
   if (blocked(boss.x, boss.y, 44)) Object.assign(boss, freeSpot());
-  boss.max = boss.hp = 400 + 140 * n;
-  minions = []; bombs = [];
+  boss.max = boss.hp = Math.round((400 + 140 * n) * (0.8 + (B.pv - 40) / 200));
+  minions = []; bombs = []; beams = [];
   addFeed(`${B.ico} ${B.nom} arrive ! Unissez vos forces !`);
 }
 function bossDefeated(by) {
   if (ended) return;
   addFeed(`🎉 ${boss.nom} est vaincu${by ? ' (coup final : ' + by.name + ')' : ''} !`);
   fx.push({ k: 'boom', x: boss.x, y: boss.y, r: 200, t: 0.8, d: 0.8 });
-  minions = []; bombs = [];
+  minions = []; bombs = []; beams = [];
   endRound('boss-gagne');
 }
 // Après chaque coup : phase 2, Bouclier du savoir, victoire
@@ -769,6 +791,15 @@ function hitMinions(test, dmg, attacker) {
   });
   return n;
 }
+// Titan du Bruit : « plus c'est bruyant, plus je deviens fort » (+15 % de dégâts par joueur collé à lui)
+function bossDmg(d) {
+  if (!BOSSES[boss.k].bruit) return d;
+  let n = 0;
+  for (const p of players.values()) if (p.alive && Math.hypot(p.x - boss.x, p.y - boss.y) < 300) n++;
+  return Math.round(d * (1 + 0.15 * Math.max(0, n - 1)));
+}
+const hurt = (p, d, a) => { damage(p, bossDmg(d), null); if (p.alive && p.protect <= 0) { if (a.stun) p.stun = a.stun; if (a.ralenti) p.slow = Math.max(p.slow || 0, a.ralenti); } };
+const playersNear = (x, y, r) => [...players.values()].filter(p => p.alive && Math.hypot(p.x - x, p.y - y) < r + R);
 function updateMinions(dt) {
   for (const m of minions) {
     m.cd -= dt; m.flash = Math.max(0, m.flash - dt);
@@ -783,21 +814,95 @@ function updateMinions(dt) {
     }
     if (bd < R + SBIRE.r + 8 && m.cd <= 0) { m.cd = 1; damage(best, SBIRE.dmg, null); }
   }
-  // citrouilles explosives du dragon
+  // objets qui tombent (citrouilles, livres, rochers, tentacules, éclairs) : un cercle rouge prévient
   bombs = bombs.filter(b => {
     if ((b.t -= dt) > 0) return true;
-    fx.push({ k: 'boom', x: b.x, y: b.y, r: 90, t: 0.45, d: 0.45, c: 'feu' });
-    for (const p of players.values()) if (p.alive && Math.hypot(p.x - b.x, p.y - b.y) < 90 + R) damage(p, 18, null);
+    fx.push({ k: 'boom', x: b.x, y: b.y, r: b.r, t: 0.45, d: 0.45, c: b.obj });
+    for (const p of playersNear(b.x, b.y, b.r)) hurt(p, b.dmg, b);
+    return false;
+  });
+  // rayon de l'œil du cyclope : une ligne fine prévient, puis le rayon frappe
+  beams = beams.filter(b => {
+    if ((b.t -= dt) > 0) return true;
+    fx.push({ k: 'rayon', x: b.x, y: b.y, a: b.a, long: b.long, t: 0.35, d: 0.35 });
+    const cx = Math.cos(b.a), cy = Math.sin(b.a);
+    for (const p of players.values()) {
+      if (!p.alive) continue;
+      const dx = p.x - b.x, dy = p.y - b.y, u = dx * cx + dy * cy;
+      if (u > 0 && u < b.long && Math.abs(dx * cy - dy * cx) < b.l + R) hurt(p, b.dmg, b);
+    }
     return false;
   });
 }
+// Une attaque du Boss, décrite par son type (voir BOSSES)
+function bossAttack(a, best, aim) {
+  const bx = Math.round(boss.x), by = Math.round(boss.y);
+  const shots = (angles, cls) => { for (const an of angles) projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(an) * a.vit, vy: Math.sin(an) * a.vit, r: 12, dmg: bossDmg(a.dmg), life: 2.4, owner: -1, cls, slow: a.ralenti || 0 }); };
+  const cibles = n => [...players.values()].filter(p => p.alive && !p.busy && Math.hypot(p.x - boss.x, p.y - boss.y) < a.portee).sort(() => Math.random() - 0.5).slice(0, n);
+  switch (a.t) {
+    case 'cri': case 'onde': case 'sablier': case 'tourbillon':
+      fx.push({ k: a.t === 'cri' ? 'cri' : a.t === 'sablier' ? 'sablier' : a.t === 'tourbillon' ? 'tourbillon' : 'slam', x: bx, y: by, r: a.r, t: 0.6, d: 0.6, b: boss.k });
+      for (const p of playersNear(boss.x, boss.y, a.r)) hurt(p, a.dmg, a);
+      break;
+    case 'eventail': shots(Array.from({ length: a.n }, (_, i) => aim - a.ecart / 2 + a.ecart * i / (a.n - 1)), a.cls); break;
+    case 'cercle': shots(Array.from({ length: a.n }, (_, i) => aim + i / a.n * Math.PI * 2), a.cls); break;
+    case 'souffle':
+      fx.push({ k: 'souffle', x: bx, y: by - 20, a: +aim.toFixed(2), r: a.r, t: 0.6, d: 0.6, c: a.fx });
+      for (const p of playersNear(boss.x, boss.y, a.r)) if (angDiff(Math.atan2(p.y - boss.y, p.x - boss.x), aim) < 0.5) hurt(p, a.dmg, a);
+      break;
+    case 'chute':
+      for (const p of cibles(boss.phase === 2 ? a.n + 1 : a.n)) {
+        const x = Math.round(p.x + rand(-30, 30)), y = Math.round(p.y + rand(-30, 30));
+        bombs.push({ x, y, t: a.delai, r: a.r, dmg: a.dmg, obj: a.obj });
+        if (a.obj !== 'tentacule' && a.obj !== 'eclair') fx.push({ k: 'lob', x: bx, y: by - 30, x2: x, y2: y, t: a.delai, d: a.delai, c: a.obj });
+        fx.push({ k: 'cible', x, y, r: a.r, t: a.delai, d: a.delai });
+      }
+      break;
+    case 'ombre': {   // disparaît et réapparaît à côté d'un joueur, avec une explosion d'ombre
+      const p = cibles(1)[0];
+      if (!p) break;
+      for (let i = 0; i < 20; i++) {
+        const an = rand(0, Math.PI * 2), x = p.x + Math.cos(an) * 110, y = p.y + Math.sin(an) * 110;
+        if (blocked(x, y, 40) || WATER.has(tileAt(x, y))) continue;
+        fx.push({ k: 'smoke', x: bx, y: by, t: 0.5, d: 0.5 });
+        boss.x = x; boss.y = y; boss.path = null;
+        fx.push({ k: 'slam', x: Math.round(x), y: Math.round(y), r: a.r, t: 0.5, d: 0.5, b: 'ombres' });
+        for (const q of playersNear(x, y, a.r)) hurt(q, a.dmg, a);
+        break;
+      }
+      break;
+    }
+    case 'rayon':
+      beams.push({ x: bx, y: by - 30, a: +aim.toFixed(2), long: a.long, l: a.l, dmg: a.dmg, t: a.delai });
+      fx.push({ k: 'visee', x: bx, y: by - 30, a: +aim.toFixed(2), long: a.long, t: a.delai, d: a.delai });
+      break;
+    case 'charge':
+      boss.charge = { a: aim, left: a.dist, hit: new Set(), dmg: a.dmg };
+      fx.push({ k: 'crit', x: bx, y: by - 70, txt: '❗', t: 0.5, d: 0.5 });
+      break;
+    case 'encre':
+      for (const p of cibles(a.n)) puddles.push({ x: Math.round(p.x), y: Math.round(p.y + 14), r: a.r, t: a.dur, owner: -1, team: -2, boss: true });
+      fx.push({ k: 'slam', x: bx, y: by, r: 120, t: 0.4, d: 0.4, b: 'kraken' });
+      break;
+  }
+}
 function bossThink(dt) {
   if (!boss || boss.hp <= 0) return;
-  const cm = boss.phase === 2 ? 0.7 : 1;   // enragé : attaques plus fréquentes
+  const B = BOSSES[boss.k], cm = boss.phase === 2 ? 0.7 : 1;   // enragé : attaques plus fréquentes
   boss.cdA -= dt; boss.cdB -= dt; boss.flash = Math.max(0, boss.flash - dt); boss.pathT -= dt;
   if (boss.shield > 0 && boss.shield !== Infinity && (boss.shield -= dt) <= 0) { boss.shield = 0; addFeed('🛡️ Le bouclier disparaît !'); }
   if (boss.phase === 2 && (boss.cdSbire -= dt) <= 0) { boss.cdSbire = 18; summon(2); }
   updateMinions(dt);
+  // charge du minotaure : fonce en ligne droite
+  if (boss.charge) {
+    const c = boss.charge, st = Math.min(c.left, 650 * dt), mx = Math.cos(c.a) * st, my = Math.sin(c.a) * st;
+    if (blocked(boss.x + mx, boss.y + my, 30)) c.left = 0;
+    else { boss.x += mx; boss.y += my; c.left -= st; }
+    if (Math.random() < 0.5) fx.push({ k: 'dust', x: Math.round(boss.x), y: Math.round(boss.y + 30), t: 0.3, d: 0.3 });
+    for (const p of playersNear(boss.x, boss.y, boss.r)) if (!c.hit.has(p.id)) { c.hit.add(p.id); hurt(p, c.dmg, {}); }
+    if (c.left <= 0) boss.charge = null;
+    return;
+  }
   let best = null, bd = Infinity;
   for (const p of players.values()) {
     if (!p.alive || p.busy) continue;
@@ -813,56 +918,13 @@ function bossThink(dt) {
   }
   boss.angle = Math.atan2(ty - boss.y, tx - boss.x);
   if (bd > 90) {
-    const sp = BOSSES[boss.k].speed * (boss.phase === 2 ? 1.35 : 1) * dt, mx = Math.cos(boss.angle) * sp, my = Math.sin(boss.angle) * sp;
+    const sp = B.speed * (boss.phase === 2 ? 1.35 : 1) * dt, mx = Math.cos(boss.angle) * sp, my = Math.sin(boss.angle) * sp;
     if (!blocked(boss.x + mx, boss.y, 30)) boss.x += mx;
     if (!blocked(boss.x, boss.y + my, 30)) boss.y += my;
   }
-  const aim = Math.atan2(best.y - boss.y, best.x - boss.x), bx = Math.round(boss.x), by = Math.round(boss.y);
-  if (boss.k === 'gobelin') {
-    // Cri assourdissant : dégâts et étourdit un instant
-    if (bd < 220 && boss.cdA <= 0) {
-      boss.cdA = 4 * cm;
-      fx.push({ k: 'cri', x: bx, y: by, r: 230, t: 0.6, d: 0.6 });
-      for (const p of players.values()) if (p.alive && Math.hypot(p.x - boss.x, p.y - boss.y) < 230 + R) { damage(p, 14, null); if (p.alive && p.protect <= 0) p.stun = 0.8; }
-    }
-    // Notes de musique en éventail
-    if (bd < 700 && boss.cdB <= 0) {
-      boss.cdB = 1.6 * cm;
-      for (const da of [-0.5, -0.25, 0, 0.25, 0.5]) projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(aim + da) * 320, vy: Math.sin(aim + da) * 320, r: 12, dmg: 10, life: 2.2, owner: -1, cls: 'note' });
-    }
-  } else if (boss.k === 'dragon') {
-    // Souffle de feu en cône
-    if (bd < 270 && boss.cdA <= 0) {
-      boss.cdA = 3.5 * cm;
-      fx.push({ k: 'souffle', x: bx, y: by - 20, a: +aim.toFixed(2), r: 290, t: 0.6, d: 0.6 });
-      for (const p of players.values()) {
-        if (!p.alive) continue;
-        const d = Math.hypot(p.x - boss.x, p.y - boss.y);
-        if (d < 290 + R && angDiff(Math.atan2(p.y - boss.y, p.x - boss.x), aim) < 0.5) damage(p, 20, null);
-      }
-    }
-    // Citrouilles explosives lancées sur 1 à 3 joueurs (un cercle rouge prévient)
-    if (bd < 800 && boss.cdB <= 0) {
-      boss.cdB = 2.4 * cm;
-      const cibles = [...players.values()].filter(p => p.alive && !p.busy && Math.hypot(p.x - boss.x, p.y - boss.y) < 800).sort(() => Math.random() - 0.5).slice(0, boss.phase === 2 ? 3 : 2);
-      for (const p of cibles) {
-        const x = Math.round(p.x + rand(-30, 30)), y = Math.round(p.y + rand(-30, 30));
-        bombs.push({ x, y, t: 1.3 });
-        fx.push({ k: 'lob', x: bx, y: by - 30, x2: x, y2: y, t: 1.3, d: 1.3 });
-        fx.push({ k: 'cible', x, y, r: 90, t: 1.3, d: 1.3 });
-      }
-    }
-  } else {
-    if (bd < 170 && boss.cdA <= 0) {
-      boss.cdA = 3.2 * cm;
-      fx.push({ k: 'slam', x: bx, y: by, r: 180, t: 0.5, d: 0.5 });
-      for (const p of players.values()) if (p.alive && Math.hypot(p.x - boss.x, p.y - boss.y) < 180 + R) damage(p, 22, null);
-    }
-    if (bd < 750 && boss.cdB <= 0) {
-      boss.cdB = 1.4 * cm;
-      for (const da of [-0.25, 0, 0.25]) projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(aim + da) * 300, vy: Math.sin(aim + da) * 300, r: 14, dmg: 13, life: 2.4, owner: -1, cls: 'boss' });
-    }
-  }
+  const aim = Math.atan2(best.y - boss.y, best.x - boss.x);
+  if (bd < B.A.portee && boss.cdA <= 0) { boss.cdA = B.A.cd * cm; bossAttack(B.A, best, aim); }
+  else if (bd < B.B.portee && boss.cdB <= 0) { boss.cdB = B.B.cd * cm; bossAttack(B.B, best, aim); }
 }
 
 // ---------- Roi de la colline ----------
@@ -980,7 +1042,7 @@ function newRound() {
   }
   for (const k in stats) stats[k] = {};
   timer.left = timer.dur;
-  boss = null; hill = null; flags = null; minions = []; bombs = [];
+  boss = null; hill = null; flags = null; minions = []; bombs = []; beams = [];
   if (mode === 'boss') spawnBoss();
   if (mode === 'colline') placeHill();
   if (mode === 'drapeau') setupFlags();
@@ -1187,6 +1249,7 @@ function step() {
         if (b.owner === -1 ? false : !canHit(owner, o)) continue;
         if (Math.hypot(o.x - b.x, o.y - b.y) < R + b.r) {
           damage(o, b.dmg, owner);
+          if (b.slow && o.alive && o.protect <= 0) o.slow = Math.max(o.slow || 0, b.slow);
           return false;
         }
       }
@@ -1212,7 +1275,7 @@ function publicState() {
     fx: fx.map(f => { const o = {}; for (const k in f) o[k] = typeof f[k] === 'number' ? Math.round(f[k] * 100) / 100 : f[k]; return o; }),
     ch: chests.map(c => (c.open > 0 ? 1 : 0)).join(''),
     tb: barrels.map(b => (b.t ? 0 : b.fuse ? 2 : 1)).join(''),
-    pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1)]),
+    pz: puddles.map(z => [z.x, z.y, z.r, +z.t.toFixed(1), z.boss ? 1 : 0]),
     it: items.map(it => [it.x, it.y, it.k]),
     boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase] : 0,
     mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / SBIRE.hp * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),

@@ -975,50 +975,198 @@ function petSprite(k, fr, col = 0) {
 }
 // Boss du mois : noms et couleurs affichés (le serveur a les mêmes)
 const BOSS_INFO = {
-  gobelin: { nom: 'Gobelin du Bruit', ico: '📢', col: '#9be05a' },
-  dragon:  { nom: 'Dragon des Citrouilles', ico: '🎃', col: '#ffa040' },
-  gluant:  { nom: 'Roi Gluant', ico: '👑', col: '#9af08a' },
+  gobelin:   { nom: 'Gobelin du Bruit', ico: '🥁', col: '#e8a890' },
+  dragon:    { nom: 'Dragon des Citrouilles', ico: '🎃', col: '#ffa040' },
+  ombres:    { nom: 'Seigneur des Ombres', ico: '👻', col: '#c8c8d8' },
+  givre:     { nom: 'Dragon du Givre', ico: '❄️', col: '#8ae0d8' },
+  cyclope:   { nom: 'Cyclope du Temps perdu', ico: '⏳', col: '#f0c890' },
+  minotaure: { nom: 'Minotaure de la Discorde', ico: '🐂', col: '#b8c0d8' },
+  kraken:    { nom: 'Kraken du Chaos', ico: '🐙', col: '#b8a8e0' },
+  golem:     { nom: 'Golem des Devoirs', ico: '📚', col: '#f0e4c8' },
+  titan:     { nom: 'Titan du Bruit', ico: '💪', col: '#ff8a6a' },
+  empereur:  { nom: 'Empereur du Chaos', ico: '😈', col: '#ff5a4a' },
+  gluant:    { nom: 'Roi Gluant', ico: '👑', col: '#9af08a' },
 };
+const SBIRE_DE = { gobelin: 'gobelin', dragon: 'citrouille', ombres: 'ombre', givre: 'glace', cyclope: 'sablier', minotaure: 'diablotin', kraken: 'pieuvre', golem: 'livre', titan: 'gobelin', empereur: 'chevalier', gluant: 'slime' };
+// Boss en pixel art (52 x 46), d'après les cartes du système d'émulation. Ils regardent vers la droite.
 function bossSprite(frame, flash, k = 'gluant') {
   const key = 'boss' + k + frame + flash;
   if (dynCache[key]) return dynCache[key];
   const P = new Painter(52, 46), sq = frame ? 1 : 0;
   const F = c => flash ? shade(c, 1.55) : c;   // flash blanc quand il est touché
+  const T3 = c => [F(shade(c, 1.3)), F(c), F(shade(c, 0.68))];
+  const line = (x0, y0, x1, y1, c, w = 1) => { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1; for (let i = 0; i <= n; i++) P.rect(Math.round(x0 + (x1 - x0) * i / n), Math.round(y0 + (y1 - y0) * i / n), w, w, c); };
+  // triangle plein (pour les ailes)
+  const tri = (ax, ay, bx, by, cx, cy, c) => {
+    for (let y = Math.min(ay, by, cy); y <= Math.max(ay, by, cy); y++) for (let x = Math.min(ax, bx, cx); x <= Math.max(ax, bx, cx); x++) {
+      const d1 = (x - bx) * (ay - by) - (ax - bx) * (y - by), d2 = (x - cx) * (by - cy) - (bx - cx) * (y - cy), d3 = (x - ax) * (cy - ay) - (cx - ax) * (y - ay);
+      if (!((d1 < 0 || d2 < 0 || d3 < 0) && (d1 > 0 || d2 > 0 || d3 > 0))) P.px(x, y, c);
+    }
+  };
+  // aile de chauve-souris : membrane entre des baleines qui partent de l'épaule
+  const wing = (sx, sy, tips, col, rib) => {
+    for (let i = 0; i < tips.length - 1; i++) {
+      const [x1, y1] = tips[i], [x2, y2] = tips[i + 1], mx = Math.round((x1 + x2) / 2 + (sx - (x1 + x2) / 2) * 0.25), my = Math.round((y1 + y2) / 2 + (sy - (y1 + y2) / 2) * 0.25);
+      tri(sx, sy, x1, y1, mx, my, col); tri(sx, sy, mx, my, x2, y2, col);
+    }
+    for (const [x, y] of tips) line(sx, sy, x, y, rib);
+    P.rect(sx - 1, sy - 1, 3, 2, rib);
+  };
   if (k === 'gobelin') {
-    // Gobelin du Bruit : grandes oreilles, bouche grande ouverte qui crie, mégaphone et cymbale
-    const sk = F('#6fae3a'), skD = F('#4a8226'), skL = F('#9be05a'), gold = F('#e8b83a'), goldD = F('#a87a1a');
-    P.rect(17, 37 + sq, 6, 6, skD); P.rect(29, 37 - sq, 6, 6, skD); P.rect(15, 42, 9, 3, F('#5a3a20')); P.rect(28, 42, 9, 3, F('#5a3a20'));
-    P.ellipse(26, 31, 13, 9, F('#7a3a2a')); P.ellipse(23, 28, 6, 3, F('#9a4a34')); P.rect(14, 33, 24, 2, F('#3a2414'));
-    P.ellipse(26, 36, 6, 4, F('#c9a06a')); P.rect(20, 34, 13, 1, F('#8a2a2a')); P.rect(20, 38, 13, 1, F('#8a2a2a')); P.px(26, 33, gold);
-    P.rect(9, 24 - sq, 5, 10, sk); P.disc(8, 36 - sq, 5, gold); P.disc(8, 36 - sq, 2, goldD); P.px(6, 34 - sq, F('#fff6c0'));
-    P.rect(38, 24, 5, 7, sk);
-    for (let i = 0; i < 9; i++) { const h = 4 + i; P.rect(42 + i, 25 - (h >> 1), 1, h, i === 8 ? goldD : gold); P.px(42 + i, 25 - (h >> 1), F('#fff2b0')); }
-    for (let i = 0; i < 10; i++) { P.rect(4 + i, 8 + (i >> 2), 1, 3 + (i >> 1), i < 2 ? skD : sk); P.rect(47 - i, 8 + (i >> 2), 1, 3 + (i >> 1), i < 2 ? skD : sk); }
-    P.ellipse(26, 15, 12, 10, sk); P.ellipse(21, 10, 5, 3, skL);
-    P.rect(15, 4, 22, 3, F('#c0303a')); P.rect(15, 4, 22, 1, F('#e85a5a')); P.rect(11, 5, 4, 2, F('#c0303a')); P.px(10, 7, F('#c0303a'));
-    P.rect(18, 11, 4, 3, '#ffe27a'); P.rect(30, 11, 4, 3, '#ffe27a'); P.px(20, 12, OUT); P.px(31, 12, OUT);
-    P.rect(17, 9, 3, 1, OUT); P.rect(20, 10, 2, 1, OUT); P.rect(32, 9, 3, 1, OUT); P.rect(30, 10, 2, 1, OUT);
-    P.rect(25, 14, 2, 2, skD);
-    P.ellipse(26, 20, 6, 3 + sq, '#3a1414'); P.rect(21, 17, 10, 1, '#ffffff'); P.px(22, 18, '#ffffff'); P.px(29, 18, '#ffffff'); P.rect(24, 21 + sq, 4, 1, '#e04a5a');
-  } else if (k === 'dragon') {
-    // Dragon des Citrouilles : corps-citrouille sculpté qui luit, ailes de chauve-souris, cornes en vrilles
-    const o = F('#e8781e'), oD = F('#b8521a'), oL = F('#ffa040'), glow = '#ffe27a', vine = F('#3a6a2a'), vineL = F('#5a9a3a'), wing = F('#4a2a5a'), wingL = F('#6a3f80');
-    for (let i = 0; i < 13; i++) { const h = 13 - Math.floor(i * 0.7); P.rect(2 + i, 6 + Math.floor(i * 0.5) + sq, 1, h, i % 4 === 0 ? wingL : wing); P.rect(49 - i, 6 + Math.floor(i * 0.5) + sq, 1, h, i % 4 === 0 ? wingL : wing); }
-    P.rect(4, 38, 8, 2, vine); P.rect(3, 34, 2, 5, vine); P.rect(4, 33, 3, 1, vineL);
-    P.rect(15, 40, 6, 5, oD); P.rect(31, 40, 6, 5, oD); P.px(15, 44, '#e8e2d0'); P.px(17, 44, '#e8e2d0'); P.px(31, 44, '#e8e2d0'); P.px(33, 44, '#e8e2d0');
-    P.ellipse(26, 32, 17, 11, o); P.ellipse(26, 33, 17, 10, o);
-    for (const x of [15, 21, 31, 37]) P.rect(x, 24, 1, 18, oD);
-    P.ellipse(19, 27, 4, 2, oL);
-    P.rect(18, 29, 5, 1, glow); P.rect(19, 30, 3, 1, glow); P.px(20, 31, glow);
-    P.rect(30, 29, 5, 1, glow); P.rect(31, 30, 3, 1, glow); P.px(32, 31, glow);
-    P.rect(18, 35, 16, 3, glow); P.px(21, 35, oD); P.px(26, 35, oD); P.px(31, 35, oD); P.px(23, 37, oD); P.px(29, 37, oD);
-    P.ellipse(26, 14, 10, 7, o); P.rect(32, 13, 9, 6, o); P.rect(32, 13, 9, 1, oL); P.rect(36, 19, 5, 1, oD); P.px(40, 14, OUT);
-    P.rect(35, 18, 1, 1, '#ffffff'); P.rect(38, 18, 1, 1, '#ffffff');
-    for (const x of [21, 26, 31]) P.rect(x, 8, 1, 12, oD);
-    P.rect(25, 3, 3, 4, vine); P.px(28, 3, vineL); P.px(29, 2, vineL);
-    P.rect(18, 7, 2, 2, vine); P.px(17, 5, vine); P.px(16, 4, vine); P.px(16, 3, vineL); P.rect(32, 7, 2, 2, vine); P.px(34, 5, vine); P.px(35, 4, vine); P.px(36, 3, vineL);
-    P.rect(22, 12, 3, 2, '#9aff5a'); P.rect(29, 12, 3, 2, '#9aff5a'); P.px(23, 13, OUT); P.px(30, 13, OUT);
-    P.rect(21, 11, 4, 1, OUT); P.rect(29, 11, 4, 1, OUT);
+    // peau rose-brun, oreilles immenses, cheveux en pointes, crie en tapant sur un gros tambour
+    const [sL, s, sD] = T3('#c48a78'), vest = F('#5e4234'), cloth = F('#4a3428');
+    P.rect(19, 37 - sq, 5, 6, sD); P.rect(30, 37 + sq, 5, 6, sD); P.rect(17, 42, 8, 3, sD); P.rect(29, 42, 8, 3, sD);
+    P.rect(16, 31, 21, 6, cloth); for (let x = 16; x < 37; x += 3) P.rect(x, 37, 2, 2, cloth);
+    P.ellipse(27, 26, 10, 8, vest); P.rect(21, 20, 12, 3, s); P.rect(24, 22, 6, 2, sL);
+    line(16, 19, 33, 34, F('#3a2a20'));   // sangle du tambour
+    P.rect(38, 13 - sq, 4, 12, s); P.disc(40, 12 - sq, 3, s); P.px(39, 11 - sq, sL);
+    line(41, 11 - sq, 47, 2 - sq, F('#8a5a2a'), 1); P.disc(48, 2 - sq, 2, F('#6a4030'));
+    P.rect(9, 22, 4, 9, s); P.disc(11, 31, 2, s);
+    P.ellipse(13, 34, 11, 8, F('#8a4a2a')); P.ellipse(15, 33, 8, 6, F('#efd8c8')); P.ellipse(13, 31, 3, 2, F('#ffffff'));
+    for (let i = 0; i < 4; i++) { P.rect(4 + i * 5, 38, 1, 4, F('#5a3020')); line(4 + i * 5, 38, 7 + i * 5, 41, F('#d8c0a0')); }
+    line(12, 31, 20, 26, F('#8a5a2a')); P.disc(21, 25, 2, F('#6a4030'));
+    for (let i = 0; i < 12; i++) { P.rect(17 - i, 12 - (i >> 1), 2, 3 - (i >> 2) + 1, i < 2 ? sD : s); P.rect(35 + i, 12 - (i >> 1), 2, 3 - (i >> 2) + 1, i < 2 ? sD : s); }
+    P.px(6, 6, sL); P.px(46, 6, sL);
+    P.ellipse(26, 13, 9, 8, s); P.ellipse(23, 9, 4, 2, sL);
+    for (const [x, y] of [[22, 4], [24, 2], [26, 1], [28, 2], [30, 4], [25, 3], [27, 3]]) P.rect(x, y, 1, 3, F('#2e2018'));
+    P.rect(20, 11, 4, 2, '#fff2c0'); P.rect(29, 11, 4, 2, '#fff2c0'); P.px(22, 12, OUT); P.px(30, 12, OUT);
+    P.rect(19, 9, 3, 1, OUT); P.rect(22, 10, 2, 1, OUT); P.rect(31, 9, 3, 1, OUT); P.rect(29, 10, 2, 1, OUT);
+    P.rect(25, 13, 3, 3, sD); P.px(25, 15, OUT);
+    P.ellipse(26, 18 + sq, 5, 3, '#3a1414'); P.rect(22, 16 + sq, 9, 1, '#ffffff'); P.px(23, 17 + sq, '#ffffff'); P.px(29, 17 + sq, '#ffffff'); P.rect(24, 20 + sq, 4, 1, '#c04050');
+  } else if (k === 'dragon' || k === 'givre') {
+    const ice = k === 'givre';
+    const [bL, b, bD] = T3(ice ? '#3f8f86' : '#8f969e'), belly = F(ice ? '#bfe6dc' : '#e2dcc8'), wingC = F(ice ? '#2f6f68' : '#6a7078'), rib = F(ice ? '#7ad0c4' : '#b8bec6');
+    wing(32, 17, [[34, 0 + sq], [44, 1 + sq], [51, 8 + sq], [49, 18], [42, 22]], wingC, rib);
+    if (!ice) for (const [x, w] of [[11, 9], [26, 10], [41, 9]]) {   // trois citrouilles grimaçantes
+      const [oL, o, oD] = T3('#e07a22');
+      P.ellipse(x, 39, w, 6, o); P.ellipse(x - 3, 37, 3, 2, oL); P.rect(x - 4, 34, 1, 11, oD); P.rect(x + 4, 34, 1, 11, oD);
+      P.rect(x - 4, 37, 3, 2, '#ffe27a'); P.rect(x + 2, 37, 3, 2, '#ffe27a'); P.rect(x - 4, 41, 9, 1, '#ffe27a'); P.px(x - 2, 41, oD); P.px(x + 2, 41, oD);
+      P.rect(x, 32, 2, 2, F('#3a6a2a'));
+    } else { P.ellipse(26, 43, 22, 3, F('#dff4f0')); for (let i = 0; i < 8; i++) P.px(6 + i * 5, 41 + (i % 2), '#ffffff'); }
+    const gy = ice ? 4 : 0;
+    P.ellipse(29, 24 + gy, 11, 8, b); P.ellipse(25, 27 + gy, 6, 5, belly); for (let i = 0; i < 4; i++) P.rect(21, 23 + gy + i * 2, 8, 1, F(shade(ice ? '#bfe6dc' : '#e2dcc8', 0.85)));
+    for (let i = 0; i < 6; i++) P.px(30 + i * 2, 16 + gy + (i >> 1), bD);
+    line(38, 28 + gy, 46, 24 + gy, b, 2); line(46, 24 + gy, 50, 18 + gy, b, 2); P.px(51, 17 + gy, bD); P.px(50, 16 + gy, bD);
+    P.rect(20, 31 + gy, 4, 5, bD); P.rect(33, 31 + gy, 5, 5, bD); for (const x of [19, 21, 23, 32, 34, 36]) P.px(x, 36 + gy, '#e8e2d0');
+    line(23, 20 + gy, 16, 11, b, 3); line(24, 21 + gy, 18, 13, belly, 1);
+    P.rect(8, 7, 11, 6, b); P.rect(4, 9, 6, 4, b); P.rect(8, 7, 11, 1, bL); P.rect(4, 13, 10, 2, bD);
+    P.px(5, 12, '#ffffff'); P.px(7, 12, '#ffffff'); P.px(9, 12, '#ffffff'); P.px(6, 13, '#ffffff'); P.px(8, 13, '#ffffff');
+    P.rect(4, 10 + sq, 3, 1, '#3a1414'); P.px(5, 9, OUT);
+    P.rect(11, 8, 3, 2, ice ? '#e0fff8' : '#ffd84a'); P.px(12, 9, OUT); P.rect(10, 7, 4, 1, OUT);
+    line(15, 7, 20, 2, F('#e8e2d0')); line(17, 8, 22, 4, F('#e8e2d0')); P.px(18, 6, F('#c8c2b0'));
+    for (let i = 0; i < 4; i++) P.px(18 + i, 12 + i, bD);
+    wing(22, 19, [[18, 14 + sq], [12, 18 + sq], [14, 24]], wingC, rib);
+    if (ice) for (let i = 0; i < 4; i++) P.px(10 + i * 9, 20 + (i % 2) * 6, '#ffffff');
+  } else if (k === 'ombres') {
+    // seigneur encapuchonné qui flotte : visage noir, deux yeux blancs, longues mains, bas de robe en fumée
+    const [rL, r, rD] = T3('#6c6c76'), fy = sq, hand = F('#d8d4c8');
+    for (const d of [-1, 1]) { tri(26 + d * 6, 15 + fy, 26 + d * 17, 27 + fy, 26 + d * 9, 30 + fy, rD); line(26 + d * 7, 16 + fy, 26 + d * 16, 27 + fy, r, 2); }
+    for (let y = 14; y < 41; y++) {
+      const w = 6 + Math.floor((y - 14) * 0.55);
+      for (let x = -w; x < w; x++) { const fold = Math.floor((x + 40) * 6 / (w + 2) + Math.sin(y * 0.35) * 0.6) % 3; P.px(26 + x, y + fy, fold === 0 ? rD : fold === 1 ? r : rL); }
+    }
+    for (let x = 12; x < 41; x += 2) { const h = 2 + ((x * 7) % 5); for (let j = 0; j < h; j++) P.px(x + ((j + x) % 3 === 0 ? 1 : 0), 41 + j + fy, j > h - 2 ? F('#9a9aa4') : rD); }
+    for (const hx of [7, 42]) { P.rect(hx, 26 + fy, 4, 3, hand); for (let i = 0; i < 4; i++) P.rect(hx + i, 29 + fy, 1, 3 + (i % 2), hand); P.px(hx + 1, 26 + fy, F('#a8a498')); }
+    P.ellipse(26, 9 + fy, 9, 9, r); P.ellipse(26, 7 + fy, 7, 6, rL); P.ellipse(26, 11 + fy, 5, 6, '#08080e');
+    for (let i = 0; i < 4; i++) P.px(19 + i, 4 + i + fy, rD);
+    P.rect(23, 10 + fy, 2, 1, '#ffffff'); P.rect(28, 10 + fy, 2, 1, '#ffffff');
+    P.px(26, 0 + fy, rL);
+  } else if (k === 'cyclope') {
+    // brute chauve à un seul œil, horloge dans une main, sablier dans l'autre
+    const [sL, s, sD] = T3('#c08a64');
+    P.rect(16, 36 - sq, 7, 7, sD); P.rect(30, 36 + sq, 7, 7, sD); P.rect(14, 42, 10, 3, sD); P.rect(29, 42, 10, 3, sD);
+    P.rect(16, 30, 21, 6, F('#5a4030')); for (let x = 16; x < 37; x += 3) P.rect(x, 36, 2, 2, F('#5a4030'));
+    P.ellipse(26, 23, 13, 10, s); P.ellipse(22, 19, 6, 4, sL); P.rect(25, 24, 2, 4, sD);
+    for (const [x, y] of [[33, 15], [35, 17], [34, 13], [37, 16]]) P.px(x, y, sD);
+    P.rect(10, 18, 5, 12, s); P.disc(9, 23, 9, F('#c8a060')); P.disc(9, 23, 7, F('#f2e8d0'));
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; P.px(9 + Math.round(Math.cos(a) * 6), 23 + Math.round(Math.sin(a) * 6), OUT); }
+    line(9, 23, 9, 18, OUT); line(9, 23, 13, 23, OUT);
+    P.rect(38, 18, 5, 10, s);
+    P.rect(39, 24, 10, 2, F('#6a4a2a')); P.rect(39, 38, 10, 2, F('#6a4a2a')); P.rect(39, 26, 1, 12, F('#6a4a2a')); P.rect(48, 26, 1, 12, F('#6a4a2a'));
+    for (let y = 0; y < 6; y++) { P.rect(41 + (y >> 1), 26 + y, 6 - y, 1, F('#d8eef8')); P.rect(41 + (y >> 1), 37 - y, 6 - y, 1, F('#d8eef8')); }
+    P.rect(42, 33, 4, 4, F('#e8c070')); P.px(43, 30 + sq, F('#e8c070')); P.rect(41, 36, 6, 1, F('#e8c070'));
+    P.ellipse(26, 9, 9, 8, s); P.ellipse(23, 5, 4, 2, sL);
+    P.rect(16, 7, 3, 3, s); P.px(15, 6, s); P.rect(34, 7, 3, 3, s); P.px(37, 6, s);
+    P.disc(26, 8, 4, '#f4f0e0'); P.disc(26, 8, 2, F('#7a4a2a')); P.px(26, 8, OUT); P.px(25, 7, '#ffffff');
+    P.rect(21, 3, 10, 1, sD); P.rect(23, 14, 6, 1, sD); P.px(22, 13, sD); P.px(29, 13, sD);
+  } else if (k === 'minotaure') {
+    // taureau musclé : grandes cornes, hache dans une main, épée dans l'autre, sabots et queue
+    const [fL, f, fD] = T3('#77808f'), horn = F('#ece4d0');
+    line(38, 32, 47, 38, f, 2); P.rect(46, 38, 3, 3, fD);
+    P.rect(17, 34 - sq, 6, 7, fD); P.rect(30, 34 + sq, 6, 7, fD); P.rect(16, 41, 7, 3, F('#3a3a44')); P.rect(30, 41, 7, 3, F('#3a3a44'));
+    P.rect(17, 29, 19, 6, F('#3e4250')); for (let x = 17; x < 36; x += 3) P.rect(x, 35, 2, 2, F('#3e4250'));
+    P.ellipse(26, 21, 12, 9, f); P.ellipse(22, 17, 5, 3, fL); P.rect(25, 20, 2, 6, fD); P.rect(21, 24, 10, 1, fD);
+    P.rect(10, 15, 5, 12, f); P.rect(38, 15, 5, 12, f);
+    line(9, 30, 9, 6, F('#6a4a2a'), 2); P.rect(3, 4, 6, 9, F('#c8ced8')); P.rect(3, 4, 1, 9, F('#ffffff')); P.rect(8, 6, 2, 5, F('#8a909a'));
+    line(42, 28, 50, 4, F('#d8dee8'), 2); line(43, 28, 51, 5, F('#8a909a')); P.rect(39, 27, 7, 2, F('#c8a040')); P.rect(41, 29, 2, 4, F('#6a4a2a'));
+    P.ellipse(26, 9, 7, 7, f); P.rect(22, 11, 9, 6, fL); P.rect(23, 15, 7, 2, F('#c8b0b8')); P.px(24, 15, OUT); P.px(28, 15, OUT);
+    P.rect(21, 7, 3, 2, '#ffe0d0'); P.rect(29, 7, 3, 2, '#ffe0d0'); P.px(22, 8, OUT); P.px(30, 8, OUT); P.rect(20, 6, 4, 1, OUT); P.rect(29, 6, 4, 1, OUT);
+    P.rect(16, 7, 3, 2, f); P.rect(33, 7, 3, 2, f);
+    line(19, 4, 13, 2, horn, 2); line(13, 2, 12, -1, horn, 1); line(33, 4, 39, 2, horn, 2); line(39, 2, 40, -1, horn, 1);
+  } else if (k === 'kraken') {
+    // pieuvre géante aux grands yeux, tentacules en spirale, éclairs du chaos, petit sablier
+    const [kL, kc, kD] = T3('#6a6284'), sucker = F('#c8c0d8');
+    // six tentacules qui s'enroulent au bout, ventouses claires en dessous
+    for (const [dir, base, len] of [[-1, 0.4, 20], [1, 0.4, 20], [-1, 1.1, 16], [1, 1.1, 16], [-1, 1.5, 12], [1, 1.5, 12]]) {
+      let x = 26 + dir * 6, y = 30, a = Math.PI / 2 - dir * base;
+      for (let i = 0; i < len; i++) {
+        const th = i < len * 0.5 ? 3 : i < len * 0.8 ? 2 : 1;
+        P.rect(Math.round(x) - (th >> 1), Math.round(y), th, th, (i >> 2) % 2 ? kD : kc);
+        if (i % 3 === 1 && th > 1) P.px(Math.round(x), Math.round(y) + th, sucker);
+        x += Math.cos(a) * 1.4; y += Math.sin(a) * 1.4 * 0.8;
+        a -= dir * (i < len * 0.55 ? 0.03 : 0.42);
+      }
+    }
+    P.ellipse(26, 30, 10, 6, kc);
+    P.rect(23, 34, 6, 1, F('#8a6a3a')); P.rect(23, 42, 6, 1, F('#8a6a3a')); P.rect(24, 35, 4, 3, F('#e8f2f8')); P.rect(24, 39, 4, 3, F('#e8f2f8')); P.rect(25, 40, 2, 2, F('#e8c070'));
+    P.ellipse(26, 13, 12, 12, kc); P.ellipse(22, 7, 5, 4, kL); for (const [x, y] of [[30, 6], [33, 10], [19, 15], [32, 16]]) P.px(x, y, kD);
+    P.disc(20, 20, 3, '#f4f0e0'); P.disc(32, 20, 3, '#f4f0e0'); P.rect(19, 20, 3, 1, OUT); P.rect(31, 20, 3, 1, OUT); P.px(19, 19, '#ffffff'); P.px(31, 19, '#ffffff'); P.rect(17, 16, 6, 1, kD); P.rect(29, 16, 6, 1, kD);
+    const bolt = '#fff6a0';
+    for (const [bx, d] of [[5, 1], [44, -1]]) { line(bx, 0, bx + d * 3, 4, bolt); line(bx + d * 3, 4, bx, 5, bolt); line(bx, 5, bx + d * 4, 10 + sq, bolt); }
+  } else if (k === 'golem') {
+    // golem en blocs de papier ligné, tête cube au regard sévère, pile de livres dans les bras
+    const [pL, p, pD] = T3('#e6dcc2'), ln = F('#b8ac8c');
+    const blk = (x, y, w, h) => { P.rect(x, y, w, h, p); P.rect(x, y, w, 1, pL); P.rect(x + w - 1, y, 1, h, pD); P.rect(x, y + h - 1, w, 1, pD); for (let j = y + 2; j < y + h - 1; j += 2) P.rect(x + 1, j, w - 2, 1, ln); };
+    blk(16, 33 - sq, 8, 9); blk(29, 33 + sq, 8, 9);
+    P.rect(13, 42, 12, 3, F('#6a3a2a')); P.rect(13, 42, 12, 1, F('#9a5a3a')); P.rect(28, 42, 11, 3, F('#3a4a6a'));
+    blk(17, 26, 18, 8); blk(14, 15, 24, 12); P.rect(14, 26, 24, 1, F('#8a7a5a'));
+    blk(38, 15, 7, 6); blk(39, 21, 6, 9); P.rect(39, 30, 6, 3, p);
+    blk(8, 15, 6, 6); blk(7, 21, 6, 6);
+    for (let i = 0; i < 4; i++) { const c = F(['#8a2a2a', '#2a4a8a', '#2a6a3a', '#7a5a2a'][i]); P.rect(2 + (i % 2), 18 + i * 3, 12, 3, c); P.rect(2 + (i % 2), 18 + i * 3, 12, 1, F('#f4ecd8')); }
+    P.rect(5, 30, 9, 3, p);
+    blk(17, 2, 18, 13); P.rect(17, 2, 18, 2, F('#f4ecd8'));
+    P.rect(20, 7, 4, 2, '#ffffff'); P.rect(29, 7, 4, 2, '#ffffff'); P.px(22, 8, OUT); P.px(30, 8, OUT);
+    line(19, 5, 24, 7, OUT); line(33, 5, 28, 7, OUT); P.rect(25, 9, 3, 3, pD); P.rect(22, 12, 9, 1, OUT); P.px(21, 13, OUT); P.px(31, 13, OUT);
+  } else if (k === 'titan') {
+    // géant musclé à la barbe hirsute, deux troncs dans le dos, poings levés, boucle en tête de lion
+    const [sL, s, sD] = T3('#c89c74'), hair = F('#5a3a22'), log = F('#8a6a44'), logD = F('#5a4428');
+    P.rect(11, 0, 7, 30, log); P.rect(35, 0, 7, 30, log); for (let y = 2; y < 30; y += 4) { P.rect(12, y, 5, 1, logD); P.rect(36, y + 2, 5, 1, logD); } P.ellipse(14, 0, 3, 1, F('#c8a878')); P.ellipse(38, 0, 3, 1, F('#c8a878'));
+    P.rect(15, 35 - sq, 8, 7, s); P.rect(30, 35 + sq, 8, 7, s); P.rect(14, 42, 10, 3, sD); P.rect(29, 42, 10, 3, sD);
+    P.rect(16, 29, 21, 7, F('#6a4a30')); for (let x = 16; x < 37; x += 3) P.rect(x, 36, 2, 2, F('#6a4a30'));
+    P.ellipse(26, 21, 14, 9, s); P.ellipse(20, 18, 5, 3, sL); P.ellipse(32, 18, 5, 3, sL); P.rect(25, 17, 2, 9, sD); for (let i = 0; i < 3; i++) { P.rect(21, 22 + i * 2, 4, 1, sD); P.rect(27, 22 + i * 2, 4, 1, sD); }
+    P.rect(16, 28, 21, 2, F('#4a3020')); P.disc(26, 30, 3, F('#c8a040')); P.px(25, 30, OUT); P.px(27, 30, OUT);
+    P.ellipse(7, 18, 4, 6, s); P.disc(6, 9 - sq, 4, s); P.px(5, 7 - sq, sL); P.ellipse(45, 18, 4, 6, s); P.disc(46, 9 + sq, 4, s); P.px(45, 7 + sq, sL);
+    P.ellipse(26, 8, 8, 7, hair); P.ellipse(26, 9, 6, 6, s); P.rect(20, 12, 13, 6, hair); P.ellipse(26, 16, 6, 4, hair);
+    for (let i = 0; i < 6; i++) P.rect(18 + i * 3, 1 + (i % 2), 2, 3, hair);
+    P.rect(22, 8, 3, 2, '#ffffff'); P.rect(28, 8, 3, 2, '#ffffff'); P.px(23, 9, OUT); P.px(29, 9, OUT); P.rect(21, 7, 4, 1, OUT); P.rect(28, 7, 4, 1, OUT);
+    P.rect(24, 14 + sq, 5, 2, '#3a1414'); P.rect(24, 14 + sq, 5, 1, '#ffffff');
+    const bolt = '#fff6a0'; line(2, 12, 0, 16, bolt); line(50, 12, 52, 16, bolt);
+  } else if (k === 'empereur') {
+    // démon en armure : immenses cornes, yeux rouges, crocs, épaulières à pointes, crâne à la ceinture, épée
+    const [aL, a, aD] = T3('#5c616c'), eye = '#ff3a2a';
+    P.rect(15, 34 - sq, 8, 8, aD); P.rect(30, 34 + sq, 8, 8, aD); P.rect(14, 41, 10, 4, a); P.rect(29, 41, 10, 4, a); P.px(14, 44, aL); P.px(38, 44, aL);
+    for (let i = 0; i < 5; i++) { P.rect(17 + i * 4, 29, 3, 6 - (i % 2) * 2, aD); }
+    P.ellipse(26, 21, 12, 9, a); P.ellipse(22, 17, 5, 3, aL); P.rect(25, 15, 2, 12, aD); P.rect(19, 21, 14, 1, aD);
+    P.rect(16, 27, 21, 3, F('#3a3036')); P.disc(26, 28, 3, F('#e8e2d0')); P.px(25, 28, OUT); P.px(27, 28, OUT); P.px(26, 30, OUT);
+    for (const [x, d] of [[13, -1], [39, 1]]) { P.ellipse(x, 14, 6, 4, a); P.px(x, 11, aL); for (let i = 0; i < 3; i++) line(x + d * i * 2, 11, x + d * (i * 2 + 2), 7 - i, aL); }
+    P.rect(7, 16, 5, 11, a); P.rect(41, 16, 5, 11, a); for (let i = 0; i < 3; i++) P.rect(42 + i * 2, 27, 1, 4, F('#c8ccd4'));
+    line(8, 30, 8, 2, F('#d8dee8'), 2); P.rect(8, 2, 1, 26, F('#ffffff')); P.rect(4, 29, 10, 2, F('#8a6a3a')); P.rect(7, 31, 3, 4, F('#4a3428')); P.disc(8, 36, 1, F('#c8a040'));
+    P.ellipse(26, 8, 7, 7, a); P.rect(21, 10, 11, 5, aD);
+    P.rect(21, 7, 3, 2, eye); P.rect(29, 7, 3, 2, eye); P.rect(20, 6, 4, 1, OUT); P.rect(29, 6, 4, 1, OUT);
+    P.rect(22, 12, 9, 2, '#2a0a0a'); for (let i = 0; i < 4; i++) P.px(22 + i * 2 + 1, 12, '#ffffff'); P.px(23, 14, '#ffffff'); P.px(29, 14, '#ffffff');
+    const horn = F('#2e2a2e'), hornL = F('#5a545a');
+    line(20, 3, 15, 0, horn, 2); line(15, 0, 14, -4, horn, 2); P.px(14, -5, hornL); line(32, 3, 37, 0, horn, 2); line(37, 0, 38, -4, horn, 2); P.px(38, -5, hornL);
+    P.px(22, 1, hornL); P.px(30, 1, hornL);
   } else {
     const b = flash ? '#c8ffc0' : '#5ac85a', bd = flash ? '#8ae08a' : '#3a9a44', bl = flash ? '#ffffff' : '#9af08a';
     P.ellipse(26, 30 + sq, 23 + sq, 14 - sq, bd);
@@ -1032,26 +1180,67 @@ function bossSprite(frame, flash, k = 'gluant') {
   }
   return (dynCache[key] = P.outline().canvas());
 }
-// Sbires appelés par le boss enragé
+// Sbires appelés par le boss enragé (et objets lancés : citrouille, livre, rocher)
 function minionSprite(k, fr, flash) {
   const key = 'mn' + k + fr + flash;
   if (dynCache[key]) return dynCache[key];
   const P = new Painter(18, 18), b = fr ? 1 : 0;
   const F = c => flash ? shade(c, 1.6) : c;
   if (k === 'gobelin') {
-    const sk = F('#6fae3a');
-    P.rect(6, 14, 2, 3 - b, F('#4a8226')); P.rect(10, 14, 2, 2 + b, F('#4a8226'));
-    P.rect(5, 10, 8, 5, F('#7a3a2a')); P.rect(5, 12, 8, 1, F('#3a2414'));
-    P.rect(4, 3, 10, 7, sk); P.rect(1, 4, 3, 2, sk); P.px(0, 3, sk); P.rect(14, 4, 3, 2, sk); P.px(17, 3, sk);
-    P.rect(4, 1, 10, 2, F('#c0303a'));
-    P.px(6, 5, '#ffe27a'); P.px(11, 5, '#ffe27a'); P.rect(7, 7, 4, 2, '#3a1414'); P.px(7, 7, '#ffffff'); P.px(10, 7, '#ffffff');
-    P.rect(14, 9 - b, 1, 5, F('#8a5a2a')); P.px(14, 8 - b, F('#e8b83a'));
+    const sk = F('#c48a78'), skD = F('#94604f');
+    P.rect(6, 14, 2, 3 - b, skD); P.rect(10, 14, 2, 2 + b, skD);
+    P.rect(5, 10, 8, 5, F('#5e4234')); P.ellipse(3, 13, 3, 2, F('#8a4a2a')); P.ellipse(3, 12, 2, 1, F('#efd8c8'));
+    P.rect(4, 3, 10, 7, sk); P.rect(1, 3, 3, 2, sk); P.px(0, 2, sk); P.rect(14, 3, 3, 2, sk); P.px(17, 2, sk);
+    P.px(7, 1, F('#2e2018')); P.px(9, 0, F('#2e2018')); P.px(11, 1, F('#2e2018'));
+    P.px(6, 5, '#fff2c0'); P.px(11, 5, '#fff2c0'); P.rect(7, 7, 4, 2, '#3a1414'); P.px(7, 7, '#ffffff'); P.px(10, 7, '#ffffff');
+    P.rect(14, 8 - b, 1, 5, F('#8a5a2a')); P.px(14, 7 - b, F('#6a4030'));
   } else if (k === 'citrouille') {
     const o = F('#e8781e'), oD = F('#b8521a');
     P.rect(5, 15, 2, 2 - b, F('#3a6a2a')); P.rect(11, 15, 2, 1 + b, F('#3a6a2a'));
     P.ellipse(9, 10 - b, 7, 5, o); P.rect(6, 6 - b, 1, 9, oD); P.rect(12, 6 - b, 1, 9, oD);
     P.rect(8, 2 - b, 2, 3, F('#3a6a2a')); P.px(10, 2 - b, F('#5a9a3a'));
     P.rect(5, 8 - b, 2, 2, '#ffe27a'); P.rect(11, 8 - b, 2, 2, '#ffe27a'); P.rect(6, 12 - b, 6, 1, '#ffe27a'); P.px(8, 12 - b, oD);
+  } else if (k === 'ombre') {
+    const r = F('#5a5a64');
+    P.ellipse(9, 5 - b, 4, 4, r); P.ellipse(9, 6 - b, 2, 3, '#08080e'); P.px(8, 6 - b, '#ffffff'); P.px(10, 6 - b, '#ffffff');
+    for (let y = 9; y < 16; y++) P.rect(9 - (y - 6) / 2, y - b, y - 6, 1, y % 3 ? r : F('#45454d'));
+    for (let x = 5; x < 14; x += 2) P.px(x, 16 + ((x + b) % 2), F('#8a8a94'));
+  } else if (k === 'glace') {
+    const c = F('#9ae8f0'), d = F('#4ab0c8');
+    P.rect(8, 1, 2, 4, c); P.rect(6, 4, 6, 9, c); P.rect(4, 7, 10, 4, c); P.rect(7, 13, 4, 2, d); P.rect(11, 4, 1, 9, d); P.rect(6, 4, 1, 9, F('#ffffff'));
+    P.px(7, 8, OUT); P.px(10, 8, OUT); P.rect(7, 10, 4, 1, d);
+    P.px(2, 6 + b, '#ffffff'); P.px(15, 9 - b, '#ffffff');
+  } else if (k === 'sablier') {
+    const w = F('#7a5a2a'), g = F('#d8eef8'), sand = F('#e8c070');
+    P.rect(4, 1, 10, 2, w); P.rect(4, 13, 10, 2, w); P.rect(4, 3, 1, 10, w); P.rect(13, 3, 1, 10, w);
+    for (let y = 0; y < 5; y++) { P.rect(5 + (y >> 1), 3 + y, 8 - y, 1, g); P.rect(5 + (y >> 1), 12 - y, 8 - y, 1, g); }
+    P.rect(7, 10, 4, 2, sand); P.px(9, 7 + b, sand); P.px(7, 4, OUT); P.px(10, 4, OUT);
+    P.rect(5, 15, 2, 2 - b, w); P.rect(11, 15, 2, 1 + b, w);
+  } else if (k === 'diablotin') {
+    const r = F('#c0303a'), rD = F('#8a1a24');
+    P.rect(6, 14, 2, 3 - b, rD); P.rect(10, 14, 2, 2 + b, rD);
+    P.rect(5, 9, 8, 6, r); P.ellipse(9, 6, 5, 4, r); P.px(5, 2, F('#e8e2d0')); P.px(4, 1, F('#e8e2d0')); P.px(13, 2, F('#e8e2d0')); P.px(14, 1, F('#e8e2d0'));
+    P.px(7, 6, '#ffe27a'); P.px(11, 6, '#ffe27a'); P.rect(7, 8, 4, 1, OUT); P.px(8, 9, '#ffffff');
+    P.rect(13, 12, 3, 1, rD); P.px(16, 11, rD); P.rect(1, 7 - b, 3, 5, F('#5a1a24'));
+  } else if (k === 'pieuvre') {
+    const c = F('#7a6a9a'), d = F('#4a4068');
+    P.ellipse(9, 6, 6, 5, c); P.ellipse(7, 4, 2, 1, F('#a898c8'));
+    for (let i = 0; i < 5; i++) P.rect(4 + i * 2, 10, 1, 4 + ((i + b) % 2) * 2, i % 2 ? d : c);
+    P.disc(7, 7, 1, '#ffffff'); P.disc(11, 7, 1, '#ffffff'); P.px(7, 7, OUT); P.px(11, 7, OUT);
+  } else if (k === 'livre') {
+    const c = F(b ? '#8a2a2a' : '#2a4a8a'), pg = F('#f4ecd8');
+    P.rect(3, 6 - b, 12, 8, pg); P.rect(8, 5 - b, 2, 10, c);
+    P.rect(1, 4 - b * 2, 7, 3, c); P.rect(10, 4 - b * 2, 7, 3, c);
+    for (let y = 8; y < 13; y += 2) { P.rect(4, y - b, 3, 1, F('#b8ac8c')); P.rect(11, y - b, 3, 1, F('#b8ac8c')); }
+    P.px(5, 7 - b, OUT); P.px(12, 7 - b, OUT);
+  } else if (k === 'chevalier') {
+    const a = F('#4a4e58'), aL = F('#7a808a');
+    P.rect(6, 14, 2, 3 - b, a); P.rect(10, 14, 2, 2 + b, a);
+    P.rect(5, 8, 8, 7, a); P.rect(5, 8, 8, 1, aL); P.rect(4, 2, 10, 7, a); P.rect(4, 2, 10, 1, aL);
+    P.rect(5, 5, 8, 1, OUT); P.px(7, 5, '#ff3a2a'); P.px(11, 5, '#ff3a2a'); P.px(4, 0, F('#2e2a2e')); P.px(13, 0, F('#2e2a2e')); P.px(4, 1, F('#2e2a2e')); P.px(13, 1, F('#2e2a2e'));
+    P.rect(14, 4 - b, 1, 10, F('#d8dee8')); P.rect(13, 12 - b, 3, 1, F('#8a6a3a'));
+  } else if (k === 'rocher') {
+    P.ellipse(9, 10, 7, 6, F('#8a8580')); P.ellipse(7, 8, 3, 2, F('#b8b2aa')); P.px(11, 12, F('#5a5550')); P.px(12, 9, F('#5a5550'));
   } else {
     const c = F('#5ac85a');
     P.ellipse(9, 12, 7 + b, 5 - b, F('#3a9a44')); P.ellipse(9, 11, 7 + b, 5 - b, c); P.ellipse(7, 9, 2, 1, F('#9af08a'));
@@ -1059,7 +1248,6 @@ function minionSprite(k, fr, flash) {
   }
   return (dynCache[key] = P.outline().canvas());
 }
-const SBIRE_DE = { gobelin: 'gobelin', dragon: 'citrouille', gluant: 'slime' };
 
 // ---------- Rendu d'une image ----------
 // mine = mon joueur (élève) ou null (vue enseignant : voit tout le monde)
@@ -1141,10 +1329,10 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     for (let i = 0; i < 3; i++) { const t = (now * 0.7 + i / 3 + k * 0.2) % 1; sq(P.x - 24 + i * 22, P.y - t * 70, 1, '#e2ccff'); }
   }
   // flaques gluantes du slime
-  for (const [x, y, r, t] of world.pz) {
+  for (const [x, y, r, t, ink] of world.pz) {
     ctx.save(); ctx.globalAlpha = Math.min(1, t) * 0.75;
-    ctx.fillStyle = '#4fbf5a'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.6, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#8af07a'; ctx.beginPath(); ctx.ellipse(x - r * 0.3, y - r * 0.15, r * 0.3, r * 0.14, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = ink ? '#1e1830' : '#4fbf5a'; ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.6, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = ink ? '#4a3a6a' :'#8af07a'; ctx.beginPath(); ctx.ellipse(x - r * 0.3, y - r * 0.15, r * 0.3, r * 0.14, 0, 0, 7); ctx.fill();
     for (let i = 0; i < 5; i++) { const a = i * 1.3 + now; sq(x + Math.cos(a) * r * 0.6, y + Math.sin(a) * r * 0.35 - ((now * 20 + i * 9) % 18), 2, '#b8ffa8'); }
     ctx.restore();
   }
@@ -1163,21 +1351,46 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, t * 1.5));
     if (f.k === 'slash') {
       for (let i = 0; i <= 8; i++) { const a = f.a - f.arc / 2 + f.arc * i / 8; sq(f.x + Math.cos(a) * f.r, f.y + Math.sin(a) * f.r, 2, '#ffffff'); }
+    } else if (f.k === 'boom' && f.c === 'eclair') {   // éclair du chaos qui tombe du ciel
+      ctx.globalAlpha = 1;
+      let x = f.x, y = f.y - 260;
+      ctx.strokeStyle = t > 0.5 ? '#ffffff' : '#c8a0ff'; ctx.lineWidth = big ? 14 : 6; ctx.beginPath(); ctx.moveTo(x, y);
+      for (let i = 0; i < 6; i++) { x = f.x + (i % 2 ? 22 : -18) * (1 - i / 6); y += 260 / 6; ctx.lineTo(x, y); }
+      ctx.stroke();
+      for (let i = 0; i < 20; i++) { const a = i / 20 * Math.PI * 2, r = f.r * (1.1 - t * 0.6); sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 3, i % 2 ? '#c8a0ff' : '#ffffff'); }
+    } else if (f.k === 'boom' && f.c === 'tentacule') {   // tentacule qui jaillit du sol
+      ctx.globalAlpha = 1;
+      const h = Math.sin((1 - t) * Math.PI) * 90;
+      for (let i = 0; i < 12; i++) { const u = i / 12, w = Math.round((1 - u) * 4) + 1; sq(f.x - w * 1.5 + Math.sin(u * 4 + now * 6) * 10 * u, f.y + 10 - h * u, w, i % 3 ? '#6a6284' : '#4a4068'); if (i % 3 === 1) sq(f.x + 6, f.y + 10 - h * u, 1, '#c8c0d8'); }
+      for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; sq(f.x + Math.cos(a) * f.r * 0.8, f.y + 10 + Math.sin(a) * f.r * 0.45, 2, '#4a4068'); }
     } else if (f.k === 'boom') {
       const r = f.r * (1.1 - t * 0.6);
       for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, 3, i % 2 ? (f.gold ? '#fff6c0' : '#ff8a1e') : '#ffe27a'); sq(f.x + Math.cos(a + 0.1) * r * 0.6, f.y + Math.sin(a + 0.1) * r * 0.6, 2, f.gold ? '#f2c94c' : '#ff4a1a'); }
-    } else if (f.k === 'slam') {
-      const r = f.r * (1.1 - t);
-      for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + 20 + Math.sin(a) * r * 0.6, 3, i % 2 ? '#5ac85a' : '#9af08a'); }
+    } else if (f.k === 'slam') {   // onde de choc, de la couleur du boss
+      const r = f.r * (1.1 - t), c = f.b && BOSS_INFO[f.b] ? BOSS_INFO[f.b].col : '#9af08a', c2 = f.b === 'ombres' ? '#2a2a34' : f.b === 'kraken' ? '#3a2a5a' : shade(c, 0.7);
+      for (let i = 0; i < 32; i++) { const a = i / 32 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + 20 + Math.sin(a) * r * 0.6, big ? 5 : 3, i % 2 ? c2 : c); }
+    } else if (f.k === 'sablier') {   // le temps ralentit : cadran doré et grains de sable
+      const r = f.r * Math.min(1, (1 - t) * 1.6);
+      for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.7, i % 3 ? 2 : 4, i % 3 ? '#e8c070' : '#fff2b0'); }
+      for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + now; sq(f.x + Math.cos(a) * r * 0.5, f.y + Math.sin(a) * r * 0.35 + (1 - t) * 30, 2, '#e8c070'); }
+      ctx.lineWidth = 4; ctx.strokeStyle = '#fff2b0'; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x + Math.cos(now * 8) * r * 0.6, f.y + Math.sin(now * 8) * r * 0.4); ctx.stroke();
+    } else if (f.k === 'tourbillon') {   // coups d'arme tout autour
+      for (let k = 0; k < 3; k++) for (let i = 0; i < 10; i++) { const a = (1 - t) * 9 + k * 2.1 + i * 0.08, r = f.r * (0.6 + i * 0.04); sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.7, big ? 5 : 3, i > 6 ? '#ffffff' : '#c8ccd4'); }
+    } else if (f.k === 'visee') {   // le cyclope vise : ligne rouge qui prévient
+      ctx.save(); ctx.globalAlpha = 0.5 + Math.sin(now * 30) * 0.3; ctx.strokeStyle = '#ff3a2a'; ctx.lineWidth = big ? 8 : 3; ctx.setLineDash([16, 10]);
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x + Math.cos(f.a) * f.long, f.y + Math.sin(f.a) * f.long); ctx.stroke(); ctx.restore();
+    } else if (f.k === 'rayon') {
+      for (const [w, c] of [[big ? 70 : 40, '#ff6a2a'], [big ? 36 : 20, '#ffd25a'], [big ? 14 : 8, '#ffffff']]) { ctx.strokeStyle = c; ctx.lineWidth = w * t; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(f.x + Math.cos(f.a) * f.long, f.y + Math.sin(f.a) * f.long); ctx.stroke(); }
     } else if (f.k === 'cri') {   // cri assourdissant : ondes sonores
       for (const m of [1, 0.7, 0.4]) {
         const r = f.r * Math.min(1, (1 - t) * 1.3 + (1 - m) * 0.2) * m;
         for (let i = 0; i < 30; i++) { if (i % 3 === 2) continue; const a = i / 30 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y - 10 + Math.sin(a) * r * 0.7, big ? 4 : 2, m === 1 ? '#ffd54a' : '#ffffff'); }
       }
     } else if (f.k === 'souffle') {   // souffle de feu du dragon
+      const ice = f.c === 'glace';
       for (let i = 0; i < 46; i++) {
         const u = ((i * 37) % 100) / 100, d = f.r * u * Math.min(1, (1 - t) * 2), a = f.a + (((i * 53) % 100) / 100 - 0.5) * 0.9 * u;
-        sq(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, u < 0.3 ? 4 : 3, u < 0.35 ? '#fff2a0' : u < 0.7 ? '#ff8a1e' : '#c23b1a');
+        sq(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, u < 0.3 ? 4 : 3, ice ? (u < 0.35 ? '#ffffff' : u < 0.7 ? '#9ae8f0' : '#4ab0c8') : (u < 0.35 ? '#fff2a0' : u < 0.7 ? '#ff8a1e' : '#c23b1a'));
       }
     } else if (f.k === 'cible') {   // citrouille qui va tomber ici
       ctx.globalAlpha = 1;
@@ -1186,7 +1399,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     } else if (f.k === 'lob') {
       ctx.globalAlpha = 1;
       const u = 1 - t, px = f.x + (f.x2 - f.x) * u, py = f.y + (f.y2 - f.y) * u - Math.sin(u * Math.PI) * 140;
-      img(minionSprite('citrouille', 0, 0), px, py, big ? 5 : 2);
+      img(minionSprite(f.c || 'citrouille', 0, 0), px, py, big ? 5 : 2);
     } else if (f.k === 'zap') {
       for (let i = 0; i <= 14; i++) { const u = i / 14; sq(f.x + (f.x2 - f.x) * u + Math.sin(i * 2 + now * 30) * 6, f.y - 30 + (f.y2 - f.y) * u, 2, i % 2 ? '#ffe27a' : '#ffffff'); }
     } else if (f.k === 'dust') {
@@ -1224,6 +1437,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       sq(x - Math.cos(a) * 14, y - Math.sin(a) * 14, 2, '#ff8a1e'); sq(x - Math.cos(a) * 24, y - Math.sin(a) * 24, 1, '#ffb347');
     } else if (c === 'pet') {
       sq(x - 4, y - 4, 3, '#ff8a1e'); sq(x - 2, y - 2, 1, '#ffe27a'); sq(x - Math.cos(a) * 10, y - Math.sin(a) * 10, 2, '#ffb347');
+    } else if (c === 'ombre') {   // boule d'ombre qui ralentit
+      sq(x - 8, y - 8, 5, '#1a1424'); sq(x - 5, y - 5, 3, '#4a3a6a'); sq(x - 3, y - 4, 1, '#c8b8ff');
+      sq(x - Math.cos(a) * 16, y - Math.sin(a) * 16, 2, '#4a3a6a'); sq(x - Math.cos(a) * 26, y - Math.sin(a) * 26, 1, '#2a2434');
+    } else if (c === 'glace') {   // éclat de glace
+      for (let i = 0; i < 5; i++) sq(x - Math.cos(a) * i * 3, y - Math.sin(a) * i * 3, i ? 2 : 3, i ? '#9ae8f0' : '#ffffff');
     } else if (c === 'note') {   // notes de musique du Gobelin du Bruit
       const col = Math.floor(now * 8 + x) % 2 ? '#ffd54a' : '#ffffff';
       sq(x - 6, y + 3, 3, OUT); sq(x - 5, y + 4, 2, col); sq(x, y - 12, 1, col); sq(x, y - 9, 1, col); sq(x, y - 6, 1, col); sq(x, y - 3, 1, col); sq(x + 3, y - 12, 1, col); sq(x + 6, y - 9, 1, col);

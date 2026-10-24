@@ -117,11 +117,21 @@ Chaque point d'armure retire 1 % des dégâts reçus, jusqu'à 40 % au maximum. 
   - **À la moitié de sa vie, il s'enrage** : plus rapide, attaques plus fréquentes, et il appelle des sbires (puis de nouveaux toutes les 18 secondes).
   - Une grande barre de vie s'affiche en haut de l'écran des élèves et en bas du projecteur. Le podium de fin classe les plus gros dégâts au boss.
 
-| Boss | Attaques | Sbires |
-|---|---|---|
-| 📢 Gobelin du Bruit (septembre) | Cri assourdissant (dégâts et étourdit un instant), notes de musique en éventail | Gobelins tapageurs |
-| 🎃 Dragon des Citrouilles (octobre) | Souffle de feu en cône, citrouilles explosives (un cercle rouge montre où elles tombent) | Citrouilles-monstres |
-| 👑 Roi Gluant | Onde de choc, boules de slime | Petits slimes |
+Les Boss viennent des cartes du système d'émulation de la classe (un par mois). Plus la carte a de PV, plus le Boss est coriace.
+
+| Mois | Boss | Attaques | Sbires |
+|---|---|---|---|
+| Septembre | 🥁 Gobelin du Bruit (40 PV) | Cri assourdissant (étourdit un instant), notes de musique en éventail | Gobelins tapageurs |
+| Octobre | 🎃 Dragon des Citrouilles (50 PV) | Souffle de feu, citrouilles explosives (un cercle rouge montre où elles tombent) | Citrouilles-monstres |
+| Novembre | 👻 Seigneur des Ombres (50 PV) | Disparaît et réapparaît à côté d'un élève, boules d'ombre qui ralentissent | Ombres |
+| Décembre | ❄️ Dragon du Givre (60 PV) | Souffle de glace qui ralentit, éclats de glace tout autour | Élémentaires de glace |
+| Janvier | ⏳ Cyclope du Temps perdu (60 PV) | Sablier qui ralentit le temps autour de lui, rayon de l'œil (une ligne rouge prévient) | Sabliers vivants |
+| Février | 🐂 Minotaure de la Discorde (70 PV) | Tourbillon de hache et d'épée, charge en ligne droite | Diablotins |
+| Mars | 🐙 Kraken du Chaos (80 PV) | Flaques d'encre qui ralentissent, tentacules qui jaillissent du sol | Petites pieuvres |
+| Avril | 📚 Golem des Devoirs (90 PV) | Onde de choc qui étourdit, piles de livres lancées | Livres volants |
+| Mai | 💪 Titan du Bruit (100 PV) | Onde de tonnerre, rochers lancés. « Plus c'est bruyant, plus je deviens fort » : ses coups font plus mal quand beaucoup d'élèves sont collés à lui | Gobelins tapageurs |
+| Juin | 😈 Empereur du Chaos (200 PV) | Tourbillon d'épée, éclairs du chaos. Il a **3** Boucliers du savoir (75 %, 50 %, 25 %) | Chevaliers noirs |
+| Juillet, août | 👑 Roi Gluant | Onde de choc, boules de slime | Petits slimes |
 
 ## Tableau de bord enseignant (`/prof`)
 
