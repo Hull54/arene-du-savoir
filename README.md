@@ -50,7 +50,7 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 | Carte | Particularités |
 |---|---|
 | 🏘️ Village de Mirabel | Maisons où l'on peut entrer, rivière avec ponts et gué, grand lac avec une île au trésor, fontaine de soin |
-| 🌲 Forêt des Murmures | Beaucoup de buissons pour se cacher, ruisseau avec gués, cabane du bûcheron, source de soin |
+| 🏙️ Cité de Pierrefort | Ville médiévale : rues pavées et ruelles, 11 maisons à visiter, marché avec fontaine de soin, canal avec 3 ponts, cathédrale, réverbères |
 | 🌵 Désert Brûlant | Oasis, temple en ruine, plateaux rocheux, sables mouvants qui ralentissent |
 | 🏰 Donjon Oublié | Salles et couloirs, torches, fosses et lave (on peut tirer par-dessus), coffres dans les coins |
 | ❄️ Toundra Glacée | Immense lac gelé où l'on glisse plus vite, cabanes, feu de camp qui soigne |
@@ -58,7 +58,7 @@ Chaque carte est prévue pour environ 20 joueurs. L'enseignant change de carte �
 | 🟤 Marais Gluant | Boue qui ralentit, passerelles, cabane de la sorcière |
 
 - **L'eau** bloque les joueurs mais pas les flèches ni les boules de feu. On traverse par les ponts ou par les **gués** (eau peu profonde, on y avance plus lentement).
-- **Les buissons et les hautes herbes** cachent un joueur tant qu'il n'attaque pas (hautes herbes : Village, Forêt, Marais).
+- **Les buissons et les hautes herbes** cachent un joueur tant qu'il n'attaque pas (hautes herbes : Village, Marais).
 - **Les tonneaux explosifs** (rouges, avec une flamme) explosent quand on les frappe ou qu'on tire dessus : 30 dégâts autour, jamais à celui qui l'a fait exploser ni à ses coéquipiers. Un tonneau peut en faire exploser un autre. Ils reviennent après 30 secondes. En mode boss, ils ne blessent que le Roi Gluant.
 - **Les portails** (un cercle de pierres violet, une paire par carte) envoient à l'autre bout de la carte. Il faut en ressortir avant de pouvoir y rentrer.
 - **Le lieu de soin** (fontaine, source, autel ou feu de camp) redonne de la vie.

@@ -191,36 +191,45 @@ function village() {
   return fin(A, 'village', 'Village de Mirabel', 'village', 'Maisons à visiter, rivière, grand lac et place avec fontaine de soin');
 }
 
-// ---------- Forêt ----------
-function foret() {
-  const A = atelier('foret', 4242, '.');
-  A.border('T', 2);
-  // bosquets impénétrables (peu nombreux, bien visibles)
-  for (const [x, y, rx, ry] of [[12, 9, 3, 2.2], [38, 8, 3.5, 2.4], [42, 27, 3, 2.5], [9, 28, 2.6, 2]]) A.blob(x, y, rx, ry, 'T', 0.4);
-  // ruisseau en diagonale avec gués et un pont
-  A.path([[0, 6], [8, 13], [18, 16], [27, 22], [36, 26], [44, 33], [52, 35]], 2, '~');
-  A.path([[12, 13], [14, 17]], 3, '=', '~');
-  A.path([[34, 24], [36, 28]], 3, '=', '~');
-  A.fill(24, 19, 2, 4, 'B');
-  A.blob(44, 15, 3.5, 2.6, '~', 0.3);                                        // étang
-  // clairière centrale avec la source de soin
-  A.blob(26, 12, 2.6, 2, 'd', 0.3);
-  A.setHeal(26.5, 12.5, 'source');
-  A.path([[26, 12], [25, 21], [20, 28], [12, 31]], 1.2, 'd', '.');
-  A.path([[26, 12], [34, 10], [46, 20]], 1.2, 'd', '.');
-  A.path([[26, 12], [16, 6], [6, 4]], 1.2, 'd', '.');
-  // cabane du bûcheron
-  A.house(4, 17, 8, 6, 'x', 'w', ['e', 's']);
-  // cercle de champignons et vieille tour
-  A.house(30, 29, 6, 5, '#', 'f', ['n', 'w'], false); A.chest(31.5, 31); A.spot(33, 31);
-  A.chest(40, 4.5); A.chest(47, 12);
-  A.tallGrass(7); A.portal('.d'); A.scatterBarrels(4, '.d');
-  A.scatter('oak', 12, '.', 1, 0.8, 1);
-  A.scatter('pine', 10, '.', 0.9, 0.8, 1);
-  A.scatter('stump', 4, '.', 0.7, 0.5, 1);
-  A.scatterBushes(18, '.');
-  for (const [x, y] of [[13, 12], [16, 25], [38, 13], [21, 4], [47, 30]]) A.spot(x, y);
-  return fin(A, 'foret', 'Forêt des Murmures', 'foret', 'Plein de buissons pour se cacher, ruisseau, cabane et source de soin');
+// ---------- Cité ----------
+function cite() {
+  const A = atelier('cite', 8128, 'p');
+  A.fill(0, 0, COLS, 1, '#'); A.fill(0, ROWS - 1, COLS, 1, '#'); A.fill(0, 0, 1, ROWS, '#'); A.fill(COLS - 1, 0, 1, ROWS, '#');   // remparts bien droits
+  // canal qui traverse la ville, trois ponts
+  A.path([[0, 19], [14, 19], [19, 21], [33, 21], [38, 19], [52, 19]], 2, '~');
+  A.path([[8, 16], [8, 24]], 3, 'B', '~');
+  A.path([[26, 18], [26, 25]], 3, 'B', '~');
+  A.path([[45, 16], [45, 23]], 3, 'B', '~');
+  // place du marché avec fontaine de soin
+  A.setHeal(27, 8, 'fontaine');
+  for (const [x, y] of [[21, 3.6], [30.5, 3.6], [21, 11], [30.5, 11]]) A.obj('stall', x, y, 2.2, 1);
+  // quartier nord : maisons et guilde (on peut entrer)
+  A.house(2, 2, 8, 6, 'b', 'w', ['s', 'e']);
+  A.house(12, 2, 7, 6, '#', 'f', ['s'], false); A.chest(13.5, 4);
+  A.house(2, 10, 7, 6, 'b', 'w', ['e', 'n'], false); A.chest(3.5, 13);
+  A.house(11, 10, 7, 6, 'b', 'w', ['s', 'w'], false);
+  A.house(36, 2, 8, 7, '#', 'f', ['s', 'w']);
+  A.house(46, 2, 5, 6, 'b', 'w', ['s'], false);
+  A.house(36, 11, 6, 5, 'b', 'w', ['n', 'w'], false);
+  A.house(44, 10, 7, 6, 'b', 'w', ['w', 's'], false); A.chest(48.5, 12);
+  // quartier sud : la cathédrale et des maisons
+  const c = A.house(19, 25, 14, 9, '#', 'f', ['n', 'e', 'w'], false);
+  A.fill(25, 26, 2, 7, 't');
+  for (const [x, y] of [[22, 27], [22, 30.5], [29, 27], [29, 30.5]]) A.obj('pillar', x, y, 1, 1);
+  A.obj('statue', 25.5, c.y + 0.2, 1, 1); A.chest(20.5, 31.5);
+  A.house(2, 25, 7, 6, 'b', 'w', ['n', 'e']);
+  A.house(11, 25, 6, 6, '#', 'f', ['n'], false);
+  A.house(35, 25, 7, 6, 'b', 'w', ['n', 'w'], false); A.chest(39.5, 27.5);
+  A.house(44, 25, 7, 6, 'b', 'w', ['n', 'w']);
+  // ruelles : caisses, tonneaux, puits, réverbères
+  for (const [x, y] of [[10, 8.4], [33, 15], [17, 33], [42, 33], [2.4, 33]]) A.obj('crate', x, y, 1, 1);
+  A.obj('barrels', 34.4, 2.4, 1, 1); A.obj('barrels', 9.6, 32.6, 1, 1);
+  A.obj('well', 4, 17, 1.4, 1.2);
+  for (const [x, y] of [[19, 2.2], [34.4, 9.6], [19, 13.8], [10.4, 22.6], [41.4, 22.6], [33.6, 24.6], [17.6, 24.6], [48, 16.4], [2.4, 22.6], [47.6, 33.4]]) A.obj('lamp', x, y, 0.4, 0.4);
+  A.bush(20.4, 14.6, 1.1); A.bush(33.6, 14.6, 1.1); A.bush(14, 33.4, 1.1); A.bush(38, 33.4, 1.1);
+  A.portal('p'); A.scatterBarrels(6, 'p');
+  for (const [x, y] of [[5, 5], [41, 5], [14, 13], [47, 28], [5, 28], [30, 33]]) A.spot(x, y);
+  return fin(A, 'cite', 'Cité de Pierrefort', 'cite', 'Rues pavées, ruelles, maisons à visiter, marché, canal et cathédrale');
 }
 
 // ---------- Désert ----------
@@ -372,5 +381,5 @@ function marais() {
   return fin(A, 'marais', 'Marais Gluant', 'marais', 'Boue qui ralentit, passerelles et cabane de la sorcière');
 }
 
-const CARTES = [village, foret, desert, donjon, hiver, colisee, marais].map(f => f());
+const CARTES = [village, cite, desert, donjon, hiver, colisee, marais].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };

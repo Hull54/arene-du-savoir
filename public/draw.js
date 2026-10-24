@@ -402,6 +402,11 @@ function spriteFor(o, TH = THEMES.village) {
     for (let i = 0; i < w; i += 4) P.rect(1 + i, 0, 2, 12, '#d33b3b'), P.rect(3 + i, 0, 2, 12, '#f4f0e6');
     P.rect(1, 12, w, 1, '#8e3029');
     for (let i = 0; i < 5; i++) P.disc(5 + i * 5, 13 + Math.floor(h / 3) + 4, 1, ['#e04a3a', '#ffb347', '#7cc25a', '#ffd84a', '#c96bd8'][i]);
+  } else if (kind === 'lamp') {
+    // réverbère de fer forgé avec sa lanterne
+    P = new Painter(12, 32); ax = 6 - w / 2; ay = 32 - h - 1;
+    P.rect(4, 27, 4, 3, '#2e2a33'); P.rect(5, 9, 2, 19, '#3a3640'); P.px(5, 10, '#5a5664');
+    P.rect(2, 7, 8, 2, '#2e2a33'); P.rect(3, 1, 6, 6, '#2e2a33'); P.rect(4, 2, 4, 4, '#ffd27a'); P.px(4, 2, '#fff3c0'); P.rect(4, 0, 4, 1, '#2e2a33');
   } else if (kind === 'barrels') {
     P = new Painter(w + 2, h + 6); ax = 1; ay = 5;
     for (const bx of [1, Math.floor(w / 2)]) { P.rect(bx, 5, Math.floor(w / 2) - 1, h, '#8b5a2b'); P.rect(bx, 7, Math.floor(w / 2) - 1, 1, '#5e5546'); P.rect(bx, 5 + h - 3, Math.floor(w / 2) - 1, 1, '#5e5546'); P.ellipse(bx + Math.floor(w / 4) - 1, 5, Math.floor(w / 4) - 1, 2, '#b07a45'); }
@@ -488,6 +493,7 @@ const THEMES = {
   desert:  { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c98f52', '#9e6a38', '#e2ad6e', '#7a4f28'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e6a38' },
   donjon:  { herbe: ['#5a5f6a', '#525763', '#646a75', '#454a55'], falaise: ['#6d6a7a', '#4a4757', '#8a8796', '#33313f'], arbres: ['#2f4a3a', '#3f5a4a', '#5a7a5a', '#1f3328'], fond: '#141019' },
   hiver:   { herbe: ['#eef4fa', '#e2ebf4', '#ffffff', '#c8d8e8'], falaise: ['#b8cde0', '#8aa3be', '#e4eff8', '#6a84a0'], arbres: ['#2f6a4a', '#3f8a5a', '#e8f2fa', '#1f4a35'], fond: '#8aa3be' },
+  cite:    { herbe: ['#6a8a55', '#61804e', '#76955f', '#4f6d42'], falaise: ['#8a8590', '#66626e', '#a8a4ae', '#46424e'], arbres: ['#3f6a3a', '#4a7a44', '#6a9a5a', '#2a4a28'], fond: '#46424e' },
   colisee: { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c9a36a', '#9e7c48', '#e2c08a', '#7a5e34'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e7c48' },
   marais:  { herbe: ['#6f8048', '#64743f', '#7d8f55', '#55653a'], falaise: ['#7a6a4a', '#5a4a32', '#9a8a62', '#3f3322'], arbres: ['#3f5a32', '#4f6d3a', '#6a8a4a', '#2a3f22'], fond: '#2a3f22' },
 };
@@ -667,6 +673,12 @@ function buildMapLayers(map) {
       else c = TH.herbe[0];
       // ombre portée par les murs juste au-dessus
       if (WALLS_T.includes(tile(tx, ty - 1)) && ly < 4 && !WALLS_T.includes(t)) c = shade(c, 0.82);
+      // quai de pierre le long du canal de la cité
+      if (t === 'p' && map.theme === 'cite') {
+        let q = 9;
+        for (let k = 1; k <= 3 && q > 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k]]) if (isW(V(x + dx, y + dy))) { q = Math.min(q, k); break; }
+        if (q <= 3) c = q === 1 ? '#3e3a46' : (x + y) % 6 === 0 ? '#5a5664' : '#77737f';
+      }
       // plage autour de l'eau
       if (t !== 'B' && t !== '=' && t !== 'v' && t !== 'L' && t !== 'p' && t !== 'f' && t !== 'w' && t !== 't') {
         let nw = 9;
@@ -780,7 +792,8 @@ function buildMapLayers(map) {
     if ((t === 'k' || (t === '#' && map.theme === 'colisee')) && !WALLS_T.includes(tile(i, j + 1)) && 'fp'.includes(tile(i, j + 1)) && (i * 7 + j * 3) % 6 === 0) torches.push([(i + 0.5) * map.T, (j + 0.55) * map.T]);
   }
   for (const o of map.objs) if (o.kind === 'brazier') torches.push([o.x + o.w / 2, o.y - 40]);
-  mapAnim = { glints, torches };
+  const lamps = map.objs.filter(o => o.kind === 'lamp').map(o => [o.x + o.w / 2, o.y - 72]);
+  mapAnim = { glints, torches, lamps };
   // ----- finition « plateau de jeu de rôle » (calculée une seule fois au chargement) -----
   // 1) ombres portées des arbres, toits et buissons, décalées vers le bas à droite
   const sc = document.createElement('canvas'); sc.width = AW; sc.height = AH;
@@ -974,6 +987,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       else if (HL.kind === 'feu') sq(HL.x + Math.sin(k * 2.3 + now * 3) * 12, HL.y - 6 - t * 50, t < 0.3 ? 3 : 2, t < 0.4 ? '#ffd25a' : t < 0.7 ? '#ff8a1e' : '#c23b1a');
       else sq(HL.x + Math.cos(a + now) * 40 * t, HL.y - 10 - t * 60, 1, HL.kind === 'autel' ? '#e2ccff' : '#bff4ff');
     }
+  }
+  for (const [x, y] of mapAnim.lamps || []) {
+    const f = 0.1 + Math.sin(now * 5 + x) * 0.015;
+    ctx.fillStyle = `rgba(255,200,110,${f})`; ctx.beginPath(); ctx.arc(x, y + 50, 90, 0, 7); ctx.fill();
+    if (Math.sin(now * 9 + x * 3) > 0.2) sq(x - 1, y + 4, 1, '#ffffff');
   }
   for (const [x, y] of mapAnim.torches) {
     const f = Math.sin(now * 12 + x) > 0 ? 1 : 0;
