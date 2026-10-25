@@ -292,6 +292,39 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
 @media (prefers-reduced-motion: reduce) {
   .tok, .float, .die.rolling svg, .hl.tgt, .tok.hero.active { transition: none; animation: none; }
 }
+
+.board canvas#meteo { pointer-events: none; z-index: 30; }
+#flash, #vignette { pointer-events: none; }
+#flash { z-index: 31; opacity: 0; background: radial-gradient(ellipse at 50% 20%, rgba(235,243,255,.95), rgba(190,210,255,.55)); border-radius: 8px; }
+#vignette { z-index: 29; border-radius: 8px; opacity: 0; transition: opacity 1.2s; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 50%, rgba(6,4,14,.6) 100%); }
+.board[data-meteo="orage"] #vignette, .board[data-meteo="eclairs"] #vignette, .board[data-meteo="brouillard"] #vignette, .board[data-meteo="lucioles"] #vignette { opacity: 1; animation: vacille 5s ease-in-out infinite; }
+.board[data-meteo="pluie"] #vignette, .board[data-meteo="neige"] #vignette, .board[data-meteo="braises"] #vignette { opacity: .6; }
+body.editing #vignette { opacity: 0 !important; }
+@keyframes vacille { 0%, 100% { filter: none; } 40% { filter: brightness(1.15); } 43% { filter: brightness(.9); } 47% { filter: brightness(1.1); } }
+.etin { position: absolute; left: 0; top: 0; width: calc(var(--cell)*.09); height: calc(var(--cell)*.09); margin: calc(var(--cell)*-.045) 0 0 calc(var(--cell)*-.045); border-radius: 50%; z-index: 26; pointer-events: none; }
+.slash { position: absolute; left: 0; top: 0; width: var(--cell); height: var(--cell); border-radius: 50%; border-top: calc(var(--cell)*.07) solid #fff8e8; filter: drop-shadow(0 0 6px #fff); z-index: 26; pointer-events: none; box-sizing: border-box; }
+.tok.enemy:not(.dead) .coin > svg, .tok.enemy:not(.dead) .coin > img { animation: respire 2.8s ease-in-out infinite; animation-delay: var(--d, 0s); }
+.tok.hero.active:not(.ko) .coin > img { animation: respire 2.2s ease-in-out infinite; }
+.tok.pnj .coin > svg, .tok.pnj .coin > img { animation: respire 3.6s ease-in-out infinite; }
+@keyframes respire { 50% { transform: scale(1.07) translateY(-3%); } }
+.tok.enemy.boss:not(.dead)::before { content: ""; position: absolute; inset: -14%; border-radius: 50%; z-index: -1; background: radial-gradient(circle, rgba(170,60,230,.55), rgba(170,60,230,0) 68%); animation: aura 2.4s ease-in-out infinite; }
+@keyframes aura { 50% { transform: scale(1.18); opacity: .6; } }
+#btn-son { padding-left: 10px; padding-right: 10px; display: inline-grid; place-items: center; }
+#btn-son svg { width: 20px; height: 20px; display: block; }
+#btn-son .x { display: none; }
+#btn-son.muet .x { display: inline; } #btn-son.muet .ondes { display: none; }
+.ed-son { display: grid; gap: 8px; }
+.editor .dims > label { min-width: 0; }
+.editor select { width: 100%; min-width: 0; box-sizing: border-box; text-overflow: ellipsis; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; font-family: var(--body); font-size: .85rem; cursor: pointer; }
+.chips button[aria-pressed="true"] { background: #2d4a2c; color: #e9f7e2; border-color: #6fae6a; }
+.reg input[type=range] { width: 100%; accent-color: var(--gold); }
+.reg-t { margin: 16px 0 0; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: left; }
+.sonboard { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+@media (prefers-reduced-motion: reduce) {
+  .tok .coin > svg, .tok .coin > img, .tok.enemy.boss::before, #vignette { animation: none !important; }
+}
 </style>
 
 <div class="app">
@@ -307,6 +340,7 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
       <select id="quete-sel" aria-label="Quête"></select>
       <button class="btn" id="btn-save" type="button">Sauvegarder</button>
       <button class="btn" id="btn-monde" type="button">Monde</button>
+      <button class="btn" id="btn-son" type="button" aria-label="Couper le son" title="Son"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="ondes" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M16 9l6 6M22 9l-6 6"/></svg></button>
       <button class="btn blue" id="btn-reg" type="button">Réglages</button>
     </div>
   </header>
@@ -317,6 +351,9 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
         <div class="layer" id="hl"></div>
         <svg class="paths" id="paths"></svg>
         <div class="layer" id="ents"></div>
+        <div class="layer" id="vignette"></div>
+        <canvas id="meteo"></canvas>
+        <div class="layer" id="flash"></div>
       </div>
     </div>
     <aside class="side">
@@ -327,6 +364,7 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
         <h3>Créateur de quêtes</h3>
         <label>Nom de la quête <input id="ed-qnom" maxlength="60"></label>
         <label>Conclusion (lue à la victoire) <textarea id="ed-fin" rows="3" placeholder="La situation finale de ton récit."></textarea></label>
+        <label>Trame sonore de la quête <select id="ed-qmus"></select></label>
         <div>
           <h4>Chapitres (une carte par semaine)</h4>
           <div class="chaps" id="ed-chaps"></div>
@@ -339,6 +377,14 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
         </div>
         <label>Nom du chapitre <input id="ed-nom" maxlength="50"></label>
         <label>Introduction (lue au début du chapitre) <textarea id="ed-intro" rows="5" placeholder="Colle ici le texte de ton document de quête."></textarea></label>
+        <div class="ed-son">
+          <h4>Sons et ambiance du chapitre</h4>
+          <div class="dims"><label>Musique <select id="ed-mus"></select></label><label>Météo <select id="ed-met"></select></label></div>
+          <div class="dims"><label>Ambiance <select id="ed-amb"></select></label><label>Bruit des pas <select id="ed-sol"></select></label></div>
+          <p class="hint">Animaux qu'on entend au loin :</p>
+          <div class="chips" id="ed-ani"></div>
+          <p class="hint">Les cases d'eau font toujours « splash ». On entend le résultat tout de suite.</p>
+        </div>
         <div>
           <h4>Image de fond</h4>
           <div class="edbtns"><label class="btn" for="ed-file" style="text-align:center">Charger une image</label><button class="btn" type="button" id="ed-noimg">Retirer l'image</button></div>
@@ -613,6 +659,15 @@ const HALLOWEEN = {
      8,
      0
     ]
+   ],
+   "meteo": "brouillard",
+   "ambiance": "vent",
+   "sol": "herbe",
+   "animaux": [
+    "hiboux",
+    "loups",
+    "corbeaux",
+    "grillons"
    ]
   },
   {
@@ -855,9 +910,17 @@ const HALLOWEEN = {
      6
     ]
    ],
-   "sorties": []
+   "sorties": [],
+   "meteo": "eclairs",
+   "ambiance": "maison",
+   "sol": "bois",
+   "animaux": [
+    "chauves",
+    "rats"
+   ]
   }
- ]
+ ],
+ "musique": "lugubre"
 };
 
 // Quête de démonstration en deux chapitres.
@@ -927,6 +990,9 @@ const DEMO = {
 };
 
 const INTEGREES = [DEMO, HALLOWEEN];
+DEMO.musique = DEMO.musique || "mystere";
+Object.assign(DEMO.chapitres[0], { meteo: "brouillard", ambiance: "vent", sol: "pierre", animaux: ["corbeaux"] }, DEMO.chapitres[0]);
+if (DEMO.chapitres[1]) Object.assign(DEMO.chapitres[1], { ambiance: "crypte", sol: "pierre", animaux: ["chauves", "rats"] }, DEMO.chapitres[1]);
 const C = {
   archer: { nom: "Archer", pv: 3, mana: 3, dep: 6, deg: 4, portee: 4, distrib: true, rim: "#7c9a3f", proj: "#cfe27a",
     p: [{ id: "fleches", nom: "Flèches elfiques", desc: "3 flèches de −2 PV à distribuer", cout: 1, cible: "zone" },
@@ -1083,6 +1149,7 @@ function construire(carte, phase, chapitre = 0) {
   };
   ents.innerHTML = ""; tokEls.clear();
   chargerImage();
+  fxChapitre();
 }
 const dernierChapitre = () => S.chapitre >= QUETE.chapitres.length - 1;
 
@@ -1432,7 +1499,7 @@ function render() {
   }
   for (const e of S.enemies) {
     const el = tok(e.id, "enemy" + (e.boss ? " boss" : "") + (e.pv <= 0 ? " dead" : ""),
-      `<div class="coin" style="--rim:${e.boss ? "#8e3dc8" : "#7a2a24"}">${svgMonstre(e.type)}</div>
+      `<div class="coin" style="--rim:${e.boss ? "#8e3dc8" : "#7a2a24"};--d:-${((parseInt(e.id.slice(2)) || 0) * .73) % 2.8}s">${svgMonstre(e.type)}</div>
        <div class="bar"><i style="width:${Math.max(0, e.pv) / e.pvMax * 100}%"></i></div>
        <div class="tag">${Math.max(0, e.pv)}</div>${e.poison ? '<div class="tag poison">☠</div>' : ""}${S.phase === "mj" && e.bouge ? '<div class="tag moved">✓</div>' : ""}
        <div class="face" style="rotate:${Math.atan2(e.face[0], -e.face[1]) * 180 / Math.PI}deg"></div>`);
@@ -1554,6 +1621,7 @@ function anim(ent, kind, to) {
   coin.getAnimations().forEach(a => a.cancel());
   let kf, d = 450;
   switch (kind) {
+    case "bond": kf = [{ transform: "none" }, { transform: "translateY(-30%) scale(1.05, 1.1)", offset: .45 }, { transform: "scale(1.12, .88)", offset: .85 }, { transform: "none" }]; d = 220; break;
     case "hop": kf = [{ transform: "none" }, { transform: "translateY(-14%) scale(1.15)" }, { transform: "none" }]; d = 380; break;
     case "lunge": {
       const dx = Math.sign(to.x - ent.x) * 45, dy = Math.sign(to.y - ent.y) * 45;
@@ -1579,8 +1647,430 @@ function projectile(from, to, color) {
   return p.animate([{ transform: a + " scale(.6)" }, { transform: b + " scale(1.2)" }], { duration: 120 + dist(from, to) * 60, easing: "ease-in" }).finished.then(() => p.remove(), () => p.remove());
 }
 async function frapper(h, e) {
-  if (C[h.cls].portee > 1) { await anim(h, "hop"); await projectile(h, e, C[h.cls].proj); }
-  else await anim(h, "lunge", e);
+  if (C[h.cls].portee > 1) { await anim(h, "hop"); bruit(h.cls === "mage" ? "magie" : "fleche"); await projectile(h, e, C[h.cls].proj); }
+  else { bruit("epee"); await anim(h, "lunge", e); entaille(e); }
+}
+
+// ---------- sons, musique, ambiance et météo (tout est généré : aucun fichier à charger) ----------
+const TRAMES = { lugubre: "Lugubre (épouvante)", mystere: "Mystère", aventure: "Aventure", foret: "Forêt enchantée", village: "Village joyeux", aucune: "Aucune musique" };
+const METEOS = { aucune: "Aucune", pluie: "Pluie", orage: "Orage (pluie et éclairs)", eclairs: "Éclairs au loin (intérieur)", brouillard: "Brouillard", neige: "Neige", lucioles: "Lucioles", braises: "Braises et cendres" };
+const AMBIANCES = { auto: "Selon la météo", vent: "Vent qui hurle", foret: "Forêt (feuillage)", marais: "Marais", crypte: "Crypte (gouttes, grondements)", maison: "Vieille maison (craquements, horloge)", grotte: "Grotte", feu: "Feu de camp", aucune: "Aucune" };
+const ANIMAUX = { hiboux: "Hiboux", loups: "Loups", corbeaux: "Corbeaux", grillons: "Grillons", grenouilles: "Grenouilles", chauves: "Chauves-souris", oiseaux: "Oiseaux", rats: "Rats" };
+const SOLS = { pierre: "Pierre", herbe: "Herbe", terre: "Terre", bois: "Plancher de bois", neige: "Neige", gravier: "Gravier" };
+
+const PREF = { vol: .7, muet: false, musique: true, ambiance: true };
+try { Object.assign(PREF, JSON.parse(localStorage.getItem("donjon-son") || "{}")); } catch {}
+const sauverPref = () => { try { localStorage.setItem("donjon-son", JSON.stringify(PREF)); } catch {} };
+let METEO_FORCEE = null;
+const SON = { ctx: null, cle: "", musique: null, ambiance: null };
+const fxQuete = () => S && S.phase === "edit" && ED ? ED.quete : QUETE;
+const fxCarte = () => S && S.phase === "edit" && ED ? ED.carte : S && S.carte;
+const meteoActive = () => METEO_FORCEE || (fxCarte() && fxCarte().meteo) || "aucune";
+
+function sonInit() {
+  if (SON.ctx) { if (SON.ctx.state === "suspended") SON.ctx.resume(); return; }
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  let ctx;
+  try { ctx = SON.ctx = new AC(); } catch { return; }
+  const comp = ctx.createDynamicsCompressor(); comp.connect(ctx.destination);
+  SON.master = ctx.createGain(); SON.master.connect(comp);
+  for (const k of ["sfx", "mus", "amb"]) { SON[k] = ctx.createGain(); SON[k].connect(SON.master); }
+  sonVolumes();
+  const len = ctx.sampleRate * 2, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  SON.bruitBuf = b;
+  // Réverbération : une réponse impulsionnelle fabriquée avec du bruit qui s'éteint
+  const rl = ctx.sampleRate * 3, ir = ctx.createBuffer(2, rl, ctx.sampleRate);
+  for (let c = 0; c < 2; c++) { const x = ir.getChannelData(c); for (let i = 0; i < rl; i++) x[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / rl, 3.2); }
+  SON.rev = ctx.createConvolver(); SON.rev.buffer = ir;
+  const rg = ctx.createGain(); rg.gain.value = .45; SON.rev.connect(rg); rg.connect(SON.master);
+  fxChapitre();
+}
+["pointerdown", "keydown"].forEach(t => addEventListener(t, sonInit, { capture: true }));
+function sonVolumes() {
+  if (!SON.ctx) return;
+  const t = SON.ctx.currentTime;
+  SON.master.gain.setTargetAtTime(PREF.muet ? 0 : PREF.vol, t, .05);
+  SON.mus.gain.setTargetAtTime(PREF.musique ? .5 : 0, t, .2);
+  SON.amb.gain.setTargetAtTime(PREF.ambiance ? .7 : 0, t, .2);
+  const b = document.getElementById("btn-son");
+  if (b) { b.classList.toggle("muet", PREF.muet); b.setAttribute("aria-label", PREF.muet ? "Activer le son" : "Couper le son"); }
+}
+
+// Petits outils de synthèse
+const sonOk = () => SON.ctx && SON.ctx.state === "running";
+function filtre(type, f, q = 1) { const x = SON.ctx.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = q; return x; }
+function gainN(v = 1) { const g = SON.ctx.createGain(); g.gain.value = v; return g; }
+function chaine(...n) { for (let i = 0; i < n.length - 1; i++) n[i].connect(n[i + 1]); return n[n.length - 1]; }
+function env(g, t, a, peak, d) { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(.0002, peak), t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); }
+function osc(type, f, t, dur) { const o = SON.ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); o.start(t); o.stop(t + dur + .05); return o; }
+function versRev(g, wet) { if (wet) { const w = gainN(wet); g.connect(w); w.connect(SON.rev); } }
+function note(dest, type, f, t, a, peak, d, wet = 0) {
+  const o = osc(type, f, t, a + d), g = gainN(0); env(g, t, a, peak, d); o.connect(g); g.connect(dest); versRev(g, wet); return o;
+}
+function souffle(dest, t, f, q, a, peak, d, type = "bandpass", wet = 0) {
+  const s = SON.ctx.createBufferSource(); s.buffer = SON.bruitBuf; s.loop = true; s.start(t, Math.random() * 1.5); s.stop(t + a + d + .05);
+  const fl = filtre(type, f, q), g = gainN(0); env(g, t, a, peak, d); chaine(s, fl, g, dest); versRev(g, wet); return fl;
+}
+function cloche(dest, f, t, v = .2, wet = .7) { [1, 2.01, 2.42, 3.01, 4.53].forEach((r, i) => note(dest, "sine", f * r, t, .004, v / (i + 1.3), 3.2 - i * .45, wet)); }
+
+// Bruitages des animaux et de la maison
+function cri(nom, dest, t, v = 1) {
+  switch (nom) {
+    case "hiboux": for (const [dt, f, d] of [[0, 400, .35], [.5, 380, .25], [.85, 380, .6]]) { const o = note(dest, "sine", f, t + dt, .06, .12 * v, d, .6); o.frequency.linearRampToValueAtTime(f * .92, t + dt + d); } break;
+    case "loups": {
+      const o = osc("sawtooth", 330, t, 3.2), fl = filtre("bandpass", 900, 3), g = gainN(0);
+      o.frequency.linearRampToValueAtTime(560, t + .9); o.frequency.linearRampToValueAtTime(600, t + 2.1); o.frequency.linearRampToValueAtTime(420, t + 3.1);
+      const vib = osc("sine", 5.5, t, 3.2), vg = gainN(9); vib.connect(vg); vg.connect(o.frequency);
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.09 * v, t + .6); g.gain.setValueAtTime(.09 * v, t + 2.2); g.gain.exponentialRampToValueAtTime(.0001, t + 3.2);
+      chaine(o, fl, g, dest); versRev(g, .9); break;
+    }
+    case "corbeaux": for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) {
+      const tt = t + i * .38, o = osc("sawtooth", 640, tt, .3), fl = filtre("bandpass", 1300, 2), g = gainN(0);
+      o.frequency.exponentialRampToValueAtTime(420, tt + .28); env(g, tt, .02, .12 * v, .26); chaine(o, fl, g, dest); versRev(g, .4);
+      souffle(dest, tt, 1500, 1.5, .02, .05 * v, .25);
+    } break;
+    case "grillons": for (let k = 0; k < 2; k++) for (let i = 0; i < 4; i++) note(dest, "sine", 4600 + k * 90, t + k * .5 + i * .045, .004, .03 * v, .03); break;
+    case "grenouilles": for (let i = 0; i < 2; i++) {
+      const tt = t + i * .32, o = osc("square", 170 + Math.random() * 40, tt, .2), fl = filtre("bandpass", 600, 4), g = gainN(0);
+      env(g, tt, .01, .12 * v, .16); const am = osc("square", 28, tt, .2), ag = gainN(.5); am.connect(ag); ag.connect(g.gain); chaine(o, fl, g, dest); versRev(g, .2);
+    } break;
+    case "chauves": for (let i = 0; i < 5; i++) { const o = note(dest, "sine", 6000, t + i * .07, .003, .03 * v, .04); o.frequency.exponentialRampToValueAtTime(3500, t + i * .07 + .04); } break;
+    case "oiseaux": for (let i = 0; i < 4 + Math.floor(Math.random() * 4); i++) {
+      const tt = t + i * .13, f = 2400 + Math.random() * 1600, o = note(dest, "sine", f, tt, .01, .05 * v, .09, .3);
+      o.frequency.exponentialRampToValueAtTime(f * (Math.random() < .5 ? 1.4 : .7), tt + .09);
+    } break;
+    case "rats": for (let i = 0; i < 3; i++) { const o = note(dest, "triangle", 2800, t + i * .11, .005, .04 * v, .07); o.frequency.exponentialRampToValueAtTime(3600, t + i * .11 + .06); } souffle(dest, t, 3000, 1, .05, .02 * v, .4); break;
+    case "goutte": { const f = 900 + Math.random() * 900, o = note(dest, "sine", f, t, .002, .08 * v, .12, .8); o.frequency.exponentialRampToValueAtTime(f * .5, t + .08); break; }
+    case "craque": { const o = osc("sawtooth", 70, t, .7), fl = filtre("bandpass", 500 + Math.random() * 400, 8), g = gainN(0); env(g, t, .15, .05 * v, .45); o.frequency.linearRampToValueAtTime(55, t + .6); const l = osc("sine", 18, t, .7), lg = gainN(20); l.connect(lg); lg.connect(o.frequency); chaine(o, fl, g, dest); versRev(g, .5); break; }
+    case "tictac": for (let i = 0; i < 4; i++) souffle(dest, t + i * .5, i % 2 ? 2600 : 3200, 6, .001, .06 * v, .03); break;
+    case "crepite": for (let i = 0; i < 6; i++) souffle(dest, t + Math.random() * .8, 2000 + Math.random() * 3000, 2, .001, .08 * v * Math.random(), .02, "bandpass"); break;
+  }
+}
+
+// Bruitages du jeu
+function bruit(nom, opt = {}) {
+  if (!sonOk()) return;
+  const t = SON.ctx.currentTime + (opt.delai || 0), out = SON.sfx;
+  switch (nom) {
+    case "pas": {
+      const sol = opt.sol || "pierre", v = .8 + Math.random() * .4;
+      if (sol === "eau") { const f = souffle(out, t, 1600, .8, .01, .35 * v, .25); f.frequency.exponentialRampToValueAtTime(500, t + .25); cri("goutte", out, t + .1, 1.5); }
+      else if (sol === "herbe") souffle(out, t, 2600 + Math.random() * 800, 1.2, .02, .16 * v, .1, "bandpass");
+      else if (sol === "neige") for (let i = 0; i < 4; i++) souffle(out, t + i * .025, 2200 + Math.random() * 1500, 2, .002, .14 * v, .03);
+      else if (sol === "gravier") for (let i = 0; i < 5; i++) souffle(out, t + i * .018, 3500 + Math.random() * 2500, 3, .001, .12 * v, .02);
+      else if (sol === "bois") { note(out, "sine", 110 + Math.random() * 30, t, .003, .35 * v, .12); souffle(out, t, 420, 2, .002, .25 * v, .08); if (Math.random() < .12) cri("craque", out, t + .05, .8); }
+      else if (sol === "terre") { souffle(out, t, 500, .7, .004, .4 * v, .1, "lowpass"); note(out, "sine", 80, t, .003, .2 * v, .08); }
+      else { souffle(out, t, 2400, 1.5, .001, .25 * v, .04, "bandpass", .15); note(out, "sine", 180 + Math.random() * 60, t, .002, .18 * v, .05); }
+      break;
+    }
+    case "epee": { const f = souffle(out, t, 1500, .9, .01, .35, .17); f.frequency.exponentialRampToValueAtTime(5000, t + .15); break; }
+    case "fleche": { const f = souffle(out, t, 900, 3, .02, .35, .25); f.frequency.exponentialRampToValueAtTime(3800, t + .24); note(out, "triangle", 700, t, .002, .12, .05); break; }
+    case "magie": {
+      const o = note(out, "sine", 380, t, .02, .2, .6, .6); o.frequency.exponentialRampToValueAtTime(1500, t + .5);
+      const o2 = note(out, "triangle", 760, t + .05, .02, .08, .5, .7); o2.frequency.exponentialRampToValueAtTime(2300, t + .5);
+      souffle(out, t, 6000, 1, .1, .05, .5, "highpass", .5); break;
+    }
+    case "touche": { souffle(out, t, 700, .7, .003, .7, .13, "lowpass"); const o = note(out, "square", 170, t, .002, .16, .12); o.frequency.exponentialRampToValueAtTime(50, t + .12); break; }
+    case "metal": [520, 1310, 2730, 3940].forEach((f, i) => note(out, "sine", f, t, .002, .2 / (i + 1), .7 - i * .12, .4)); souffle(out, t, 4500, 1, .001, .3, .05, "highpass"); break;
+    case "mort": { const o = note(out, "sawtooth", 230, t, .02, .12, .8, .4); o.frequency.exponentialRampToValueAtTime(40, t + .8); souffle(out, t, 320, .8, .05, .35, .7, "lowpass", .3); break; }
+    case "aie": { const o = note(out, "square", 340, t, .005, .1, .25); o.frequency.exponentialRampToValueAtTime(140, t + .25); souffle(out, t, 600, .8, .003, .5, .12, "lowpass"); break; }
+    case "grogne": {
+      const o = osc("sawtooth", 72, t, 1.1), fl = filtre("lowpass", 420, 3), g = gainN(0);
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.3, t + .15); g.gain.exponentialRampToValueAtTime(.0001, t + 1.1);
+      o.frequency.linearRampToValueAtTime(58, t + 1); const am = osc("sine", 11, t, 1.1), ag = gainN(.15); am.connect(ag); ag.connect(g.gain);
+      chaine(o, fl, g, out); versRev(g, .4); break;
+    }
+    case "porte": {
+      const o = osc("sawtooth", 95, t, .9), fl = filtre("bandpass", 750, 7), g = gainN(0); env(g, t, .12, .22, .7);
+      o.frequency.linearRampToValueAtTime(68, t + .8); const l = osc("sine", 13, t, .9), lg = gainN(22); l.connect(lg); lg.connect(o.frequency);
+      chaine(o, fl, g, out); versRev(g, .4);
+      souffle(out, t + .8, 200, 1, .004, .7, .3, "lowpass", .3); break;
+    }
+    case "ok": [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => note(out, "triangle", f, t + i * .08, .005, .2, .5, .4)); break;
+    case "echec": [311.1, 233.1].forEach((f, i) => note(out, "triangle", f, t + i * .22, .01, .25, .45, .2)); break;
+    case "de": souffle(out, t, 2600, 2, .001, .3, .03); break;
+    case "tresor": [784, 988, 1175, 1568, 1976].forEach((f, i) => note(out, "sine", f, t + i * .06, .003, .14, .8, .6)); break;
+    case "soin": [523, 659, 784, 1047].forEach((f, i) => note(out, "sine", f * 1.5, t + i * .1, .05, .1, .7, .7)); break;
+    case "cloche": cloche(out, 196, t, .35, .9); cloche(out, 196, t + 2.2, .3, .9); break;
+    case "victoire": [[523, 0], [659, .15], [784, .3], [1047, .5], [784, .75], [1047, .9]].forEach(([f, dt]) => { note(out, "triangle", f, t + dt, .01, .2, .5, .4); note(out, "sine", f / 2, t + dt, .01, .12, .5); }); break;
+    case "defaite": [[392, 0], [349, .45], [311, .9], [262, 1.4]].forEach(([f, dt]) => note(out, "triangle", f, t + dt, .03, .2, .8, .6)); break;
+    case "tonnerre": {
+      const s = SON.ctx.createBufferSource(); s.buffer = SON.bruitBuf; s.loop = true; s.start(t); s.stop(t + 5);
+      const fl = filtre("lowpass", 1800, .5), g = gainN(0);
+      g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(1.1, t + .05); g.gain.exponentialRampToValueAtTime(.4, t + .5);
+      g.gain.exponentialRampToValueAtTime(.75, t + 1); g.gain.exponentialRampToValueAtTime(.0001, t + 4.6);
+      fl.frequency.exponentialRampToValueAtTime(110, t + 3); chaine(s, fl, g, out); versRev(g, .5); break;
+    }
+    default: if (ANIMAUX[nom] || nom === "craque") cri(nom, out, t, 1.6);
+  }
+}
+const solIci = (x, y) => { try { if (tile(x, y) === "~") return "eau"; } catch {} return (S && S.carte.sol) || "pierre"; };
+
+// Musique : un petit séquenceur qui improvise sur une grille d'accords
+const THEMES = {
+  lugubre: { bpm: 50, ton: 50, nappe: "sawtooth", ouv: 650, melo: "boite", prob: .5, cloche: true,
+    accords: [[0, 3, 7], [-4, 0, 3], [-7, -4, 0], [-5, -1, 2]], gamme: [0, 2, 3, 5, 7, 8, 11, 12, 14, 15] },
+  mystere: { bpm: 58, ton: 45, nappe: "triangle", ouv: 900, melo: "celesta", prob: .35,
+    accords: [[0, 3, 7], [1, 5, 8], [0, 3, 7], [-2, 1, 5]], gamme: [0, 1, 3, 5, 7, 8, 10, 12, 13] },
+  aventure: { bpm: 84, ton: 50, nappe: "sawtooth", ouv: 1100, melo: "pince", prob: .7, tambour: true,
+    accords: [[0, 3, 7], [5, 9, 12], [0, 3, 7], [-2, 2, 5]], gamme: [0, 2, 3, 5, 7, 9, 10, 12, 14] },
+  foret: { bpm: 66, ton: 45, nappe: "triangle", ouv: 800, melo: "flute", prob: .45, harpe: true,
+    accords: [[0, 3, 7], [-4, 0, 3], [-2, 2, 5], [0, 3, 7]], gamme: [0, 3, 5, 7, 10, 12, 15, 17] },
+  village: { bpm: 100, ton: 48, nappe: "triangle", ouv: 1400, melo: "pince", prob: .75, tambour: true,
+    accords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]], gamme: [0, 2, 4, 5, 7, 9, 11, 12, 14, 16] },
+};
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+function musiqueArreter() {
+  const m = SON.musique; if (!m) return;
+  SON.musique = null; clearInterval(m.timer);
+  const t = SON.ctx.currentTime; m.bus.gain.cancelScheduledValues(t); m.bus.gain.setTargetAtTime(0, t, .7);
+  setTimeout(() => m.bus.disconnect(), 5000);
+}
+function musiqueDemarrer(nom) {
+  musiqueArreter();
+  const th = THEMES[nom]; if (!th || !SON.ctx) return;
+  const m = SON.musique = { th, prochain: SON.ctx.currentTime + .3, pas: 0, deg: 3, bus: gainN(0) };
+  m.bus.connect(SON.mus); m.bus.gain.setTargetAtTime(1, SON.ctx.currentTime, 1.5);
+  m.timer = setInterval(() => planifier(m), 150);
+}
+function melodie(dest, type, f, t, beat) {
+  if (type === "boite") { note(dest, "sine", f, t, .003, .1, 1.6, .7); note(dest, "sine", f * 4, t, .002, .025, .3, .7); }
+  else if (type === "celesta") { note(dest, "triangle", f, t, .01, .07, 1.3, .8); note(dest, "sine", f * 2, t, .005, .035, .6, .8); }
+  else if (type === "flute") {
+    const o = osc("sine", f, t, beat * 1.4), g = gainN(0), v = osc("sine", 5, t, beat * 1.4), vg = gainN(f * .012);
+    v.connect(vg); vg.connect(o.frequency);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.07, t + .12); g.gain.exponentialRampToValueAtTime(.0001, t + beat * 1.4);
+    o.connect(g); g.connect(dest); versRev(g, .6); souffle(dest, t, f * 2, 4, .05, .01, beat, "bandpass", .4);
+  }
+  else note(dest, "triangle", f, t, .004, .1, beat * .9, .3);
+}
+function planifier(m) {
+  if (!SON.ctx || SON.musique !== m) return;
+  const th = m.th, beat = 60 / th.bpm;
+  if (m.prochain < SON.ctx.currentTime) m.prochain = SON.ctx.currentTime + .05;
+  while (m.prochain < SON.ctx.currentTime + .7) {
+    const t = m.prochain, b = m.pas % 4, mesure = Math.floor(m.pas / 4), acc = th.accords[mesure % th.accords.length];
+    if (b === 0) {
+      for (const s of acc) for (const det of [-7, 7]) {
+        const o = osc(th.nappe, hz(th.ton + s), t, beat * 4 + 1); o.detune.value = det;
+        const fl = filtre("lowpass", th.ouv, .7), g = gainN(0);
+        g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.035, t + beat * 1.2);
+        g.gain.setValueAtTime(.035, t + beat * 3.2); g.gain.exponentialRampToValueAtTime(.0001, t + beat * 4 + .9);
+        chaine(o, fl, g, m.bus); versRev(g, .5);
+      }
+      note(m.bus, "sine", hz(th.ton + acc[0] - 12), t, .03, .16, beat * 3.5, .3);
+      if (th.cloche && mesure % 4 === 3) cloche(m.bus, hz(th.ton + acc[0] - 12), t + beat * 2, .14);
+    }
+    if (th.harpe) for (let i = 0; i < 2; i++) note(m.bus, "triangle", hz(th.ton + 12 + acc[(b + i) % 3]), t + i * beat / 2, .003, .04, beat * 1.5, .5);
+    if (th.tambour && b % 2 === 0) { const o = note(m.bus, "sine", 110, t, .002, .25, .18); o.frequency.exponentialRampToValueAtTime(45, t + .15); }
+    if (th.tambour && b % 2 === 1) souffle(m.bus, t, 5000, 1, .001, .04, .05, "highpass");
+    if (Math.random() < th.prob) {
+      m.deg = Math.max(0, Math.min(th.gamme.length - 1, m.deg + [-2, -1, -1, 0, 1, 1, 2][Math.floor(Math.random() * 7)]));
+      let s = th.gamme[m.deg] + 12;
+      if (b === 0 && Math.random() < .6) s = acc[Math.floor(Math.random() * 3)] + 12;
+      melodie(m.bus, th.melo, hz(th.ton + s), t + (Math.random() < .25 ? beat / 2 : 0), beat);
+    }
+    m.pas++; m.prochain += beat;
+  }
+}
+
+// Ambiance : boucles de bruit filtré + cris d'animaux au hasard
+function ambianceArreter() {
+  const a = SON.ambiance; if (!a) return;
+  SON.ambiance = null; a.timers.forEach(clearInterval);
+  const t = SON.ctx.currentTime; a.bus.gain.cancelScheduledValues(t); a.bus.gain.setTargetAtTime(0, t, .6);
+  setTimeout(() => { a.noeuds.forEach(n => { try { n.stop(); } catch {} }); a.bus.disconnect(); }, 4000);
+}
+function ambianceDemarrer(nom, pluie, animaux) {
+  ambianceArreter();
+  if (!SON.ctx) return;
+  const ctx = SON.ctx, a = SON.ambiance = { bus: gainN(0), noeuds: [], timers: [] };
+  a.bus.connect(SON.amb); a.bus.gain.setTargetAtTime(1, ctx.currentTime, 1.5);
+  const boucle = (f, type, q, v) => { const s = ctx.createBufferSource(); s.buffer = SON.bruitBuf; s.loop = true; s.start(0, Math.random() * 1.5); const fl = filtre(type, f, q), g = gainN(v); chaine(s, fl, g, a.bus); a.noeuds.push(s); return { fl, g }; };
+  const lfo = (param, f, amp) => { const o = ctx.createOscillator(); o.frequency.value = f; const g = gainN(amp); o.connect(g); g.connect(param); o.start(); a.noeuds.push(o); };
+  const hasard = (ms, p, fn) => a.timers.push(setInterval(() => { if (sonOk() && !document.hidden && Math.random() < p) fn(ctx.currentTime); }, ms));
+  if (nom === "vent") { const v = boucle(480, "bandpass", 1.3, .3); lfo(v.fl.frequency, .07, 280); lfo(v.g.gain, .11, .18); const v2 = boucle(1300, "bandpass", 5, .06); lfo(v2.fl.frequency, .05, 600); }
+  if (nom === "foret") { const v = boucle(1800, "bandpass", .6, .07); lfo(v.g.gain, .13, .05); hasard(2500, .25, t => cri("craque", a.bus, t, .3)); }
+  if (nom === "marais") { const v = boucle(300, "lowpass", .7, .18); lfo(v.g.gain, .06, .08); hasard(1400, .4, t => { const f = 120 + Math.random() * 80, o = note(a.bus, "sine", f, t, .05, .06, .3, .4); o.frequency.exponentialRampToValueAtTime(f * 2, t + .25); }); }
+  if (nom === "crypte" || nom === "grotte") {
+    const o = ctx.createOscillator(); o.frequency.value = nom === "crypte" ? 46 : 60; const g = gainN(.1); o.connect(g); g.connect(a.bus); o.start(); a.noeuds.push(o); lfo(g.gain, .08, .05);
+    const v = boucle(200, "lowpass", .7, .22); lfo(v.g.gain, .05, .1);
+    hasard(1100, .5, t => cri("goutte", a.bus, t, .8));
+  }
+  if (nom === "maison") { const v = boucle(350, "bandpass", 1, .06); lfo(v.g.gain, .07, .04); hasard(2000, .3, t => cri("craque", a.bus, t, .8)); hasard(6000, .35, t => cri("tictac", a.bus, t, .6)); }
+  if (nom === "feu") { boucle(400, "lowpass", .7, .2); hasard(500, .7, t => cri("crepite", a.bus, t, 1)); }
+  if (pluie) { boucle(1500, "lowpass", .5, .32); boucle(5500, "highpass", .5, .05); hasard(400, .5, t => cri("goutte", a.bus, t, .5)); }
+  for (const an of animaux || []) {
+    const rythme = { grillons: [1200, .7], grenouilles: [2200, .4], chauves: [5000, .3], oiseaux: [3500, .35], rats: [7000, .3], corbeaux: [9000, .35], hiboux: [10000, .4], loups: [16000, .35] }[an];
+    if (rythme) hasard(rythme[0], rythme[1], t => cri(an, a.bus, t, an === "grillons" || an === "oiseaux" ? .8 : 1));
+  }
+}
+const ambDefaut = met => ({ brouillard: "vent", neige: "vent", lucioles: "foret", braises: "feu" }[met] || "aucune");
+// Règle la musique, l'ambiance et la météo selon la quête et le chapitre affichés
+function fxChapitre() {
+  meteoMaj();
+  if (!SON.ctx) return;
+  const q = fxQuete(), c = fxCarte(), met = meteoActive();
+  const mus = c && c.musique && c.musique !== "quete" ? c.musique : (q && q.musique) || "mystere";
+  const amb = c && c.ambiance && c.ambiance !== "auto" ? c.ambiance : ambDefaut(met);
+  const ambCle = [amb, ["pluie", "orage", "eclairs"].includes(met), ...((c && c.animaux) || [])].join(",");
+  const [m0, a0] = SON.cle.split("|");
+  if (m0 !== mus) { if (THEMES[mus]) musiqueDemarrer(mus); else musiqueArreter(); }
+  if (a0 !== ambCle) ambianceDemarrer(amb, ["pluie", "orage", "eclairs"].includes(met), c && c.animaux);
+  SON.cle = mus + "|" + ambCle;
+}
+document.addEventListener("visibilitychange", () => { if (!SON.ctx) return; if (document.hidden) SON.ctx.suspend(); else SON.ctx.resume(); });
+
+// ---------- météo dessinée par-dessus le plateau ----------
+const meteoCv = document.getElementById("meteo"), mctx = meteoCv.getContext("2d");
+const METEO = { type: "aucune", parts: [], ronds: [], raf: 0, eclairA: 0, bolt: null };
+function meteoMaj() {
+  const type = S ? meteoActive() : "aucune";
+  document.getElementById("board").dataset.meteo = type;
+  if (type === METEO.type) return;
+  METEO.type = type; METEO.parts = []; METEO.ronds = [];
+  METEO.eclairA = performance.now() + 3000 + Math.random() * 5000;
+  meteoGo();
+}
+function meteoGo() { if (!METEO.raf) METEO.raf = requestAnimationFrame(meteoBoucle); }
+function meteoBoucle(now) {
+  METEO.raf = 0;
+  const T = METEO.type, P = METEO.parts, w = board.clientWidth, h = board.clientHeight;
+  if (meteoCv.width !== w || meteoCv.height !== h) { meteoCv.width = w; meteoCv.height = h; P.length = 0; }
+  mctx.clearRect(0, 0, w, h);
+  const bolt = METEO.bolt && now < METEO.bolt.fin ? METEO.bolt : null;
+  if (T === "aucune" && !bolt) return;
+  METEO.raf = requestAnimationFrame(meteoBoucle);
+  if (document.hidden) return;
+  const dt = Math.min(3, (now - (METEO.t || now)) / 16.7); METEO.t = now;
+  const fixe = RM.matches;
+  if (T === "pluie" || T === "orage") {
+    const n = Math.round((T === "orage" ? 1.6 : 1) * w * h / 4500);
+    while (P.length < n) P.push({ x: Math.random() * w * 1.25, y: Math.random() * h, v: 10 + Math.random() * 8, l: 9 + Math.random() * 12 });
+    mctx.strokeStyle = "rgba(190,210,240,.42)"; mctx.lineWidth = 1.2; mctx.beginPath();
+    for (const p of P) {
+      if (!fixe) { p.y += p.v * dt; p.x -= p.v * .28 * dt; }
+      if (p.y > h || p.x < -20) { if (METEO.ronds.length < 40 && Math.random() < .35) METEO.ronds.push({ x: p.x, y: Math.random() * h, r: 1 }); p.y = -20 - Math.random() * 40; p.x = Math.random() * w * 1.25; }
+      mctx.moveTo(p.x, p.y); mctx.lineTo(p.x + p.l * .28, p.y - p.l);
+    }
+    mctx.stroke();
+    mctx.strokeStyle = "rgba(200,220,255,.35)"; mctx.lineWidth = 1;
+    METEO.ronds = METEO.ronds.filter(r => (r.r += .6 * dt) < 9);
+    for (const r of METEO.ronds) { mctx.globalAlpha = 1 - r.r / 9; mctx.beginPath(); mctx.ellipse(r.x, r.y, r.r, r.r * .45, 0, 0, Math.PI * 2); mctx.stroke(); }
+    mctx.globalAlpha = 1;
+  }
+  if (T === "neige") {
+    const n = Math.round(w * h / 6000);
+    while (P.length < n) P.push({ x: Math.random() * w, y: Math.random() * h, v: .5 + Math.random() * 1.1, r: 1 + Math.random() * 2.4, ph: Math.random() * 6 });
+    mctx.fillStyle = "rgba(255,255,255,.85)"; mctx.beginPath();
+    for (const p of P) {
+      if (!fixe) { p.y += p.v * dt; p.ph += .02 * dt; p.x += Math.sin(p.ph) * .5 * dt; }
+      if (p.y > h + 4) { p.y = -4; p.x = Math.random() * w; }
+      mctx.moveTo(p.x + p.r, p.y); mctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    }
+    mctx.fill();
+  }
+  if (T === "brouillard") {
+    while (P.length < 8) P.push({ x: Math.random() * w, y: Math.random() * h, r: (.22 + Math.random() * .25) * Math.max(w, h), v: (.15 + Math.random() * .3) * (Math.random() < .5 ? -1 : 1), a: .1 + Math.random() * .1 });
+    for (const p of P) {
+      if (!fixe) p.x += p.v * dt;
+      if (p.x - p.r > w) p.x = -p.r; if (p.x + p.r < 0) p.x = w + p.r;
+      const g = mctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(205,212,222,${p.a})`); g.addColorStop(1, "rgba(205,212,222,0)");
+      mctx.fillStyle = g; mctx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+    }
+  }
+  if (T === "lucioles" || T === "braises") {
+    const braise = T === "braises", n = Math.round(w * h / (braise ? 9000 : 14000));
+    while (P.length < n) P.push({ x: Math.random() * w, y: Math.random() * h, a: Math.random() * 6, v: .3 + Math.random() * .6, ph: Math.random() * 6 });
+    for (const p of P) {
+      if (!fixe) {
+        p.ph += .05 * dt;
+        if (braise) { p.y -= p.v * 1.4 * dt; p.x += Math.sin(p.ph) * .6 * dt; if (p.y < -6) { p.y = h + 6; p.x = Math.random() * w; } }
+        else { p.a += (Math.random() - .5) * .25 * dt; p.x += Math.cos(p.a) * p.v * dt; p.y += Math.sin(p.a) * p.v * dt; p.x = (p.x + w) % w; p.y = (p.y + h) % h; }
+      }
+      const al = braise ? .55 + .45 * Math.sin(p.ph * 2) : Math.max(0, Math.sin(p.ph));
+      const col = braise ? "255,140,50" : "210,255,120", r = braise ? 2 : 2.4;
+      const g = mctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 5);
+      g.addColorStop(0, `rgba(${col},${.9 * al})`); g.addColorStop(.25, `rgba(${col},${.35 * al})`); g.addColorStop(1, `rgba(${col},0)`);
+      mctx.fillStyle = g; mctx.fillRect(p.x - r * 5, p.y - r * 5, r * 10, r * 10);
+    }
+  }
+  if ((T === "orage" || T === "eclairs") && now > METEO.eclairA) { eclair(T === "eclairs"); METEO.eclairA = now + 10000 + Math.random() * 15000; }
+  if (bolt) {
+    mctx.save(); mctx.globalAlpha = Math.min(1, (bolt.fin - now) / 150);
+    mctx.strokeStyle = "#f4f8ff"; mctx.shadowColor = "#9cc4ff"; mctx.shadowBlur = 18; mctx.lineCap = "round";
+    for (const br of bolt.branches) { mctx.lineWidth = br.l; mctx.beginPath(); br.pts.forEach(([x, y], i) => i ? mctx.lineTo(x, y) : mctx.moveTo(x, y)); mctx.stroke(); }
+    mctx.restore();
+  }
+}
+function genBolt(w, h) {
+  const branches = [];
+  const trace = (x, y, fin, l) => {
+    const pts = [[x, y]];
+    while (y < fin) { x += (Math.random() - .5) * 40; y += 12 + Math.random() * 22; pts.push([x, y]); if (l > 1.5 && Math.random() < .12) trace(x, y, y + h * .2, l * .45); }
+    branches.push({ pts, l });
+  };
+  trace(w * (.15 + Math.random() * .7), -10, h * (.45 + Math.random() * .4), 3.5);
+  return branches;
+}
+// Un éclair : flash blanc, zébrure (dehors seulement), puis le tonnerre qui roule
+function eclair(loin) {
+  if (!S) return;
+  if (!RM.matches) {
+    const fl = document.getElementById("flash");
+    fl.animate([{ opacity: 0 }, { opacity: loin ? .45 : .8, offset: .05 }, { opacity: .05, offset: .16 }, { opacity: loin ? .3 : .55, offset: .26 }, { opacity: 0 }], { duration: 950, easing: "ease-out" });
+    if (!loin) { METEO.bolt = { branches: genBolt(board.clientWidth, board.clientHeight), fin: performance.now() + 380 }; meteoGo(); }
+  }
+  const delai = .25 + Math.random() * (loin ? 1.4 : .7);
+  bruit("tonnerre", { delai });
+  setTimeout(() => secousse(loin ? .6 : 1), delai * 1000);
+}
+
+// ---------- combats plus vivants ----------
+function secousse(f = 1) {
+  if (RM.matches) return;
+  const a = 4 * f;
+  wrap.animate([{ transform: "none" }, { transform: `translate(${-a}px, ${a * .5}px)` }, { transform: `translate(${a}px, ${-a * .5}px)` }, { transform: `translate(${-a * .6}px, ${a * .3}px)` }, { transform: "none" }], { duration: 320, easing: "ease-out" });
+}
+function etincelles(c, couleur = "#ffc36a", n = 10, force = 1) {
+  if (RM.matches || !c) return;
+  const cx = (c.x + .5) * CELL, cy = (c.y + .5) * CELL;
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("div"); p.className = "etin"; p.style.background = couleur; p.style.boxShadow = `0 0 6px 2px ${couleur}`; ents.appendChild(p);
+    const a = Math.random() * Math.PI * 2, r = (.35 + Math.random() * .6) * CELL * .9 * force;
+    p.animate([{ transform: `translate(${cx}px,${cy}px) scale(1)`, opacity: 1 }, { transform: `translate(${cx + Math.cos(a) * r}px,${cy + Math.sin(a) * r}px) scale(.2)`, opacity: 0 }],
+      { duration: 350 + Math.random() * 350 * force, easing: "cubic-bezier(.2,.8,.3,1)" }).finished.then(() => p.remove(), () => p.remove());
+  }
+}
+function entaille(c) {
+  if (RM.matches || !c) return;
+  const s = document.createElement("div"); s.className = "slash"; ents.appendChild(s);
+  const cx = c.x * CELL, cy = c.y * CELL, r = Math.random() * 360;
+  s.animate([{ transform: `translate(${cx}px,${cy}px) rotate(${r}deg) scale(.5)`, opacity: 0 }, { transform: `translate(${cx}px,${cy}px) rotate(${r + 70}deg) scale(1.05)`, opacity: 1, offset: .4 },
+    { transform: `translate(${cx}px,${cy}px) rotate(${r + 110}deg) scale(1.2)`, opacity: 0 }], { duration: 340, easing: "ease-out" }).finished.then(() => s.remove(), () => s.remove());
+}
+function flashRouge() {
+  if (RM.matches) return;
+  document.getElementById("flash").animate([{ opacity: 0, background: "radial-gradient(ellipse at center, rgba(200,0,0,0) 40%, rgba(200,0,0,.6))" }, { opacity: 1, offset: .2 }, { opacity: 0 }], { duration: 600 });
+}
+// Déplacement case par case, en petits bonds, avec un bruit de pas selon le sol
+async function marcher(ent, pts, deja) {
+  const el = tokEls.get(ent.id), [fx, fy] = pts[pts.length - 1];
+  const sauts = deja || RM.matches || !el ? [] : pts.slice(1);
+  const occupe = S.busy, carte = S.carte;
+  if (sauts.length) { S.busy = true; render(); el.style.transition = "transform .2s cubic-bezier(.3,.7,.4,1)"; }
+  for (const [x, y] of sauts) {
+    if (S.carte !== carte) return;
+    ent.x = x; ent.y = y; place(el, x, y); anim(ent, "bond"); bruit("pas", { sol: solIci(x, y) });
+    await sleep(ent.boss ? 280 : 210);
+  }
+  if (el) el.style.transition = "";
+  if (S.carte !== carte) return;
+  ent.x = fx; ent.y = fy;
+  if (!sauts.length) { anim(ent, "bond"); bruit("pas", { sol: solIci(fx, fy) }); }
+  S.busy = occupe; render();
 }
 
 // ---------- fenêtres ----------
@@ -1595,7 +2085,7 @@ async function lancer(el, final) {
   el.classList.add("rolling");
   const b = el.querySelector("b");
   const t0 = performance.now(), dur = RM.matches ? 0 : 900;
-  while (performance.now() - t0 < dur) { b.textContent = 1 + Math.floor(Math.random() * 12); await sleep(70); }
+  while (performance.now() - t0 < dur) { b.textContent = 1 + Math.floor(Math.random() * 12); bruit("de"); await sleep(70); }
   b.textContent = final; el.classList.remove("rolling");
 }
 const d12 = () => 1 + Math.floor(Math.random() * 12);
@@ -1638,6 +2128,7 @@ function epreuveMath(op, titre, danger) {
     const valider = () => {
       fini = true;
       const ok = Number(val) === q.rep;
+      bruit(ok ? "ok" : "echec");
       pad.outerHTML = `<p class="verdict ${ok ? "ok" : "bad"}">${ok ? "Bravo!" : "Oups! La réponse était " + q.rep + "."}</p><div class="row"><button class="btn gold" id="cont" type="button">Continuer</button></div>`;
       const fin = () => { fermer(); resolve(ok); };
       document.getElementById("cont").onclick = fin;
@@ -1663,6 +2154,7 @@ function epreuveFr(titre) {
       const b = e.target.closest("button"); if (!b || ch.dataset.done) return;
       ch.dataset.done = 1;
       const ok = Number(b.dataset.i) === r;
+      bruit(ok ? "ok" : "echec");
       ch.querySelectorAll("button").forEach(x => { if (Number(x.dataset.i) === r) x.classList.add("right"); else if (x === b) x.classList.add("wrong"); });
       document.getElementById("suite").innerHTML = `<p class="verdict ${ok ? "ok" : "bad"}">${ok ? "Bravo!" : "Pas tout à fait!"}</p><div class="row" style="margin-top:10px"><button class="btn gold" id="cont" type="button">Continuer</button></div>`;
       document.getElementById("cont").onclick = () => { fermer(); resolve(ok); };
@@ -1703,8 +2195,10 @@ function distribuer(total, pas, cibles, titre) {
 async function blesser(e, n) {
   e.pv = Math.max(0, e.pv - n);
   flotter(e.x, e.y, "−" + n, "#ff8a80");
+  bruit("touche"); etincelles(e); secousse(.5);
   await anim(e, "hit");
   if (e.pv <= 0) {
+    bruit("mort"); etincelles(e, "#cfc6b8", 16, 1.4); secousse(e.boss ? 2 : 1);
     await anim(e, "die");
     log(`<b>${e.nom}</b> est vaincu!`);
     if (e.boss && S.objets.some(o => o.type === "coffreDore")) { log("Le boss s'effondre. Son coffre est maintenant accessible!"); toast("Le boss est vaincu! Ouvrez son coffre.", 4000); }
@@ -1714,10 +2208,11 @@ async function blesser(e, n) {
 // Le héros est attaqué : il se défend avec une division. Réussite = contre-attaque, échec = perte de PV.
 async function defendre(h, e, deg) {
   if (h.pv <= 0) return;
-  if (e) { e.face = dirVers(e, h); render(); await anim(e, "lunge", h); }
+  if (e) { e.face = dirVers(e, h); render(); bruit("grogne"); bruit("epee", { delai: .15 }); await anim(e, "lunge", h); }
   const qui = e ? e.nom : "Un piège";
   const ok = await epreuveMath("÷", `${qui} attaque ${esc(h.nom)}! Défends-toi`, true);
   if (ok) {
+    bruit("metal"); etincelles(h, "#9fe7ff", 12);
     await anim(h, "parry");
     if (e && e.pv > 0 && aPortee(h, e)) {
       log(`${esc(h.nom)} pare le coup et contre-attaque ${e.nom}!`);
@@ -1727,6 +2222,7 @@ async function defendre(h, e, deg) {
   } else {
     h.pv = Math.max(0, h.pv - deg);
     flotter(h.x, h.y, "−" + deg, "#ff8a80");
+    bruit("aie"); etincelles(h, "#ff6b5e"); flashRouge(); secousse(1.2);
     await anim(h, "hit");
     log(`${qui} touche ${esc(h.nom)} (−${deg} PV).`);
     if (h.pv <= 0) { log(`${esc(h.nom)} est à terre!`); h.actions = 0; }
@@ -1751,13 +2247,15 @@ async function faireAction(epreuve, succes, attaquant) {
   if (S.phase === "heros" && !S.fini && (h.actions <= 0 || h.pv <= 0)) await finTourHeros();
 }
 
-async function deplacer(h, x, y) {
+async function deplacer(h, x, y, deja) {
   if (!reachCache || !reachCache.has(key(x, y))) return;
-  h.x = x; h.y = y; h.actions--; S.debut = false;
+  const pts = chemin(reachCache, h, x, y);
+  h.actions--; S.debut = false;
   log(`${esc(h.nom)} se déplace.`);
-  drawPath(null); render();
+  drawPath(null);
   const carte = S.carte;
-  await sleep(330); anim(h, "hop");
+  await marcher(h, pts, deja);
+  if (S.carte !== carte) return;
   await arrivee(h);
   if (S.carte !== carte || S.fini) return;
   render();
@@ -1793,19 +2291,20 @@ async function interagir(h, o) {
   if (o.type === "coffreDore" && S.enemies.some(e => e.boss && e.pv > 0)) { toast("Le boss garde son coffre. Battez-le d'abord!"); return; }
   await faireAction(async () => { await anim(h, "lunge", o); return epreuveMath("+", `${esc(h.nom)} interagit : ${OBJ[o.type].nom}`); }, async () => {
     o.vide = true;
+    bruit("tresor"); etincelles(o, "#ffe08a", 14);
     await anim(o, "open");
     const ct = OBJ[o.type].contenu;
     if (ITEMS[ct]) { S.inv[ct]++; log(`Le groupe obtient : <b>${ITEMS[ct].nom}</b>.`); toast(`+1 ${ITEMS[ct].nom}`); }
     else if (ct === "levier") {
       for (const p of Object.values(S.portes)) if (p.par === "levier") p.verrou = false;
-      drawTerrain(); log("Clac! Les grilles s'ouvrent."); toast("Les grilles s'ouvrent…", 3500);
+      drawTerrain(); bruit("porte"); log("Clac! Les grilles s'ouvrent."); toast("Les grilles s'ouvrent…", 3500);
     }
     else if (ct === "tresor") { S.fini = "victoire"; log("Le coffre du boss est ouvert. Victoire!"); }
   });
 }
 async function ouvrirPorte(h, k) {
   await faireAction(() => epreuveMath("+", `${esc(h.nom)} déverrouille la porte`), async () => {
-    S.portes[k].verrou = false; S.inv.cle--; drawTerrain();
+    S.portes[k].verrou = false; S.inv.cle--; drawTerrain(); bruit("porte");
     log(`${esc(h.nom)} ouvre la porte avec la clé de bronze.`);
   });
 }
@@ -1838,15 +2337,16 @@ async function executerPouvoir(h, p, cible) {
   await faireAction(() => epreuvePouvoir(`${esc(h.nom)} : ${p.nom}`), async () => {
     h.mana -= p.cout;
     log(`${esc(h.nom)} utilise <b>${p.nom}</b>.`);
+    bruit("magie"); etincelles(h, "#e3ab45", 14);
     await anim(h, "power");
     switch (p.id) {
       case "force": h.force = true; break;
-      case "priere": h.mana = Math.min(st(h).mana, h.mana + 1); flotter(h.x, h.y, "+1 mana", "#8cc4ff"); await anim(h, "heal"); break;
+      case "priere": h.mana = Math.min(st(h).mana, h.mana + 1); flotter(h.x, h.y, "+1 mana", "#8cc4ff"); bruit("soin"); await anim(h, "heal"); break;
       case "poison": await projectile(h, cible, "#9be36b"); cible.poison = true; await anim(cible, "hit"); log(`${cible.nom} est empoisonné.`); break;
       case "tp": await anim(h, "die"); h.x = cible.x; h.y = cible.y; render(); await sleep(380); await anim(h, "open"); break;
       case "camo": await anim(h, "lunge", cible); await blesser(cible, Math.ceil(cible.pv / 2)); break;
       case "lynx": await projectile(h, cible, "#ffe08a"); await blesser(cible, 4); break;
-      case "pickpocket": S.portes[cible.k].verrou = false; drawTerrain(); log("Le cadenas cède!"); break;
+      case "pickpocket": S.portes[cible.k].verrou = false; drawTerrain(); bruit("porte"); log("Le cadenas cède!"); break;
       case "fleches": {
         const cibles = ennemisAPortee(h);
         const parts = cibles.length > 1 ? await distribuer(6, 2, cibles, "Flèches elfiques : 3 flèches de −2") : { [cibles[0].id]: 6 };
@@ -1862,7 +2362,7 @@ async function finTourHeros() {
   const h = heros(); h.joue = true; h.actions = 0;
   const next = S.heroes.findIndex(x => !x.joue && x.pv > 0);
   if (next >= 0) { S.actif = next; toast(`Au tour ${de(heros().nom)}!`); render(); return; }
-  S.phase = "mj"; log("— Tour du maître du jeu —");
+  S.phase = "mj"; log("— Tour du maître du jeu —"); bruit("grogne");
   for (const e of S.enemies) e.bouge = false;
   render();
   await sleep(300);
@@ -1896,8 +2396,8 @@ async function ennemisAuto() {
         const pts = chemin(reach, e, best.x, best.y);
         const n = Math.min(E[e.type].pas, pts.length - 1), [nx, ny] = pts[n], [px, py] = pts[n - 1];
         e.face = [nx - px, ny - py];
-        e.x = nx; e.y = ny; e.bouge = true;
-        render(); await sleep(420);
+        e.bouge = true;
+        await marcher(e, pts.slice(0, n + 1)); await sleep(150);
         adj = cibles.find(h => dist(h, e) <= 1);
       }
     }
@@ -1912,6 +2412,7 @@ function verifierFin() {
   if (dernierChapitre() && !ennemisVivants().length && !S.objets.some(o => o.type === "coffreDore" && !o.vide)) { S.fini = "victoire"; montrerFin(true); }
 }
 function montrerFin(v) {
+  bruit(v ? "victoire" : "defaite");
   ouvrir(v ? `<h2>Victoire!</h2>${QUETE.fin ? `<div class="intro">${esc(QUETE.fin).replace(/\n/g, "<br>")}</div>` : ""}<p class="fr-q">Les héros ont triomphé : « ${esc(QUETE.nom)} » est terminée!</p><p class="sub">Le maître du jeu remet les récompenses aux héros.</p><div class="row"><button class="btn gold" type="button" id="again">Nouvelle aventure</button><button class="btn" type="button" id="stay">Voir la carte</button></div>`
     : `<h2>Les héros sont tombés…</h2><p class="fr-q">Le donjon a eu raison de l'équipe cette fois-ci.</p><div class="row"><button class="btn gold" type="button" id="again">Réessayer</button><button class="btn" type="button" id="stay">Voir la carte</button></div>`);
   document.getElementById("again").onclick = () => { fermer(); demarrerQuete(QUETE); };
@@ -1932,16 +2433,16 @@ const ECHECS = { rien: "Rien : on peut réessayer", piege: "−1 PV au héros", 
 const nomRecomp = sec => sec.recompense === "objet" ? (sec.objet || "Objet spécial") : sec.recompense === "monstre" ? `${(E[sec.monstre] || E.gobelin).nom} surgit!` : RECOMP[sec.recompense] || "";
 async function blesserHeros(list, n, quoi) {
   for (const h of list.filter(h => h.pv > 0)) {
-    h.pv = Math.max(0, h.pv - n); flotter(h.x, h.y, "−" + n, "#ff8a80"); anim(h, "hit");
+    h.pv = Math.max(0, h.pv - n); flotter(h.x, h.y, "−" + n, "#ff8a80"); anim(h, "hit"); bruit("aie"); etincelles(h, "#ff6b5e");
     if (h.pv <= 0) { log(`${esc(h.nom)} est à terre!`); h.actions = 0; }
   }
-  log(`${quoi} (−${n} PV).`); render(); await sleep(500); verifierFin();
+  flashRouge(); secousse(1.2); log(`${quoi} (−${n} PV).`); render(); await sleep(500); verifierFin();
 }
 function verifierSceaux() {
   const sceaux = S.secrets.filter(s => s.recompense === "sceau"), faits = sceaux.filter(s => s.trouve).length;
-  if (faits < sceaux.length) { toast(`Un sceau se brise! (${faits} sur ${sceaux.length})`); log(`Un sceau se brise (${faits}/${sceaux.length}).`); return; }
+  if (faits < sceaux.length) { bruit("magie"); toast(`Un sceau se brise! (${faits} sur ${sceaux.length})`); log(`Un sceau se brise (${faits}/${sceaux.length}).`); return; }
   for (const p of Object.values(S.portes)) if (p.par === "sceau") p.verrou = false;
-  drawTerrain(); log("Tous les sceaux sont brisés : la porte scellée s'ouvre!"); toast("La porte scellée s'ouvre!");
+  drawTerrain(); bruit("porte"); bruit("cloche"); log("Tous les sceaux sont brisés : la porte scellée s'ouvre!"); toast("La porte scellée s'ouvre!");
 }
 const secretIci = (x, y, action) => S.secrets.find(s => s.x === x && s.y === y && !s.trouve && (!action || s.action === action));
 const pnjAt = (x, y) => S.pnj.find(p => p.x === x && p.y === y);
@@ -2003,13 +2504,15 @@ function faireApparaitre(t, x, y) {
 }
 async function donner(sec, h) {
   const r = sec.recompense || "rien";
+  if (ITEMS[r] || r === "objet") { bruit("tresor"); if (h) etincelles(h, "#ffe08a", 12); }
+  if (r === "monstre" || E[r]) bruit("grogne");
   if (ITEMS[r]) { S.inv[r]++; toast(`+1 ${ITEMS[r].nom}`); }
   else if (r === "objet") { const k = "sp:" + (sec.objet || "Objet spécial").trim(); S.inv[k] = (S.inv[k] || 0) + 1; toast(`Nouvel objet : ${k.slice(3)}`); log(`Le groupe obtient : <b>${esc(k.slice(3))}</b>.`); }
   else if (r === "sceau") verifierSceaux();
   else if (r === "piege" && h) await blesserHeros([h], 1, "Un piège blesse " + esc(h.nom));
   else if (r === "piegeGroupe") await blesserHeros(S.heroes, 1, "Un piège frappe tout le groupe");
   else if (r === "monstre") { const t = E[sec.monstre] ? sec.monstre : "gobelin", c = caseLibrePres(sec.x, sec.y); if (c) { faireApparaitre(t, c.x, c.y); log(`${E[t].nom} surgit!`); } }
-  else if (r === "levier") { for (const p of Object.values(S.portes)) if (p.par === "levier") p.verrou = false; drawTerrain(); log("Clac! Les grilles s'ouvrent."); }
+  else if (r === "levier") { for (const p of Object.values(S.portes)) if (p.par === "levier") p.verrou = false; drawTerrain(); bruit("porte"); log("Clac! Les grilles s'ouvrent."); }
   else if (E[r]) { const c = caseLibrePres(sec.x, sec.y); if (c) { faireApparaitre(r, c.x, c.y); log(`${E[r].nom} surgit!`); } }
 }
 async function reveler(sec, h) {
@@ -2258,9 +2761,9 @@ board.addEventListener("pointerup", ev => {
   if (d.moved) {
     tokEls.get(d.ent.e.id).classList.remove("dragging");
     drawPath(null); mjReach = null;
-    if (d.ent.kind === "hero") { if (reachCache && reachCache.has(key(c.x, c.y))) deplacer(d.ent.e, c.x, c.y); else render(); }
+    if (d.ent.kind === "hero") { if (reachCache && reachCache.has(key(c.x, c.y))) deplacer(d.ent.e, c.x, c.y, true); else render(); }
     else {
-      if (d.reach.has(key(c.x, c.y))) { const pts = chemin(d.reach, d.ent.e, c.x, c.y), [px, py] = pts[pts.length - 2]; d.ent.e.face = [c.x - px, c.y - py]; d.ent.e.x = c.x; d.ent.e.y = c.y; d.ent.e.bouge = true; render(); setTimeout(() => anim(d.ent.e, "hop"), 300); }
+      if (d.reach.has(key(c.x, c.y))) { const pts = chemin(d.reach, d.ent.e, c.x, c.y), [px, py] = pts[pts.length - 2]; d.ent.e.face = [c.x - px, c.y - py]; d.ent.e.x = c.x; d.ent.e.y = c.y; d.ent.e.bouge = true; render(); anim(d.ent.e, "bond"); bruit("pas", { sol: solIci(c.x, c.y) }); }
       else render();
     }
   } else if (overlay.hidden) clicCase(c.x, c.y);
@@ -2332,7 +2835,9 @@ function renderEditeur() {
   document.getElementById("ed-mons").innerHTML = mons.length ? mons.map(m => `<button class="tool${ED.sel && ED.sel.ref === m ? " on" : ""}" type="button" data-mon="${esc(m.id)}">✎ ${esc(m.nom || "Monstre")} · ${m.pv} PV</button>`).join("") : "";
   document.querySelectorAll("#editor [data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === ED.outil));
   const set = (id, v) => { const el = document.getElementById(id); if (document.activeElement !== el) el.value = v; };
-  set("ed-qnom", ED.quete.nom); set("ed-fin", ED.quete.fin || ""); set("ed-nom", ED.carte.nom); set("ed-intro", ED.carte.intro || "");
+  set("ed-qnom", ED.quete.nom); set("ed-fin", ED.quete.fin || ""); set("ed-qmus", ED.quete.musique || "mystere");
+  set("ed-mus", ED.carte.musique || "quete"); set("ed-met", ED.carte.meteo || "aucune"); set("ed-amb", ED.carte.ambiance || "auto"); set("ed-sol", ED.carte.sol || "pierre");
+  document.getElementById("ed-ani").innerHTML = Object.entries(ANIMAUX).map(([k, n]) => `<button type="button" data-a="${k}" aria-pressed="${(ED.carte.animaux || []).includes(k)}">${n}</button>`).join(""); set("ed-nom", ED.carte.nom); set("ed-intro", ED.carte.intro || "");
   document.getElementById("ed-cols").value = W; document.getElementById("ed-rows").value = H;
   document.getElementById("ed-noimg").disabled = !(ED.carte.image || ED.carte.imageId);
   document.getElementById("ed-chaps").innerHTML = ED.quete.chapitres.map((c, i) => `<button class="chap ${i === ED.ch ? "on" : ""}" type="button" data-ch="${i}">${i + 1}. ${esc(c.nom)}</button>`).join("");
@@ -2464,6 +2969,23 @@ document.getElementById("ed-rows").addEventListener("change", e => redimensionne
 document.getElementById("ed-qnom").addEventListener("input", e => { ED.quete.nom = e.target.value.trim() || "Quête sans nom"; renderTop(); });
 document.getElementById("ed-nom").addEventListener("input", e => { ED.carte.nom = e.target.value.trim() || "Chapitre"; renderEditeur(); renderTop(); });
 document.getElementById("ed-intro").addEventListener("input", e => { ED.carte.intro = e.target.value; });
+{
+  const opts = o => Object.entries(o).map(([k, n]) => `<option value="${k}">${n}</option>`).join("");
+  document.getElementById("ed-qmus").innerHTML = opts(TRAMES);
+  document.getElementById("ed-mus").innerHTML = opts({ quete: "Celle de la quête", ...TRAMES });
+  document.getElementById("ed-met").innerHTML = opts(METEOS);
+  document.getElementById("ed-amb").innerHTML = opts(AMBIANCES);
+  document.getElementById("ed-sol").innerHTML = opts(SOLS);
+  const champ = (id, cible, k) => document.getElementById(id).addEventListener("change", e => { cible()[k] = e.target.value; fxChapitre(); if (k === "sol") bruit("pas", { sol: e.target.value }); });
+  champ("ed-qmus", () => ED.quete, "musique"); champ("ed-mus", () => ED.carte, "musique"); champ("ed-met", () => ED.carte, "meteo");
+  champ("ed-amb", () => ED.carte, "ambiance"); champ("ed-sol", () => ED.carte, "sol");
+  document.getElementById("ed-ani").addEventListener("click", e => {
+    const b = e.target.closest("[data-a]"); if (!b) return;
+    const k = b.dataset.a, l = ED.carte.animaux = (ED.carte.animaux || []).filter(x => x !== k);
+    if (b.getAttribute("aria-pressed") !== "true") { l.push(k); bruit(k); }
+    b.setAttribute("aria-pressed", String(l.includes(k))); fxChapitre();
+  });
+}
 document.getElementById("ed-fin").addEventListener("input", e => { ED.quete.fin = e.target.value; });
 // Carte en PDF : la première page est convertie en image
 let pdfjs = null;
@@ -2758,6 +3280,8 @@ document.getElementById("btn-pass").onclick = () => { if (!S.busy) { S.mode = nu
 document.getElementById("btn-auto").onclick = ennemisAuto;
 document.getElementById("btn-mj-end").onclick = finTourMJ;
 document.getElementById("btn-save").onclick = () => sauvegarderPartie(false);
+document.getElementById("btn-son").onclick = () => { PREF.muet = !PREF.muet; sonVolumes(); sauverPref(); toast(PREF.muet ? "Son coupé" : "Son activé", 1200); };
+sonVolumes();
 document.getElementById("btn-d12").onclick = async () => {
   ouvrir(`<h2>Dé à 12 faces</h2><div class="dice"><div class="die" id="dd">${D12}<b>?</b></div></div><div class="row"><button class="btn gold" id="cont" type="button" disabled>Continuer</button></div>`);
   await lancer(document.getElementById("dd"), d12());
@@ -2773,6 +3297,14 @@ document.getElementById("btn-reg").onclick = () => {
     </div>
     <div class="row"><button class="btn blue" type="button" id="r-edit">Créateur de quêtes</button><button class="btn" type="button" id="r-reset">Recommencer le chapitre</button><button class="btn" type="button" id="r-restart">Recommencer la quête</button></div>
     <div class="row"><button class="btn gold" type="button" id="r-equipe">Changer d'équipe</button></div>
+    <h3 class="reg-t">Son et ambiance</h3>
+    <div class="reg">
+      <label>Volume <input type="range" id="r-vol" min="0" max="100" value="${Math.round(PREF.vol * 100)}"></label>
+      <label>Musique <select id="r-mus">${opt(PREF.musique ? 1 : 0, [[1, "Activée"], [0, "Coupée"]])}</select></label>
+      <label>Bruits d'ambiance <select id="r-amb">${opt(PREF.ambiance ? 1 : 0, [[1, "Activés"], [0, "Coupés"]])}</select></label>
+      <label>Météo <select id="r-met">${opt(METEO_FORCEE || "auto", [["auto", "Selon le chapitre"], ...Object.entries(METEOS)])}</select></label>
+    </div>
+    <div class="sonboard"><button class="btn" type="button" data-fx="eclair">Éclair!</button><button class="btn" type="button" data-fx="loups">Hurlement</button><button class="btn" type="button" data-fx="cloche">Cloche de minuit</button><button class="btn" type="button" data-fx="porte">Porte qui grince</button><button class="btn" type="button" data-fx="grogne">Grognement</button><button class="btn" type="button" data-fx="corbeaux">Corbeaux</button></div>
     <div class="row"><button class="btn" type="button" id="r-export">Exporter mes quêtes</button><label class="btn" for="ed-import">Importer un fichier</label></div>
     <p class="sub" id="r-msg">Quêtes et parties enregistrées ${Stock.ou()}.</p>
     <div class="row"><button class="btn gold" type="button" id="r-ok">Fermer</button></div>`);
@@ -2782,6 +3314,15 @@ document.getElementById("btn-reg").onclick = () => {
     render();
   };
   document.getElementById("r-niv").onchange = e => { S.niveau = e.target.value; };
+  document.getElementById("r-vol").oninput = e => { PREF.vol = e.target.value / 100; PREF.muet = false; sonVolumes(); sauverPref(); };
+  document.getElementById("r-vol").onchange = () => bruit("pas");
+  document.getElementById("r-mus").onchange = e => { PREF.musique = e.target.value === "1"; sonVolumes(); sauverPref(); };
+  document.getElementById("r-amb").onchange = e => { PREF.ambiance = e.target.value === "1"; sonVolumes(); sauverPref(); };
+  document.getElementById("r-met").onchange = e => { METEO_FORCEE = e.target.value === "auto" ? null : e.target.value; fxChapitre(); };
+  modal.querySelector(".sonboard").onclick = e => {
+    const b = e.target.closest("[data-fx]"); if (!b) return;
+    if (b.dataset.fx === "eclair") { fermer(); setTimeout(() => eclair(false), 250); } else bruit(b.dataset.fx);
+  };
   document.getElementById("r-edit").onclick = () => { fermer(); ouvrirEditeur(); };
   confirmer(document.getElementById("r-reset"), () => { fermer(); demarrerChapitre(S.chapitre, S.groupeDebut); });
   confirmer(document.getElementById("r-restart"), () => { fermer(); demarrerQuete(QUETE); });
