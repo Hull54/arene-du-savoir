@@ -1073,13 +1073,26 @@ function buildMapLayers(map) {
   for (const b of map.bushes) {
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
     const snow = map.theme === 'hiver', dark = map.theme === 'marais';
-    const base = dark ? '#3f5a2a' : '#2f7a3a', mid = dark ? '#4f6d33' : '#3f9a48', hi = dark ? '#6a8a44' : '#62b85a';
-    // même feuillage en touffes que les arbres et la bordure de forêt
-    const bp = dark ? ['#4f6d33', '#46632e', '#6a8a44', '#2f4520'] : TH.arbres, br = Math.max(4, Math.round(r * 0.42));
-    const spots = [[0, -0.45], [-0.5, -0.15], [0.5, -0.15], [0, 0.05], [-0.4, 0.35], [0.4, 0.35]];
-    spots.forEach(([dx, dy], i) => leafBlob(P, c + Math.round(dx * r), c + Math.round(dy * r), br, bp, i % 2));
-    if (snow) P.ellipse(c, c - Math.round(r * 0.45), Math.round(r * 0.75), Math.round(r * 0.25), '#f4f8ff');
-    else for (let i = 0; i < 6; i++) P.px(c + Math.round(Math.cos(i * 2.1) * r * 0.55), c + Math.round(Math.sin(i * 2.1) * r * 0.4), '#d9334a');
+    // cachette : buisson de fougères pointues vert lime avec des baies violettes (bien différent des arbres ronds)
+    const bp = dark ? ['#a3a83c', '#8a922e', '#c8cc66', '#5e6420'] : snow ? ['#6aa890', '#548f78', '#a8d8c4', '#36604e'] : ['#8fcf3c', '#76b82e', '#c0ec70', '#4a8420'];
+    const ry = Math.round(r * 0.78);
+    P.ellipse(c, c + 1, r - 1, ry - 1, bp[1]);
+    for (let k = 0; k < 22; k++) {   // feuilles pointues qui rayonnent du centre
+      const a = k / 22 * Math.PI * 2 + (k % 2) * 0.12, len = (k % 3 === 0 ? 1.05 : 0.85);
+      const ex = c + Math.round(Math.cos(a) * r * len), ey = c + 1 + Math.round(Math.sin(a) * ry * len);
+      line2(P, c + Math.round(Math.cos(a) * r * 0.25), c + 1 + Math.round(Math.sin(a) * ry * 0.25), ex, ey, Math.sin(a) < -0.2 ? bp[2] : Math.sin(a) > 0.5 ? bp[3] : bp[0]);
+      P.px(ex + Math.round(Math.cos(a + 1.4)), ey + Math.round(Math.sin(a + 1.4)), bp[k % 2 ? 0 : 1]);
+    }
+    for (let k = 0; k < 14; k++) {   // feuilles plus sombres entre les autres : du relief
+      const a = (k + 0.5) / 14 * Math.PI * 2, ex = c + Math.round(Math.cos(a) * r * 0.7), ey = c + 1 + Math.round(Math.sin(a) * ry * 0.7);
+      line2(P, c + Math.round(Math.cos(a) * r * 0.35), c + 1 + Math.round(Math.sin(a) * ry * 0.35), ex, ey, Math.sin(a) > 0 ? bp[3] : bp[1]);
+    }
+    P.ellipse(c - 2, c - 2, Math.round(r * 0.3), Math.round(ry * 0.25), bp[2]);
+    if (snow) P.ellipse(c, c - Math.round(ry * 0.5), Math.round(r * 0.7), Math.round(ry * 0.25), '#f4f8ff');
+    for (let i = 0; i < 5; i++) {   // grappes de baies
+      const bx = c + Math.round(Math.cos(i * 2.4 + 0.5) * r * 0.5), by = c + 1 + Math.round(Math.sin(i * 2.4 + 0.5) * ry * 0.45);
+      P.px(bx, by, '#7a4ad8'); P.px(bx + 1, by, '#5a32a8'); P.px(bx, by + 1, '#5a32a8'); P.px(bx, by - 1, '#c9b0ff');
+    }
     tg.globalAlpha = 0.92;
     tg.drawImage(P.outline().canvas(), Math.round(b.x / PX) - c, Math.round(b.y / PX) - c);
     tg.globalAlpha = 1;
