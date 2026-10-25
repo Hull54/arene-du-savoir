@@ -455,6 +455,103 @@ body.editing #vignette { opacity: 0 !important; }
 .tok.hero.attend .fxi { opacity: .5; }
 .tok.hero.attend.done .coin { filter: saturate(.4) brightness(.6); }
 @media (prefers-reduced-motion: reduce) { .tok.hero.active::before, .tok.hero.active::after { animation: none !important; } }
+/* ---------- Thème « parchemin et ardoise » : panneaux clairs bien cernés, rubans de couleur, boutons en relief ---------- */
+:root {
+  --bg: #3b414d; --panel: #f1e3c4; --panel-2: #e6d3ab; --line: #2b1f16; --ink: #2b1d12; --muted: #6b5638;
+  --gold: #f2b233; --rouge: #c8473a; --sarcelle: #2a8c94; --vert: #6aa84f; --encre-or: #8f4f08; --cerne: #2b1f16;
+  color-scheme: light;
+}
+body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), transparent 40%), radial-gradient(circle at 85% 90%, rgba(0,0,0,.25), transparent 50%), repeating-linear-gradient(45deg, rgba(255,255,255,.015) 0 2px, transparent 2px 6px), var(--bg); }
+.brand { color: #f6d27a; text-shadow: 0 3px 0 var(--cerne); }
+.brand small { color: #c9ced8; }
+/* boutons en relief */
+.btn, .tool, .chap, .equipe, .chips button, .seg button, .pad button, .choices button, .item, .bst, .pw {
+  border: 2px solid var(--cerne); box-shadow: 0 3px 0 var(--cerne); transition: translate .08s, box-shadow .08s; }
+.btn, .tool, .chap, .equipe, .pad button, .choices button { background: #f6ead0; color: var(--ink); }
+.btn:hover, .tool:hover, .equipe:hover, .bst:hover { border-color: var(--cerne); filter: brightness(1.05); }
+.btn:active:not(:disabled), .tool:active, .pad button:active, .choices button:active, .equipe:active, .bst:active { translate: 0 2px; box-shadow: 0 1px 0 var(--cerne); }
+.btn.gold, .tool.on, .seg button[aria-pressed="true"] { background: var(--gold); color: #2b1d12; border-color: var(--cerne); }
+.btn.red { background: var(--rouge); color: #fff4e0; border-color: var(--cerne); }
+.btn.blue { background: var(--sarcelle); color: #f3fffd; border-color: var(--cerne); }
+.tool.add { color: var(--encre-or); border-style: dashed; }
+.tools select, .editor input, .editor select, .reg select, .field, #ed-form input, #ed-form select, #ed-form textarea {
+  background: #fbf4e2; color: var(--ink); border: 2px solid var(--cerne); }
+.turn { background: var(--panel); border: 2px solid var(--cerne); box-shadow: 0 3px 0 var(--cerne); color: var(--ink); }
+.turn .pip.off { border-color: var(--muted); }
+/* panneaux de parchemin */
+.box, .hcard, .menu, .modal, .toast, #ed-form { background: var(--panel); color: var(--ink); border: 3px solid var(--cerne); box-shadow: 0 4px 0 rgba(0,0,0,.35), inset 0 0 24px rgba(139,94,40,.18); }
+.box { border-radius: 10px; padding-top: 0; }
+.box h3, .bst-wrap h3 { display: inline-block; margin: -2px 0 8px -4px; padding: 3px 18px 4px 12px; background: var(--rouge); color: #fff4e0; font-size: 1.05rem;
+  border: 2px solid var(--cerne); border-top: 0; border-radius: 0 0 6px 6px; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 50%, 100% 100%, 0 100%); }
+.box.log h3 { background: var(--sarcelle); }
+.editor .box h3, .editor > h3 { background: #7a52b3; }
+.bst-wrap h3 { margin-left: 0; border-top: 2px solid var(--cerne); border-radius: 6px; }
+.hcard { border-radius: 10px; }
+.hcard.active { background: #fff6dc; border-color: var(--cerne); box-shadow: 0 0 0 3px var(--gold), 0 4px 0 rgba(0,0,0,.35); }
+.hcard input { color: var(--ink); }
+.hcard .cls { color: var(--muted); }
+.hcard .race select { background: #fbf4e2; color: var(--ink); border-color: var(--cerne); }
+.hcard .race select:disabled { color: var(--muted); }
+.hcard .titre { color: var(--encre-or); font-weight: 700; }
+.dmg { background: var(--cerne); color: #fff4e0; border-color: var(--cerne); }
+.chip { background: var(--gold); color: var(--ink); border: 1px solid var(--cerne); }
+.chip.ko { background: var(--rouge); color: #fff4e0; }
+.pw { background: var(--sarcelle); color: #f3fffd; border-radius: 9px; }
+.pw span { color: #d8f3f0; }
+.pw:disabled { filter: grayscale(.6); opacity: .6; }
+.item { background: #fbf4e2; }
+.item b { color: var(--rouge); }
+.log li { color: var(--muted); } .log li:first-child { color: var(--ink); }
+/* menus contextuels et fenêtres */
+.menu { border-radius: 10px; }
+.menu h4 { color: var(--rouge); }
+.menu .op { color: var(--rouge); }
+.menu p { color: var(--muted); }
+.overlay { background: rgba(22,26,34,.72); }
+.modal { border-width: 4px; border-radius: 14px; box-shadow: 0 8px 0 rgba(0,0,0,.4), 0 30px 80px rgba(0,0,0,.6), inset 0 0 40px rgba(139,94,40,.22); }
+.modal h2 { justify-self: center; color: #fff4e0; background: var(--rouge); padding: 4px 34px 6px; border: 3px solid var(--cerne); border-radius: 6px; margin-top: -8px; font-size: 1.7rem; max-width: 100%; box-sizing: border-box;
+  box-shadow: 0 3px 0 var(--cerne); clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 0 100%, 12px 50%); text-shadow: 0 2px 0 rgba(0,0,0,.35); }
+
+.modal.danger { border-color: var(--cerne); }
+.modal.danger h2 { background: #7c2a24; color: #ffd9d4; }
+.modal .sub, .modal .kicker { color: var(--muted); }
+.modal .intro, .bilan-wrap { background: #fbf4e2; border: 2px solid var(--cerne); color: var(--ink); }
+.modal .ans { border-bottom-color: var(--cerne); }
+.pad button.ok { background: var(--vert); color: #fff; }
+.choices button.right { background: var(--vert); color: #fff; }
+.choices button.wrong { background: var(--rouge); color: #fff; }
+.verdict.ok { color: #2f7a35; } .verdict.bad { color: #b0352a; }
+.dice .x { color: var(--encre-or); }
+.dist .line { background: #fbf4e2; border: 2px solid var(--cerne); }
+.dist .line b { color: var(--rouge); }
+.toast { border-radius: 12px; }
+.equipe b { color: var(--rouge); }
+.equipe span { color: var(--muted); }
+.chips button { background: #fbf4e2; color: var(--muted); }
+.chips button[aria-pressed="true"] { background: var(--vert); color: #fff; }
+.reg label, .reg-t { color: var(--muted); }
+.bilan th { color: var(--muted); } .bilan th, .bilan td { border-bottom-color: rgba(43,31,22,.3); }
+.bilan details, .bilan summary { color: var(--ink); }
+/* éditeur */
+.chap { background: #f6ead0; }
+.chap.on { background: var(--gold); color: var(--ink); border-color: var(--cerne); }
+#ed-form h4, .editor h4 { color: var(--rouge); }
+.editor label, .editor .hint { color: var(--muted); }
+.editor label.check, .editor label.btn { color: var(--ink); }
+/* fiches, bestiaire, badges */
+.fiche, .bst { background: #fbf4e2; }
+.fiche { border: 3px solid var(--rim); box-shadow: 0 0 0 2px var(--cerne), 0 4px 0 var(--cerne); }
+.fiche-cls { color: var(--rouge); }
+.fiche-cls small { color: var(--encre-or); font-weight: 700; }
+.seg button { background: #f6ead0; color: var(--ink); box-shadow: 0 2px 0 var(--cerne); }
+.badge { background: #efe2c4; border: 2px solid var(--cerne); }
+.badge.eu { background: #fff2c9; border-color: var(--cerne); box-shadow: 0 0 0 2px var(--gold); }
+.bst small, .fiche-stats { color: var(--muted); }
+/* éléments posés sur la carte : restent sombres et lisibles */
+.tok .tag { color: #f6ead2; }
+.nametag { color: #f6ead2; }
+.nametag.tour { color: #1d1408; }
+
 </style>
 
 <div class="app">
