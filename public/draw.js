@@ -513,6 +513,7 @@ function spriteFor(o, TH = THEMES.village) {
   if (kind === 'oak' || kind === 'willow') {
     P = new Painter(30, 34); ax = 15 - w / 2; ay = 34 - h - 1;
     P.rect(13, 20, 4, 11, '#5a3a20'); P.rect(13, 20, 1, 11, '#7a5030'); P.rect(16, 21, 1, 10, '#3e2614'); P.px(12, 30, '#5a3a20'); P.px(17, 30, '#5a3a20');
+    if (TH.rustique) { P.rect(10, 30, 3, 1, '#5a3a20'); P.px(9, 31, '#4a2e18'); P.rect(17, 30, 3, 1, '#4a2e18'); P.px(20, 31, '#4a2e18'); P.px(14, 31, '#5a3a20'); P.px(11, 29, '#7a5030'); }
     const pal = kind === 'oak' ? TH.arbres : TH.arbres.map(c => shade(c, 1.12));
     const blobs = [[15, 5, 6], [9, 9, 6], [21, 9, 6], [15, 11, 7], [8, 15, 5], [22, 15, 5], [12, 18, 5], [18, 18, 5]];
     blobs.forEach(([x, y, r], i) => leafBlob(P, x, y, r, pal, i % 2));
@@ -549,6 +550,19 @@ function spriteFor(o, TH = THEMES.village) {
     for (const [dx, dy] of [[-1, 0], [1, 0], [-0.7, 0.6], [0.7, 0.6], [0, -1], [-0.6, -0.6], [0.6, -0.6]])
       for (let k = 1; k < 11; k++) P.rect(15 + Math.round(dx * k), 11 + Math.round(dy * k + (k * k) / 25), 2, 2, k > 7 ? fd : f);
     P.disc(15, 12, 2, '#6b4423');
+  } else if (kind === 'rock' && TH.rustique) {
+    // gros rocher clair, facettes, mousse sur le dessus
+    P = new Painter(w + 4, h + 10); ax = 2; ay = 8;
+    const cx = Math.floor((w + 4) / 2), cy = Math.floor(h / 2) + 6, rx = Math.floor(w / 2), ry = Math.floor(h / 2) + 3;
+    P.ellipse(cx, cy, rx, ry, '#b9bec6');
+    P.ellipse(cx + 2, cy + 2, Math.floor(rx * 0.75), Math.floor(ry * 0.7), '#9aa0aa');
+    P.ellipse(cx - 2, cy - 2, Math.floor(rx * 0.6), Math.floor(ry * 0.55), '#dfe3e8');
+    P.ellipse(cx - 3, cy - 3, Math.floor(rx * 0.3), Math.floor(ry * 0.25), '#f4f6f8');
+    for (let i = -rx + 2; i < rx - 1; i++) P.px(cx + i, cy + ry - 2 - (i * i) % 3, '#7d838e');   // base dans l'ombre
+    line2(P, cx + 1, cy - ry + 3, cx + 4, cy + 1, '#9aa0aa');   // fissure
+    const moss = ['#6cbd48', '#4f9a34', '#8ad65c'];
+    for (let i = 0; i < Math.max(4, rx); i++) { const mx = cx - rx + 3 + ((i * 7) % (rx * 2 - 4)), my = cy - ry + 2 + ((i * 3) % 3); P.px(mx, my, moss[i % 3]); P.px(mx + 1, my, moss[(i + 1) % 3]); if (i % 2) P.px(mx, my + 1, moss[1]); }
+    P.px(cx - rx + 1, cy + ry - 1, '#4f9a34'); P.px(cx - rx + 2, cy + ry, '#6cbd48'); P.px(cx + rx - 2, cy + ry, '#4f9a34');
   } else if (kind === 'rock' || kind === 'snowrock') {
     P = new Painter(w + 4, h + 8); ax = 2; ay = 6;
     P.ellipse(Math.floor((w + 4) / 2), Math.floor(h / 2) + 5, Math.floor(w / 2), Math.floor(h / 2) + 1, '#7d828c');
@@ -665,18 +679,56 @@ function spriteFor(o, TH = THEMES.village) {
   return { c: P.outline().canvas(), ax, ay };
 }
 function gold() { return '#f2c94c'; }
+// cheminée de pierre avec un feu (sur le mur du fond des cabanes)
+function cheminee() {
+  const P = new Painter(16, 18);
+  P.rect(5, 0, 6, 5, '#8a8f99'); P.rect(5, 0, 6, 1, '#b7bcc6');   // conduit
+  P.rect(1, 5, 14, 12, '#9aa0ab'); P.rect(1, 5, 14, 2, '#c3c7d0');
+  for (const [x, y] of [[2, 8], [9, 8], [5, 11], [12, 11], [2, 14], [9, 14]]) P.rect(x, y, 3, 2, '#b7bcc6');
+  P.rect(4, 9, 8, 8, '#2a1d2e'); P.ellipse(8, 14, 3, 2, '#ff8a1e'); P.ellipse(8, 14, 2, 1, '#ffd25a'); P.px(7, 11, '#ff8a1e'); P.px(9, 12, '#ffb347');
+  P.rect(0, 16, 16, 2, '#6d7380');
+  return P.outline().canvas();
+}
+// trophée accroché au mur : tête de cerf ou d'ours sur une plaque de bois
+function trophee(k) {
+  const P = new Painter(12, 12), b = '#7a4b25';
+  P.ellipse(6, 7, 4, 3, b); P.ellipse(6, 7, 3, 2, '#9b6b3a');
+  if (k === 'cerf') {
+    P.rect(5, 4, 3, 6, '#a8784a'); P.rect(5, 9, 3, 2, '#c9a27a'); P.px(5, 6, OUT); P.px(7, 6, OUT); P.px(6, 10, OUT);
+    for (const s of [-1, 1]) { const x = 6 + s * 2; P.px(x, 3, '#e8dcc0'); P.px(x + s, 2, '#e8dcc0'); P.px(x + s * 2, 1, '#e8dcc0'); P.px(x + s, 0, '#e8dcc0'); P.px(x + s * 3, 2, '#e8dcc0'); }
+  } else {
+    P.ellipse(6, 7, 3, 3, '#6e3a1e'); P.px(3, 4, '#6e3a1e'); P.px(9, 4, '#6e3a1e'); P.rect(5, 8, 3, 2, '#a86034'); P.px(5, 6, OUT); P.px(7, 6, OUT); P.px(6, 8, OUT);
+  }
+  return P.outline().canvas();
+}
+// peau d'ours (ou de loup blanc en hiver) étalée au sol : corps, 4 pattes, tête vers le bas
+function peauSprite(w, h, blanc) {
+  const P = new Painter(w, h), cx = w >> 1, cy = (h >> 1) - 2;
+  const f = blanc ? ['#e8e4dc', '#c9c2b4', '#f8f6f0', '#a8a090'] : ['#8a4a26', '#6e3a1e', '#a86034', '#4a2614'];
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {   // pattes en étoile
+    const px = cx + sx * Math.round(w * 0.32), py = cy + sy * Math.round(h * 0.28);
+    P.ellipse(px, py, 4, 3, f[1]); P.px(px + sx * 4, py + 2, '#e8e2d0'); P.px(px + sx * 3, py + 3, '#e8e2d0');
+  }
+  P.ellipse(cx, cy, Math.round(w * 0.3), Math.round(h * 0.36), f[0]);
+  P.ellipse(cx - 2, cy - 2, Math.round(w * 0.16), Math.round(h * 0.18), f[2]);
+  for (let i = 0; i < 14; i++) P.px(cx - Math.round(w * 0.22) + ((i * 7) % Math.round(w * 0.44)), cy - Math.round(h * 0.25) + ((i * 5) % Math.round(h * 0.5)), f[1]);
+  const hy = cy + Math.round(h * 0.36);   // tête
+  P.ellipse(cx, hy, 5, 4, f[1]); P.ellipse(cx, hy + 1, 3, 2, f[0]); P.px(cx - 4, hy - 3, f[1]); P.px(cx + 4, hy - 3, f[1]);
+  P.px(cx - 2, hy, OUT); P.px(cx + 2, hy, OUT); P.rect(cx - 1, hy + 3, 2, 1, OUT);
+  return P.outline().canvas();
+}
 
 // ---------- La carte (dessinée une seule fois, en tuiles de 16 pixels d'art) ----------
 const WALLS_T = 'b#kcxgT', WATER_T = '~vL', NATURAL_T = '.hsnmd~=icT';
 const THEMES = {
-  village: { herbe: ['#6a9a55', '#61904e', '#76a660', '#4f7d42'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#2f7a3f', '#3f9a4a', '#5cb860', '#215a2e'], fond: '#2f7a3f' },
-  foret:   { herbe: ['#56884a', '#4d7d43', '#629553', '#3d6a37'], falaise: ['#a0623a', '#7a4524', '#c07f4c', '#5a3218'], arbres: ['#25603a', '#2f7a44', '#4f9a52', '#183f26'], fond: '#183f26' },
+  village: { herbe: ['#5dae3e', '#54a238', '#6cbd48', '#3f8a2e'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2f7a3f', rustique: true },
+  foret:   { rustique: true, herbe: ['#4f9a3c', '#478e36', '#5eab48', '#367a2c'], falaise: ['#a0623a', '#7a4524', '#c07f4c', '#5a3218'], arbres: ['#25603a', '#2f7a44', '#4f9a52', '#183f26'], fond: '#183f26' },
   desert:  { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c98f52', '#9e6a38', '#e2ad6e', '#7a4f28'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e6a38' },
   donjon:  { herbe: ['#5a5f6a', '#525763', '#646a75', '#454a55'], falaise: ['#6d6a7a', '#4a4757', '#8a8796', '#33313f'], arbres: ['#2f4a3a', '#3f5a4a', '#5a7a5a', '#1f3328'], fond: '#141019' },
-  hiver:   { herbe: ['#eef4fa', '#e2ebf4', '#ffffff', '#c8d8e8'], falaise: ['#b8cde0', '#8aa3be', '#e4eff8', '#6a84a0'], arbres: ['#2f6a4a', '#3f8a5a', '#e8f2fa', '#1f4a35'], fond: '#8aa3be' },
+  hiver:   { rustique: true, herbe: ['#eef4fa', '#e2ebf4', '#ffffff', '#c8d8e8'], falaise: ['#b8cde0', '#8aa3be', '#e4eff8', '#6a84a0'], arbres: ['#2f6a4a', '#3f8a5a', '#e8f2fa', '#1f4a35'], fond: '#8aa3be' },
   cite:    { herbe: ['#6a8a55', '#61804e', '#76955f', '#4f6d42'], falaise: ['#8a8590', '#66626e', '#a8a4ae', '#46424e'], arbres: ['#3f6a3a', '#4a7a44', '#6a9a5a', '#2a4a28'], fond: '#46424e' },
   colisee: { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c9a36a', '#9e7c48', '#e2c08a', '#7a5e34'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e7c48' },
-  marais:  { herbe: ['#6f8048', '#64743f', '#7d8f55', '#55653a'], falaise: ['#7a6a4a', '#5a4a32', '#9a8a62', '#3f3322'], arbres: ['#3f5a32', '#4f6d3a', '#6a8a4a', '#2a3f22'], fond: '#2a3f22' },
+  marais:  { rustique: true, herbe: ['#6f8048', '#64743f', '#7d8f55', '#55653a'], falaise: ['#7a6a4a', '#5a4a32', '#9a8a62', '#3f3322'], arbres: ['#3f5a32', '#4f6d3a', '#6a8a4a', '#2a3f22'], fond: '#2a3f22' },
 };
 const HEAL_NOM = { fontaine: 'Fontaine de soin', source: 'Source de soin', autel: 'Autel de soin', feu: 'Feu de camp (soigne)' };
 
@@ -701,6 +753,10 @@ function buildMapLayers(map) {
       const jx = (noise(x / 7, y / 7, 1) - 0.5) * 9, jy = (noise(x / 7, y / 7, 2) - 0.5) * 9;
       const s = tile(Math.floor((x + jx) / TS), Math.floor((y + jy) / TS));
       if (NATURAL_T.includes(s)) t = s;
+    }
+    if (t === 't' && TH.rustique) {   // sous la peau de bête : le même sol que la pièce
+      const tx0 = Math.floor(x / TS), ty0 = Math.floor(y / TS);
+      for (let k = 1; k < 8; k++) { const n = tile(tx0 - k, ty0); if (n !== 't') { t = WALLS_T.includes(n) ? 'w' : n; break; } }
     }
     vt[y * AW + x] = t;
   }
@@ -751,6 +807,23 @@ function buildMapLayers(map) {
           if (t === 'c' && cl.d2 - cl.d1 < 1) c = pal[3];
         }
         if (t === 'T' && H && dy0(y, cl) && cl.d1 < r) c = '#f4f8ff';
+        if (edge) c = OUT;
+      } else if (t === 'b' && TH.rustique) {
+        // ----- cabane en rondins : rondins horizontaux, bouts ronds aux coins -----
+        const lg = ['#8a5530', '#6e4024', '#a86a3c', '#4a2a16', '#5a361e'];
+        const corner = !WALLS_T.includes(tile(tx - 1, ty)) || !WALLS_T.includes(tile(tx + 1, ty));
+        if (front) {
+          const fy = ly - 9, r = fy % 4;
+          c = r === 0 ? lg[2] : r === 3 ? lg[3] : lg[0];
+          if (corner && (lx < 4 && !WALLS_T.includes(tile(tx - 1, ty)) || lx > TS - 5 && !WALLS_T.includes(tile(tx + 1, ty)))) { const ex = lx < 4 ? lx : TS - 1 - lx; c = r === 3 ? lg[3] : (ex + r) % 3 === 0 ? '#c99a5c' : '#b07a45'; }
+          else if (hsh(x >> 3, (y >> 2), 61) < 0.12 && x % 8 === 3) c = lg[4];   // nœud du bois
+          if (ly === TS - 1) c = OUT;
+        } else {
+          const r = y % 4;
+          c = r === 0 ? lg[2] : r === 3 ? lg[3] : lg[0];
+          if ((x + (y >> 2) * 5) % 23 === 0) c = lg[1];
+          if (h < 0.03) c = lg[1];
+        }
         if (edge) c = OUT;
       } else {
         const P = {
@@ -838,9 +911,14 @@ function buildMapLayers(map) {
         if (x % 8 === 1 && y % 8 !== 0 && map.theme !== 'donjon') c = '#66719a';
         if (map.theme === 'donjon' && h < 0.015) c = '#3f4762';
       }
-      else if (t === 'w') {
+      else if (t === 'w' && !TH.rustique) {
         const row = Math.floor(y / 4);
         c = y % 4 === 3 || (x + row * 5) % 13 === 0 ? '#a87a48' : row % 2 ? '#e2b67c' : '#d8ab70';
+      }
+      else if ((t === 't' || t === 'w') && TH.rustique) {   // dalles de pierre irrégulières dans les cabanes
+        const cl = cells(x, y, 6, 71);
+        c = cl.d2 - cl.d1 < 1.1 ? '#6e5a40' : cl.id < 0.33 ? '#b39a74' : cl.id < 0.66 ? '#a48c68' : '#c2aa82';
+        if (cl.d2 - cl.d1 >= 1.1 && x - cl.px + y - cl.py < -2) c = shade(c, 1.08);
       }
       else if (t === 't') {
         let d = 9;
@@ -852,6 +930,19 @@ function buildMapLayers(map) {
         c = qs ? (Math.sin(Math.hypot(x - tx * TS, y - ty * TS) * 0.6) > 0.7 ? '#c49a50' : '#d8b46a') : (noise(x / 6, y / 6, 7) > 0.68 ? '#5a4c26' : h < 0.05 ? '#8f7d48' : '#6b5c30');
       }
       else c = TH.herbe[0];
+      // herbe surélevée : un petit talus de terre sous le bord de l'herbe (thèmes rustiques)
+      if (TH.rustique && (t === 'd' || t === 's')) {
+        const g1 = V(x, y - 1), g2 = V(x, y - 2), g3 = V(x, y - 3), gr = u => u === '.' || u === 'h';
+        if (gr(g1)) c = OUT;
+        else if (gr(g2)) c = '#5a3a20';
+        else if (gr(g3)) c = hsh(x, y, 62) < 0.3 ? '#4a2e18' : '#6e4a2a';
+        else if (gr(V(x - 1, y)) || gr(V(x + 1, y))) c = shade(c, 0.8);
+      }
+      if (TH.rustique && (t === '.' || t === 'h')) {
+        const b1 = V(x, y + 1), b2 = V(x, y + 2), d = u => u === 'd' || u === 's';
+        if (d(b1)) c = shade(TH.herbe[3], 0.85);
+        else if (d(b2)) c = TH.herbe[2];
+      }
       // ombre portée par les murs juste au-dessus
       if (WALLS_T.includes(tile(tx, ty - 1)) && ly < 4 && !WALLS_T.includes(t)) c = shade(c, 0.82);
       // quai de pierre le long du canal de la cité
@@ -887,7 +978,11 @@ function buildMapLayers(map) {
     const x = Math.floor(R(2, AW - 3)), y = Math.floor(R(2, AH - 3)), t = V(x, y), r = R(0, 1);
     if (near(x, y, 2, WALLS_T + '~vLB')) { if (t === '~' && !near(x, y, 3, WALLS_T + '.snd') && r < 0.06 && map.theme !== 'donjon') { g.fillStyle = '#3d9a4a'; g.fillRect(x - 1, y, 4, 2); g.fillRect(x, y - 1, 2, 4); if (r < 0.025) dot(x + 1, y, '#f7a8d0'); } continue; }
     if (t === '.') {
-      if (r < 0.35) { const c = TH.herbe[3]; dot(x, y, c); dot(x + 2, y, c); dot(x + 1, y - 1, c); }
+      if (r < 0.35 && TH.rustique) {   // touffe d'herbe : brins foncés à la base, pointes claires
+        const d = shade(TH.herbe[3], 0.9), l = shade(TH.herbe[2], 1.15);
+        dot(x, y, d); dot(x + 1, y, d); dot(x + 2, y, d); dot(x - 1, y - 1, l); dot(x + 1, y - 1, d); dot(x + 1, y - 2, l); dot(x + 3, y - 1, l);
+      }
+      else if (r < 0.35) { const c = TH.herbe[3]; dot(x, y, c); dot(x + 2, y, c); dot(x + 1, y - 1, c); }
       else if (r < 0.42 && map.theme !== 'marais') { const c = ['#fff3a8', '#ffd1e8', '#ffffff', '#c9b8ff', '#ff9a7a'][Math.floor(R(0, 5))]; dot(x, y - 1, c); dot(x - 1, y, c); dot(x + 1, y, c); dot(x, y + 1, c); dot(x, y, '#f2b632'); }
       else if (r < 0.45 && (map.theme === 'foret' || map.theme === 'marais')) { g.fillStyle = '#efe3cf'; g.fillRect(x, y, 1, 2); g.fillStyle = '#d84a3a'; g.fillRect(x - 1, y - 1, 3, 1); }
       else if (r < 0.47 && map.theme === 'marais') { g.fillStyle = '#4f6a2a'; g.fillRect(x, y - 3, 1, 4); g.fillStyle = '#6b4423'; g.fillRect(x, y - 5, 1, 2); }
@@ -902,6 +997,30 @@ function buildMapLayers(map) {
       else if (r < 0.08) { dot(x, y, '#2a2238'); dot(x + 1, y + 1, '#2a2238'); dot(x + 2, y + 1, '#2a2238'); }
     } else if (t === 'p' || t === 'd') {
       if (r < 0.04) { g.fillStyle = '#6c8f4a'; g.fillRect(x, y, 2, 1); }
+    }
+  }
+  // peaux de bête : à la place des tapis, dans les maisons des thèmes rustiques
+  if (TH.rustique) {
+    const vu = new Set();
+    for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) {
+      if (tile(i, j) !== 't' || vu.has(j * map.cols + i)) continue;
+      let i0 = i, i1 = i, j0 = j, j1 = j; const pile = [[i, j]]; vu.add(j * map.cols + i);
+      while (pile.length) {
+        const [a, b] = pile.pop(); i0 = Math.min(i0, a); i1 = Math.max(i1, a); j0 = Math.min(j0, b); j1 = Math.max(j1, b);
+        for (const [da, db] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const na = a + da, nb = b + db; if (tile(na, nb) === 't' && !vu.has(nb * map.cols + na)) { vu.add(nb * map.cols + na); pile.push([na, nb]); } }
+      }
+      const pw = (i1 - i0 + 1) * TS, ph = (j1 - j0 + 1) * TS;
+      g.drawImage(peauSprite(pw + 10, ph + 6, map.theme === 'hiver'), i0 * TS - 5, j0 * TS - 3);
+      // mur du fond de la cabane : cheminée au-dessus de la peau, trophées de chaque côté
+      let jw = j0 - 1; while (jw > 0 && tile(i0, jw) !== 'b') jw--;
+      if (tile(i0, jw) === 'b' && !WALLS_T.includes(tile(i0, jw + 1))) {
+        const fy = jw * TS + 9, mx = Math.round((i0 + i1 + 1) / 2 * TS);
+        if (tile(Math.floor(mx / TS) , jw) === 'b') g.drawImage(cheminee(), mx - 8, fy - 9);
+        // trophées : à gauche et à droite de la cheminée, là où aucun meuble ne les cache
+        const libre = d => { const ax = mx + d; return tile(Math.floor(ax / TS), jw) === 'b' && !map.objs.some(o => ax * PX > o.x - 30 && ax * PX < o.x + o.w + 30 && o.y < (fy + 30) * PX && o.y + o.h > (fy - 10) * PX); };
+        const places = [-26, 26, -44, 44, -60, 60].filter(libre);
+        ['cerf', 'ours'].forEach((k, n) => { if (places[n] != null) g.drawImage(trophee(k), mx + places[n] - 6, fy - 4); });
+      }
     }
   }
   // lieu de soin
@@ -1001,7 +1120,7 @@ function buildMapLayers(map) {
   for (let j = 0; j < MH; j++) for (let i = 0; i < MW; i++) mot[j * MW + i] = 0.86 + noise(i / 7.5, j / 7.5, 31) * 0.16 + noise(i / 1.75, j / 1.75, 32) * 0.07;
   const grade = (cv, mottle) => {
     const cx = cv.getContext('2d'), im = cx.getImageData(0, 0, AW, AH), d = im.data;
-    const cold = map.theme === 'hiver', sat = cold ? 0.85 : 0.76;
+    const cold = map.theme === 'hiver', sat = cold ? 0.9 : TH.rustique ? 1.0 : 0.85;
     for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
       const k = (y * AW + x) * 4;
       if (!d[k + 3]) continue;
@@ -1015,7 +1134,7 @@ function buildMapLayers(map) {
         if (e < 48) m *= 0.78 + 0.22 * (e / 48);
       }
       if (cold) { m = 1 + (m - 1) * 0.35; d[k] = Math.min(255, r * 0.97 * m); d[k + 1] = Math.min(255, gg * m); d[k + 2] = Math.min(255, b * 1.03 * m); }
-      else { d[k] = Math.min(255, r * 1.04 * m); d[k + 1] = Math.min(255, gg * 1.0 * m); d[k + 2] = Math.min(255, b * 0.9 * m); }
+      else { d[k] = Math.min(255, r * 1.03 * m); d[k + 1] = Math.min(255, gg * 1.0 * m); d[k + 2] = Math.min(255, b * 0.93 * m); }
     }
     cx.putImageData(im, 0, 0);
   };
