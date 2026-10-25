@@ -1106,23 +1106,23 @@ DEMO.musique = DEMO.musique || "mystere";
 Object.assign(DEMO.chapitres[0], { meteo: "brouillard", ambiance: "vent", sol: "pierre", animaux: ["corbeaux"] }, DEMO.chapitres[0]);
 if (DEMO.chapitres[1]) Object.assign(DEMO.chapitres[1], { brume: true, ambiance: "crypte", sol: "pierre", animaux: ["chauves", "rats"] }, DEMO.chapitres[1]);
 const C = {
-  archer: { nom: "Archer", pv: 3, mana: 3, dep: 6, deg: 4, portee: 4, distrib: true, rim: "#7c9a3f", proj: "#cfe27a",
+  archer: { nom: "Archer", pv: 3, mana: 3, dep: 6, deg: 3, portee: 4, distrib: true, rim: "#7c9a3f", proj: "#cfe27a",
     p: [{ id: "fleches", nom: "Flèches elfiques", desc: "3 flèches de −2 PV à distribuer", cout: 1, cible: "zone" },
         { id: "lynx", nom: "Œil de lynx", desc: "−4 PV n'importe où sur la carte", cout: 1, cible: "enemyAny" }] },
   mage: { nom: "Mage", pv: 3, mana: 5, dep: 5, deg: 3, portee: 3, distrib: true, rim: "#3a9e98", proj: "#9fe7ff",
     p: [{ id: "poison", nom: "Empoisonnement", desc: "L'ennemi perd 1 PV par tour", cout: 1, cible: "enemy" },
         { id: "tp", nom: "Téléportation", desc: "Va sur n'importe quelle case libre", cout: 1, cible: "tile" }] },
-  guerrier: { nom: "Guerrier", pv: 5, mana: 2, dep: 4, deg: 5, portee: 1, distrib: false, rim: "#9aa3ad",
+  guerrier: { nom: "Guerrier", pv: 6, mana: 2, dep: 4, deg: 5, portee: 1, distrib: false, rim: "#9aa3ad",
     p: [{ id: "force", nom: "Force brute", desc: "Prochaine attaque : dégâts doublés", cout: 1, cible: "self" },
-        { id: "priere", nom: "Prière du combattant", desc: "Retrouve 1 mana", cout: 0, cible: "self" }] },
+        { id: "priere", nom: "Prière du combattant", desc: "Retrouve 1 PV", cout: 0, cible: "self" }] },
   voleur: { nom: "Voleur", pv: 4, mana: 3, dep: 6, deg: 3, portee: 1, distrib: false, rim: "#c9b437",
-    p: [{ id: "camo", nom: "Camouflage", desc: "Enlève la moitié des PV d'un ennemi", cout: 1, cible: "enemy" },
+    p: [{ id: "camo", nom: "Camouflage", desc: "Enlève la moitié des PV d'un ennemi (6 au plus contre un boss)", cout: 1, cible: "enemy" },
         { id: "pickpocket", nom: "Pickpocket", desc: "Déverrouille un cadenas", cout: 1, cible: "door" }] },
 };
 const RACES = {
   humain: { nom: "Humain", bonus: "+1 mana", mana: 1 },
-  elfe: { nom: "Elfe", bonus: "+1 déplacement", dep: 1 },
-  nain: { nom: "Nain", bonus: "+1 PV", pv: 1 },
+  elfe: { nom: "Elfe", bonus: "+1 déplacement, voit plus loin", dep: 1, vue: 1 },
+  nain: { nom: "Nain", bonus: "+2 PV", pv: 2 },
   orc: { nom: "Orc", bonus: "+1 dégât", deg: 1 },
 };
 const RACE_DEFAUT = { archer: "elfe", mage: "humain", guerrier: "nain", voleur: "orc" };
@@ -1165,14 +1165,14 @@ const MLOOKS = { frankenstein: "Créature de Frankenstein", vampire: "Vampire", 
 // Les monstres inventés d'une quête s'ajoutent aux monstres de base
 // Bestiaire prêt à l'emploi : [apparence, nom, PV, dégâts, vitesse, boss]
 const BESTIAIRE = [
-  ["Gobelins et orcs", [["kobold","Kobold",5,1,4],["gobelin","Gobelin",7,1,4],["chefgob","Chef gobelin",14,2,3],["orque","Orc pillard",14,3,3],["troll","Troll des cavernes",22,3,2],["ogre","Ogre",26,4,2,1]]],
+  ["Gobelins et orcs", [["kobold","Kobold",5,1,4],["gobelin","Gobelin",7,1,4],["chefgob","Chef gobelin",14,2,3],["orque","Orc pillard",14,2,3],["troll","Troll des cavernes",18,2,2],["ogre","Ogre",26,3,2,1]]],
   ["Slimes et marais", [["slime","Slime vert",6,1,2],["slimeglace","Slime de glace",8,2,2],["champignon","Champignon vénéneux",6,2,0],["serpent","Serpent géant",10,2,4],["lezard","Homme-lézard",12,2,3],["basilic","Basilic",20,3,2,1]]],
-  ["Glace et neige", [["loupglace","Loup des glaces",10,2,5],["yeti","Yéti",18,3,3],["golemglace","Golem de glace",22,3,1],["blizzard","Esprit du blizzard",14,2,4],["dragonglace","Dragon de glace",36,4,3,1]]],
-  ["Feu et dragons", [["feufollet","Feu follet",5,1,5],["elemfeu","Élémentaire de feu",14,3,3],["dragonnet","Dragonnet",12,2,4],["dragon","Dragon rouge",40,5,3,1]]],
-  ["Morts-vivants", [["squelette","Squelette",8,2,3],["zombie","Momie",12,2,2],["fantome","Fantôme",8,2,4],["vampire","Vampire",18,3,4],["chevnoir","Chevalier noir",22,3,3],["necro","Nécromancien",16,3,3],["liche","Liche",32,4,3,1]]],
-  ["Forêt et bêtes", [["rat","Rat géant",4,1,4],["chauve","Chauve-souris",4,1,5],["araignee","Araignée géante",9,2,4],["loup","Loup-garou",14,3,5],["harpie","Harpie",10,2,5],["arbre","Arbre maudit",20,3,1],["minotaure","Minotaure",26,4,3,1]]],
-  ["Donjon et sortilèges", [["bandit","Bandit",8,2,4],["elfenoir","Elfe noir",12,2,4],["mimique","Coffre mimique",14,3,1],["gargouille","Gargouille",16,2,3],["golem","Golem de pierre",24,3,1],["sorciere","Sorcière",14,3,3],["grimoire","Grimoire enragé",8,2,3]]],
-  ["Halloween et école", [["citrouille","Citrouille maudite",10,2,2],["frankenstein","Créature de Frankenstein",22,3,2],["pupitre","Pupitre hanté",8,1,2],["roi","Roi couronné",30,4,3,1]]],
+  ["Glace et neige", [["loupglace","Loup des glaces",10,2,5],["yeti","Yéti",18,2,3],["golemglace","Golem de glace",18,2,1],["blizzard","Esprit du blizzard",14,2,4],["dragonglace","Dragon de glace",30,3,3,1]]],
+  ["Feu et dragons", [["feufollet","Feu follet",5,1,5],["elemfeu","Élémentaire de feu",14,2,3],["dragonnet","Dragonnet",12,2,4],["dragon","Dragon rouge",30,3,3,1]]],
+  ["Morts-vivants", [["squelette","Squelette",8,2,3],["zombie","Momie",12,2,2],["fantome","Fantôme",8,2,4],["vampire","Vampire",18,2,4],["chevnoir","Chevalier noir",18,2,3],["necro","Nécromancien",16,2,3],["liche","Liche",30,3,3,1]]],
+  ["Forêt et bêtes", [["rat","Rat géant",4,1,4],["chauve","Chauve-souris",4,1,5],["araignee","Araignée géante",9,2,4],["loup","Loup-garou",14,2,5],["harpie","Harpie",10,2,5],["arbre","Arbre maudit",18,2,1],["minotaure","Minotaure",26,3,3,1]]],
+  ["Donjon et sortilèges", [["bandit","Bandit",8,2,4],["elfenoir","Elfe noir",12,2,4],["mimique","Coffre mimique",14,2,1],["gargouille","Gargouille",16,2,3],["golem","Golem de pierre",18,2,1],["sorciere","Sorcière",14,2,3],["grimoire","Grimoire enragé",8,2,3]]],
+  ["Halloween et école", [["citrouille","Citrouille maudite",10,2,2],["frankenstein","Créature de Frankenstein",18,2,2],["pupitre","Pupitre hanté",8,1,2],["roi","Roi couronné",30,3,3,1]]],
 ];
 function ouvrirBestiaire() {
   const fiche = (b, i, j) => `<button type="button" class="bst" data-b="${i}.${j}"><span class="coin" style="--rim:${b[5] ? "#c9a227" : "#7a2a24"}">${imgMon(b[0]) || SVG[b[0]] || ""}</span><b>${esc(b[1])}</b><small>${b[2]} PV · ${b[3]} dég. · ${b[4]} cases${b[5] ? " · Boss" : ""}</small></button>`;
@@ -1313,7 +1313,7 @@ function appliquerGroupe(g, relever) {
   for (const gh of g.heroes) {
     const h = S.heroes.find(x => x.cls === gh.cls); if (!h) continue;
     Object.assign(h, { race: gh.race, nom: gh.nom, force: gh.force });
-    h.pv = Math.min(st(h).pv, relever && gh.pv <= 0 ? 1 : gh.pv); h.mana = Math.min(st(h).mana, gh.mana);
+    h.pv = Math.min(st(h).pv, relever && gh.pv <= 0 ? 1 : gh.pv); h.mana = Math.min(st(h).mana, gh.mana + (relever ? 1 : 0));
     if (h.pv <= 0) { h.joue = true; h.actions = 0; }
   }
   S.inv = { vie: 0, mana: 0, cle: 0, ...g.inv };
@@ -2258,9 +2258,10 @@ const brumeActive = () => S && S.phase !== "edit" && S.carte.brume && !S.brumeOf
 function majBrume() {
   if (!brumeActive()) { brumeCv.hidden = true; return; }
   if (!S.vu || S.vu.length !== W * H) S.vu = new Uint8Array(W * H);
-  const voit = new Uint8Array(W * H), R = 4;
+  const voit = new Uint8Array(W * H);
   for (const h of S.heroes) {
     if (h.pv <= 0) continue;
+    const R = 4 + ((RACES[h.race] || {}).vue || 0);
     for (let y = Math.max(0, h.y - R); y <= Math.min(H - 1, h.y + R); y++) for (let x = Math.max(0, h.x - R); x <= Math.min(W - 1, h.x + R); x++) {
       if ((x - h.x) ** 2 + (y - h.y) ** 2 > (R + .5) ** 2) continue;
       if (dist(h, { x, y }) <= 1 || vue(h, { x, y })) { voit[y * W + x] = 1; S.vu[y * W + x] = 1; }
@@ -2468,7 +2469,7 @@ async function defendre(h, e, deg) {
   if (ok) {
     bruit("metal"); etincelles(h, "#9fe7ff", 12);
     await anim(h, "parry");
-    if (e && e.pv > 0 && aPortee(h, e)) {
+    if (e && e.pv > 0 && dist(h, e) <= 1) {
       log(`${esc(h.nom)} pare le coup et contre-attaque ${e.nom}!`);
       await frapper(h, e);
       await blesser(e, st(h).deg);
@@ -2595,10 +2596,10 @@ async function executerPouvoir(h, p, cible) {
     await anim(h, "power");
     switch (p.id) {
       case "force": h.force = true; break;
-      case "priere": h.mana = Math.min(st(h).mana, h.mana + 1); flotter(h.x, h.y, "+1 mana", "#8cc4ff"); bruit("soin"); await anim(h, "heal"); break;
+      case "priere": h.pv = Math.min(st(h).pv, h.pv + 1); flotter(h.x, h.y, "+1 PV", "#7be38a"); bruit("soin"); await anim(h, "heal"); break;
       case "poison": await projectile(h, cible, "#9be36b"); cible.poison = true; await anim(cible, "hit"); log(`${cible.nom} est empoisonné.`); break;
       case "tp": await anim(h, "die"); h.x = cible.x; h.y = cible.y; render(); await sleep(380); await anim(h, "open"); break;
-      case "camo": await anim(h, "lunge", cible); await blesser(cible, Math.ceil(cible.pv / 2)); break;
+      case "camo": await anim(h, "lunge", cible); await blesser(cible, cible.boss ? Math.min(6, Math.ceil(cible.pv / 2)) : Math.ceil(cible.pv / 2)); break;
       case "lynx": await projectile(h, cible, "#ffe08a"); await blesser(cible, 4); break;
       case "pickpocket": S.portes[cible.k].verrou = false; drawTerrain(); bruit("porte"); log("Le cadenas cède!"); break;
       case "fleches": {
