@@ -136,6 +136,18 @@ function atelier(id, seed, base) {
 }
 
 function fin(A, id, nom, theme, desc) {
+  // un buisson ne doit pas chevaucher un arbre ou un meuble (on ne le distinguerait plus) : on le déplace un peu
+  const touche = (bx, by, r) => A.objs.some(o => bx + r > o.x - 16 && bx - r < o.x + o.w + 16 && by + r > o.y - 90 && by - r < o.y + o.h + 12);
+  A.bushes.forEach((b, n) => {
+    if (!touche(b.x, b.y, b.r)) return;
+    const i0 = Math.floor(b.x / T), j0 = Math.floor(b.y / T), sol = A.get(i0, j0);
+    for (let d = 1; d <= 10; d++) for (let j = j0 - d; j <= j0 + d; j++) for (let i = i0 - d; i <= i0 + d; i++) {
+      if (Math.max(Math.abs(i - i0), Math.abs(j - j0)) !== d) continue;
+      const x = (i + 0.5) * T, y = (j + 0.5) * T;
+      if (!A.free(i, j, 1, sol) || touche(x, y, b.r) || A.bushes.some((c, m) => m !== n && Math.hypot(c.x - x, c.y - y) < T * 3)) continue;
+      b.x = Math.round(x); b.y = Math.round(y); return;
+    }
+  });
   // les buissons servent aussi de cachettes pour les objets
   for (const b of A.bushes) A.spots.push({ x: b.x, y: b.y });
   return {
