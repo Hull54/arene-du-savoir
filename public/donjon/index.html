@@ -325,14 +325,12 @@ html, body, button, .board, .modal { touch-action: manipulation; }
 @keyframes pinpulse { 50% { box-shadow: 0 0 0 3px #120d09, 0 0 0 6px var(--gold), 0 0 26px 6px rgba(227,171,69,.55); } }
 .modal .lieu-intro { display: block; text-align: left; font-size: 1.15rem; line-height: 1.5; margin: 10px 0; }
 .modal .lieu-info { display: block; color: var(--muted); font-size: .95rem; }
-@media (prefers-reduced-motion: reduce) { .pin-coin { animation: none; } }
+html.rm .pin-coin { animation: none; }
 .tool.add { border-style: dashed; color: var(--gold); }
 .item.special { border-color: #9b6ad1; }
 .modal label.btn { cursor: pointer; display: inline-block; }
-@media (prefers-reduced-motion: reduce) {
-  .tok.deco::before, .tok.deco .flame path, .tok.deco .glow, .tok.spark i { animation: none; }
-  .tok.spark i { opacity: 1; }
-}
+html.rm .tok.deco::before,html.rm .tok.deco .flame path,html.rm .tok.deco .glow,html.rm .tok.spark i { animation: none; }
+html.rm .tok.spark i { opacity: 1; }
 
 @media (max-width: 980px) {
   body { overflow: auto; }
@@ -341,9 +339,7 @@ html, body, button, .board, .modal { touch-action: manipulation; }
   .side, body.editing .side { grid-template-rows: auto; }
   .log ol { max-height: 220px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .tok, .float, .die.rolling svg, .hl.tgt, .tok.hero.active { transition: none; animation: none; }
-}
+html.rm .tok,html.rm .float,html.rm .die.rolling svg,html.rm .hl.tgt,html.rm .tok.hero.active { transition: none; animation: none; }
 
 .board canvas#meteo { pointer-events: none; z-index: 30; }
 #flash, #vignette { pointer-events: none; }
@@ -370,9 +366,7 @@ body.editing #vignette { opacity: 0 !important; }
 .reg input[type=range] { width: 100%; accent-color: var(--gold); }
 .reg-t { margin: 16px 0 0; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: left; }
 .sonboard { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
-@media (prefers-reduced-motion: reduce) {
-  .tok .coin > svg, .tok .coin > img, .tok.enemy.boss::before, #vignette { animation: none !important; }
-}
+html.rm .tok .coin > svg,html.rm .tok .coin > img,html.rm .tok.enemy.boss::before,html.rm #vignette { animation: none !important; }
 
 /* Effets d'attente : seuls de petits effets bougent, le jeton reste immobile */
 .fxi { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
@@ -459,7 +453,8 @@ body.editing #vignette { opacity: 0 !important; }
 .pct.bon { background: #24442a; color: #b9f0c0; } .pct.moyen { background: #4a3c1c; color: #ffe08a; } .pct.faible { background: #4d2222; color: #ffb3a8; }
 .bilan details { margin-top: 4px; color: var(--muted); font-size: .85rem; } .bilan summary { cursor: pointer; color: var(--ink); }
 .bilan-wrap { max-height: 58vh; overflow: auto; }
-@media (prefers-reduced-motion: reduce) { .fxi, .tok.fx-ecto .coin, .tok .coin > img, .tok.hero.active .coin { animation: none !important; } .fxi { display: none; } }
+html.rm .fxi,html.rm .tok.fx-ecto .coin,html.rm .tok .coin > img,html.rm .tok.hero.active .coin { animation: none !important; }
+html.rm .fxi { display: none; }
 
 /* Tour du joueur : le héros actif ressort, les autres passent en retrait */
 .tok.hero.active { z-index: 6; }
@@ -474,7 +469,7 @@ body.editing #vignette { opacity: 0 !important; }
 .tok.hero.attend .coin { filter: saturate(.7) brightness(.72); scale: .9; }
 .tok.hero.attend .fxi { opacity: .5; }
 .tok.hero.attend.done .coin { filter: saturate(.4) brightness(.6); }
-@media (prefers-reduced-motion: reduce) { .tok.hero.active::before, .tok.hero.active::after { animation: none !important; } }
+html.rm .tok.hero.active::before,html.rm .tok.hero.active::after { animation: none !important; }
 /* ---------- Thème « parchemin et ardoise » : panneaux clairs bien cernés, rubans de couleur, boutons en relief ---------- */
 :root {
   --bg: #3b414d; --panel: #f1e3c4; --panel-2: #e6d3ab; --line: #2b1f16; --ink: #2b1d12; --muted: #6b5638;
@@ -601,6 +596,15 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .nametag { color: #f6ead2; }
 .nametag.tour { color: #1d1408; }
 
+
+/* Les jetons vivants : le portrait respire doucement, chacun à son rythme */
+@keyframes respire { 0%, 100% { transform: scale(1.02); } 50% { transform: scale(1.07) translateY(-2.5%); } }
+.tok.hero:not(.ko) .coin > img, .tok.hero:not(.ko) .coin > svg, .tok.pnj .coin > img, .tok.pnj .coin > svg,
+.tok.enemy:not(.dead) .coin > img, .tok.enemy:not(.dead) .coin > svg { transform-origin: 50% 75%; animation: respire var(--rs, 3.6s) ease-in-out var(--rd, 0s) infinite; }
+.tok.enemy { --rs: 2.7s; }
+.tok.enemy.boss { --rs: 3.3s; }
+.tok.fx-braise.enemy:not(.dead) .coin > img { animation: interieur 1.6s ease-in-out infinite alternate, respire var(--rs) ease-in-out var(--rd, 0s) infinite; }
+html.rm .tok .coin > img, html.rm .tok .coin > svg { animation: none !important; }
 </style>
 
 <div class="app">
@@ -1873,7 +1877,7 @@ const DECO = {
 const tokEls = new Map();
 function tok(id, cls, html) {
   let el = tokEls.get(id);
-  if (!el) { el = document.createElement("div"); el.dataset.id = id; ents.appendChild(el); tokEls.set(id, el); }
+  if (!el) { el = document.createElement("div"); el.dataset.id = id; el.style.setProperty("--rd", -(Math.random() * 3.6).toFixed(2) + "s"); ents.appendChild(el); tokEls.set(id, el); }
   el.className = "tok " + cls;
   if (el._html !== html) { el.innerHTML = html; el._html = html; }
   return el;
@@ -2030,6 +2034,7 @@ addEventListener("unhandledrejection", e => signaler(e.reason));
 // Petit crochet vert sur le jeton : l'action est bien enregistrée
 function valide(ent) {
   if (!ent || !ents) return;
+  if (ent.pv === undefined || ent.pv > 0) anim(ent, "ok");
   const el = document.createElement("div"); el.className = "valide"; el.innerHTML = "<b>✓</b>";
   el.style.transform = `translate(${ent.x * CELL}px, ${ent.y * CELL}px)`; ents.appendChild(el);
   try { bruit("coche"); } catch {}
@@ -2038,7 +2043,8 @@ function valide(ent) {
 }
 
 // ---------- animations des jetons ----------
-const RM = matchMedia("(prefers-reduced-motion: reduce)");
+const RM = { get matches() { return PREF.anims === "reduit"; } };
+const majAnims = () => document.documentElement.classList.toggle("rm", RM.matches);
 function anim(ent, kind, to) {
   const el = tokEls.get(ent.id), coin = el && el.querySelector(".coin");
   if (!coin || RM.matches) return Promise.resolve();
@@ -2046,6 +2052,12 @@ function anim(ent, kind, to) {
   let kf, d = 450;
   switch (kind) {
     case "bond": kf = [{ transform: "none" }, { transform: "translateY(-30%) scale(1.05, 1.1)", offset: .45 }, { transform: "scale(1.12, .88)", offset: .85 }, { transform: "none" }]; d = 220; break;
+    case "tir": {
+      const dx = Math.sign(to.x - ent.x) * 14, dy = Math.sign(to.y - ent.y) * 14;
+      kf = [{ transform: "none", filter: "none" }, { transform: `translate(${-dx}%, ${-dy}%) scale(.92)`, offset: .45 }, { transform: `translate(${dx}%, ${dy}%) scale(1.14)`, filter: "brightness(1.4)", offset: .7 }, { transform: "none", filter: "none" }]; d = 460; break;
+    }
+    case "ok": kf = [{ transform: "none" }, { transform: "translateY(-10%) scale(1.08)", offset: .4 }, { transform: "scale(1.04, .96)", offset: .75 }, { transform: "none" }]; d = 380; break;
+    case "eveil": kf = [{ transform: "none" }, { transform: "translateY(-18%) scale(1.12)", offset: .35 }, { transform: "scale(1.1, .9)", offset: .7 }, { transform: "none" }]; d = 480; break;
     case "hop": kf = [{ transform: "none" }, { transform: "translateY(-14%) scale(1.15)" }, { transform: "none" }]; d = 380; break;
     case "lunge": {
       const dx = Math.sign(to.x - ent.x) * 45, dy = Math.sign(to.y - ent.y) * 45;
@@ -2072,7 +2084,7 @@ function projectile(from, to, color) {
 }
 async function frapper(h, e) {
   S.frappeur = h;
-  if (C[h.cls].portee > 1) { await anim(h, "hop"); bruit(h.cls === "mage" ? "magie" : "fleche"); await projectile(h, e, C[h.cls].proj); }
+  if (C[h.cls].portee > 1) { await anim(h, "tir", e); bruit(h.cls === "mage" ? "magie" : "fleche"); await projectile(h, e, C[h.cls].proj); }
   else { bruit("epee"); await anim(h, "lunge", e); entaille(e); }
 }
 
@@ -2086,6 +2098,7 @@ const SOLS = { pierre: "Pierre", herbe: "Herbe", terre: "Terre", bois: "Plancher
 const PREF = { vol: .7, muet: false, musique: true, ambiance: true };
 try { Object.assign(PREF, JSON.parse(localStorage.getItem("donjon-son") || "{}")); } catch {}
 const sauverPref = () => { try { localStorage.setItem("donjon-son", JSON.stringify(PREF)); } catch {} };
+majAnims();
 let METEO_FORCEE = null;
 const SON = { ctx: null, cle: "", musique: null, ambiance: null };
 const fxQuete = () => S && S.phase === "edit" && ED ? ED.quete : QUETE;
@@ -2490,6 +2503,24 @@ function flashRouge() {
   if (RM.matches) return;
   document.getElementById("flash").animate([{ opacity: 0, background: "radial-gradient(ellipse at center, rgba(200,0,0,0) 40%, rgba(200,0,0,.6))" }, { opacity: 1, offset: .2 }, { opacity: 0 }], { duration: 600 });
 }
+// De temps en temps, un seul jeton bouge un peu : un héros s'étire, un monstre menace le héros le plus proche
+setInterval(() => {
+  if (!S || S.busy || S.fini || S.phase === "edit" || RM.matches || document.hidden || !ents) return;
+  const vivs = [...S.heroes.filter(h => h.pv > 0), ...S.enemies.filter(e => e.pv > 0)].filter(x => {
+    const el = tokEls.get(x.id), c = el && el.isConnected && el.querySelector(".coin");
+    return c && !el.classList.contains("dragging") && getComputedStyle(el).display !== "none" && !c.getAnimations().some(a => !(a instanceof CSSAnimation));
+  });
+  if (!vivs.length) return;
+  const x = vivs[Math.floor(Math.random() * vivs.length)], c = tokEls.get(x.id).querySelector(".coin");
+  if (S.heroes.includes(x)) {
+    const s = Math.random() < .5 ? -1 : 1;
+    c.animate([{ transform: "none" }, { transform: `rotate(${s * 7}deg) translateY(-5%)`, offset: .3 }, { transform: `rotate(${-s * 4}deg)`, offset: .65 }, { transform: "none" }], { duration: 700, easing: "ease-in-out" });
+  } else {
+    const h = S.heroes.filter(v => v.pv > 0).sort((a, b) => dist(a, x) - dist(b, x))[0];
+    const dx = h ? Math.sign(h.x - x.x) * 9 : 0, dy = h ? Math.sign(h.y - x.y) * 9 : -6;
+    c.animate([{ transform: "none" }, { transform: `translate(${dx}%, ${dy}%) scale(1.08)`, offset: .35 }, { transform: "scale(1.03)", offset: .6 }, { transform: "none" }], { duration: 760, easing: "ease-in-out" });
+  }
+}, 3800);
 // Déplacement case par case, en petits bonds, avec un bruit de pas selon le sol
 async function marcher(ent, pts, deja) {
   const el = tokEls.get(ent.id), [fx, fy] = pts[pts.length - 1];
@@ -3371,7 +3402,7 @@ async function finTourHeros() {
   if (S.attente) { S.attente = null; drawPath(null); }
   const h = heros(); h.joue = true; h.actions = 0;
   const next = S.heroes.findIndex(x => !x.joue && x.pv > 0);
-  if (next >= 0) { S.actif = next; toast(`Au tour ${de(heros().nom)}!`); render(); return; }
+  if (next >= 0) { S.actif = next; toast(`Au tour ${de(heros().nom)}!`); render(); anim(heros(), "eveil"); return; }
   S.phase = "mj"; log("— Tour du maître du jeu —"); bruit("grogne");
   for (const e of S.enemies) e.bouge = false;
   render();
@@ -3386,7 +3417,7 @@ function finTourMJ() {
   for (const h of S.heroes) { h.joue = h.pv <= 0; h.actions = h.pv > 0 ? S.nbActions : 0; }
   S.actif = S.heroes.findIndex(h => h.pv > 0);
   log(`— Manche ${S.round} —`);
-  render(); toast(`Manche ${S.round} : au tour ${de(heros().nom)}!`);
+  render(); toast(`Manche ${S.round} : au tour ${de(heros().nom)}!`); if (heros()) anim(heros(), "eveil");
   sauvegarderPartie(true);
   if (PERIODE.fin && PERIODE.duree) aSuivre(); else evenementsManche();
 }
@@ -4378,6 +4409,7 @@ document.getElementById("btn-reg").onclick = () => {
       <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
       <label>Durée de la période <select id="r-per">${opt(String(PREF.periode ?? 50), [["0", "Pas de minuterie"], ["30", "30 minutes"], ["45", "45 minutes"], ["50", "50 minutes"], ["60", "60 minutes"], ["75", "75 minutes"], ["90", "90 minutes"]])}</select></label>
       <label>Voix des PNJ <select id="r-voix">${opt(PREF.voix || "auto", [["auto", "Lit les dialogues tout seul"], ["bouton", "Avec le bouton 🔊 seulement"], ["non", "Désactivée"]])}</select></label>
+      <label>Animations <select id="r-anim">${opt(PREF.anims === "reduit" ? "reduit" : "vivant", [["vivant", "Jetons vivants"], ["reduit", "Réduites"]])}</select></label>
       <label>Souffleur du MJ <select id="r-souf">${opt(PREF.souffleur === false ? "0" : "1", [["1", "Affiché sur le plateau"], ["0", "Caché"]])}</select></label>
     </div>
     <div class="row"><button class="btn blue" type="button" id="r-edit">Créateur de quêtes</button><button class="btn" type="button" id="r-reset">Recommencer le chapitre</button><button class="btn" type="button" id="r-restart">Recommencer la quête</button></div>
@@ -4402,6 +4434,7 @@ document.getElementById("btn-reg").onclick = () => {
   document.getElementById("r-evt").onchange = e => { PREF.evts = e.target.value; sauverPref(); S.dernierEvt = Date.now(); };
   document.getElementById("r-per").onchange = e => { PREF.periode = Number(e.target.value); sauverPref(); demarrerPeriode(); toast(PREF.periode ? `Minuterie : ${PREF.periode} minutes à partir de maintenant.` : "Minuterie désactivée."); };
   document.getElementById("r-voix").onchange = e => { PREF.voix = e.target.value; sauverPref(); if (e.target.value !== "non" && !voixFr()) toast("Aucune voix française n'est installée sur cet ordinateur."); };
+  document.getElementById("r-anim").onchange = e => { PREF.anims = e.target.value; sauverPref(); majAnims(); };
   document.getElementById("r-souf").onchange = e => { PREF.souffleur = e.target.value === "1"; PREF.sfMin = false; sauverPref(); majSouffleur(); };
   document.getElementById("r-vol").oninput = e => { PREF.vol = e.target.value / 100; PREF.muet = false; sonVolumes(); sauverPref(); };
   document.getElementById("r-vol").onchange = () => bruit("pas");
