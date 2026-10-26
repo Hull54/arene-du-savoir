@@ -302,6 +302,7 @@ html, body, button, .board, .modal { touch-action: manipulation; }
 .monde-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .monde-wrap { min-height: 0; display: grid; place-items: center; }
 .monde-carte { position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 3px #0b0806, 0 0 0 5px var(--line), 0 24px 60px rgba(0,0,0,.65); }
+.m-fond video { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: cover; transition: opacity .7s linear; }
 .m-fond, .m-fond img, .m-fond svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .m-fond img { object-fit: cover; }
 .m-fond svg text { font-family: var(--display); }
@@ -729,7 +730,7 @@ html.rm .tok .coin > img, html.rm .tok .coin > svg { animation: none !important;
   <div class="monde-top"><div class="brand">Le Royaume d'Hull<small>Classe et Donjon · touche un lieu pour partir à l'aventure</small></div><span class="spacer"></span>
     <div class="tools"><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
   <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-pins" id="m-pins"></div></div></div>
-  <input type="file" id="m-file" accept="image/*,application/pdf" hidden>
+  <input type="file" id="m-file" accept="image/*,video/mp4,video/webm,application/pdf" hidden>
 </div>
 <div class="overlay" id="overlay" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" hidden></div>
@@ -4269,7 +4270,7 @@ const Stock = {
     return (await IDB.all("reglages")).find(x => x.id === "monde") || null;
   },
   async sauverMonde(m) {
-    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, caches: m.caches || [] };
+    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, video: !!(m.image && m.video), caches: m.caches || [] };
     if (d.image && d.image.startsWith("data:") && this.assets) { try { const b = dataUrlBlob(d.image); d.image = "asset:" + (await this.assets.upload(b, { type: b.type })).id; m.image = d.image; } catch {} }
     if (this.db) { try { await this.db.doc("reglages/monde").set(d); return true; } catch {} }
     return !!(await IDB.put("reglages", d));
@@ -4480,7 +4481,9 @@ async function afficherMonde() {
   const m = document.getElementById("monde"); m.hidden = false;
   const carte = document.getElementById("m-carte");
   const src = srcJeton(MONDE.image);
-  carte.querySelector(".m-fond").innerHTML = src ? `<img src="${src}" alt="Carte du monde">` : MONDE_SVG;
+  const fond = carte.querySelector(".m-fond");
+  if (src && MONDE.video) { if (fond.dataset.src !== src) { fond.dataset.src = src; videoEnBoucle(fond, src); } }
+  else { delete fond.dataset.src; fond.innerHTML = src ? `<img src="${src}" alt="Carte du monde">` : MONDE_SVG; const im = fond.querySelector("img"); if (im) im.onload = ajusterMonde; }
   const pris = [], pins = [];
   for (const q of quetesDuMonde()) {
     const [x, y] = lieuDe(q, pris); pris.push([x, y]);
@@ -4500,10 +4503,25 @@ async function afficherMonde() {
 }
 function ajusterMonde() {
   const wrap = document.getElementById("m-wrap"), carte = document.getElementById("m-carte");
-  const fond = carte.querySelector(".m-fond img, .m-fond svg");
-  const ratio = fond && fond.naturalWidth ? fond.naturalHeight / fond.naturalWidth : 1000 / 1600;
+  const fond = carte.querySelector(".m-fond video, .m-fond img, .m-fond svg");
+  const ratio = fond && fond.videoWidth ? fond.videoHeight / fond.videoWidth : fond && fond.naturalWidth ? fond.naturalHeight / fond.naturalWidth : 1000 / 1600;
   const w = Math.min(wrap.clientWidth, wrap.clientHeight / ratio);
   carte.style.width = w + "px"; carte.style.height = w * ratio + "px"; carte.style.setProperty("--mw", w + "px");
+}
+// Une vidéo courte (ex. 5 s de Canva) tourne en boucle : deux lecteurs se relaient en fondu pour cacher le raccord
+function videoEnBoucle(fond, src) {
+  fond.innerHTML = [0, 1].map(i => `<video src="${src}" muted playsinline preload="auto" aria-hidden="${i ? "true" : "false"}" style="opacity:${i ? 0 : 1}"></video>`).join("");
+  const [a, b] = fond.querySelectorAll("video"); let cur = a, next = b, fondu = false;
+  a.onloadedmetadata = ajusterMonde;
+  a.play().catch(() => {});
+  for (const v of [a, b]) v.ontimeupdate = () => {
+    if (v !== cur || fondu || !v.duration) return;
+    if (v.duration - v.currentTime < .8) {
+      fondu = true; next.currentTime = 0; next.style.zIndex = 1; cur.style.zIndex = 0;
+      next.play().catch(() => {}); next.style.opacity = 1;
+      setTimeout(() => { cur.pause(); cur.style.opacity = 0; [cur, next] = [next, cur]; fondu = false; }, 800);
+    }
+  };
 }
 function fermerMonde() { document.getElementById("monde").hidden = true; mondeEdit = false; }
 async function choisirLieu(id) {
@@ -4552,11 +4570,19 @@ document.getElementById("m-caches").onclick = async () => { MONDE.caches = []; a
 document.getElementById("m-close").onclick = fermerMonde;
 document.getElementById("m-creer").onclick = () => { fermerMonde(); ouvrirEditeur(); document.getElementById("ed-new").click(); };
 document.getElementById("btn-monde").onclick = afficherMonde;
-document.getElementById("m-def").onclick = async () => { MONDE.image = null; await Stock.sauverMonde(MONDE); afficherMonde(); };
+document.getElementById("m-def").onclick = async () => { MONDE.image = null; MONDE.video = false; await Stock.sauverMonde(MONDE); afficherMonde(); };
 document.getElementById("m-file").addEventListener("change", async e => {
   let f = e.target.files[0]; e.target.value = "";
   if (!f) return;
   if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) { try { f = await pdfEnImage(f); } catch { toast("Ce PDF n'a pas pu être lu."); return; } }
+  // Une vidéo (MP4, WebM) devient la carte animée, jouée en boucle et sans son
+  if (/^video\//.test(f.type) || /\.(mp4|webm|m4v|mov)$/i.test(f.name)) {
+    if (f.size > 19 * 1024 * 1024) { toast("Cette vidéo est trop lourde (plus de 19 Mo). Exporte-la en qualité plus basse ou plus courte."); return; }
+    toast("Vidéo en cours d'envoi…");
+    MONDE.image = await blobDataUrl(f); MONDE.video = true;
+    await Stock.sauverMonde(MONDE); afficherMonde(); return;
+  }
+  MONDE.video = false;
   // Un GIF ou un WebP peut être animé : on le garde tel quel (le redessiner figerait l'animation)
   if (/^image\/(gif|webp)$/.test(f.type) || /\.(gif|webp)$/i.test(f.name)) {
     if (f.size > 15 * 1024 * 1024) { toast("Cette image animée est trop lourde (plus de 15 Mo). Essaie une version plus petite."); return; }
