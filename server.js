@@ -12,6 +12,8 @@ const PUBLIC = path.join(__dirname, 'public');
 const QUESTIONS = JSON.parse(fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8'));
 const GENERATEURS = require('./generateurs');
 const { CARTES, WALL, WATER } = require('./cartes');
+const MV = require('./public/mouvement');   // déplacement partagé avec le navigateur
+const DUR = new Set([...WALL, ...WATER]);
 // Liste des notions (cases à cocher de l'enseignant), regroupées par matière
 const NOTIONS_BASE = [];
 for (const q of [...QUESTIONS, ...Object.values(GENERATEURS).map(g => g())])
@@ -47,20 +49,6 @@ function lanAddresses() {
     .filter(i => i && i.family === 'IPv4' && !i.internal).map(i => `http://${i.address}:${PORT}`);
 }
 
-// Objets de chaque carte rangés par tuile : un test de collision ne regarde que les objets voisins
-const GRILLES = new WeakMap(), MARGE = 48;
-function grilleObjs(c) {
-  let g = GRILLES.get(c);
-  if (g) return g;
-  g = Array.from({ length: c.cols * c.rows }, () => []);
-  for (const o of c.objs) {
-    const i0 = Math.max(0, Math.floor((o.x - MARGE) / c.T)), i1 = Math.min(c.cols - 1, Math.floor((o.x + o.w + MARGE) / c.T));
-    const j0 = Math.max(0, Math.floor((o.y - MARGE) / c.T)), j1 = Math.min(c.rows - 1, Math.floor((o.y + o.h + MARGE) / c.T));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) g[j * c.cols + i].push(o);
-  }
-  GRILLES.set(c, g);
-  return g;
-}
 
 // ---------- Une partie (un « monde ») : la classe, ou un élève seul à la maison ----------
 // Tout l'état du jeu vit dans cette fonction : chaque appel crée une partie indépendante.
@@ -76,11 +64,11 @@ const SPAWN_PROTECT = 2.5;
 const WRONG_DELAY = 3;
 
 const CLASSES = {
-  guerrier: { nom: 'Guerrier', hp: 170, speed: 150, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
+  guerrier: { nom: 'Guerrier', hp: 170, speed: 160, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
   voleur:   { nom: 'Voleur',   hp: 105, speed: 200, atk: { type: 'melee', range: 55, arc: 1.2, dmg: 18, cd: 0.35, backstab: 2 }, power: { nom: 'Ombre', cd: 9, dur: 4 }, dash: { nom: 'Roulade', cd: 2, dist: 140, dur: 0.24 } },
-  mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 380, dmg: 22, cd: 0.65, r: 10, life: 1.6 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
+  mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 430, dmg: 22, cd: 0.65, r: 10, life: 1.3 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
   druide:   { nom: 'Druide',   hp: 115, speed: 165, atk: { type: 'proj', speed: 460, dmg: 16, cd: 0.5, r: 8, life: 1.25 }, power: { nom: 'Cercle de soin', cd: 10, radius: 170, soin: 40 }, dash: { nom: 'Bond', cd: 3, dist: 140, dur: 0.24, racines: 70, rdur: 3 } },
-  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
+  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.0 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 
 // Objets des coffres et objets cachés
@@ -225,24 +213,12 @@ function tileAt(x, y) {
   if (i < 0 || j < 0 || i >= carte.cols || j >= carte.rows) return 'c';
   return carte.tiles[j][i];
 }
-function circleHitsRect(x, y, r, o) {
-  const cx = clamp(x, o.x, o.x + o.w), cy = clamp(y, o.y, o.y + o.h);
-  return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
-}
+const circleHitsRect = MV.circleHitsRect;
 const healCore = () => carte.heal && carte.heal.kind !== 'source';
-function touchObj(x, y, r) {
-  const os = r > MARGE ? carte.objs : grilleObjs(carte)[clamp(Math.floor(y / T), 0, carte.rows - 1) * carte.cols + clamp(Math.floor(x / T), 0, carte.cols - 1)];
-  for (const o of os) if (circleHitsRect(x, y, r, o)) return true;
-  return false;
-}
+const touchObj = (x, y, r) => MV.touchObj(carte, x, y, r);
 // Pour les joueurs : murs, eau, fosses, objets
 function blocked(x, y, r) {
-  if (x < r || y < r || x > W - r || y > H - r) return true;
-  const k = r * 0.75;
-  const dur = (px, py) => { const t = tileAt(px, py); return WALL.has(t) || WATER.has(t); };
-  if (dur(x, y) || dur(x + k, y) || dur(x - k, y) || dur(x, y + k) || dur(x, y - k)) return true;
-  if (touchObj(x, y, r)) return true;
-  if (healCore() && Math.hypot(x - carte.heal.x, y - carte.heal.y) < 30 + r) return true;
+  if (MV.heurte(carte, DUR, x, y, r)) return true;
   if (barrels.some(b => !b.t && Math.hypot(x - b.x, y - b.y) < BARREL.r + r - 4)) return true;
   return false;
 }
@@ -1666,6 +1642,7 @@ function step() {
   if (!frozen && timer.dur && !ended) { if (timer.left > 60 && timer.left - dt <= 60 && timer.dur > 90) addFeed('⏱ Plus qu\'une minute !'); timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); } }
 
   for (const p of players.values()) {
+    p.vb = 0;
     if (frozen) continue;
     if (p.bot) botThink(p, dt);
     if (!p.alive) {
@@ -1693,25 +1670,21 @@ function step() {
       mx = p.moveAngle == null ? 0 : Math.cos(p.moveAngle);
       my = p.moveAngle == null ? 0 : Math.sin(p.moveAngle);
     } else {
-      mx = p.input.r - p.input.l; my = p.input.d - p.input.u;
-      const len = Math.hypot(mx, my) || 1; mx /= len; my /= len;
+      mx = p.input.jx != null ? p.input.jx : p.input.r - p.input.l; my = p.input.jx != null ? p.input.jy : p.input.d - p.input.u;
+      const len = Math.hypot(mx, my); if (len > 1) { mx /= len; my /= len; }
     }
-    let sp = CLASSES[p.cls].speed * dt;
-    const under = tileAt(p.x, p.y + 12);
-    if (under === 'm') sp *= 0.55;          // boue, sables mouvants : ralentit
-    else if (under === '=') sp *= 0.7;      // gué : on traverse l'eau lentement
-    else if (under === 'i') sp *= 1.4;      // glace : on glisse plus vite !
-    if (p.stealth > 0) sp *= 1.2;
-    if (mode === 'zombie' && p.team === 1) sp *= 1.1;
-    if (p.fast > 0) sp *= 1.35;
-    if (p.slow > 0) sp *= 0.5;
-    if (p.carry) sp *= FLAG.slow;
-    sp *= 1 + GEAR.bottes.vitesse * p.gear.bottes / 100;
-    sp *= raceDe(p).vitesse || 1;
-    const bx = blocked(p.x + mx * sp, p.y, R), by = blocked(p.x, p.y + my * sp, R);
-    if (!bx) p.x += mx * sp;
-    if (!by) p.y += my * sp;
-    if (p.bot && p.moveAngle != null && bx && by) { p.moveAngle += Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1); p.stuckT = 0.4; p.path = null; }
+    let vb = CLASSES[p.cls].speed;          // vitesse sans le terrain (envoyée au joueur pour sa prédiction)
+    if (p.stealth > 0) vb *= 1.2;
+    if (mode === 'zombie' && p.team === 1) vb *= 1.1;
+    if (p.fast > 0) vb *= 1.35;
+    if (p.slow > 0) vb *= 0.5;
+    if (p.carry) vb *= FLAG.slow;
+    vb *= 1 + GEAR.bottes.vitesse * p.gear.bottes / 100;
+    vb *= raceDe(p).vitesse || 1;
+    p.vb = vb;
+    // boue ×0.55, gué ×0.7, glace ×1.4
+    const coince = MV.pas(p, mx, my, vb * MV.terrain(tileAt(p.x, p.y + 12)) * dt, blocked, R);
+    if (p.bot && p.moveAngle != null && coince) { p.moveAngle += Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1); p.stuckT = 0.4; p.path = null; }
   }
 
   if (!frozen) {
@@ -1795,7 +1768,7 @@ function broadcast() {
     if (c.role === 'prof') c.etat(`{"t":"s","w":${common}}`);
     else if (c.player) {
       const p = c.player;
-      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), bo: Math.ceil(p.shield), om: Math.ceil(p.stealth), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear };
+      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), bo: Math.ceil(p.shield), om: Math.ceil(p.stealth), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear, vb: Math.round(p.vb || 0) };
       c.etat(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
     }
   }
@@ -1816,7 +1789,7 @@ const infoT = setInterval(() => {
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
 
-const welcome = () => ({ t: 'welcome', map: carte, classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
+const welcome = () => ({ t: 'welcome', map: carte, dur: [...DUR].join(''), mur: [...WALL].join(''), classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
 setCarte(CARTES[0]);
 const stepT = setInterval(step, solo ? TICK * 2 : TICK);   // une partie à la maison coûte deux fois moins au serveur
 
@@ -1867,8 +1840,14 @@ function onMessage(conn, msg) {
       if (cart) send(conn, { t: 'route', pts: cart.pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
       break;
     case 'in':
-      if (p) { p.input = { u: +!!m.u, d: +!!m.d, l: +!!m.l, r: +!!m.r }; if (typeof m.a === 'number') p.angle = m.a; }
+      if (p) {
+        p.input = { u: +!!m.u, d: +!!m.d, l: +!!m.l, r: +!!m.r };
+        // manette tactile : direction exacte (pas seulement 8 directions)
+        if (Number.isFinite(m.jx) && Number.isFinite(m.jy) && Math.hypot(m.jx, m.jy) > 0.1) { p.input.jx = clamp(m.jx, -1, 1); p.input.jy = clamp(m.jy, -1, 1); }
+        if (typeof m.a === 'number') p.angle = m.a;
+      }
       break;
+    case 'pg': send(conn, { t: 'pg', k: +m.k || 0 }); break;   // mesure du délai réseau (prédiction du déplacement)
     case 'atk': if (p && !(p.gele > 0)) attack(p); break;
     case 'dash': if (p && !(p.gele > 0)) dash(p); break;
     case 'pow': if (p && !(p.gele > 0)) power(p); break;

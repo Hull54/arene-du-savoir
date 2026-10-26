@@ -95,7 +95,7 @@
   #msgMenu button { font: 600 16px "Lexend", sans-serif; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; }
   #joy { position: fixed; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 4px solid #ffffff66; background: #1b142433; display: none; pointer-events: none; }
   #joy i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: #ffd54acc; border: 3px solid #1b1424; }
-  #c { touch-action: none; }
+  #c { touch-action: none; cursor: crosshair; }
   #nuit { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; display: none; }
   #score { position: fixed; top: 10px; left: 12px; padding: 3px 12px 3px 4px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
   #portrait { width: 30px; height: 30px; image-rendering: pixelated; background: #44386a; border: 2px solid #1b1424; }
@@ -251,6 +251,7 @@
 
 <script src="sons.js"></script>
 <script src="draw.js"></script>
+<script src="mouvement.js"></script>
 <script>
 
 const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️', druide: '🌿' };
@@ -448,7 +449,9 @@ function connect(name, cls, code = '', solo = false) {
     if (m.t === 'welcome' && essais) { essais = 0; $('reco').style.display = 'none'; answering = false; $('quiz').style.display = 'none'; toast('📶 Te revoilà ! Tes points sont gardés.'); }
     if (m.t === 'welcome' || m.t === 'carte') {
       if (m.t === 'welcome') { myId = m.id; info = m; if (m.nom && !code && m.nom !== $('name').value.trim()) setTimeout(() => toast(`Ce prénom est déjà pris : tu t'appelles « ${m.nom} » dans le jeu`), 800); }
-      map = m.map; mapLayer = null;
+      map = m.map; mapLayer = null; pred = null; hist = [];
+      if (m.dur) dur = new Set(m.dur);
+      if (m.mur) MUR = new Set(m.mur);
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
       setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'eco', 'gear', 'musique'].forEach(id => $(id).style.display = ''); Son.musique(map.theme); }, 30);
@@ -458,6 +461,7 @@ function connect(name, cls, code = '', solo = false) {
     } else if (m.t === 's') {
       world = unpackWorld(m.w);
       const mp = world.p.find(p => p.id === myId);
+      if (pred && mp) corriger(mp);
       if (me && m.me) {
         if (me.alive && !m.me.alive) Son.play('ko');
         else if (mp && lastHp != null && mp.hp < lastHp - 1 && m.me.alive) { Son.play('touche'); secousse = Math.min(1, secousse + 0.25 + (lastHp - mp.hp) / 80); flashRouge = 0.3; }
@@ -467,7 +471,8 @@ function connect(name, cls, code = '', solo = false) {
       if (world.fx.some(f => (f.k === 'slam' || f.k === 'boom' || f.k === 'cri' || f.k === 'souffle') && f.t > f.d - 0.08 && mp && Math.hypot(f.x - mp.x, f.y - mp.y) < 700)) { Son.play('boom'); secousse = Math.min(1, secousse + 0.5); }
       lastHp = mp ? mp.hp : null;
       me = m.me;
-    } else if (m.t === 'q') showQuestion(m);
+    } else if (m.t === 'pg') { const r = (performance.now() - m.k) / 1000; if (r >= 0 && r < 3) rtt = rtt ? rtt * 0.7 + r * 0.3 : r; }
+    else if (m.t === 'q') showQuestion(m);
     else if (m.t === 'res') showResult(m);
     else if (m.t === 'close') { answering = false; $('quiz').style.display = 'none'; }
     else if (m.t === 'item') { if (m.gear) toast(`${m.ico} ${m.nom} ! (${m.bonus})`); else if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play(m.gear ? 'serie' : 'objet'); }
@@ -701,7 +706,7 @@ let aim = 0, mouseAim = false, lastMouse = 0, mouse = { x: 0, y: 0 };
 addEventListener('keydown', e => {
   if (!map) return;
   if (answering && !qOuvert && /^Digit[1-4]$/.test(e.code)) return choose(+e.code.slice(5) - 1);
-  if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 1; e.preventDefault(); }
+  if (KEYMAP[e.code]) { e.preventDefault(); if (!keys[KEYMAP[e.code]]) { keys[KEYMAP[e.code]] = 1; envoyerInput(); } }
   Son.unlock();
   if (e.code === 'KeyJ') { attackSound(); sendMsg({ t: 'atk' }); }
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { dashSound(); sendMsg({ t: 'dash' }); } }
@@ -710,13 +715,13 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR' && !e.repeat) sendMsg({ t: 'super' });
   if (!answering && /^Digit[5-9]$/.test(e.code) && !e.repeat && msgPermis()) envoyerMsgRapide(+e.code.slice(5) - 5);
 });
-addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
+addEventListener('keyup', e => { if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 0; envoyerInput(); } });
 const cv = $('c'), ctx = cv.getContext('2d');
 cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; mouseAim = true; lastMouse = performance.now(); });
 cv.addEventListener('mousedown', e => { Son.unlock(); if (e.button === 2) sendMsg({ t: 'pow' }); else { attackSound(); sendMsg({ t: 'atk' }); } });
 function petPow() { if (me && me.alive && me.pet && me.cdF <= 0.05) Son.play(['', 'miaou', 'ouaf', 'feu', 'hibou', 'slime'][me.pet]); sendMsg({ t: 'pet' }); }
 function dashSound() { if (me && me.alive && me.cdD <= 0.05) Son.play(myCls === 'mage' ? 'tp' : 'dash'); }
-function attackSound() { if (me && me.alive && me.cdA <= 0.05) Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' || myCls === 'druide' ? 'tir' : 'atk'); }
+function attackSound() { if (me && me.alive && me.cdA <= 0.05) { Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' || myCls === 'druide' ? 'tir' : 'atk'); const d = disp.get(myId); if (d) d.at0 = performance.now() / 1000; } }   // le geste part tout de suite, sans attendre le serveur
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
 // Tactile : glisser n'importe où à gauche pour bouger
@@ -727,10 +732,11 @@ cv.addEventListener('touchmove', e => {
     const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
     keys.l = dx < -15 ? 1 : 0; keys.r = dx > 15 ? 1 : 0; keys.u = dy < -15 ? 1 : 0; keys.d = dy > 15 ? 1 : 0;
     const l = Math.hypot(dx, dy), k = l > 40 ? 40 / l : 1; $('joy').firstChild.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
+    joy = l < 15 ? null : { x: dx * k / 40, y: dy * k / 40 };   // direction exacte, pas seulement 8 directions
   }
   e.preventDefault();
 }, { passive: false });
-cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; $('joy').style.display = 'none'; } });
+cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; joy = null; keys.l = keys.r = keys.u = keys.d = 0; envoyerInput(); $('joy').style.display = 'none'; } });
 $('tAtk').ontouchstart = e => { e.preventDefault(); Son.unlock(); attackSound(); sendMsg({ t: 'atk' }); };
 $('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
 $('tSuper').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'super' }); };
@@ -746,14 +752,46 @@ MSGS.forEach((t, i) => { const b = document.createElement('button'); b.className
 $('msgBtn').onclick = () => { $('msgMenu').style.display = $('msgMenu').style.display === 'flex' ? 'none' : 'flex'; };
 let geleFin = 0;
 
-setInterval(() => {
+function envoyerInput() {
   if (!map) return;
-  const mx = keys.r - keys.l, my = keys.d - keys.u;
+  const v = direction();
   if (mouseAim && performance.now() - lastMouse < 3000) {
     aim = Math.atan2(mouse.y - meScreen.y, mouse.x - meScreen.x);
-  } else if (mx || my) aim = Math.atan2(my, mx);
-  sendMsg({ t: 'in', ...keys, a: +aim.toFixed(2) });
-}, 50);
+  } else if (v.x || v.y) aim = Math.atan2(v.y, v.x);
+  sendMsg(joy ? { t: 'in', ...keys, jx: +joy.x.toFixed(2), jy: +joy.y.toFixed(2), a: +aim.toFixed(2) } : { t: 'in', ...keys, a: +aim.toFixed(2) });
+}
+setInterval(envoyerInput, 50);
+
+// ----- Prédiction : mon héros bouge dès qu'on appuie, puis le serveur le corrige doucement -----
+let joy = null, dur = new Set(), rtt = 0, pred = null, hist = [], corr = { x: 0, y: 0 };
+setInterval(() => { if (map) sendMsg({ t: 'pg', k: Math.round(performance.now()) }); }, 2000);
+function direction() {
+  if (joy) return joy;
+  const x = keys.r - keys.l, y = keys.d - keys.u, l = Math.hypot(x, y) || 1;
+  return { x: x / l, y: y / l };
+}
+const bloqueIci = (x, y, r) => Mouvement.heurte(map, dur, x, y, r);
+function predire(dt, mine) {
+  // seulement quand le serveur dit qu'on marche normalement (pas en question, charge, gel, etc.)
+  if (!mine || !mine.al || !me || !me.vb || !dur.size) { pred = null; return; }
+  if (!pred) { const d = disp.get(myId); pred = { x: d ? d.x : mine.x, y: d ? d.y : mine.y }; hist = []; corr = { x: 0, y: 0 }; }
+  const v = direction();
+  Mouvement.pas(pred, v.x, v.y, me.vb * Mouvement.terrain(Mouvement.tuile(map, pred.x, pred.y + 12)) * dt, bloqueIci, 22);
+  const f = Math.min(1, dt * 6), cx = corr.x * f, cy = corr.y * f;
+  if (cx || cy) { pred.x += cx; pred.y += cy; corr.x -= cx; corr.y -= cy; for (const h of hist) { h.x += cx; h.y += cy; } }
+  const now = performance.now();
+  hist.push({ t: now, x: pred.x, y: pred.y });
+  while (hist.length > 2 && hist[0].t < now - 1500) hist.shift();
+  disp.set(myId, pred);
+}
+// La position reçue du serveur correspond à là où j'étais il y a environ un aller-retour réseau
+function corriger(mp) {
+  const t = performance.now() - rtt * 1000 - 30;
+  let h = null;
+  for (const e of hist) if (!h || Math.abs(e.t - t) < Math.abs(h.t - t)) h = e;
+  if (!h || Math.hypot(mp.x - pred.x, mp.y - pred.y) > 140) { pred.x = mp.x; pred.y = mp.y; hist = []; corr = { x: 0, y: 0 }; }
+  else corr = { x: mp.x - h.x, y: mp.y - h.y };
+}
 
 // ----- Rendu -----
 // Mode économie : image moins fine et moins d'effets (s'active seul si l'appareil rame)
@@ -851,11 +889,13 @@ function frame(now) {
   gel = Math.max(0, gel - dt);
   const k = gel > 0 ? 0 : Math.min(1, dt * 18);
   for (const p of world.p) {
+    if (pred && p.id === myId) continue;
     const d = disp.get(p.id);
     if (!d || Math.hypot(d.x - p.x, d.y - p.y) > 150) disp.set(p.id, { x: p.x, y: p.y });
     else { d.x += (p.x - d.x) * k; d.y += (p.y - d.y) * k; }
   }
   const mine = world.p.find(p => p.id === myId);
+  predire(dt, mine);
   const md = mine && disp.get(mine.id);
   if (md) { camX = md.x; camY = md.y; }
 

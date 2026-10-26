@@ -245,7 +245,7 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
   // ===== bras et épaulières =====
   const armC = cls === 'guerrier' ? '#8f98a6' : cls === 'mage' ? K.main : cls === 'voleur' ? K.main : K.cloth;
   // balancement des bras à la marche (sw), bras d'arme levé à l'attaque
-  const sw = frame === 1 ? 1 : frame === 2 ? -1 : 0, atk = frame === 3;
+  const sw = frame === 1 ? 1 : frame === 2 ? -1 : 0, atk = frame >= 3, suite = frame === 4;   // 3 : le coup, 4 : la fin du geste
   const hL = sw + (atk && cls !== 'mage' && cls !== 'druide' ? 1 : 0), hR = atk ? -2 : -sw;   // décalage vertical des mains (vue de face/dos)
   if (side) {
     const fx = atk ? 2 : sw;
@@ -395,41 +395,57 @@ function heroSprite(cls, look, dir, frame, gearCode = 0) {
   const oy0 = P.oy, ox0 = P.ox;
   if (atk) {   // geste d'attaque : coup d'épée, coup de dague, sort lancé, arc tendu
     if (down) {
-      if (cls === 'guerrier') {
+      if (cls === 'guerrier' && suite) {   // l'épée a fini sa course, plus bas
+        line2(P, 13, 15, 16, 22, blade); line2(P, 14, 15, 17, 21, bladeD); P.rect(12, 14, 3, 1, gold);
+        P.rect(-1, 11, 5, 7, K.acc); P.rect(-1, 11, 5, 1, steel); P.rect(-1, 11, 1, 7, steel); P.rect(1, 13, 1, 4, gold); P.rect(0, 14, 3, 1, gold);
+      } else if (cls === 'guerrier') {
         line2(P, 13, 13, 19, 19, blade); line2(P, 13, 14, 18, 19, bladeD); P.rect(12, 12, 3, 1, gold); P.px(12, 13, gold);
         P.rect(-1, 11, 5, 7, K.acc); P.rect(-1, 11, 5, 1, steel); P.rect(-1, 11, 1, 7, steel); P.rect(1, 13, 1, 4, gold); P.rect(0, 14, 3, 1, gold);
       }
       if (cls === 'voleur') {
-        P.rect(13, 13, 1, 6, blade); P.px(13, 19, bladeD); P.rect(12, 12, 3, 1, '#7a5a2a');
-        P.rect(2, 14, 1, 4, blade); P.px(2, 18, bladeD); P.rect(1, 13, 3, 1, '#7a5a2a');
+        const v = suite ? 2 : 0;   // les dagues piquent vers l'avant puis reviennent
+        P.rect(13, 13 + v, 1, 6, blade); P.px(13, 19 + v, bladeD); P.rect(12, 12 + v, 3, 1, '#7a5a2a');
+        P.rect(2, 14 + 2 - v, 1, 4, blade); P.px(2, 18 + 2 - v, bladeD); P.rect(1, 13 + 2 - v, 3, 1, '#7a5a2a');
       }
       if (cls === 'mage') {
         P.rect(14, -2, 1, 17, wood); P.px(14, 3, woodH); P.px(14, 8, woodH);
         P.rect(13, -5, 3, 3, crystal); P.px(13, -5, '#ffffff'); P.rect(13, -2, 3, 1, gold);
       }
       if (cls === 'druide') { staffD(14, -2, 17); P.px(12, -6, leafL); P.px(17, -5, leaf); P.px(11, -3, leaf); P.px(18, -2, leafL); }
-      if (cls === 'archer') {
+      if (cls === 'archer' && suite) {   // la flèche est partie : la corde vibre, l'arc recule
+        P.px(2, 7, wood); P.px(1, 8, wood); P.rect(0, 9, 1, 9, woodH); P.px(1, 18, wood); P.px(2, 19, wood);
+        P.rect(2, 7, 1, 12, '#d8d0c0'); P.rect(3, 12, 2, 2, s);
+      } else if (cls === 'archer') {
         P.px(2, 6, wood); P.px(1, 7, wood); P.rect(0, 8, 1, 9, woodH); P.px(1, 17, wood); P.px(2, 18, wood);
         line2(P, 2, 6, 4, 12, '#d8d0c0'); line2(P, 4, 12, 2, 18, '#d8d0c0');
         P.rect(1, 12, 9, 1, '#5a3a1e'); P.px(0, 12, '#cfd6de'); P.px(-1, 12, '#cfd6de'); P.rect(4, 11, 2, 2, s);
       }
     } else if (up) {
-      if (cls === 'guerrier') { P.rect(0, 11, 4, 7, K.acc); P.rect(0, 11, 4, 1, steel); line2(P, 13, 9, 17, 3, blade); }
+      if (cls === 'guerrier') { P.rect(0, 11, 4, 7, K.acc); P.rect(0, 11, 4, 1, steel); if (suite) line2(P, 12, 8, 9, 1, blade); else line2(P, 13, 9, 17, 3, blade); }
       if (cls === 'voleur') { P.rect(2, 12, 1, 4, blade); P.rect(13, 6, 1, 5, blade); }
       if (cls === 'mage') { P.rect(13, -4, 2, 2, crystal); }
       if (cls === 'archer') { P.rect(13, 6, 1, 8, woodH); P.rect(12, 9, 1, 3, '#d8d0c0'); }
       if (cls === 'druide') { P.px(13, -4, leafL); P.px(14, -5, leaf); }
     } else {
-      if (cls === 'guerrier') {
+      if (cls === 'guerrier' && suite) {   // fin du coup : la lame descend en diagonale
+        line2(P, 12, 14, 18, 19, blade); line2(P, 12, 15, 17, 19, bladeD); P.rect(11, 13, 1, 3, gold);
+        P.rect(2, 10, 3, 7, K.acc); P.rect(2, 10, 3, 1, steel);
+      } else if (cls === 'guerrier') {
         P.rect(12, 12, 7, 1, blade); P.rect(12, 13, 6, 1, bladeD); P.px(19, 12, blade); P.rect(11, 11, 1, 3, gold);
         P.rect(2, 10, 3, 7, K.acc); P.rect(2, 10, 3, 1, steel);
       }
-      if (cls === 'voleur') { P.rect(12, 13, 6, 1, blade); P.px(18, 13, bladeD); P.rect(11, 12, 1, 3, '#7a5a2a'); }
-      if (cls === 'druide') { line2(P, 9, 18, 14, 2, wood); P.px(14, 1, wood); P.px(15, 0, wood); P.px(15, 1, leafL); P.px(16, 0, leaf); P.px(13, 0, leaf); P.px(16, 2, leafD); P.px(17, -1, leafL); }
+      if (cls === 'voleur' && suite) { P.rect(11, 13, 4, 1, blade); P.px(15, 13, bladeD); P.rect(10, 12, 1, 3, '#7a5a2a'); P.rect(5, 14, 4, 1, blade); }
+      else if (cls === 'voleur') { P.rect(12, 13, 6, 1, blade); P.px(18, 13, bladeD); P.rect(11, 12, 1, 3, '#7a5a2a'); }
+      const pt = suite ? 1 : 0;   // le bâton pointe un peu plus loin à la fin du sort
+      if (cls === 'druide') { line2(P, 9, 18, 14 + pt, 2, wood); P.px(14 + pt, 1, wood); P.px(15 + pt, 0, wood); P.px(15 + pt, 1, leafL); P.px(16 + pt, 0, leaf); P.px(13 + pt, 0, leaf); P.px(16 + pt, 2, leafD); P.px(17 + pt, -1, leafL); }
       if (cls === 'mage') {
-        line2(P, 9, 18, 14, 2, wood); P.rect(13, -1, 3, 3, crystal); P.px(13, -1, '#ffffff'); P.rect(13, 2, 3, 1, gold);
+        line2(P, 9, 18, 14 + pt, 2, wood); P.rect(13 + pt, -1, 3, 3, crystal); P.px(13 + pt, -1, '#ffffff'); P.rect(13 + pt, 2, 3, 1, gold);
+        if (!suite) { P.px(17, -2, '#ffffff'); P.px(18, 0, crystal); P.px(17, 2, '#ffffff'); }   // éclat du sort
       }
-      if (cls === 'archer') {
+      if (cls === 'archer' && suite) {
+        P.px(12, 6, wood); P.px(13, 7, wood); P.rect(14, 8, 1, 8, woodH); P.px(13, 16, wood); P.px(12, 17, wood);
+        P.rect(12, 7, 1, 10, '#d8d0c0');
+      } else if (cls === 'archer') {
         P.px(13, 6, wood); P.px(14, 7, wood); P.rect(15, 8, 1, 8, woodH); P.px(14, 16, wood); P.px(13, 17, wood);
         line2(P, 13, 6, 9, 12, '#d8d0c0'); line2(P, 9, 12, 13, 17, '#d8d0c0');
         P.rect(9, 12, 8, 1, '#5a3a1e'); P.px(17, 12, '#cfd6de'); P.px(18, 12, '#cfd6de'); P.px(8, 12, '#e8e2d0');
@@ -486,9 +502,10 @@ function dirFromAngle(a) {
   return s > 0 ? 'down' : 'up';
 }
 // Dessine un héros : (x, y) = centre du joueur dans le monde ; S = taille d'un pixel d'art
-function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0, atk = false) {
+// atk : 0 rien, 1 le coup, 2 la fin du geste
+function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0, atk = 0) {
   const d = dirFromAngle(angle);
-  const frame = atk ? 3 : walk ? 1 + (Math.floor(walk) % 2) : 0;
+  const frame = atk ? 2 + atk : walk ? 1 + (Math.floor(walk) % 2) : 0;
   const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame, gear);
   g.save();
   g.imageSmoothingEnabled = false;
@@ -1702,6 +1719,59 @@ function minionSprite(k, fr, flash) {
 
 // ---------- Rendu d'une image ----------
 // mine = mon joueur (élève) ou null (vue enseignant : voit tout le monde)
+// Visée de mon héros : la zone exacte que l'épée touche, ou la ligne du tir jusqu'au premier mur,
+// et un anneau rouge sous l'ennemi qui sera touché. Plus vif quand l'attaque est prête.
+let MUR = new Set('b#kcxgT');   // remplacé par la liste du serveur
+function drawVisee(ctx, world, map, mine, md, disp, B, now) {
+  const atk = typeof info !== 'undefined' && info && info.classes && info.classes[mine.c] && info.classes[mine.c].atk;
+  if (!atk) return;
+  const a = mine.aim ?? mine.a, ca = Math.cos(a), sa = Math.sin(a), R = 22;
+  const pret = typeof me === 'undefined' || !me || me.cdA <= 0.05;
+  const ox = md.x, oy = md.y + 6;
+  const cibles = [];
+  for (const p of world.p) if (p.al && p.id !== mine.id && !p.hd && !p.inv && !(mine.tm >= 0 && p.tm === mine.tm)) { const d = disp.get(p.id) || p; cibles.push({ x: d.x, y: d.y, r: R, s: 1 }); }
+  for (const [x, y] of world.mn) cibles.push({ x, y, r: 16, s: 1 });
+  if (B) cibles.push({ x: B[0], y: B[1], r: 50, s: 2.6 });
+  const touche = [];
+  ctx.save();
+  if (atk.type === 'melee') {
+    // même règle que le serveur : portée + 2 rayons, angle ± (arc/2 + 0.3)
+    const r = atk.range + R * 2, demi = atk.arc / 2 + 0.3;
+    ctx.globalAlpha = pret ? 0.2 : 0.07; ctx.fillStyle = '#ffd54a';
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.arc(ox, oy, r, a - demi, a + demi); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = pret ? 1 : 0.4; ctx.setLineDash([8, 6]);
+    ctx.strokeStyle = OUT; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(ox, oy, r, a - demi, a + demi); ctx.stroke();
+    ctx.strokeStyle = '#ffd54a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ox, oy, r, a - demi, a + demi); ctx.stroke();
+    for (const c of cibles) { const dx = c.x - md.x, dy = c.y - md.y, an = Math.abs(((Math.atan2(dy, dx) - a) % (2 * Math.PI) + 3 * Math.PI) % (2 * Math.PI) - Math.PI); if (Math.hypot(dx, dy) < r + c.r - R && an < demi) touche.push(c); }
+  } else {
+    // le tir : jusqu'à sa portée, ou jusqu'au premier mur ou objet
+    const portee = Math.min(atk.speed * atk.life, 640);
+    let L = 0;
+    while (L < portee) { const x = md.x + ca * (L + 8), y = md.y + sa * (L + 8); if (MUR.has(Mouvement.tuile(map, x, y)) || Mouvement.touchObj(map, x, y, atk.r || 6)) break; L += 8; }
+    let best = null;
+    for (const c of cibles) { const dx = c.x - md.x, dy = c.y - md.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca); if (along > 0 && along < L + c.r && perp < c.r + (atk.r || 6) && (!best || along < best.along)) best = { c, along }; }
+    if (best) { touche.push(best.c); L = Math.min(L, best.along); }
+    for (let k = 26; k < L - 8; k += 12) {
+      const x = Math.round(ox + ca * k), y = Math.round(oy + sa * k);
+      ctx.globalAlpha = (pret ? 1 : 0.4) * (1 - 0.5 * k / portee);
+      ctx.fillStyle = OUT; ctx.fillRect(x - 3, y - 3, 6, 6); ctx.fillStyle = '#ffd54a'; ctx.fillRect(x - 2, y - 2, 4, 4);
+    }
+    // mire au bout de la ligne
+    const ex = Math.round(ox + ca * L), ey = Math.round(oy + sa * L), col = best ? '#ff4a4a' : '#ffd54a';
+    ctx.globalAlpha = pret ? 1 : 0.45;
+    ctx.strokeStyle = OUT; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(ex, ey, 9, 0, 7); ctx.stroke();
+    ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ex, ey, 9, 0, 7); ctx.stroke();
+    ctx.fillStyle = OUT; ctx.fillRect(ex - 2, ey - 2, 5, 5); ctx.fillStyle = col; ctx.fillRect(ex - 1, ey - 1, 3, 3);
+  }
+  // anneau rouge sous la cible
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+  for (const c of touche) {
+    const w = (19 + Math.sin(now * 10) * 2) * c.s;
+    ctx.strokeStyle = OUT; ctx.lineWidth = 6; ctx.beginPath(); ctx.ellipse(c.x, c.y + 21 * c.s, w, w * 0.4, 0, 0, 7); ctx.stroke();
+    ctx.strokeStyle = '#ff3a3a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.ellipse(c.x, c.y + 21 * c.s, w, w * 0.4, 0, 0, 7); ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   if (!mapLayer) buildMapLayers(map);
   const big = heroScale > PX;   // vue enseignant : carte réduite, on lisse pour qu'elle reste jolie
@@ -1846,8 +1916,15 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   for (const f of world.fx) {
     const t = f.t / f.d;
     ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, t * 1.5));
-    if (f.k === 'slash') {
-      for (let i = 0; i <= 8; i++) { const a = f.a - f.arc / 2 + f.arc * i / 8; sq(f.x + Math.cos(a) * f.r, f.y + Math.sin(a) * f.r, 2, '#ffffff'); }
+    if (f.k === 'slash') {   // traînée de l'arme : un croissant qui balaie la zone du coup
+      const u = 1 - t, tete = f.a - f.arc / 2 + f.arc * Math.min(1, 1 - (1 - u) * (1 - u) * 1.2 + 0.2), queue = Math.max(f.a - f.arc / 2, tete - f.arc * 0.8);
+      ctx.globalAlpha = 1; ctx.lineCap = 'round';
+      for (let i = 0; i < 8; i++) {
+        const a0 = queue + (tete - queue) * i / 8, a1 = queue + (tete - queue) * (i + 1) / 8, k = (i + 1) / 8;
+        ctx.globalAlpha = k * Math.min(1, t * 2.5);
+        ctx.strokeStyle = i > 5 ? '#ffffff' : '#cfe8ff'; ctx.lineWidth = 2 + k * 7;
+        ctx.beginPath(); ctx.arc(f.x, f.y + 6, f.r * 0.82, a0, a1); ctx.stroke();
+      }
     } else if (f.k === 'boom' && f.c === 'eclair') {   // éclair du chaos qui tombe du ciel
       ctx.globalAlpha = 1;
       let x = f.x, y = f.y - 260;
@@ -1979,6 +2056,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     }
     bossDrawn = true;
   };
+  if (mine && mine.al && md) drawVisee(ctx, world, map, mine, md, disp, B, now);
   // sbires
   const mk = B ? SBIRE_DE[B[6]] || 'slime' : world.mk || 'slime';
   for (const [x, y, hp, fl, a] of world.mn) {
@@ -2018,11 +2096,6 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     if (p.fa) for (let i = 0; i < 3; i++) sq(d.x - 30 - i * 8, d.y + 14 - i * 5, 1, '#9fd6ff');
     if (p.dz) { const dx = d.x - (d.px ?? d.x), dy = d.y - (d.py ?? d.y), l = Math.hypot(dx, dy) || 1; for (let i = 1; i <= 3; i++) sq(d.x - dx / l * i * 16 + (i % 2 ? 8 : -8), d.y - 20 - dy / l * i * 16, 2, '#ffffffaa'); }
     d.px = d.x; d.py = d.y;
-    // flèche de visée sous mon héros
-    if (isMe) {
-      const a = mine.aim ?? p.a, ca = Math.cos(a), sa = Math.sin(a);
-      for (const [k, w] of [[44, 0], [38, 1], [32, 2]]) for (let j = -w; j <= w; j++) sq(d.x + ca * k - sa * j * 4, d.y + 8 + sa * k + ca * j * 4, 2, '#ffd54ae0');
-    }
     // familier : suit son héros, un peu en retard
     const pet = p.l ? +p.l[5] || 0 : 0;
     let drawPet = null;
@@ -2046,7 +2119,10 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     const breathe = !d.ph && Math.sin(now * 2.6 + p.id) > 0.3 ? -heroScale / 3 : 0;
     const zom = world.mode === 'zombie' && p.tm === 1;
     if (zom) ctx.filter = 'hue-rotate(75deg) saturate(1.7) brightness(0.85)';   // les zombies deviennent verdâtres
-    drawHeroSprite(ctx, d.x, d.y + breathe, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, p.at);
+    // attaque : le coup (0,1 s), puis la fin du geste ; le héros avance un peu vers sa cible
+    if (p.at && !d.at0) d.at0 = now; else if (!p.at && d.at0 && now - d.at0 > 0.4) d.at0 = 0;
+    const ta = d.at0 ? now - d.at0 : 9, phase = ta < 0.1 ? 1 : ta < 0.25 ? 2 : 0, el = phase ? Math.sin(Math.min(1, ta / 0.2) * Math.PI) * 4 : 0;
+    drawHeroSprite(ctx, d.x + Math.cos(p.a) * el, d.y + breathe + Math.sin(p.a) * el * 0.6, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, phase);
     if (zom) { ctx.filter = 'none'; const S = heroScale; sq(d.x - 4 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); sq(d.x + 2 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); }
     if (p.c === 'mage') {
       const dd = dirFromAngle(p.a), S = heroScale, gx = d.x + (dd === 'down' ? 6 * S : dd === 'up' ? 5 * S : dd === 'right' ? 2 * S : -2 * S), gy = d.y + breathe + 22 - (dd === 'up' ? 22 : 21) * S;
