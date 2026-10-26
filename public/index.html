@@ -133,7 +133,11 @@
   #zone.fin10 { color: #ff6a5a; animation: clign .5s steps(2) infinite; } @keyframes clign { 50% { opacity: .4; } }
   #eco { position: fixed; top: 52px; left: 64px; font: 600 15px "Lexend", sans-serif; padding: 4px 10px; color: #fff; cursor: pointer; }
   #mute { position: fixed; top: 52px; left: 12px; font: 600 15px "Lexend", sans-serif; padding: 4px 10px; color: #fff; cursor: pointer; }
-  #buffs { position: fixed; top: 56px; left: 172px; font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: flex; gap: 10px; }
+  /* objets actifs : une étiquette par effet, avec le temps qui reste */
+  #buffs { position: fixed; left: 12px; bottom: 156px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  #buffs .bf { display: flex; align-items: center; gap: 8px; padding: 5px 10px 7px; font-size: 15px; font-weight: 600; min-width: 170px; position: relative; }
+  #buffs .bf b { font-size: 20px; } #buffs .bf span { flex: 1; } #buffs .bf em { font-style: normal; color: #ffd54a; }
+  #buffs .bf i { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 3px; background: #ffd54a; transform-origin: left; }
   #bossbar { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); width: min(520px, 70vw); padding: 4px 10px 8px; text-align: center; font-size: 16px; display: none; pointer-events: none; }
   #bossbar .bar { height: 14px; background: #3a2a3a; border: 3px solid #1b1424; margin-top: 3px; }
   #bossbar .bar i { display: block; height: 100%; background: #e04a5a; transition: width .2s; }
@@ -411,7 +415,7 @@ const garderFiche = rec => { try { localStorage.setItem('arene-fiche-' + rec.cod
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('next').disabled) showStep(2); };
 
 // ----- Réseau -----
-let lastHp = null, lastCd = 0, lastGear = null;
+let lastHp = null, lastCd = 0, lastGear = null, lastBuffs = '';
 let ws, myId, world = null, me = null, map = null, myCls = null, info = null;
 const MOTS = { cache: 'trouvé', coffre: 'coffre', serie: 'série' };
 function toast(t) {
@@ -929,7 +933,13 @@ function frame(now) {
       $('lblF').textContent = me.cdF > 0 ? Math.ceil(me.cdF) + ' s' : 'E';
     }
     $('scoreT').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}   🪙 ${monOr}` + (me.sk >= 2 ? `   🔥 ${me.sk}` : '');
-    $('buffs').textContent = [me.st ? `💪 ${me.st}` : '', me.fa ? `👢 ${me.fa}` : ''].filter(Boolean).join('  ');
+    // objets actifs (potion de force, bottes de vitesse, bouclier, cape d'ombre) avec leur temps restant
+    const actifs = [['st', '💪', 'Force +50 %', 10], ['fa', '👢', 'Vitesse', 10], ['bo', '🛡️', 'Bouclier', 4], ['om', '🌑', 'Invisible', 5]].filter(([k]) => me[k] > 0);
+    const cleB = actifs.map(([k]) => k + me[k]).join();
+    if (cleB !== lastBuffs) {
+      lastBuffs = cleB;
+      $('buffs').innerHTML = actifs.map(([k, ico, nom, dur]) => `<div class="bf panel"><b>${ico}</b><span>${nom}</span><em>${me[k]} s</em><i style="transform:scaleX(${Math.min(1, me[k] / dur)})"></i></div>`).join('');
+    }
     // équipement trouvé : 4 cases, bordure de la couleur du niveau
     const gk = me.ge ? GEAR_ORDRE.map(k => me.ge[k]).join('') : '';
     if (gk !== lastGear && info.gear) {

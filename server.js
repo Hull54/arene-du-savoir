@@ -1793,7 +1793,7 @@ function broadcast() {
     if (c.role === 'prof') c.etat(`{"t":"s","w":${common}}`);
     else if (c.player) {
       const p = c.player;
-      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear };
+      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), bo: Math.ceil(p.shield), om: Math.ceil(p.stealth), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear };
       c.etat(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
     }
   }
