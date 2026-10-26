@@ -202,6 +202,7 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
 .modal .big { font-family: var(--body); font-size: clamp(2.4rem, 7vw, 4rem); font-weight: 700; line-height: 1.1; }
 .modal .ans { font-family: var(--body); font-weight: 700; font-size: 2.6rem; min-height: 1.3em; border-bottom: 3px solid var(--line); margin: 0 auto; min-width: 5ch; font-variant-numeric: tabular-nums; }
 .pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+html, body, button, .board, .modal { touch-action: manipulation; }
 .pad button { font-size: 1.8rem; font-weight: 700; padding: 12px 0; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line); }
 .pad button.ok { background: var(--ok); color: #0d2a1a; border-color: var(--ok); }
 .pad button.del { font-size: 1.1rem; }
@@ -1995,6 +1996,10 @@ function flotter(x, y, txt, color) {
   el.style.transform = `translate(${x * CELL}px, ${y * CELL}px)`; ents.appendChild(el); setTimeout(() => el.remove(), 1200);
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Une erreur inattendue s'affiche à l'écran (pratique pour la signaler) au lieu de bloquer en silence
+function signaler(err) { try { console.error(err); toast("Oups, petite erreur : " + String(err && err.message || err).slice(0, 120), 8000); } catch {} }
+addEventListener("error", e => signaler(e.error || e.message));
+addEventListener("unhandledrejection", e => signaler(e.reason));
 // Petit crochet vert sur le jeton : l'action est bien enregistrée
 function valide(ent) {
   if (!ent || !ents) return;
@@ -3051,16 +3056,22 @@ function epreuveMath(op, titre, danger) {
       ans.textContent = val;
     };
     const valider = () => {
+      if (fini) return;
       fini = true;
       const ok = Number(val) === q.rep;
-      bruit(ok ? "ok" : "echec"); noter("maths", q.txt, ok);
+      // L'écran passe d'abord au verdict : un souci de son ou de sauvegarde ne doit jamais bloquer le jeu
       pad.outerHTML = `<p class="verdict ${ok ? "ok" : "bad"}">${ok ? "Bravo!" : "Oups! La réponse était " + q.rep + "."}</p><div class="row"><button class="btn gold" id="cont" type="button">Continuer</button></div>`;
-      const fin = () => { fermer(); resolve(ok); };
-      document.getElementById("cont").onclick = fin;
-      document.getElementById("cont").focus();
+      let parti = false;
+      const fin = () => { if (parti) return; parti = true; fermer(); resolve(ok); };
+      const cont = document.getElementById("cont");
+      cont.onclick = fin; cont.onpointerup = fin;
       keyHandler = e => { if (e.key === "Enter") { e.preventDefault(); fin(); } };
+      try { bruit(ok ? "ok" : "echec"); } catch (err) { signaler(err); }
+      try { noter("maths", q.txt, ok); } catch (err) { signaler(err); }
     };
     pad.onclick = e => { const b = e.target.closest("button"); if (b) presse(b.dataset.k); };
+    // Le ✓ réagit dès que le doigt se lève (sur tablette, le clic est parfois avalé)
+    pad.querySelector('[data-k="ok"]').onpointerup = e => { e.preventDefault(); presse("ok"); };
     keyHandler = e => {
       if (/^[0-9]$/.test(e.key)) presse(e.key);
       else if (e.key === "Backspace") presse("del");
