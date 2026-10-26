@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Arène du Savoir – Enseignant</title>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&family=Pixelify+Sans:wght@600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: #141b26; color: #fff; font-family: "Pixelify Sans", system-ui, sans-serif; }
+  html, body { margin: 0; height: 100%; background: #141b26; color: #fff; font-family: "Lexend", system-ui, sans-serif; }
   .wrap { display: grid; grid-template-columns: 1fr 370px; height: 100%; }
   .stage { position: relative; min-height: 0; background: #141b26; }
   canvas { width: 100%; height: 100%; display: block; }
@@ -15,7 +15,7 @@
   h2 { margin: 0 0 6px; font-size: 16px; color: #ffd54a; }
   .box { background: #ffffff0d; border-radius: 12px; padding: 10px 12px; }
   .url { font-size: 22px; font-weight: 800; word-break: break-all; }
-  button, select { font: 700 14px "Pixelify Sans", system-ui; padding: 7px 12px; border-radius: 9px; border: 0; background: #ffd54a; color: #222; cursor: pointer; margin: 2px; }
+  button, select { font: 700 14px "Lexend", system-ui; padding: 7px 12px; border-radius: 9px; border: 0; background: #ffd54a; color: #222; cursor: pointer; margin: 2px; }
   button.sec, select { background: #ffffff22; color: #fff; }
   select option { color: #222; }
   button.on { outline: 3px solid #ffd54a; background: #ffd54a33; color: #ffd54a; }
@@ -547,7 +547,7 @@ function frame() {
   drawWorld(ctx, world, map, null, disp, 7, teams);   // héros plus gros pour être vus de loin au projecteur
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   // bandeau du haut : carte, minuterie, scores d'équipes
-  ctx.font = '22px "Pixelify Sans", monospace'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = '22px "Lexend", sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   let x = 12;
   const tag = (t, bg, fg = '#fff') => { const w = ctx.measureText(t).width + 20; ctx.fillStyle = bg; ctx.fillRect(x, 6, w, 30); ctx.fillStyle = fg; ctx.fillText(t, x + 10, 22); x += w + 8; };
   tag('🗺️ ' + map.nom, '#1b1424');
@@ -562,18 +562,18 @@ function frame() {
     ctx.fillStyle = '#3a2a3a'; ctx.fillRect(bx, by + 4, bw, 20);
     ctx.fillStyle = B[7] ? '#7fd3ff' : '#e04a5a'; ctx.fillRect(bx, by + 4, bw * Math.max(0, B[2] / B[3]), 20);
     ctx.fillStyle = '#ffffff55'; ctx.fillRect(bx + bw / 2 - 1, by + 4, 2, 20);
-    ctx.font = '20px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = BI.col;
+    ctx.font = '20px "Lexend", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = BI.col;
     ctx.fillText(`${BI.ico} ${BI.nom}` + (B[7] ? ' · 🛡️ Bouclier du savoir !' : B[8] === 2 ? ' · 😡 Enragé !' : ''), r.width / 2, by - 12);
     ctx.textAlign = 'left';
   }
   ctx.textBaseline = 'alphabetic';
-  ctx.font = '18px "Pixelify Sans", monospace';
+  ctx.font = '18px "Lexend", sans-serif';
   world.feed.forEach((t, i) => {
     ctx.fillStyle = '#1b1424cc'; ctx.fillRect(8, 46 + i * 26, ctx.measureText(t).width + 14, 24);
     ctx.fillStyle = '#fff'; ctx.fillText(t, 15, 64 + i * 26);
   });
-  if (world.cd > 0) { ctx.font = '160px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 12; ctx.strokeStyle = '#1b1424'; ctx.strokeText(world.cd, r.width / 2, r.height / 2 + 50); ctx.fillStyle = '#ffd54a'; ctx.fillText(world.cd, r.width / 2, r.height / 2 + 50); }
-  if (world.paused && !$('fin').style.display.includes('flex')) { ctx.font = '52px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText('⏸ Pause', r.width / 2, r.height / 2); }
+  if (world.cd > 0) { ctx.font = '160px "Lexend", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 12; ctx.strokeStyle = '#1b1424'; ctx.strokeText(world.cd, r.width / 2, r.height / 2 + 50); ctx.fillStyle = '#ffd54a'; ctx.fillText(world.cd, r.width / 2, r.height / 2 + 50); }
+  if (world.paused && !$('fin').style.display.includes('flex')) { ctx.font = '52px "Lexend", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.fillText('⏸ Pause', r.width / 2, r.height / 2); }
 }
 requestAnimationFrame(frame);
 </script>

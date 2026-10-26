@@ -1928,7 +1928,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       const r = f.r * (1 - t);
       for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 2, i % 2 ? '#f2c94c' : '#ffffff'); }
     } else if (f.k === 'crit') {
-      ctx.font = '22px "Pixelify Sans", monospace'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = OUT;
+      ctx.font = '22px "Lexend", sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 5; ctx.strokeStyle = OUT;
       ctx.strokeText(f.txt, f.x, f.y - 40 - (1 - t) * 30); ctx.fillStyle = '#ffd54a'; ctx.fillText(f.txt, f.x, f.y - 40 - (1 - t) * 30);
     }
     ctx.restore();
@@ -2074,7 +2074,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   for (const [id, i] of world.bu || []) {
     const p = world.p.find(q => q.id === id); if (!p || !p.al) continue;
     const d = disp.get(id) || p, txt = BULLES[i] || '';
-    ctx.save(); ctx.font = (big ? 30 : 15) + 'px "Pixelify Sans", monospace'; ctx.textAlign = 'center';
+    ctx.save(); ctx.font = (big ? 30 : 15) + 'px "Lexend", sans-serif'; ctx.textAlign = 'center';
     const w = ctx.measureText(txt).width + 14, h = big ? 40 : 22, y = d.y - (big ? 150 : 74);
     ctx.fillStyle = OUT; ctx.fillRect(Math.round(d.x - w / 2) - 2, Math.round(y - h) - 2, Math.round(w) + 4, h + 4);
     ctx.fillStyle = '#fffaf0'; ctx.fillRect(Math.round(d.x - w / 2), Math.round(y - h), Math.round(w), h);
@@ -2098,7 +2098,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   ctx.imageSmoothingEnabled = big;
   ctx.drawImage(topLayer, 0, 0, topLayer.width * PX, topLayer.height * PX);
   // noms et barres de vie par-dessus tout
-  ctx.font = `${big ? 46 : 15}px "Pixelify Sans", monospace`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = `${big ? 46 : 15}px "Lexend", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   for (const p of list) {
     const d = disp.get(p.id) || p;
     const isMe = mine && p.id === mine.id;
