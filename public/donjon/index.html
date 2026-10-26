@@ -606,6 +606,28 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .tok.enemy.boss { --rs: 3.3s; }
 .tok.fx-braise.enemy:not(.dead) .coin > img { animation: interieur 1.6s ease-in-out infinite alternate, respire var(--rs) ease-in-out var(--rd, 0s) infinite; }
 html.rm .tok .coin > img, html.rm .tok .coin > svg { animation: none !important; }
+
+/* Indices des secrets */
+.tok.indice { z-index: 0; pointer-events: none; }
+.tok.indice > svg { position: relative; width: 104%; height: 104%; filter: drop-shadow(0 0 1.5px #000) drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
+.tok.indice::before { content: ""; position: absolute; inset: 2%; border-radius: 50%; background: radial-gradient(circle, var(--ig, rgba(255,214,120,.55)) 0%, rgba(0,0,0,0) 68%); animation: ind-halo 2.8s ease-in-out infinite; }
+.tok.ind-toucher { --ig: rgba(143,227,255,.55); } .tok.ind-bruler { --ig: rgba(255,140,50,.5); } .tok.ind-creuser { --ig: rgba(240,200,140,.5); }
+@keyframes ind-halo { 0%, 100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.05); } }
+html.rm .tok.indice::before { animation: none; opacity: .7; }
+.tok.indice .spark { position: absolute; inset: 0; }
+.tok.indice .spark i { position: absolute; width: calc(var(--cell)*.12); height: calc(var(--cell)*.12); background: #fff6c8; border-radius: 50%; box-shadow: 0 0 calc(var(--cell)*.15) #ffd76a; animation: scintille 1.8s ease-in-out infinite; }
+.tok.indice .spark i:nth-child(1) { left: 28%; top: 30%; } .tok.indice .spark i:nth-child(2) { left: 62%; top: 44%; animation-delay: .6s; } .tok.indice .spark i:nth-child(3) { left: 40%; top: 66%; animation-delay: 1.2s; }
+.ind-eclat { transform-box: fill-box; transform-origin: center; animation: ind-eclat 3.2s ease-in-out infinite; }
+@keyframes ind-eclat { 0%, 70%, 100% { opacity: 0; transform: scale(.3) rotate(0deg); } 80% { opacity: 1; transform: scale(1.1) rotate(45deg); } 90% { opacity: 0; transform: scale(.4) rotate(90deg); } }
+.ind-poussiere { opacity: 0; animation: ind-poussiere 4s ease-out infinite; }
+@keyframes ind-poussiere { 0%, 60% { opacity: 0; transform: translateY(0) scale(.4); } 70% { opacity: .7; } 100% { opacity: 0; transform: translateY(-14px) scale(1.6); } }
+.ind-braise { animation: ind-braise 1.6s ease-in-out infinite alternate; }
+@keyframes ind-braise { from { opacity: .45; filter: none; } to { opacity: 1; filter: drop-shadow(0 0 5px #ff7a1a); } }
+.ind-rune { animation: ind-rune 2.6s ease-in-out infinite; }
+@keyframes ind-rune { 0%, 100% { opacity: .35; filter: none; } 50% { opacity: .95; filter: drop-shadow(0 0 6px #8fe3ff); } }
+.ind-dalle { animation: ind-dalle 3s ease-in-out infinite; }
+@keyframes ind-dalle { 0%, 100% { opacity: .3; } 50% { opacity: .75; } }
+html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-rune, html.rm .ind-dalle, html.rm .tok.indice .spark i { animation: none; opacity: .8; }
 </style>
 
 <div class="app">
@@ -705,7 +727,7 @@ html.rm .tok .coin > img, html.rm .tok .coin > svg { animation: none !important;
         <div><h4>Images des jetons</h4><p class="hint" style="margin-bottom:6px">Mets tes propres jetons (PNG, JPG ou WEBP, ex. 2-Minute Tabletop). Ils sont découpés en rond.</p><div class="jetons" id="ed-jetons"></div></div>
         <input type="file" id="ed-jeton" accept="image/*" hidden>
         <div><h4>Quête : personnages, secrets, décor</h4><div class="tgrid" data-group="quete"></div></div>
-        <p class="hint">Un secret est invisible sur la carte (sauf s'il scintille). Touche un PNJ ou un secret avec l’outil « Modifier » pour écrire son texte, son énigme et sa récompense.</p>
+        <p class="hint">Chaque secret montre un petit indice sur la carte (sauf s'il est marqué « vraiment caché »). Touche un PNJ ou un secret avec l’outil « Modifier » pour écrire son texte, son énigme et sa récompense.</p>
         <div id="ed-form" hidden></div>
         <div class="edbtns">
           <button class="btn" type="button" id="ed-new">Nouvelle quête</button>
@@ -728,7 +750,7 @@ html.rm .tok .coin > img, html.rm .tok .coin > svg { animation: none !important;
 </div>
 <div class="monde" id="monde" hidden>
   <div class="monde-top"><div class="brand">Le Royaume d'Hull<small>Classe et Donjon · touche un lieu pour partir à l'aventure</small></div><span class="spacer"></span>
-    <div class="tools"><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
+    <div class="tools"><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn blue" type="button" id="m-modif">Modifier une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
   <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-pins" id="m-pins"></div></div></div>
   <input type="file" id="m-file" accept="image/*,video/mp4,video/webm,application/pdf" hidden>
 </div>
@@ -1895,7 +1917,7 @@ function render() {
     if (S.phase === "edit") {
       const sel = ED && ED.sel && ED.sel.ref.x === sc.x && ED.sel.ref.y === sc.y && ED.sel.kind === "secret";
       pose(tok(sc.id, "secret-ed" + (sel ? " sel" : ""), `<div class="mark">${(DECLENCHEURS[sc.action] || "?")[0]}${sc.enigme && sc.enigme.q ? "?" : ""}</div>`), sc.x, sc.y);
-    } else if (sc.visible && !sc.trouve && sc.action !== "entrer") pose(tok(sc.id, "spark", "<i></i><i></i><i></i>"), sc.x, sc.y);
+    } else if (!sc.trouve && !sc.cache) pose(tok(sc.id, "indice ind-" + (INDICES[sc.action] ? sc.action : "fouiller") + (sc.visible ? " fort" : ""), (INDICES[sc.action] || INDICES.fouiller) + (sc.visible ? '<span class="spark"><i></i><i></i><i></i></span>' : "")), sc.x, sc.y);
   }
   for (const p of S.pnj) {
     const sel = S.phase === "edit" && ED && ED.sel && ED.sel.ref.x === p.x && ED.sel.ref.y === p.y && ED.sel.kind === "pnj";
@@ -3474,6 +3496,15 @@ const EXPLO = {
   bruler: { nom: "Brûler avec une torche", op: "÷", verbe: "approche sa torche" },
   toucher: { nom: "Toucher", op: "+", verbe: "touche" },
 };
+// Chaque secret laisse un indice discret selon ce qu'il faut faire : de quoi donner envie d'essayer
+const INDICES = {
+  fouiller: `<svg viewBox="0 0 100 100"><g class="ind-objet"><path d="M24 72 l18 -11 l30 8 l-8 15 l-28 3z" fill="#8a6a3e" stroke="#2a1f12" stroke-width="3"/><path d="M36 67 l26 6" stroke="#d4b47a" stroke-width="3"/><circle cx="60" cy="72" r="4" fill="#e3c26a"/></g><path class="ind-eclat" d="M64 30 l4 12 l12 4 l-12 4 l-4 12 l-4 -12 l-12 -4 l12 -4z" fill="#fff4c2"/></svg>`,
+  creuser: `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="64" rx="36" ry="17" fill="#6a4a2a" stroke="#2a1b0e" stroke-width="3"/><path d="M24 62 q12 -18 26 -9 q12 -14 28 5" fill="#8a6338" stroke="#2a1b0e" stroke-width="3"/><path d="M40 70 l6 -4 M56 70 l5 -5" stroke="#2a1b0e" stroke-width="2"/><circle cx="34" cy="74" r="2.6" fill="#8b7355"/><circle cx="68" cy="72" r="2.2" fill="#8b7355"/><circle class="ind-poussiere" cx="52" cy="52" r="7" fill="#c9b08a"/></svg>`,
+  bruler: `<svg viewBox="0 0 100 100"><g fill="none" stroke="#6b4a26" stroke-width="5" stroke-linecap="round"><path d="M24 76 q10 -26 26 -30 q14 -2 24 10"/><path d="M30 78 q12 -14 28 -12 q10 2 16 12"/><path d="M38 56 l-5 -6 M58 50 l4 -7 M46 66 l-2 -7 M66 64 l6 -4"/></g><circle class="ind-braise" cx="52" cy="62" r="6" fill="#ff9a3c"/></svg>`,
+  toucher: `<svg viewBox="0 0 100 100"><g class="ind-rune" fill="none" stroke="#8fe3ff" stroke-width="4.5" stroke-linecap="round"><circle cx="50" cy="52" r="26"/><path d="M50 32 v40 M34 44 l32 16 M66 44 l-32 16"/></g></svg>`,
+  entrer: `<svg viewBox="0 0 100 100"><g class="ind-dalle" fill="none" stroke="#f3e2b4" stroke-width="4" stroke-dasharray="7 5"><rect x="16" y="22" width="68" height="58" rx="6"/></g><path d="M40 44 l8 10 l-5 8 M60 46 l-6 8" stroke="#e8d6a8" stroke-width="2" fill="none" opacity=".7"/></svg>`,
+};
+const INDICE_TITRES = { fouiller: "Quelque chose attire le regard…", creuser: "La terre semble fraîchement remuée…", bruler: "Des ronces sèches cachent quelque chose…", toucher: "Une marque étrange luit doucement…" };
 const DECLENCHEURS = { fouiller: "Fouiller", creuser: "Creuser", bruler: "Brûler", toucher: "Toucher", entrer: "Marcher sur la case" };
 const RECOMP = { rien: "Rien de plus", vie: "Potion de vie", mana: "Potion de mana", cle: "Clé de bronze", objet: "Objet spécial (à nommer)", sceau: "Brise un sceau de la porte scellée", levier: "Ouvre les grilles",
   piege: "Piège : −1 PV au héros", piegeGroupe: "Piège : −1 PV à tout le groupe", monstre: "Un monstre surgit" };
@@ -3496,9 +3527,9 @@ const secretIci = (x, y, action) => S.secrets.find(s => s.x === x && s.y === y &
 const pnjAt = (x, y) => S.pnj.find(p => p.x === x && p.y === y);
 
 function menuExplorer(h, x, y, debut = []) {
-  const brille = S.secrets.some(s => s.x === x && s.y === y && !s.trouve && s.visible && s.action !== "entrer");
+  const ind = S.secrets.find(s => s.x === x && s.y === y && !s.trouve && !s.cache && s.action !== "entrer");
   const ok = h.actions > 0;
-  menu(x, y, brille ? "Quelque chose brille ici…" : "Explorer cet endroit", "Que fait l'équipe?", [
+  menu(x, y, ind ? INDICE_TITRES[ind.action] || "Quelque chose attire le regard…" : "Explorer cet endroit", "Que fait l'équipe?", [
     ...debut,
     ...Object.entries(EXPLO).map(([k, a]) => ({ txt: a.nom, op: a.op, off: !ok, fn: () => explorer(h, x, y, k) })),
     { txt: "Autre idée…", op: "?", off: !ok, fn: () => autreIdee(h, x, y) },
@@ -3746,7 +3777,7 @@ function clicCase(x, y) {
     return;
   }
   if (reachCache && reachCache.has(key(x, y))) {
-    const brille = S.secrets.some(sc => sc.x === x && sc.y === y && !sc.trouve && sc.visible && sc.action !== "entrer");
+    const brille = S.secrets.some(sc => sc.x === x && sc.y === y && !sc.trouve && !sc.cache && sc.action !== "entrer");
     if (brille && dist(h, { x, y }) <= 1) return menuExplorer(h, x, y, [{ txt: "Aller ici", fn: () => deplacer(h, x, y) }]);
     // 1re touche : on montre le chemin et un ✓. Toucher le ✓ confirme le déplacement.
     if (att && att.x === x && att.y === y) return deplacer(h, x, y);
@@ -3893,12 +3924,12 @@ document.getElementById("editor").addEventListener("click", e => {
 });
 const carteVierge = n => normaliser({ nom: `Chapitre ${n}`, intro: "", grid: Array.from({ length: 12 }, (_, y) => Array.from({ length: 18 }, (_, x) => (x === 0 || y === 0 || x === 17 || y === 11) ? "#" : ".").join("")) });
 
-function ouvrirEditeur() {
+function ouvrirEditeur(src = QUETE) {
   const retour = S && S.phase !== "edit" ? { quete: QUETE, partie: photoPartie() } : (ED && ED.retour);
-  const q = clone(QUETE);
-  if (INTEGREES.some(i => i.id === q.id)) { q.id = "q" + Date.now(); q.nom = "Copie de " + QUETE.nom.replace(" (démo)", ""); }
+  const q = clone(src);
+  if (INTEGREES.some(i => i.id === q.id)) { q.id = "q" + Date.now(); q.nom = "Copie de " + src.nom.replace(" (démo)", ""); }
   q.chapitres = q.chapitres.map(normaliser);
-  ED = { quete: q, ch: Math.min(S ? S.chapitre : 0, q.chapitres.length - 1), outil: "mur", sel: null, retour, get carte() { return this.quete.chapitres[this.ch]; } };
+  ED = { quete: q, ch: src === QUETE ? Math.min(S ? S.chapitre : 0, q.chapitres.length - 1) : 0, outil: "mur", sel: null, retour, get carte() { return this.quete.chapitres[this.ch]; } };
   afficherForm();
   rebatirEdition();
   msgEd(`Les quêtes sont enregistrées ${Stock.ou()}.`);
@@ -3957,7 +3988,9 @@ function afficherForm() {
     <button class="btn" type="button" data-f-del>Retirer ce personnage</button>`
     : `<h4>Secret</h4>
     <label>Se déclenche quand l'équipe… <select id="f-act" data-f="action">${opts(DECLENCHEURS, r.action)}</select></label>
-    <label class="check"><input id="f-vis" type="checkbox" data-f="visible" ${r.visible ? "checked" : ""}> Scintille (indice visible)</label>
+    <p class="hint">Un petit indice apparaît sur la case selon l'action (objet qui brille, terre remuée, ronces, rune, dalle fissurée).</p>
+    <label class="check"><input id="f-vis" type="checkbox" data-f="visible" ${r.visible ? "checked" : ""}> Indice fort (scintille en plus)</label>
+    <label class="check"><input id="f-cache" type="checkbox" data-f="cache" ${r.cache ? "checked" : ""}> Aucun indice (vraiment caché, ex. un piège)</label>
     <label>Texte révélé <textarea id="f-txt" data-f="texte" rows="3">${esc(r.texte || "")}</textarea></label>
     <label>Énigme (facultatif) <input id="f-q" data-f="enigme.q" value="${esc(r.enigme.q || "")}" placeholder="La question"></label>
     <label>Bonne réponse <input id="f-rep" data-f="enigme.rep" value="${esc(r.enigme.rep || "")}"></label>
@@ -4568,6 +4601,13 @@ document.getElementById("m-pins").addEventListener("click", async e => {
 }, true);
 document.getElementById("m-caches").onclick = async () => { MONDE.caches = []; await Stock.sauverMonde(MONDE); afficherMonde(); toast("Toutes les quêtes sont de retour sur la carte."); };
 document.getElementById("m-close").onclick = fermerMonde;
+document.getElementById("m-modif").onclick = async () => {
+  const toutes = [...QUETES, ...INTEGREES.filter(i => i.id !== "demo" || !(MONDE.caches || []).includes("demo"))];
+  const v = await choisir("Modifier une quête", "Choisis la quête à ouvrir dans le Créateur. Une quête fournie avec le jeu est d'abord copiée, l'originale reste intacte.",
+    [...toutes.map(q => ({ txt: esc(q.nom.replace(" (démo)", "")), v: q.id, cls: INTEGREES.includes(q) ? "" : "blue" })), { txt: "Retour", v: null }]);
+  const q = toutes.find(x => x.id === v); if (!q) return;
+  fermerMonde(); ouvrirEditeur(q);
+};
 document.getElementById("m-creer").onclick = () => { fermerMonde(); ouvrirEditeur(); document.getElementById("ed-new").click(); };
 document.getElementById("btn-monde").onclick = afficherMonde;
 document.getElementById("m-def").onclick = async () => { MONDE.image = null; MONDE.video = false; await Stock.sauverMonde(MONDE); afficherMonde(); };
