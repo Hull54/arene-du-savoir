@@ -1512,7 +1512,7 @@ function construire(carte, phase, chapitre = 0) {
   carte = normaliser(carte);
   carte = { ...carte, enemies: carte.enemies.filter(([t]) => E[t]) };
   W = carte.grid[0].length; H = carte.grid.length;
-  const niveau = S ? S.niveau : "5e", nbActions = S ? S.nbActions : 2;
+  const niveau = S ? S.niveau : "5e", nbActions = S ? S.nbActions : (PREF.nbActions || 3);
   S = {
     carte, chapitre, grid: carte.grid.map(r => r.split("")), round: 1, evFaits: [], dernierEvt: Date.now(), debut: true, phase, actif: 0, mode: null, busy: false, niveau, nbActions, fini: null,
     inv: { vie: 0, mana: 0, cle: 0 }, log: [],
@@ -3905,7 +3905,7 @@ function ouvrirEditeur() {
 }
 function rebatirEdition() { rebatirSansResize(true); }
 function rebatirSansResize(taille) {
-  const old = S; construire(ED.carte, "edit", ED.ch); S.niveau = old ? old.niveau : "5e"; S.nbActions = old ? old.nbActions : 2;
+  const old = S; construire(ED.carte, "edit", ED.ch); S.niveau = old ? old.niveau : "5e"; S.nbActions = old ? old.nbActions : (PREF.nbActions || 3);
   if (taille) resize(true); else { drawTerrain(); render(); }
 }
 function renderEditeur() {
@@ -4427,7 +4427,7 @@ document.getElementById("btn-reg").onclick = () => {
     <p class="sub" id="r-msg">Quêtes et parties enregistrées ${Stock.ou()}.</p>
     <div class="row"><button class="btn gold" type="button" id="r-ok">Fermer</button></div>`);
   document.getElementById("r-act").onchange = e => {
-    const n = Number(e.target.value), diff = n - S.nbActions; S.nbActions = n;
+    const n = Number(e.target.value), diff = n - S.nbActions; S.nbActions = n; PREF.nbActions = n; sauverPref();
     for (const h of S.heroes) if (h.pv > 0 && !h.joue) h.actions = Math.max(0, h.actions + diff);
     render();
   };
