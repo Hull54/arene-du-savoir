@@ -54,6 +54,7 @@ Object.assign(REGLES, {
   survie: { ico: '🌊', titre: 'Survie coopérative', but: 'Toute la classe ensemble contre 8 vagues de monstres !', pts: ['On ne peut pas se blesser entre nous.', 'Chaque vague est plus forte que la précédente.', 'Entre deux vagues : une question éclair. Bonne réponse = bonus de force.', 'Si tout le monde tombe en même temps, les monstres gagnent.'] },
   zombie: { ico: '🧟', titre: 'Contagion', but: 'Humains : survivez ! Zombies : attrapez tout le monde !', pts: ['Un zombie qui te touche te pose une question : bonne réponse = tu résistes 3 secondes.', 'Mauvaise réponse : tu deviens un zombie à ton tour.', 'Les coups des humains repoussent et étourdissent les zombies.', 'Survivre rapporte des points. Les zombies vont un peu plus vite.'] },
   entrainement: { ico: '🎯', titre: 'Entraînement', but: 'Entraîne-toi contre les robots !', pts: ['Les élèves ne peuvent pas se blesser entre eux : seulement les robots.', 'Les robots frappent moins fort.', 'Les questions reviennent plus souvent sur les notions que tu rates.'] },
+  prof: { ico: '🧑‍🏫', titre: 'Boss Prof', but: 'Toute la classe contre le Prof, dans une classe géante !', pts: ['🥊 Gant de boxe, 👀 regard, 📢 voix, 📣 sifflet (esquive au bon moment !), 📄 devoirs, 🖍️ craie.', '🔒 Retenue : reste 2 s près d\'un camarade en cage et réponds pour le libérer.', '📝 Interros surprises : tout le monde répond aux mêmes questions. La majorité brise le bouclier, mais chacun est noté.', '⭐ 3 bonnes réponses de suite aux interros : tu deviens le chouchou (coups puissants).', '🏆 À la fin, le Prof tombe à genoux : la question finale décide !'] },
   controle: { ico: '📝', titre: 'Contrôle', but: 'Réponds à toutes les questions, à ton rythme.', pts: ['Pas de combat : ton héros reste à sa place.', 'Tout le monde a les mêmes questions.', 'Prends ton temps et relis-toi : ton bilan arrive à la fin.'] },
 });
 // Modes en équipes : noms et scores affichés en haut de l'écran
@@ -86,7 +87,7 @@ function reglesHTML(mode, extra = '') {
 function unpackWorld(w) {
   w.pz = w.pz || [];
   w.mn = w.mn || [];
-  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024), sz: !!(f & 2048), at: !!(f & 4096), sj: !!(f & 8192) }));
+  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024), sz: !!(f & 2048), at: !!(f & 4096), sj: !!(f & 8192), cg: !!(f & 16384) }));
   return w;
 }
 
@@ -754,6 +755,38 @@ function spriteFor(o, TH = THEMES.village) {
     line2(P, 14, h + 28, 18, 16, '#5a361e'); line2(P, 22, h + 28, 18, 16, '#5a361e'); line2(P, 18, h + 28, 18, 16, '#5a361e');
     for (let k = 0; k < 22; k++) { const r = 2 + Math.floor(k / 7); P.rect(6 + k, 20 - k - r, 1, r * 2 + 1, k % 7 === 0 ? '#9a6a1e' : '#e3b341'); }
     P.rect(28, 1, 3, 3, '#bfe4ff');
+  } else if (kind === 'bureau') {   // grand bureau du Prof : pomme, piles de copies, tasse de café
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 20;
+    P.rect(1, 6, w, h + 14, '#8a5a32'); P.rect(1, 6, w, 14, '#a86a3c'); P.rect(1, 6, w, 1, '#c99060'); P.rect(1, 20, w, 1, '#5a361e');
+    for (const x of [4, w - 14]) { P.rect(x, 24, 10, h - 6, '#7a4b25'); P.rect(x + 3, 26, 4, 1, '#c8a040'); }
+    P.rect(8, 0, 16, 9, '#f4f0e6'); P.rect(9, 2, 14, 1, '#b8b0a0'); P.rect(9, 4, 12, 1, '#b8b0a0'); P.rect(10, 1, 16, 8, '#f8f4ec');
+    P.disc(w - 24, 10, 3, '#d8302a'); P.px(w - 24, 6, '#5a3a20'); P.px(w - 23, 6, '#4fa060');
+    P.rect(w - 12, 6, 6, 7, '#f4f0e6'); P.rect(w - 6, 8, 2, 3, '#f4f0e6'); P.rect(w - 11, 7, 4, 1, '#5a361e');
+    P.rect(30, 9, 18, 4, '#3f6fb5'); P.rect(30, 9, 18, 1, '#6a94d8');
+  } else if (kind === 'grandpupitre') {   // pupitre géant avec sa chaise bleue, un cahier et un crayon
+    P = new Painter(w + 2, h + 34); ax = 1; ay = 14;
+    P.rect(1, 2, w, 14, '#d8ab70'); P.rect(1, 2, w, 2, '#ecc890'); P.rect(1, 15, w, 2, '#a87a48');
+    P.rect(4, 17, 3, h, '#8a8f99'); P.rect(w - 5, 17, 3, h, '#8a8f99'); P.rect(1, 16, w, h - 2, '#5a4a3a');   // casier sous le pupitre
+    P.rect(6, 4, 14, 9, '#f8f4ec'); P.rect(6, 4, 2, 9, '#e0405a'); for (let y = 6; y < 12; y += 2) P.rect(9, y, 10, 1, '#9fc6e0');
+    P.rect(24, 8, 14, 2, '#ffd84a'); P.rect(38, 8, 3, 2, '#e8c89a'); P.px(41, 8, '#3a3846'); P.rect(22, 8, 2, 2, '#ff8aa8');
+    const cx = Math.floor(w / 2) - 8;                                                     // chaise
+    P.rect(cx, h + 16, 16, 8, '#3f6fb5'); P.rect(cx, h + 16, 16, 2, '#6a94d8'); P.rect(cx + 1, h + 24, 2, 8, '#55525f'); P.rect(cx + 13, h + 24, 2, 8, '#55525f');
+  } else if (kind === 'crayon') {   // crayon géant couché
+    P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
+    P.rect(8, 2, w - 18, h + 4, '#ffd84a'); P.rect(8, 2, w - 18, 2, '#fff0a0'); P.rect(8, h + 3, w - 18, 2, '#e8b83a');
+    P.rect(1, 2, 5, h + 4, '#ff8aa8'); P.rect(6, 2, 2, h + 4, '#c8d0dc');
+    for (let i = 0; i < 10; i++) { const r = Math.round((h + 4) / 2 * (1 - i / 10)); P.rect(w - 10 + i, 4 + Math.floor(h / 2) - r, 1, r * 2, i > 6 ? '#3a3846' : '#e8c89a'); }
+  } else if (kind === 'gomme') {   // efface géante rose et bleue
+    P = new Painter(w + 2, h + 12); ax = 1; ay = 10;
+    P.rect(1, 2, w, h + 8, '#ff9ab0'); P.rect(1, 2, w, 3, '#ffc0d0'); P.rect(Math.floor(w / 2), 2, Math.ceil(w / 2), h + 8, '#5a8ad8'); P.rect(Math.floor(w / 2), 2, Math.ceil(w / 2), 3, '#8ab0f0');
+  } else if (kind === 'regle') {   // règle de 30 cm géante
+    P = new Painter(w + 2, h + 6); ax = 1; ay = 4;
+    P.rect(1, 1, w, h + 4, '#f0e0a0'); P.rect(1, 1, w, 1, '#fff6c8');
+    for (let x = 3; x < w; x += 3) P.rect(x, 1, 1, x % 15 === 0 ? 5 : 3, '#5a4a3a');
+  } else if (kind === 'sac') {   // sac à dos géant
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 20;
+    P.rect(2, 4, w - 2, h + 16, '#e0405a'); P.rect(2, 4, w - 2, 3, '#ff7a8a'); P.rect(5, 12, w - 8, h + 4, '#c02a40'); P.rect(5, 12, w - 8, 2, '#e8e0d0');
+    P.rect(Math.floor(w / 2) - 4, 0, 8, 5, '#3a3846'); P.rect(Math.floor(w / 2) - 1, 14, 2, 4, '#ffd84a');
   } else if (kind === 'barre') {   // gouvernail : roue à poignées sur son pied
     P = new Painter(w + 8, h + 22); ax = 4; ay = 20; const cx = Math.floor((w + 8) / 2);
     P.rect(cx - 2, 12, 4, h + 9, '#5a361e');
@@ -895,6 +928,7 @@ function peindreEcole(g, map, tile, TS) {
     g.beginPath(); g.arc((x0 + x1) / 2, (y0 + y1) / 2, 14, 0, 7); g.stroke();
   }
   // cour : terrain de basket, marelle et « carré » (ballon-poing)
+  if (map.id === 'ecole') {
   const T = TS, cx = 27 * T, cy = 24 * T;
   g.strokeStyle = blanc; g.lineWidth = 2;
   g.strokeRect(14.6 * T, 19.5 * T, 25.2 * T, 9 * T);
@@ -910,6 +944,7 @@ function peindreEcole(g, map, tile, TS) {
   const qx = 33 * T, qy = 30 * T;
   g.strokeStyle = '#7fd0ff'; g.strokeRect(qx, qy, 4 * T, 4 * T * 0.75);
   g.beginPath(); g.moveTo(qx + 2 * T, qy); g.lineTo(qx + 2 * T, qy + 3 * T); g.moveTo(qx, qy + 1.5 * T); g.lineTo(qx + 4 * T, qy + 1.5 * T); g.stroke();
+  }
   // trampolines (blocs de 2×2 tuiles 'r')
   const vus = new Set();
   for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) {
@@ -1035,6 +1070,23 @@ function peindreMine(g, tg, map) {
       g.drawImage(P.outline().canvas(), x - 3, y - 4);
     }
   }
+}
+// pupitre brisé par le Prof : planches, pieds tordus, feuilles
+let debrisCache = null;
+function debrisSprite() {
+  if (debrisCache) return debrisCache;
+  const P = new Painter(60, 22);
+  for (const [x, y, l, c] of [[2, 10, 20, '#d8ab70'], [18, 4, 24, '#c89a60'], [30, 13, 22, '#d8ab70'], [8, 16, 16, '#a87a48']]) { P.rect(x, y, l, 4, c); P.rect(x, y, l, 1, '#ecc890'); }
+  line2(P, 44, 2, 50, 12, '#8a8f99'); line2(P, 12, 3, 6, 9, '#8a8f99');
+  P.rect(24, 15, 9, 6, '#f8f4ec'); P.rect(25, 17, 6, 1, '#9fc6e0'); P.rect(48, 15, 10, 4, '#3f6fb5');
+  return (debrisCache = P.outline().canvas());
+}
+function casserObjet(map, x, y) {   // le serveur annonce un pupitre brisé
+  const i = map.objs.findIndex(o => o.x === x && o.y === y);
+  if (i < 0) return;
+  const o = map.objs.splice(i, 1)[0];
+  (map.debris = map.debris || []).push({ x: o.x, y: o.y - 10 });
+  if (window.Mouvement && Mouvement.oublier) Mouvement.oublier(map);
 }
 // Caverne : tout est noir sauf autour de mon héros, des coéquipiers, des cristaux, de la lave et des boules de feu
 let noirCv = null, lumieresCarte = null, lumieresDe = null;
@@ -1580,6 +1632,7 @@ function buildMapLayers(map) {
   // objets : la partie au-dessus du rectangle de collision va dans la couche du dessus (les joueurs passent derrière)
   const sorted = [...map.objs].sort((a, b) => (a.y + a.h) - (b.y + b.h));
   for (const o of sorted) {
+    if (o.kind === 'grandpupitre') continue;   // dessinés à chaque image (ils peuvent se briser)
     const s = spriteFor(o, TH);
     if (!s) continue;
     const sx = Math.round(o.x / PX - s.ax), sy = Math.round(o.y / PX - s.ay);
@@ -1849,6 +1902,7 @@ const BOSS_INFO = {
   titan:     { nom: 'Titan du Bruit', ico: '💪', col: '#ff8a6a' },
   empereur:  { nom: 'Empereur du Chaos', ico: '😈', col: '#ff5a4a' },
   gluant:    { nom: 'Roi Gluant', ico: '👑', col: '#9af08a' },
+  prof:      { nom: 'Le Prof', ico: '🧑‍🏫', col: '#ff8a6a' },
 };
 const SBIRE_DE = { gobelin: 'gobelin', dragon: 'citrouille', ombres: 'ombre', givre: 'glace', cyclope: 'sablier', minotaure: 'diablotin', kraken: 'pieuvre', golem: 'livre', titan: 'gobelin', empereur: 'chevalier', gluant: 'slime' };
 // Boss en pixel art (60 x 54), d'après les cartes du système d'émulation. Ils regardent vers la droite.
@@ -2112,6 +2166,43 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
     P.rect(29, 11, 2, 3, F(sD)); P.px(28, 13, F(sDD)); P.px(31, 13, F(sDD));
     P.rect(26, 15, 8, 1 + mo, F('#2a0808')); P.rect(26, 15, 8, 1, G('#f4ecd8')); if (a) P.rect(27, 18, 6, 1, G('#e8e0d0'));
     if (f % 2 === 0 || a) { line(1, 14, 4, 18, G('#fff6a0')); line(4, 18, 1, 20, G('#fff6a0')); line(58, 14, 55, 18, G('#fff6a0')); line(55, 18, 58, 20, G('#fff6a0')); }
+  } else if (k === 'prof' || k === 'prof2' || k === 'prof3') {
+    // Le Prof : très large, gros bras, barbe rousse, chemise de chasse à carreaux, jeans, Converse, casquette à l'envers
+    const skin = '#e3a984', [sH, s, sD, sDD] = T(skin), jean = '#3f6aa8', barbe = '#a8542a', red = '#c8342a', noir = '#22181c', fache = k !== 'prof', casque = k === 'prof3';   // fâché : lunettes ; phase finale : casque de football
+    const carreaux = (x0, y0, x1, y1) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const c = P.g[y * P.w + x]; if (c && c !== OUT && ((Math.floor(x / 3) + Math.floor(y / 3)) % 2 === 0)) P.g[y * P.w + x] = F(noir); } };
+    // jambes en jeans, Converse blanches
+    limb(24, 39, 22, 47 + lA, 8, jean); limb(36, 39, 38, 47 + lB, 8, jean);
+    for (const [x, l] of [[16, lA], [33, lB]]) { box(x, 47 + l, 13, 4, '#f4f0e6'); P.rect(x, 50 + l, 13, 1, F('#c8c0b0')); P.rect(x + 9, 47 + l, 4, 2, F('#f8f8f8')); P.rect(x + 2, 48 + l, 6, 1, F(noir)); }
+    box(16, 36, 28, 4, '#5a3a22'); box(28, 36, 4, 4, '#c8a040');
+    // torse très large : chemise à carreaux rouges et noirs, col ouvert
+    ball(30, 27 + b, 17, 11, red); carreaux(12, 16, 48, 39);
+    P.rect(29, 18 + b, 2, 18, F('#3a1414')); for (let y = 22; y < 36; y += 4) P.px(30, y + b, G('#e8e0d0'));
+    tri(25, 16 + b, 35, 16 + b, 30, 23 + b, F(barbe));
+    // bras énormes : manches roulées, avant-bras, gant de boxe rouge à droite
+    limb(14, 19, 8, 29, 9, red); carreaux(3, 18, 18, 33);
+    if (a) {   // coup de poing : le gant part vers l'avant
+      limb(44, 19, 49, 23, 9, red); carreaux(42, 15, 53, 28); limb(49, 23, 52, 22, 7, skin);
+      ball(53, 21, 5, 6, '#d8302a'); P.rect(48, 16, 2, 10, G('#f4f0e6')); P.px(54, 17, G('#ff8a7a'));
+      limb(8, 29, 12, 22, 7, skin); ball(13, 20, 4, 4, skin);
+    } else {   // garde haute
+      limb(46, 19, 52, 28, 9, red); carreaux(42, 15, 57, 32); limb(52, 28, 50, 18, 7, skin);
+      ball(50, 14, 6, 6, '#d8302a'); P.rect(45, 17, 10, 2, G('#f4f0e6')); P.px(48, 11, G('#ff8a7a'));
+      limb(8, 29, 10, 20, 7, skin); ball(11, 17, 4, 4, skin); P.rect(9, 16, 5, 1, F(sD));
+    }
+    // tête : visage, grosse barbe rousse, casquette noire à l'envers
+    ball(30, 10, 8, 8, skin); P.px(22, 10, F(sD)); P.px(38, 10, F(sD));
+    ball(30, 16 + b, 10, 7, barbe); ball(30, 12, 6, 2, barbe); for (let i = 0; i < 6; i++) P.px(23 + i * 3, 20 + b + (i % 2), F('#7a3a1a'));
+    P.rect(26, 12, 8, 1, F('#8a4220'));   // moustache
+    P.rect(27, 14, 6, a ? 3 : 1, F('#3a0808')); if (a) P.rect(27, 14, 6, 1, G('#f4ecd8'));
+    if (fache) { P.rect(23, 7, 15, 3, F('#1b1424')); P.rect(24, 8, 5, 1, G('#5a8ab8')); P.rect(32, 8, 5, 1, G('#5a8ab8')); P.rect(29, 8, 3, 1, F('#c8a040')); }
+    else { P.rect(25, 8, 3, 2, G('#f4f0e0')); P.rect(32, 8, 3, 2, G('#f4f0e0')); P.px(27, 8, G('#3a6ab0')); P.px(34, 8, G('#3a6ab0')); P.px(27, 9, OUT); P.px(34, 9, OUT); }
+    brow(24, 5, 1, 5, F('#6a3418')); brow(37, 5, -1, 5, F('#6a3418'));
+    P.rect(29, 10, 2, 3, F(sD));
+    if (casque) {   // phase finale : casque de football (coque rouge, bande noire, grille devant le visage)
+      ball(29, 6, 11, 9, '#c8342a'); P.rect(27, -2, 4, 12, F(noir)); P.rect(18, 9, 4, 6, F('#a82a22')); P.disc(20, 11, 2, G('#f4f0e6'));
+      P.rect(23, 7, 15, 3, F('#1b1424')); P.rect(24, 8, 5, 1, G('#5a8ab8')); P.rect(32, 8, 5, 1, G('#5a8ab8'));
+      for (const y of [11, 14]) P.rect(31, y, 9, 1, G('#c8ccd4')); P.rect(39, 9, 1, 7, G('#c8ccd4')); P.rect(35, 10, 1, 6, G('#c8ccd4'));
+    } else { ball(30, 3, 9, 4, noir); P.rect(21, 4, 18, 2, F(noir)); box(13, 3, 9, 3, noir); P.rect(24, 5, 4, 1, F('#5a5664')); }   // casquette, visière derrière
   } else if (k === 'empereur') {
     const ar = '#585d68', [aH, am, aD, aDD] = T(ar), red = '#ff3a2a', mo = a ? 3 : 1;
     // cape rouge sombre derrière
@@ -2562,6 +2653,13 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       sq(x - Math.cos(a) * 16, y - Math.sin(a) * 16, 2, '#4a3a6a'); sq(x - Math.cos(a) * 26, y - Math.sin(a) * 26, 1, '#2a2434');
     } else if (c === 'glace') {   // éclat de glace
       for (let i = 0; i < 5; i++) sq(x - Math.cos(a) * i * 3, y - Math.sin(a) * i * 3, i ? 2 : 3, i ? '#9ae8f0' : '#ffffff');
+    } else if (c === 'craie') {   // craie blanche qui file
+      sq(x - 9, y - 3, 7, OUT); sq(x - 6, y, 5, '#f8f8f4'); sq(x + 6, y, 1, '#d8d8d0');
+    } else if (c === 'papier') {   // feuille de devoir qui tourbillonne
+      const r = Math.floor(now * 10 + x) % 2;
+      sq(x - 15, y - 15, 10, OUT); sq(x - 12, y - 12, 8, r ? '#f8f4ec' : '#e8e0d0');
+      for (let k = 0; k < 3; k++) for (let i = 0; i < 5; i++) sq(x - 6 + i * 3, y - 6 + k * 6, 1, '#7fb0e0');
+      sq(x - 9, y - 9, 1, '#e04a5a');
     } else if (c === 'note') {   // notes de musique du Gobelin du Bruit
       const col = Math.floor(now * 8 + x) % 2 ? '#ffd54a' : '#ffffff';
       sq(x - 6, y + 3, 3, OUT); sq(x - 5, y + 4, 2, col); sq(x, y - 12, 1, col); sq(x, y - 9, 1, col); sq(x, y - 6, 1, col); sq(x, y - 3, 1, col); sq(x + 3, y - 12, 1, col); sq(x + 6, y - 9, 1, col);
@@ -2587,6 +2685,14 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     const s = wagonSprite(Math.abs(Math.cos(a)) > 0.5), S = big ? 4 : PX;
     ctx.drawImage(s, Math.round(x - s.width * S / 2), Math.round(y - s.height * S / 2 - 6), s.width * S, s.height * S);
   }
+  // pupitres géants (classe du Boss Prof) et leurs débris
+  for (const o of map.objs) {
+    if (o.kind !== 'grandpupitre') continue;
+    const s = o._s || (o._s = spriteFor(o));
+    ctx.fillStyle = '#00000030'; ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h, o.w / 2 + 6, 9, 0, 0, 7); ctx.fill();
+    ctx.drawImage(s.c, Math.round(o.x - s.ax * PX), Math.round(o.y - s.ay * PX), s.c.width * PX, s.c.height * PX);
+  }
+  for (const d of map.debris || []) ctx.drawImage(debrisSprite(), Math.round(d.x - 6), Math.round(d.y - 10), 60 * PX, 22 * PX);
   // ballons géants de la cour d'école
   for (const [x, y, rot] of world.bl || []) {
     ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(x, y + 30, 30, 9, 0, 0, 7); ctx.fill();
@@ -2602,8 +2708,9 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     const fr = an & 2 ? Math.floor(now * 7) % 4 : 0, atk = an & 1 ? 1 : 0, br = Math.floor(now * 1.6) % 2;
     ctx.fillStyle = '#00000044'; ctx.beginPath(); ctx.ellipse(x, y + 40, 70, 16, 0, 0, 7); ctx.fill();
     if (phase === 2) for (let k = 0; k < 10; k++) { const t = (now * 0.8 + k / 10) % 1; sq(x + Math.sin(k * 2.7) * 70, y + 30 - t * 120, big ? 4 : 2, t < 0.5 ? '#ff5a3a' : '#a8201a'); }
-    const spr = bossSprite(fr, fl && Math.floor(now * 20) % 2 ? 1 : 0, bk, atk, br);
+    const spr = bossSprite(an & 4 ? 0 : fr, fl && Math.floor(now * 20) % 2 ? 1 : 0, bk === 'prof' ? (an & 8 ? 'prof3' : phase === 2 ? 'prof2' : 'prof') : bk, atk, br);
     ctx.save(); ctx.translate(Math.round(x), Math.round(y - 10)); if (Math.cos(ang) < -0.2) ctx.scale(-1, 1);
+    if (an & 4) { ctx.translate(0, spr.height * bs * 0.18); ctx.scale(1, 0.72); ctx.rotate(Math.sin(now * 3) * 0.05); }   // à genoux (question finale)
     ctx.drawImage(spr, Math.round(-spr.width * bs / 2), Math.round(-spr.height * bs / 2), spr.width * bs, spr.height * bs); ctx.restore();
     if (shield) {   // Bouclier du savoir : bulle bleue
       ctx.save(); ctx.globalAlpha = 0.22 + Math.sin(now * 5) * 0.08; ctx.fillStyle = '#9fd6ff'; ctx.beginPath(); ctx.arc(x, y - 6, big ? 200 : 92, 0, 7); ctx.fill();
@@ -2645,6 +2752,12 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     else if (isMe) sq(d.x - 3, d.y + 30, 2, '#ffd54a');
     else { ctx.fillStyle = CLS[p.c].color; ctx.fillRect(Math.round(d.x) - 15, Math.round(d.y) + 24, 30, 3); }
     if (p.st) for (let i = 0; i < 4; i++) sq(d.x - 20 + i * 13, d.y + 10 - ((now * 60 + i * 17) % 50), 1, '#ff8a1e');
+    if (p.cg) {   // en retenue : barreaux de cage et cadenas
+      const cx = d.x, top = d.y + 26 - 30 * heroScale, bas = d.y + 30, l = 18 * heroScale / 3 + 16;
+      ctx.fillStyle = '#3a3846'; ctx.fillRect(cx - l, top - 6, l * 2, 6); ctx.fillRect(cx - l, bas, l * 2, 6);
+      for (let k = 0; k <= 4; k++) ctx.fillRect(Math.round(cx - l + k * l / 2 - 2), top, 4, bas - top);
+      ctx.fillStyle = '#e3b341'; ctx.fillRect(cx - 6, (top + bas) / 2 - 4, 12, 10); ctx.fillStyle = '#1b1424'; ctx.fillRect(cx - 1, (top + bas) / 2, 2, 4);
+    }
     if (p.sz) for (let i = 0; i < 3; i++) { const a = now * 6 + i * 2.1; sq(d.x + Math.cos(a) * 18, d.y + 26 - 27 * heroScale + Math.sin(a) * 6, 2, '#ffe27a'); }
     if (p.sl) for (let i = 0; i < 3; i++) sq(d.x - 14 + i * 14, d.y + 6 + ((now * 30 + i * 7) % 16), 2, '#6fd85a');
     if (p.fa) for (let i = 0; i < 3; i++) sq(d.x - 30 - i * 8, d.y + 14 - i * 5, 1, '#9fd6ff');

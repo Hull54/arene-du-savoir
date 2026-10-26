@@ -116,9 +116,10 @@ const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
   { nom: 'Verts', color: '#3fbf5a' }, { nom: 'Jaunes', color: '#f2c94c' },
 ];
-const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement', controle: 'Contrôle' };
+const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement', controle: 'Contrôle', prof: 'Boss Prof' };
 const TEAM_MODES = new Set(['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie']);
-const coop = () => mode === 'boss' || mode === 'survie';   // toute la classe ensemble : pas de dégâts entre joueurs
+const bossMode = () => mode === 'boss' || mode === 'prof';   // un boss contre toute la classe
+const coop = () => bossMode() || mode === 'survie';   // toute la classe ensemble : pas de dégâts entre joueurs
 // noms d'équipes propres à certains modes
 const teamsNow = () => mode === 'zombie' ? [{ nom: 'Humains', color: '#3a7ae0' }, { nom: 'Zombies', color: '#5ac85a' }]
   : mode === 'chariot' ? [{ nom: 'Pousseurs', color: '#e0a03a' }, { nom: 'Défenseurs', color: '#3a7ae0' }] : TEAMS.slice(0, nbTeams);
@@ -269,7 +270,26 @@ function sendAll(obj) { const s = JSON.stringify(obj); for (const c of conns) if
 
 // ---------- Carte : grille de marche (pour les robots) ----------
 let walk = [];
+// pupitres géants de la classe : le Prof peut les briser ; tout revient à la manche suivante
+function casserPupitres(x, y, r) {
+  for (const o of [...carte.objs]) {
+    if (o.kind !== 'grandpupitre' || Math.hypot(o.x + o.w / 2 - x, o.y + o.h / 2 - y) > r + 40) continue;
+    if ((o.pv = (o.pv == null ? 3 : o.pv) - 1) > 0) { fx.push({ k: 'hit', x: o.x + o.w / 2, y: o.y, t: 0.25, d: 0.25 }); continue; }
+    if (!carte.objs0) carte.objs0 = [...carte.objs];
+    carte.objs.splice(carte.objs.indexOf(o), 1); MV.oublier(carte);
+    (carte.debris = carte.debris || []).push({ x: o.x, y: o.y - 10 });
+    fx.push({ k: 'boom', x: o.x + o.w / 2, y: o.y + o.h / 2, r: 70, t: 0.4, d: 0.4 });
+    sendAll({ t: 'casse', x: o.x, y: o.y });
+  }
+}
+function reparerPupitres() {
+  if (!carte.objs0) return false;
+  for (const o of carte.objs0) delete o.pv;
+  carte.objs.length = 0; carte.objs.push(...carte.objs0); delete carte.objs0; delete carte.debris; MV.oublier(carte);
+  return true;
+}
 function setCarte(c) {
+  if (carte) reparerPupitres();
   carte = c; T = c.T; W = c.W; H = c.H;
   walk = [];
   for (let j = 0; j < c.rows; j++) for (let i = 0; i < c.cols; i++) {
@@ -382,7 +402,7 @@ function createPlayer(name, cls, bot = false, look = '') {
   return p;
 }
 
-function newQuestion(p) {
+function newQuestion(p, forcee = null) {
   // On choisit d'abord une notion (parmi celles cochées), puis une question de cette notion.
   // Révision ciblée : une notion souvent ratée par cet élève revient plus souvent (jusqu'à 4 fois plus).
   const actives = NOTIONS.filter(n => subjects.has(n.s));
@@ -390,7 +410,7 @@ function newQuestion(p) {
   const poids = pool.map(n => { const s = mem && mem[n.s]; return s ? clamp((s.ko + 1) / (s.ok + 1), 0.5, 4) : 1; });
   let r = Math.random() * poids.reduce((a, b) => a + b, 0), ni = 0;
   while (ni < pool.length - 1 && (r -= poids[ni]) > 0) ni++;
-  const notion = pool[ni].s;
+  const notion = forcee || pool[ni].s;   // forcee : notion imposée (interros du Boss Prof)
   const list = QUESTIONS.filter(q => q.notion === notion).concat(PERSO.filter(q => q.notion === notion));
   const gen = GENERATEURS[notion];
   p.recent = p.recent || [];
@@ -509,7 +529,7 @@ function kill(target, killer) {
 function respawn(p) {
   Object.assign(p, freeSpot(p.team));
   p.hp = p.maxHp; p.alive = true; p.protect = SPAWN_PROTECT; p.question = null;
-  p.cdA = 0; p.cdP = 0; p.cdD = 0; p.dash = null; p.stun = 0;
+  p.cdA = 0; p.cdP = 0; p.cdD = 0; p.dash = null; p.stun = 0; p.cage = 0; p.cageBy = 0;
   fx.push({ k: 'spawn', x: p.x, y: p.y, t: 0.6, d: 0.6 });
 }
 
@@ -569,6 +589,14 @@ function answer(p, i, txt) {
       res('🧟 Oh non ! Tu deviens un zombie. Attrape les humains !');
       addFeed(`🧟 ${p.name} devient un zombie !`);
     }
+    return;
+  }
+  if (Q.kind === 'cage') {   // libérer un camarade de la retenue
+    p.question = null; p.busy = false; p.protect = 0.8;
+    const o = players.get(Q.cage);
+    if (o) { o.cageBy = 0; o.cageProg = 0; }
+    if (ok && o && o.cage) { o.cage = 0; o.stun = 0; addFeed(`🔓 ${p.name} libère ${o.name} de la retenue !`); fx.push({ k: 'heal', x: o.x, y: o.y, t: 0.9, d: 0.9 }); res(`🔓 Bravo ! ${o.name} est libéré.`); }
+    else res('❌ Pas tout à fait… Réessaie dans un instant.');
     return;
   }
   if (Q.kind === 'releve') {   // un coéquipier répond pour relever un K.O.
@@ -827,7 +855,7 @@ function updatePuddles(dt) {
     if (!o.alive) continue;
     for (const z of puddles) {
       const owner = players.get(z.owner);
-      if (o.id === z.owner || (owner && !canHit(owner, o)) || (!owner && mode === 'boss' && !z.boss)) continue;   // encre du Kraken : touche tout le monde
+      if (o.id === z.owner || (owner && !canHit(owner, o)) || (!owner && bossMode() && !z.boss)) continue;   // encre du Kraken : touche tout le monde
       if (Math.hypot(o.x - z.x, (o.y - z.y) * 1.6) < z.r) o.slow = Math.max(o.slow, 1);   // ralenti tant qu'on y marche, et 1 s après
     }
   }
@@ -975,7 +1003,7 @@ function finControle() {
   const eleves = [...ctl.eleves.entries()].map(([nom, e]) => ({ nom, ok: e.rep.filter(r => r && r.ok).length, fait: e.i, rep: ctl.qs.map((_, k) => e.rep[k] || null) }));
   const questions = ctl.qs.map((Q, k) => {
     const rep = eleves.map(x => x.rep[k]).filter(Boolean);
-    return { texte: Q.q.dire ? `🎧 ${Q.q.dire}` : Q.q.question, notion: Q.q.notion, bonne: Q.q.choix[Q.q.reponse], reussite: rep.length ? Math.round(rep.filter(r => r.ok).length / rep.length * 100) : null };
+    return { texte: Q.q.dire ? `🎧 ${Q.q.dire}` : Q.q.question, matiere: Q.q.matiere, notion: Q.q.notion, bonne: Q.q.choix[Q.q.reponse], reussite: rep.length ? Math.round(rep.filter(r => r.ok).length / rep.length * 100) : null };
   });
   for (const p of players.values()) {
     const e = ctl.eleves.get(p.name);
@@ -1123,6 +1151,18 @@ function updateLoot(dt) {
   }
 }
 // Relever un coéquipier : rester 2 s près de son âme, puis répondre à une question à sa place
+// Retenue (Boss Prof) : l'élève en cage ne bouge plus ; un camarade reste 2 s à côté, puis répond pour le libérer
+function updateCages(dt) {
+  for (const p of players.values()) {
+    if (!p.cage) continue;
+    p.stun = Math.max(p.stun || 0, 0.2); p.protect = Math.max(p.protect, 0.2);
+    if ((p.cage -= dt) <= 0 || !p.alive) { p.cage = 0; p.cageBy = 0; continue; }
+    if (p.cageBy || eclair) continue;
+    const r = [...players.values()].find(q => q.alive && !q.bot && !q.busy && !q.cage && q.id !== p.id && Math.hypot(q.x - p.x, q.y - p.y) < 70);
+    if (!r) { p.cageProg = 0; continue; }
+    if ((p.cageProg = (p.cageProg || 0) + dt) >= 2) { p.cageBy = r.id; r.busy = true; r.busyT = 25; askQuestion(r, 'cage', { cage: p.id }); }
+  }
+}
 function updateAmes(dt) {
   ames = ames.filter(a => { const o = players.get(a.id); return o && !o.alive && (a.t -= dt) > 0; });
   for (const a of ames) {
@@ -1169,6 +1209,13 @@ const BOSSES = {
     A: { t: 'onde', portee: 220, r: 230, dmg: 24, stun: 1, cd: 4 }, B: { t: 'chute', portee: 800, n: 2, r: 100, dmg: 20, delai: 1.3, cd: 2.4, obj: 'rocher' } },
   empereur:  { nom: 'Empereur du Chaos', ico: '😈', mois: 'Juin', pv: 200, speed: 85, r: 60, sbire: 'chevalier', boucliers: [0.75, 0.5, 0.25],
     A: { t: 'tourbillon', portee: 190, r: 195, dmg: 26, cd: 3 }, B: { t: 'chute', portee: 850, n: 3, r: 80, dmg: 20, delai: 1, cd: 2.2, obj: 'eclair' } },
+  // Boss Prof : l'enseignant en personne ! Gant de boxe (près), regard (rayon), voix (onde qui étourdit).
+  // Ses boucliers sont des « interros surprises » : les mêmes questions pour toute la classe, notées pour chaque élève.
+  prof:      { nom: 'Le Prof', ico: '🧑‍🏫', pv: 120, speed: 85, r: 56, sbire: null, boucliers: [0.75, 0.5, 0.25],
+    A: { t: 'poing', portee: 170, r: 175, dmg: 18, recul: 220, stun: 0.3, cd: 2 }, B: { t: 'rayon', portee: 800, long: 850, l: 30, dmg: 22, delai: 0.9, cd: 3.4 },
+    C: { t: 'cri', portee: 300, r: 300, dmg: 10, stun: 1, cd: 6.5 },
+    D: { t: 'sifflet', portee: 900, r: 650, stun: 1.1, delai: 0.8, cd: 11 }, E: { t: 'eventail', portee: 700, n: 7, ecart: 1.3, vit: 330, dmg: 9, cls: 'papier', cd: 5 },
+    F: { t: 'retenue', portee: 700, dur: 12, cd: 14 }, G: { t: 'craie', portee: 1100, vit: 640, dmg: 14, cd: 4.5 } },
   gluant:    { nom: 'Roi Gluant', ico: '👑', mois: '', pv: 50, speed: 75, r: 56, sbire: 'slime',
     A: { t: 'onde', portee: 170, r: 180, dmg: 22, cd: 3.2 }, B: { t: 'eventail', portee: 750, n: 3, ecart: 0.5, vit: 300, dmg: 13, cls: 'boss', cd: 1.4 } },
 };
@@ -1178,17 +1225,21 @@ const bossDuMois = () => ['cyclope', 'minotaure', 'kraken', 'golem', 'titan', 'e
 let bossKind = bossDuMois();
 let minions = [], bombs = [], beams = [];
 function spawnBoss() {
-  const B = BOSSES[bossKind], n = Math.max(1, players.size);
+  const kind = mode === 'prof' ? 'prof' : bossKind;
+  const B = BOSSES[kind], n = Math.max(1, players.size);
   const spot = freeSpot();
-  boss = { k: bossKind, nom: B.nom, ico: B.ico, x: carte.heal ? carte.heal.x + 220 : spot.x, y: carte.heal ? carte.heal.y : spot.y, r: B.r, hp: 0, max: 0,
+  boss = { k: kind, nom: B.nom, cdC: 5, cdD: 9, cdE: 4, cdF: 10, cdG: 3, sifflet: 0, ico: B.ico, x: carte.heal ? carte.heal.x + 220 : spot.x, y: carte.heal ? carte.heal.y : spot.y, r: B.r, hp: 0, max: 0,
     cdA: 3, cdB: 2, flash: 0, angle: 0, path: null, pathT: 0, phase: 1, shield: 0, shields: [...(B.boucliers || [0.75, 0.25])], cdSbire: 0, charge: null };
+  if (kind === 'prof' && carte.id === 'classe') { boss.x = 26 * T; boss.y = 9.6 * T; }   // devant son bureau
   if (blocked(boss.x, boss.y, 44)) Object.assign(boss, freeSpot());
-  boss.max = boss.hp = Math.round((400 + 140 * n) * (0.8 + (B.pv - 40) / 200));
+  boss.max = boss.hp = Math.round((400 + 140 * n) * (0.8 + (B.pv - 40) / 200) * (+process.env.BOSS_PV_TEST || 1));   // BOSS_PV_TEST : pour les essais seulement
   minions = []; bombs = []; beams = [];
   addFeed(`${B.ico} ${B.nom} arrive ! Unissez vos forces !`);
+  if (kind === 'prof') setupInterros();
 }
 function bossDefeated(by) {
   if (ended) return;
+  if (boss.k === 'prof' && !boss.vaincu) return startFinale();   // le Prof tombe à genoux : la question finale décide
   addFeed(`🎉 ${boss.nom} est vaincu${by ? ' (coup final : ' + by.name + ')' : ''} !`);
   fx.push({ k: 'boom', x: boss.x, y: boss.y, r: 200, t: 0.8, d: 0.8 });
   minions = []; bombs = []; beams = [];
@@ -1200,12 +1251,13 @@ function bossCheck(by) {
   if (boss.hp <= 0) return bossDefeated(by);
   if (boss.phase === 1 && boss.hp <= boss.max / 2) {
     boss.phase = 2;
-    addFeed(`😡 ${boss.nom} est enragé ! Attention aux sbires !`);
-    summon(3 + Math.floor(players.size / 4));
+    addFeed(BOSSES[boss.k].sbire === null ? `😡 ${boss.nom} se fâche ! Il attaque plus vite !` : `😡 ${boss.nom} est enragé ! Attention aux sbires !`);
+    if (BOSSES[boss.k].sbire !== null) summon(3 + Math.floor(players.size / 4));
   }
   if (boss.shields.length && !boss.shield && boss.hp <= boss.max * boss.shields[0]) {
     boss.shields.shift();
     boss.shield = Infinity;   // jusqu'à la fin de la question éclair
+    if (boss.k === 'prof') return startInterro();
     addFeed('🛡️ Bouclier du savoir ! Répondez tous pour le briser !');
     startEclair(true);
     if (!eclair) boss.shield = 0;
@@ -1304,6 +1356,38 @@ function bossAttack(a, best, aim) {
       fx.push({ k: a.t === 'cri' ? 'cri' : a.t === 'sablier' ? 'sablier' : a.t === 'tourbillon' ? 'tourbillon' : 'slam', x: bx, y: by, r: a.r, t: 0.6, d: 0.6, b: boss.k });
       for (const p of playersNear(boss.x, boss.y, a.r)) hurt(p, a.dmg, a);
       break;
+    case 'retenue': {   // un élève (au hasard) est enfermé dans une cage ; un camarade le libère en répondant à une question
+      const libres = [...players.values()].filter(p => p.alive && !p.busy && !p.cage);
+      const p = libres[Math.floor(Math.random() * libres.length)];
+      if (!p) break;
+      p.cage = a.dur; p.dash = null;
+      fx.push({ k: 'crit', x: Math.round(p.x), y: Math.round(p.y) - 60, txt: '🔒', t: 1, d: 1 });
+      addFeed(`🔒 ${p.name} est en retenue ! Un camarade peut le libérer.`);
+      break;
+    }
+    case 'craie': {   // craie lancée très vite vers l'élève le plus loin
+      let loin = null, ld = 0;
+      for (const p of players.values()) { if (!p.alive || p.busy) continue; const d = Math.hypot(p.x - boss.x, p.y - boss.y); if (d < a.portee && d > ld) { ld = d; loin = p; } }
+      const an = best ? (loin ? Math.atan2(loin.y - boss.y, loin.x - boss.x) : aim) : aim;
+      projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(an) * a.vit, vy: Math.sin(an) * a.vit, r: 9, dmg: a.dmg, life: 2, owner: -1, cls: 'craie', slow: 0 });
+      break;
+    }
+    case 'sifflet':   // le coach prend son sifflet : un avertissement, puis tout le monde est figé
+      boss.sifflet = a.delai;
+      fx.push({ k: 'crit', x: bx, y: by - 100, txt: '📣', t: a.delai, d: a.delai });
+      break;
+    case 'poing': {   // gant de boxe : coup devant lui qui repousse loin
+      const px = bx + Math.round(Math.cos(aim) * 70), py = by + Math.round(Math.sin(aim) * 70);
+      fx.push({ k: 'slam', x: px, y: py, r: 90, t: 0.4, d: 0.4, b: 'prof' }, { k: 'crit', x: px, y: py - 40, txt: '🥊', t: 0.6, d: 0.6 });
+      casserPupitres(px, py, 60);
+      for (const p of playersNear(boss.x, boss.y, a.r)) {
+        const an = Math.atan2(p.y - boss.y, p.x - boss.x);
+        if (angDiff(an, aim) > 0.75) continue;
+        hurt(p, a.dmg, a);
+        for (let k = a.recul; k > 0; k -= 20) { const tx = p.x + Math.cos(an) * k, ty = p.y + Math.sin(an) * k; if (!blocked(tx, ty, R) && !WATER.has(tileAt(tx, ty))) { p.x = tx; p.y = ty; break; } }
+      }
+      break;
+    }
     case 'eventail': shots(Array.from({ length: a.n }, (_, i) => aim - a.ecart / 2 + a.ecart * i / (a.n - 1)), a.cls); break;
     case 'cercle': shots(Array.from({ length: a.n }, (_, i) => aim + i / a.n * Math.PI * 2), a.cls); break;
     case 'souffle':
@@ -1352,7 +1436,13 @@ function bossThink(dt) {
   boss.cdA -= dt; boss.cdB -= dt; boss.flash = Math.max(0, boss.flash - dt); boss.pathT -= dt;
   boss.anim = Math.max(0, (boss.anim || 0) - dt); boss.moving = !!boss.charge;   // pour l'animation : attaque, marche
   if (boss.shield > 0 && boss.shield !== Infinity && (boss.shield -= dt) <= 0) { boss.shield = 0; addFeed('🛡️ Le bouclier disparaît !'); }
-  if (boss.phase === 2 && (boss.cdSbire -= dt) <= 0) { boss.cdSbire = 18; summon(2); }
+  if (boss.phase === 2 && B.sbire !== null && (boss.cdSbire -= dt) <= 0) { boss.cdSbire = 18; summon(2); }
+  boss.cdC -= dt; boss.cdD -= dt; boss.cdE -= dt; boss.cdF -= dt; boss.cdG -= dt;
+  if (boss.sifflet > 0 && (boss.sifflet -= dt) <= 0) {   // coup de sifflet : tout le monde est figé, sauf ceux qui esquivent à ce moment
+    fx.push({ k: 'cri', x: Math.round(boss.x), y: Math.round(boss.y), r: B.D.r, t: 0.6, d: 0.6, b: 'prof' });
+    for (const p of playersNear(boss.x, boss.y, B.D.r)) if (!p.dash && p.protect <= 0) p.stun = Math.max(p.stun || 0, B.D.stun);
+  }
+  if (boss.ctl && Date.now() - boss.ctl.t < 4000) return bossPilote(dt, B, cm);   // l'enseignant contrôle le boss
   updateMinions(dt);
   // charge du minotaure : fonce en ligne droite
   if (boss.charge) {
@@ -1386,7 +1476,32 @@ function bossThink(dt) {
   }
   const aim = Math.atan2(best.y - boss.y, best.x - boss.x);
   if (bd < B.A.portee && boss.cdA <= 0) { boss.cdA = B.A.cd * cm; bossAttack(B.A, best, aim); }
+  else if (B.F && boss.cdF <= 0 && players.size > 1) { boss.cdF = B.F.cd * cm; bossAttack(B.F, best, aim); }
+  else if (B.G && boss.cdG <= 0 && bd > 300) { boss.cdG = B.G.cd * cm; bossAttack(B.G, best, aim); }
+  else if (B.D && bd < B.D.portee && boss.cdD <= 0) { boss.cdD = B.D.cd * cm; bossAttack(B.D, best, aim); }
+  else if (B.E && bd < B.E.portee && boss.cdE <= 0 && bd > 200) { boss.cdE = B.E.cd * cm; bossAttack(B.E, best, aim); }
+  else if (B.C && bd < B.C.portee && boss.cdC <= 0) { boss.cdC = B.C.cd * cm; bossAttack(B.C, best, aim); }
   else if (bd < B.B.portee && boss.cdB <= 0) { boss.cdB = B.B.cd * cm; bossAttack(B.B, best, aim); }
+}
+// L'enseignant pilote le boss depuis son tableau de bord : flèches pour bouger, 1-2-3 pour attaquer vers la souris
+function bossPilote(dt, B, cm) {
+  const c = boss.ctl, mx = (c.r ? 1 : 0) - (c.l ? 1 : 0), my = (c.d ? 1 : 0) - (c.u ? 1 : 0);
+  boss.moving = !!(mx || my);
+  if (mx || my) {
+    const n = Math.hypot(mx, my), sp = B.speed * 1.5 * dt;
+    if (!blocked(boss.x + mx / n * sp, boss.y, 30)) boss.x += mx / n * sp;
+    if (!blocked(boss.x, boss.y + my / n * sp, 30)) boss.y += my / n * sp;
+  }
+  const aim = c.ax != null ? Math.atan2(c.ay - boss.y, c.ax - boss.x) : boss.angle;
+  boss.angle = aim;
+  const k = c.atk; c.atk = null;
+  if (k === 'A' && boss.cdA <= 0) { boss.cdA = B.A.cd * cm; bossAttack(B.A, null, aim); }
+  if (k === 'B' && boss.cdB <= 0) { boss.cdB = B.B.cd * cm; bossAttack(B.B, null, aim); }
+  if (k === 'C' && B.C && boss.cdC <= 0) { boss.cdC = B.C.cd * cm; bossAttack(B.C, null, aim); }
+  if (k === 'D' && B.D && boss.cdD <= 0) { boss.cdD = B.D.cd * cm; bossAttack(B.D, null, aim); }
+  if (k === 'E' && B.E && boss.cdE <= 0) { boss.cdE = B.E.cd * cm; bossAttack(B.E, null, aim); }
+  if (k === 'F' && B.F && boss.cdF <= 0) { boss.cdF = B.F.cd * cm; bossAttack(B.F, null, aim); }
+  if (k === 'G' && B.G && boss.cdG <= 0) { boss.cdG = B.G.cd * cm; bossAttack(B.G, null, aim); }
 }
 
 // ---------- Roi de la colline ----------
@@ -1593,8 +1708,8 @@ function endRound(why) {
   if (ended) return;
   const ps = [...players.values()];
   const top = (key, n = 3) => [...ps].sort((a, b) => b[key] - a[key] || b.good - a.good).slice(0, n).filter(p => p[key] > 0).map(p => ({ n: p.name, c: p.cls, l: p.look, v: Math.round(p[key]), team: p.team }));
-  const cle = mode === 'boss' || mode === 'survie' ? 'dmgBoss' : ['colline', 'drapeau', 'runes', 'chariot', 'zombie'].includes(mode) ? 'obj' : 'kills';
-  ended = { why, mode, boss: mode === 'boss' && boss ? { k: boss.k, nom: boss.nom } : null, top: top(cle), cerveaux: top('good') };
+  const cle = bossMode() || mode === 'survie' ? 'dmgBoss' : ['colline', 'drapeau', 'runes', 'chariot', 'zombie'].includes(mode) ? 'obj' : 'kills';
+  ended = { why, mode, boss: bossMode() && boss ? { k: boss.k, nom: boss.nom } : null, top: top(cle), cerveaux: top('good') };
   if (teamMode()) ended.teams = teamScores().map((s, i) => ({ ...teamsNow()[i], ...s })).sort((a, b) => b.score - a.score);
   // titres des nouveaux modes (le gagnant d'abord)
   if (mode === 'runes') Object.assign(ended, { titre: '✨ Course aux runes terminée !', unite: 'rune', sous: 'Le plus de runes capturées' });
@@ -1610,6 +1725,7 @@ function endRound(why) {
     Object.assign(ended, { titre: hum ? `🧄 ${hum} humain${hum > 1 ? 's ont' : ' a'} survécu : les Humains gagnent !` : '🧟 Les zombies ont contaminé tout le monde !', unite: 'joueur', sous: 'Survie et contagion' });
   }
   if (mode === 'entrainement') Object.assign(ended, { sous: 'Le plus de robots vaincus' });
+  if (mode === 'prof' && interros) rapportInterros();
   if (ctl) { Object.assign(ended, { titre: ctl.dictee ? '🎧 Dictée terminée !' : '📝 Contrôle terminé !', top: [], cerveaux: [], controle: true }); finControle(); }
   // badges de fin de manche
   for (const p of ps) {
@@ -1654,8 +1770,9 @@ function newRound() {
   for (const k in stats) stats[k] = {};
   timer.left = timer.dur;
   boss = null; hill = null; flags = null; minions = []; bombs = []; beams = [];
-  runes = []; cart = null; surv = null; zomb = null; ctl = null;
-  if (mode === 'boss') spawnBoss();
+  if (reparerPupitres()) sendAll({ t: 'carte', map: carte });
+  runes = []; cart = null; surv = null; zomb = null; ctl = null; interros = null;
+  if (bossMode()) spawnBoss();
   if (mode === 'colline') placeHill();
   if (mode === 'drapeau') setupFlags();
   if (mode === 'runes') setupRunes();
@@ -1675,18 +1792,18 @@ function newRound() {
 }
 
 // ---------- Question éclair : la même question pour toute la classe ----------
-function startEclair(bouclier = false) {
+function startEclair(bouclier = false, Qdonne = null, extra = {}, duree = eclairDur) {
   if (eclair || ended) return;
-  const Q = newQuestion({});
-  eclair = { ...Q, left: eclairDur, answers: new Map(), ids: [], bouclier };
+  const Q = Qdonne || newQuestion({});
+  eclair = { ...Q, left: duree, answers: new Map(), ids: [], bouclier, ...extra };
   for (const p of players.values()) {
     cancelChest(p);
     eclair.ids.push(p.id);
     p.question = null;
     if (p.bot) p.botT = rand(3, 12);
-    else send(p.conn, questionMsg(Q, 'eclair', { temps: eclairDur, bouclier }));
+    else send(p.conn, questionMsg(Q, 'eclair', { temps: duree, bouclier, ...(extra.titre ? { titre: extra.titre } : {}) }));
   }
-  addFeed('⚡ Question éclair pour toute la classe !');
+  if (!extra.titre) addFeed('⚡ Question éclair pour toute la classe !');
 }
 function finishEclair() {
   const E = eclair;
@@ -1699,6 +1816,7 @@ function finishEclair() {
     if (i >= 0) counts[i]++;
     const ok = i === E.answer;
     if (i >= 0) record(p, E.q, ok);
+    if (E.interro != null && !p.bot) noterInterro(p, E, i, ok);
     if (ok) { nbOk++; p.pending = 'force'; }
     send(p.conn, { t: 'res', kind: 'eclair', ok, bonne: E.answer, explication: ok ? '' : expl(E.q), repondu: i >= 0 });
     if (!p.alive) { p.question = null; p.waitQ = 2.5; }
@@ -1707,7 +1825,87 @@ function finishEclair() {
   for (const c of conns) if (c.role === 'prof') send(c, res);
   addFeed(`⚡ ${nbOk} bonne${nbOk > 1 ? 's' : ''} réponse${nbOk > 1 ? 's' : ''} sur ${E.ids.length}`);
   eclair = null;
+  if (E.interro != null) return finInterroQ(E, nbOk);
   shieldResult(nbOk, E.ids.length);
+}
+
+// ---------- Boss Prof : interros surprises et question finale ----------
+// Au début du combat, une seule liste de questions est tirée (réparties entre les notions cochées) : toute la classe
+// reçoit les mêmes, dans le même ordre, et chaque élève est noté seul. La majorité ne sert qu'à briser le bouclier.
+// Les questions pour revenir d'un K.O. ne comptent pas. La finale : la notion la plus ratée par la classe.
+let interros = null;
+function setupInterros() {
+  const n = ctlReglages.n, actives = NOTIONS.filter(x => subjects.has(x.s)), pool = (actives.length ? actives : NOTIONS).map(x => x.s);
+  const qs = [];
+  for (let k = 0; qs.length < n && k < n * 8; k++) {
+    const Q = newQuestion({ name: null, recent: [] }, pool[qs.length % pool.length]);
+    if (!qs.some(x => x.q.question === Q.q.question)) qs.push(Q);
+  }
+  const par = Math.ceil(qs.length / 3);
+  interros = { qs, lots: [qs.slice(0, par), qs.slice(par, par * 2), qs.slice(par * 2)], lot: -1, k: 0, ok: 0, tot: 0, pause: 0, eleves: new Map(), finales: 0 };
+}
+function startInterro() {
+  if (!interros) return;
+  interros.lot++;
+  const lot = interros.lots[interros.lot];
+  if (!lot || !lot.length) { boss.shield = 0; return; }
+  interros.k = 0; interros.ok = 0; interros.tot = 0;
+  addFeed(`📝 Interro surprise ! ${lot.length} questions pour toute la classe`);
+  fx.push({ k: 'crit', x: boss.x, y: boss.y - 90, txt: '📝', t: 1, d: 1 });
+  interros.pause = 1.5;   // petit temps pour lire « Interro surprise ! »
+}
+function poserInterro() {
+  const I = interros, lot = I.lots[I.lot], Q = lot[I.k], num = I.qs.indexOf(Q);
+  startEclair(true, Q, { interro: num, titre: `📝 Interro surprise · question ${I.k + 1} sur ${lot.length}` }, Math.max(20, eclairDur));
+}
+function noterInterro(p, E, i, ok) {
+  const I = interros; if (!I) return;
+  if (!I.eleves.has(p.name)) I.eleves.set(p.name, []);
+  I.eleves.get(p.name)[E.interro === 'finale' ? E.num : E.interro] = { ok, txt: i >= 0 ? E.q.choix[E.order[i]] : '' };
+  // le chouchou : 3 bonnes réponses de suite aux interros = coups doublés pendant 15 s
+  p.serieI = ok ? (p.serieI || 0) + 1 : 0;
+  if (p.serieI === 3) { p.serieI = 0; p.strong = Math.max(p.strong, 15); addFeed(`⭐ ${p.name} est le chouchou du Prof : coups puissants pendant 15 s !`); }
+}
+function finInterroQ(E, nbOk) {
+  const I = interros;
+  if (E.interro === 'finale') return finFinale(E, nbOk);
+  I.ok += nbOk; I.tot += E.ids.length; I.k++;
+  if (I.k < I.lots[I.lot].length) { I.pause = 2.5; return; }
+  shieldResult(I.ok, I.tot);
+}
+function startFinale() {
+  const I = interros;
+  boss.hp = 1; boss.genoux = true; boss.shield = Infinity;
+  // la notion la plus ratée par la classe pendant les interros
+  const parNotion = {};
+  for (const rep of I.eleves.values()) rep.forEach((r, k) => { if (!r) return; const n = I.qs[k].q.notion, o = (parNotion[n] = parNotion[n] || { ok: 0, t: 0 }); o.t++; if (r.ok) o.ok++; });
+  const pire = Object.entries(parNotion).sort((a, b) => a[1].ok / a[1].t - b[1].ok / b[1].t)[0];
+  let Q = null;
+  for (let k = 0; k < 20; k++) { Q = newQuestion({ name: null, recent: [] }, pire ? pire[0] : null); if (!I.qs.some(x => x.q.question === Q.q.question)) break; }
+  I.qs.push(Q); I.finales++;
+  addFeed(`🧑‍🏫 Le Prof tombe à genoux… Question finale${pire ? ' (' + pire[0] + ')' : ''} : la plus difficile !`);
+  fx.push({ k: 'crit', x: boss.x, y: boss.y - 90, txt: '😵', t: 1.2, d: 1.2 });
+  startEclair(true, Q, { interro: 'finale', num: I.qs.length - 1, titre: '🏆 Question finale : si la classe a juste, le Prof tombe !' }, Math.max(30, eclairDur + 10));
+}
+function finFinale(E, nbOk) {
+  boss.genoux = false;
+  if (nbOk * 2 > E.ids.length) {
+    boss.shield = 0; boss.vaincu = true; boss.hp = 0;
+    addFeed(`🎉 ${nbOk} bonnes réponses sur ${E.ids.length} : le Prof tombe au combat !`);
+    return bossDefeated(null);
+  }
+  boss.shield = 0; boss.hp = Math.round(boss.max * 0.25);
+  addFeed(`😤 Seulement ${nbOk} sur ${E.ids.length}… le Prof se relève avec 25 % de vie !`);
+}
+// rapport : même forme que le Contrôle (fiches pour les parents)
+function rapportInterros() {
+  const I = interros; if (!I) return;
+  const eleves = [...I.eleves.entries()].map(([nom, rep]) => ({ nom, ok: I.qs.reduce((t, _, k) => t + (rep[k] && rep[k].ok ? 1 : 0), 0), fait: rep.filter(Boolean).length, rep: I.qs.map((_, k) => rep[k] || null) }));
+  const posees = I.qs.map((Q, k) => eleves.some(e => e.rep[k]) ? k : -1).filter(k => k >= 0);
+  const questions = posees.map(k => { const Q = I.qs[k], rep = eleves.map(x => x.rep[k]).filter(Boolean); return { texte: (k >= I.qs.length - I.finales ? '🏆 Finale : ' : '') + Q.q.question, matiere: Q.q.matiere, notion: Q.q.notion, bonne: Q.q.choix[Q.q.reponse], reussite: rep.length ? Math.round(rep.filter(r => r.ok).length / rep.length * 100) : null }; });
+  for (const e of eleves) { e.rep = posees.map(k => e.rep[k]); e.ok = e.rep.filter(r => r && r.ok).length; }
+  const rapport = { t: 'ctlRapport', prof: true, total: questions.length, questions, eleves };
+  for (const c of conns) if (c.role === 'prof') send(c, rapport);
 }
 
 // ---------- Robots (pour tester ou compléter la classe) ----------
@@ -1730,7 +1928,7 @@ function botThink(p, dt) {
   }
   // cible : le boss, ou l'adversaire le plus proche
   let best = null, bd = Infinity;
-  if (mode === 'boss' && boss && boss.hp > 0) { best = boss; bd = Math.hypot(boss.x - p.x, boss.y - p.y) - boss.r + R; }
+  if (bossMode() && boss && boss.hp > 0) { best = boss; bd = Math.hypot(boss.x - p.x, boss.y - p.y) - boss.r + R; }
   else if (mode === 'survie') for (const m of minions) { const d = Math.hypot(m.x - p.x, m.y - p.y); if (d < bd) { bd = d; best = m; } }
   else for (const o of players.values()) {
     if (!canHit(p, o) || o.busy) continue;
@@ -1824,8 +2022,9 @@ function step() {
     if (eclair.left <= 0 || !waiting) finishEclair();
   }
   if (countdown > 0 && !paused && !eclair) countdown = Math.max(0, countdown - dt);
-  const frozen = paused || !!eclair || countdown > 0;
-  if (!frozen && timer.dur && !ended) { if (timer.left > 60 && timer.left - dt <= 60 && timer.dur > 90) addFeed('⏱ Plus qu\'une minute !'); timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); } }
+  if (interros && !eclair && interros.pause > 0 && !paused && (interros.pause -= dt) <= 0) poserInterro();
+  const frozen = paused || !!eclair || countdown > 0 || !!(interros && interros.pause > 0);
+  if (!frozen && timer.dur && !ended) { if (timer.left > 60 && timer.left - dt <= 60 && timer.dur > 90) addFeed('⏱ Plus qu\'une minute !'); timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(bossMode() ? 'boss-perdu' : 'temps'); } }
 
   for (const p of players.values()) {
     p.vb = 0;
@@ -1887,7 +2086,7 @@ function step() {
     updateLoot(dt);
     updateBarrels(dt); updateBallons(dt); if (wagons.length) updateWagons(dt); if (fantome) updateFantome(dt); if (vent) updateVent(dt);
     updatePortals(dt);
-    updatePuddles(dt); updateTraps(dt); updateAmes(dt);
+    updatePuddles(dt); updateTraps(dt); updateAmes(dt); updateCages(dt);
     updateHill(dt);
     updateFlags(dt);
     if (mode === 'runes') updateRunes(dt);
@@ -1930,7 +2129,7 @@ function publicState() {
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0) | (p.dash && p.dash.saut ? 8192 : 0),
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0) | (p.dash && p.dash.saut ? 8192 : 0) | (p.cage ? 16384 : 0),
       p.team, gearCode(p),
     ]),
     vt: vent && vent.actif > 0 ? +vent.a.toFixed(2) : null,
@@ -1949,7 +2148,7 @@ function publicState() {
     tn: mode === 'zombie' || mode === 'chariot' ? teamsNow().map(t => t.nom) : 0,
     am: ames.map(a => [a.x, a.y, a.team, Math.min(1, a.prog / 2).toFixed(2) * 1, a.id]),
     tr: traps.map(tr => [tr.x, tr.y, tr.owner, tr.arm > 0 ? 1 : 0]), sm: smokes.map(z => [z.x, z.y, z.r, +z.t.toFixed(1)]),
-    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase, (boss.anim > 0 ? 1 : 0) | (boss.moving ? 2 : 0)] : 0,
+    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase, (boss.anim > 0 ? 1 : 0) | (boss.moving ? 2 : 0) | (boss.genoux ? 4 : 0) | (boss.k === 'prof' && boss.hp <= boss.max * 0.25 ? 8 : 0)] : 0,
     mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / (m.max || SBIRE.hp) * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),
     tm: timer.dur ? Math.ceil(timer.left) : cart && isFinite(cart.left) ? Math.ceil(cart.left) : zomb && isFinite(zomb.left) ? Math.ceil(zomb.left) : -1,
     mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
@@ -2135,8 +2334,14 @@ function onMessage(conn, msg) {
       if (m.nb >= 2 && m.nb <= 4) nbTeams = m.nb;
       if (mode === 'drapeau' || mode === 'chariot' || mode === 'zombie') nbTeams = 2;
       assignTeams();
+      if (mode === 'prof') { const c = CARTES.find(c => c.id === 'classe'); if (c && c !== carte) { setCarte(c); sendAll({ t: 'carte', map: carte }); } }   // le Boss Prof se bat dans sa classe
       newRound();
       addFeed(`🎮 Mode : ${MODES[mode]}${mode === 'equipes' || mode === 'colline' ? ' (' + nbTeams + ' équipes)' : ''}`);
+      break;
+    case 'bossIn':   // l'enseignant pilote le Boss Prof
+      if (!boss || boss.k !== 'prof') break;
+      if (m.off) { boss.ctl = null; break; }
+      boss.ctl = { u: !!m.u, d: !!m.d, l: !!m.l, r: !!m.r, ax: Number.isFinite(m.ax) ? m.ax : null, ay: Number.isFinite(m.ay) ? m.ay : null, atk: 'ABCDEFG'.includes(m.atk) && m.atk ? m.atk : (boss.ctl && boss.ctl.atk) || null, t: Date.now() };
       break;
     case 'ctlReglages':   // contrôle et dictée : nombre de questions, correction, mots de la dictée
       ctlReglages.n = clamp(Math.round(+m.n || 10), 3, 30);
@@ -2147,7 +2352,7 @@ function onMessage(conn, msg) {
       timer.dur = [0, 3, 5, 10, 15, 20].includes(m.min) ? m.min * 60 : 0;
       timer.left = timer.dur;
       break;
-    case 'finir': endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); break;
+    case 'finir': endRound(bossMode() ? 'boss-perdu' : 'temps'); break;
     case 'eclair': startEclair(); break;
     case 'eclairdur': if ([10, 20, 30, 45].includes(m.s)) eclairDur = m.s; break;
     case 'boss':

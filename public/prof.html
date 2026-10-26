@@ -112,12 +112,15 @@
       </div>
     </div>
     <div class="box">
-      <h2>📝 Contrôle</h2>
+      <h2>📝 Évaluation : Contrôle ou Boss Prof</h2>
       <div class="perso">
-        <div class="pbanks">Mode calme, sans combat : tout le monde reçoit les mêmes questions, dans le même ordre, et répond à son rythme. Le contrôle utilise les notions cochées plus bas.</div>
-        <div class="prow">Questions : <select id="ctlN"><option>5</option><option selected>10</option><option>15</option><option>20</option></select>
-          <label><input type="checkbox" id="ctlCorr"> Montrer la correction après chaque question</label></div>
-        <div class="prow"><button id="ctlGo">📝 Lancer le contrôle</button><span id="ctlMsg"></span></div>
+        <div class="pbanks"><b>Contrôle</b> : mode calme, chacun répond à son rythme. <b>Boss Prof</b> : la classe te combat ! Les questions des interros surprises sont les mêmes pour tous, notées pour chaque élève. Les deux utilisent les notions cochées plus bas.</div>
+        <div class="prow">Questions : <select id="ctlN"><option>5</option><option>10</option><option>12</option><option selected>15</option><option>18</option><option>20</option></select>
+          <label><input type="checkbox" id="ctlCorr"> Contrôle : montrer la correction</label></div>
+        <div class="prow"><button id="ctlGo">📝 Lancer le contrôle</button><button id="profGo">🧑‍🏫 Lancer le Boss Prof</button><span id="ctlMsg"></span></div>
+        <div class="prow" id="pilote" style="display:none"><button class="sec" id="piloteBtn">🎮 Prendre la main</button>
+          <small id="piloteAide">Flèches ou WASD : bouger · souris sur le projecteur : viser · 1 🥊 poing · 2 👀 regard · 3 📢 voix · 4 📣 sifflet · 5 📄 devoirs · 6 🔒 retenue · 7 🖍️ craie</small></div>
+        <div class="prow">Cotes (seuils en %) : <input id="cotes" style="width:220px" value="A+ 95, A 90, A- 85, B+ 80, B 75, B- 70, C+ 65, C 60, D 50, E 0"></div>
         <div id="ctlProg"></div>
         <div id="ctlRap"></div>
       </div>
@@ -189,6 +192,7 @@ ws.onclose = () => {
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); }
+  else if (m.t === 'casse') { if (map) casserObjet(map, m.x, m.y); }
   else if (m.t === 'carte') { map = m.map; mapLayer = null; disp.clear(); if (Son.musOn) Son.musique(map.theme); }
   else if (m.t === 'codeMaj') { const i = codes.findIndex(r => r.code === m.rec.code); if (i >= 0 && (m.rec.v || 0) >= (codes[i].v || 0)) { codes[i] = m.rec; sauverCodes(false); } }
   else if (m.t === 's') {
@@ -217,6 +221,28 @@ function lancerCtl(m) {
   $('ctlMsg').textContent = ''; $('ctlRap').innerHTML = '';
 }
 $('ctlGo').onclick = () => lancerCtl('controle');
+$('profGo').onclick = () => lancerCtl('prof');
+try { const c = localStorage.getItem('arene-cotes'); if (c) $('cotes').value = c; } catch {}
+$('cotes').onchange = () => { try { localStorage.setItem('arene-cotes', $('cotes').value); } catch {} };
+const cotes = () => $('cotes').value.split(',').map(t => t.trim().match(/^(\S+)\s+(\d+)/)).filter(Boolean).map(m => [m[1], +m[2]]).sort((a, b) => b[1] - a[1]);
+const cote = p => { for (const [l, s] of cotes()) if (p >= s) return l; return 'E'; };
+// ----- Piloter le Boss Prof : clavier pour bouger et attaquer, souris sur le projecteur pour viser -----
+let pilote = false, viseur = null;
+const touches = { u: 0, d: 0, l: 0, r: 0 };
+const TOUCHE = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
+const ATTAQUE = { Digit1: 'A', Digit2: 'B', Digit3: 'C', Digit4: 'D', Digit5: 'E', Digit6: 'F', Digit7: 'G', Numpad1: 'A', Numpad2: 'B', Numpad3: 'C', Numpad4: 'D', Numpad5: 'E', Numpad6: 'F', Numpad7: 'G' };
+function envoiPilote(atk) { if (pilote) send({ t: 'bossIn', ...touches, ...(viseur ? { ax: viseur.x, ay: viseur.y } : {}), ...(atk ? { atk } : {}) }); }
+$('piloteBtn').onclick = () => { pilote = !pilote; $('piloteBtn').textContent = pilote ? '🤖 Rendre la main au jeu' : '🎮 Prendre la main'; $('piloteBtn').classList.toggle('on', pilote); if (!pilote) send({ t: 'bossIn', off: true }); };
+addEventListener('keydown', e => {
+  if (!pilote || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if (TOUCHE[e.code]) { touches[TOUCHE[e.code]] = 1; e.preventDefault(); envoiPilote(); }
+  else if (ATTAQUE[e.code]) { e.preventDefault(); envoiPilote(ATTAQUE[e.code]); }
+});
+addEventListener('keyup', e => { if (pilote && TOUCHE[e.code]) { touches[TOUCHE[e.code]] = 0; envoiPilote(); } });
+setInterval(() => envoiPilote(), 1000);   // le serveur rend la main au jeu après 4 s sans nouvelles
+let vueEchelle = null;   // pour convertir la souris en position sur la carte (calculé dans frame)
+cv.addEventListener('mousemove', e => { if (!vueEchelle) return; const r = cv.getBoundingClientRect(), v = vueEchelle; viseur = { x: Math.round((e.clientX - r.left - v.ox) / v.s), y: Math.round((e.clientY - r.top - v.oy) / v.s) }; });
+cv.addEventListener('mousedown', e => { if (pilote) { e.preventDefault(); envoiPilote('A'); } });
 function majCtl(c) {   // avancement en direct
   if (!c) { $('ctlProg').innerHTML = ''; return; }
   $('ctlProg').innerHTML = `<table><tr><th>Élève</th><th>Avancement</th><th>Bonnes</th></tr>${c.eleves.map(e => `<tr><td>${esc(e.nom)}</td><td>${e.fait} / ${c.total}${e.fait >= c.total ? ' ✅' : ''}</td><td>${e.ok}</td></tr>`).join('')}</table>`;
@@ -225,10 +251,11 @@ let ctlRapport = null;
 function rapportCtl(r) {   // à la fin : résultats par élève et par question, à copier dans Excel
   ctlRapport = r;
   const pct = (a, b) => b ? Math.round(a / b * 100) + ' %' : '';
-  $('ctlRap').innerHTML = `<h3>${r.dictee ? '🎧 Résultats de la dictée' : '📝 Résultats du contrôle'}</h3>
+  $('ctlRap').innerHTML = `<h3>${r.prof ? '🧑‍🏫 Résultats du Boss Prof (interros surprises)' : '📝 Résultats du contrôle'}</h3>
     <table><tr><th>Élève</th><th>Note</th><th></th></tr>${r.eleves.map(e => `<tr><td>${esc(e.nom)}</td><td>${e.ok} / ${r.total}</td><td>${pct(e.ok, r.total)}</td></tr>`).join('')}</table>
     <table style="margin-top:8px"><tr><th>#</th><th>Question</th><th>Réussite</th></tr>${r.questions.map((q, k) => `<tr><td>${k + 1}</td><td title="Bonne réponse : ${esc(q.bonne)}">${esc(q.texte)}</td><td>${q.reussite == null ? '–' : q.reussite + ' %'}</td></tr>`).join('')}</table>
-    <button class="sec" id="ctlCopie" style="margin-top:8px">📋 Copier pour Excel</button>`;
+    <button class="sec" id="ctlCopie" style="margin-top:8px">📋 Copier pour Excel</button> <button class="sec" id="ctlFiches" style="margin-top:8px">🖨️ Fiches pour les parents</button>`;
+  $('ctlFiches').onclick = () => fichesEval(r);
   $('ctlCopie').onclick = () => {
     const l = [['Élève', 'Note', 'Sur', ...r.questions.map((q, k) => `Q${k + 1}`)].join('\t')];
     for (const e of r.eleves) l.push([e.nom, e.ok, r.total, ...e.rep.map(x => x ? (x.ok ? '✔ ' : '✘ ') + x.txt : '')].join('\t'));
@@ -257,6 +284,7 @@ const CONSEILS = {
   zombie: '📗🎉 Révision et plaisir · Conseil : manche courte (4 min par défaut).',
   entrainement: '📘 Échauffement · Conseil : 3 à 5 min en début de séance, contre des robots seulement.',
   controle: '📝 Évaluation · Conseil : minuterie de 10 à 15 min ; la manche finit seule quand tout le monde a terminé.',
+  prof: '📝🎉 Évaluation et plaisir · Conseil : sans minuterie, 15 à 18 questions ; la carte passe à la salle de classe. Tu peux prendre la main du boss.',
 };
 // ----- Codes des élèves : gardés dans ce navigateur, envoyés au jeu à chaque connexion -----
 const BADGE_ICO = { serie5: '🔥', serie10: '🌋', studieux: '📚', sansFaute: '🎯', sauveur: '💚', couronne: '👑', coffres: '🗝️', runes: '✨', boss: '🐉', vagues: '🌊', chariot: '🛒', survivant: '🧄' };
@@ -380,6 +408,8 @@ function info(m) {
   const local = /^(localhost|127\.)/.test(location.hostname);
   $('urls').innerHTML = local && m.urls.length ? m.urls.map(esc).join('<br>') : esc(location.origin);
   $('pause').textContent = m.paused ? '▶ Reprendre' : '⏸ Pause';
+  $('pilote').style.display = m.mode === 'prof' ? 'flex' : 'none';
+  if (m.mode !== 'prof' && pilote) $('piloteBtn').onclick();
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m.mode && (m.mode !== 'equipes' || +b.dataset.nb === m.nbTeams)));
   if (modeActuel !== m.mode) { modeActuel = m.mode; $('conseil').innerHTML = resumeMode(m.mode); }
   if (document.activeElement !== $('timer')) $('timer').value = String(m.timer / 60);
@@ -594,6 +624,35 @@ function bilans(m) {
   fenBilans = null;
 }
 
+// ----- Fiches d'évaluation pour les parents : une page par élève (score, cote, notions, questions) -----
+function fichesEval(r) {
+  const w = window.open('', '_blank');
+  if (!w) return alert('Autorisez les fenêtres surgissantes pour imprimer les fiches.');
+  const date = new Date().toLocaleDateString('fr-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const titre = r.prof ? 'Évaluation : combat contre le Boss Prof' : 'Contrôle';
+  const col = p => p >= 75 ? '#2f9e55' : p >= 60 ? '#d9a020' : '#c0392b';
+  const fiche = e => {
+    const pct = r.total ? Math.round(e.ok / r.total * 100) : 0, notions = {};
+    r.questions.forEach((q, k) => { const n = (notions[q.notion] = notions[q.notion] || { m: q.matiere || '', ok: 0, t: 0 }); n.t++; if (e.rep[k] && e.rep[k].ok) n.ok++; });
+    return `<section><div class="tete"><div><h2>${esc(e.nom)}</h2><div>${esc(titre)} · ${esc(date)}</div></div>
+      <div class="cote" style="border-color:${col(pct)};color:${col(pct)}">${cote(pct)}<small>${e.ok} / ${r.total} · ${pct} %</small></div></div>
+      <h3>Résultats par notion</h3><table><tr><th>Notion</th><th>Réussite</th><th></th></tr>${Object.entries(notions).map(([n, x]) => { const p = Math.round(x.ok / x.t * 100); return `<tr><td>${x.m ? `<small>${esc(x.m)}</small> ` : ''}${esc(n)}</td><td>${x.ok} / ${x.t}</td><td><span class="barre"><i style="width:${p}%;background:${col(p)}"></i></span> ${p} %</td></tr>`; }).join('')}</table>
+      <h3>Questions</h3><table class="q"><tr><th>#</th><th>Question</th><th>Réponse de l'élève</th><th>Bonne réponse</th></tr>${r.questions.map((q, k) => { const x = e.rep[k]; return `<tr><td>${x && x.ok ? '✅' : '❌'} ${k + 1}</td><td>${esc(q.texte)}</td><td>${x ? esc(x.txt || '(pas de réponse)') : '(absent)'}</td><td>${x && x.ok ? '' : esc(q.bonne)}</td></tr>`; }).join('')}</table>
+      <div class="sign">Commentaire de l'enseignant : ______________________________________________</div>
+      <div class="sign">Signature d'un parent : ______________________________</div></section>`;
+  };
+  w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Fiches – ${esc(titre)}</title><style>
+    body { font-family: system-ui, sans-serif; color: #222; margin: 20px; } header { display: flex; justify-content: space-between; align-items: center; } header button { font-size: 16px; padding: 8px 16px; }
+    section { border: 2px solid #333; border-radius: 8px; padding: 14px 18px; margin: 14px 0; page-break-after: always; } .tete { display: flex; justify-content: space-between; align-items: center; }
+    h2 { margin: 0; } h3 { margin: 12px 0 4px; font-size: 15px; } table { border-collapse: collapse; width: 100%; font-size: 13px; } th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #ddd; vertical-align: top; } small { color: #777; }
+    .cote { border: 4px solid; border-radius: 12px; padding: 6px 16px; font-size: 40px; font-weight: 800; text-align: center; } .cote small { display: block; font-size: 13px; font-weight: 400; color: #555; }
+    .barre { display: inline-block; width: 90px; height: 10px; background: #eee; border: 1px solid #aaa; vertical-align: middle; } .barre i { display: block; height: 100%; } .sign { margin-top: 12px; color: #555; }
+    @media print { header { display: none; } body { margin: 0; } section { border: 0; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style></head><body><header><h1 style="margin:0">Fiches pour les parents</h1><button onclick="print()">🖨️ Imprimer ou enregistrer en PDF</button></header>
+  ${[...r.eleves].sort((a, b) => a.nom.localeCompare(b.nom, 'fr')).map(fiche).join('')}</body></html>`);
+  w.document.close();
+}
+
 function frame() {
   requestAnimationFrame(frame);
   const r = cv.getBoundingClientRect(), dpr = devicePixelRatio;
@@ -608,6 +667,7 @@ function frame() {
   }
   const s = Math.min(r.width / (map.W + 40), (r.height - 40) / (map.H + 40));
   ctx.translate((r.width - map.W * s) / 2, 40 + (r.height - 40 - map.H * s) / 2);
+  vueEchelle = { s, ox: (r.width - map.W * s) / 2, oy: 40 + (r.height - 40 - map.H * s) / 2 };
   ctx.scale(s, s);
   const teams = equipesDe(world, last && last.teams);
   drawWorld(ctx, world, map, null, disp, 7, teams);   // héros plus gros pour être vus de loin au projecteur

@@ -477,6 +477,31 @@ function ecole() {
   return fin(A, 'ecole', 'École des Héros', 'ecole', 'Classes, corridor, cafétéria au Jell-O, gymnase à trampolines et cour aux ballons géants');
 }
 
+// ---------- Salle de classe géante (Boss Prof) ----------
+// La classe vue en très grand : le tableau et le bureau du Prof au nord, des rangées de pupitres pour se cacher,
+// un coin lecture, une table de sciences et les casiers du fond.
+function classe() {
+  const A = atelier('classe', 5151, 'l');
+  A.border('b', 1);
+  A.fill(1, 1, 50, 2, 'b');                                                  // mur du tableau
+  for (const x of [8, 20, 32]) A.obj('tableau', x, 2.2, 10, 0.6);
+  A.obj('bureau', 23, 6, 6, 1.6);                                            // bureau du Prof
+  A.setHeal(45, 30.5, 'fontaine');
+  // rangées de pupitres géants (on est minuscule à côté !)
+  for (const y of [10.5, 16.5, 22.5]) for (const x of [5.5, 12.5, 19.5, 29, 36, 43]) A.obj('grandpupitre', x, y, 3.4, 1.4);
+  // fournitures géantes qui traînent par terre
+  A.obj('crayon', 24.5, 14, 5, 0.8); A.obj('gomme', 26.5, 20.3, 2, 1.2); A.obj('regle', 15, 28.5, 7, 0.6); A.obj('sac', 33, 27.5, 2, 1.6); A.obj('sac', 47.5, 15, 2, 1.6);
+  // coin lecture (tapis-puzzle, sofa, bibliothèque) et table de sciences
+  A.fill(3, 25, 9, 8, 'q'); A.obj('sofa', 4, 25.3, 3, 0.8); A.obj('shelf', 8.5, 25, 1.4, 0.9);
+  A.obj('tablecaf', 41, 8, 5, 0.9); A.obj('globe', 47, 7.5, 1.6, 1); A.obj('telescope', 37.5, 7, 1, 0.8);
+  // casiers du fond : on s'y cache
+  for (const x of [16, 22, 28, 34]) A.bush(x, 34.8, 0.85, 'casier');
+  for (const y of [8, 14, 20]) A.bush(1.9, y, 0.85, 'casier');
+  for (const [x, y] of [[3, 4], [48, 4], [26, 24], [6, 30], [44, 26]]) A.chest(x, y);
+  for (const [x, y] of [[10, 9], [40, 12], [14, 30], [38, 31], [26, 16], [26, 27]]) A.spot(x, y);
+  return fin(A, 'classe', 'Salle de classe géante', 'ecole', 'La classe en très grand : tableau, bureau du Prof, pupitres pour se cacher, coin lecture et casiers');
+}
+
 // ---------- Caverne ----------
 // Une mine dans le noir : on ne voit qu'autour de son héros, des lanternes, des cristaux et des champignons lumineux.
 // Trois wagonnets foncent sur une grande boucle de rails (ils traversent la lave sur des ponts de rails),
@@ -610,5 +635,5 @@ function ciel() {
   return fin(A, 'ciel', 'Bateaux Volants', 'ciel', 'Deux galions pirates bord à bord dans les nuages : planches d\'abordage, canons et coups de vent');
 }
 
-const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne, bibliotheque, ciel].map(f => f());
+const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne, bibliotheque, ciel, classe].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };

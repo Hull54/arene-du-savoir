@@ -454,6 +454,7 @@ function connect(name, cls, code = '', solo = false) {
     const m = JSON.parse(e.data);
     vuServeur = Date.now();
     if (m.t === 'welcome' && essais) { essais = 0; $('reco').style.display = 'none'; answering = false; $('quiz').style.display = 'none'; toast('📶 Te revoilà ! Tes points sont gardés.'); }
+    if (m.t === 'casse') { if (map) casserObjet(map, m.x, m.y); return; }
     if (m.t === 'welcome' || m.t === 'carte') {
       if (m.t === 'welcome') { myId = m.id; info = m; if (m.nom && !code && m.nom !== $('name').value.trim()) setTimeout(() => toast(`Ce prénom est déjà pris : tu t'appelles « ${m.nom} » dans le jeu`), 800); }
       map = m.map; mapLayer = null; pred = null; hist = [];
@@ -543,11 +544,12 @@ function showQuestion(m) {
   head.className = 'ko ' + qKind;
   clearInterval(qTimer);
   if (qKind === 'chest' && m.gold) { head.className = 'ko gold'; head.textContent = `🌟 Coffre doré ! Question ${m.step} sur 2 : deux bonnes réponses = trésor légendaire.`; if (m.step === 1) Son.play('coffre'); }
+  else if (qKind === 'cage') { head.className = 'ko chest'; head.textContent = '🔓 Réponds juste pour libérer ton camarade de la retenue !'; Son.play('coffre'); }
   else if (qKind === 'releve') { head.className = 'ko chest'; head.textContent = '💚 Réponds juste pour relever ton coéquipier !'; Son.play('coffre'); }
   else if (qKind === 'chest') { head.textContent = '🎁 Un coffre au trésor ! Bonne réponse = meilleur objet.'; Son.play('coffre'); }
   else if (qKind === 'eclair') {
     let t = m.temps || 20; Son.play('eclair');
-    const upd = () => { head.textContent = m.bouclier ? `🛡️ Bouclier du savoir ! Si la majorité répond juste, il se brise. ${t} s` : `⚡ Question éclair pour toute la classe ! ${t} s`; t = Math.max(0, t - 1); };
+    const upd = () => { head.textContent = m.titre ? `${m.titre} · ${t} s` : m.bouclier ? `🛡️ Bouclier du savoir ! Si la majorité répond juste, il se brise. ${t} s` : `⚡ Question éclair pour toute la classe ! ${t} s`; t = Math.max(0, t - 1); };
     upd(); qTimer = setInterval(upd, 1000);
   } else if (qKind === 'controle') { head.className = 'ko chest'; head.textContent = m.dire ? `🎧 Dictée · ${m.num} sur ${m.total}` : `📝 Contrôle · Question ${m.num} sur ${m.total}`; }
   else head.textContent = '💫 Tu es K.O. ! Réponds pour revenir au combat.';

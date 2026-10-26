@@ -63,5 +63,6 @@
     }
   }
 
-  Object.assign(exp, { grilleObjs, circleHitsRect, tuile, touchObj, heurte, terrain, pas });
+  const oublier = c => GRILLES.delete(c);   // un objet a disparu (pupitre brisé) : refaire la grille
+  Object.assign(exp, { oublier, grilleObjs, circleHitsRect, tuile, touchObj, heurte, terrain, pas });
 })(typeof module !== 'undefined' ? module.exports : (window.Mouvement = {}));
