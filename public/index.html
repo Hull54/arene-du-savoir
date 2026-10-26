@@ -81,6 +81,8 @@
   .btn:active { transform: translate(2px, 2px); box-shadow: inset -4px -4px 0 #c99a1e, inset 4px 4px 0 #fff0a8; }
   .btn:disabled { opacity: .5; cursor: default; }
   .keys { font-size: 15px; opacity: .85; text-align: center; }
+  #cadre { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 1; }
+  #cadre span { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font: 700 14px "Lexend", sans-serif; color: #fff; padding: 2px 12px; border: 3px solid #1b1424; text-shadow: 1px 1px 0 #1b1424; }
   #hud { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 10px; pointer-events: none; }
   .cd { width: 76px; height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; font-size: 13px; }
   .cd .ico { font-size: 28px; }
@@ -168,6 +170,7 @@
 <canvas id="c"></canvas>
 <canvas id="nuit"></canvas>
 
+<div id="cadre"><span></span></div>
 <div id="score" class="panel" style="display:none"><canvas id="portrait" width="16" height="16"></canvas><span id="scoreT"></span><span id="pv"><i></i></span></div>
 <div id="zone" class="panel" style="display:none"></div>
 <button id="mute" class="panel" style="display:none">🔊</button>
@@ -880,6 +883,18 @@ function ambiance(now, vw, vh, zoom) {
   }
   ctx.restore();
 }
+// En équipe : un cadre de la couleur de mon équipe autour de l'écran
+let cadreAvant = '';
+function cadreEquipe(teams, mine) {
+  const t = teams && mine && mine.tm >= 0 && teams[mine.tm], cle = t ? t.color + t.nom : '';
+  if (cle === cadreAvant) return;
+  cadreAvant = cle;
+  const c = $('cadre');
+  c.style.display = t ? 'block' : 'none';
+  if (!t) return;
+  c.style.boxShadow = `inset 0 0 0 6px ${t.color}, inset 0 0 36px ${t.color}aa`;
+  c.firstChild.textContent = `Ton équipe : ${t.nom}`; c.firstChild.style.background = t.color;
+}
 let lastPortrait = '';
 let lastTm = -1, lastFrame = performance.now(), camX = 0, camY = 0, meScreen = { x: innerWidth / 2, y: innerHeight / 2 };
 function frame(now) {
@@ -916,6 +931,7 @@ function frame(now) {
   const teams = equipesDe(world, equipes());
   if (mine) mine.aim = aim;
   drawWorld(ctx, world, map, mine, disp, PX, teams);
+  cadreEquipe(teams, mine);
   if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ambiance(now, vw, vh, zoom);

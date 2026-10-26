@@ -137,11 +137,12 @@ function trapu(P) {
   }
   P.g = g;
 }
-function heroSprite(cls, look, dir, frame, gearCode = 0) {
-  const key = cls + look + dir + frame + 'g' + gearCode;
+function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
+  const key = cls + look + dir + frame + 'g' + gearCode + (tenue || '');
   if (heroCache[key]) return heroCache[key];
   const P = new Painter(24, 30); P.ox = 4; P.oy = 8;
-  const fem = look[0] === 'f', out = OUTFIT[+look[3] || 0], acc = +look[4] || 0, G = gearOf(gearCode);
+  const fem = look[0] === 'f', out = tenue || OUTFIT[+look[3] || 0],   // en équipe : vêtements de la couleur de l'équipe
+    acc = +look[4] || 0, G = gearOf(gearCode);
   const race = +look[7] || 0;   // 0 humain, 1 elfe, 2 nain, 3 orc
   const s = (race === 3 ? ORC_SKIN : SKIN)[+look[1]] || SKIN[0], sD = shade(s, 0.78), sH = shade(s, 1.12);
   const h = HAIR[+look[2]] || HAIR[0], hD = shade(h, 0.68), hH = shade(h, 1.4);
@@ -503,10 +504,10 @@ function dirFromAngle(a) {
 }
 // Dessine un héros : (x, y) = centre du joueur dans le monde ; S = taille d'un pixel d'art
 // atk : 0 rien, 1 le coup, 2 la fin du geste
-function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0, atk = 0) {
+function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0, atk = 0, tenue = null) {
   const d = dirFromAngle(angle);
   const frame = atk ? 2 + atk : walk ? 1 + (Math.floor(walk) % 2) : 0;
-  const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame, gear);
+  const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame, gear, tenue);
   g.save();
   g.imageSmoothingEnabled = false;
   g.translate(Math.round(x), Math.round(y + 22));
@@ -2122,7 +2123,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     // attaque : le coup (0,1 s), puis la fin du geste ; le héros avance un peu vers sa cible
     if (p.at && !d.at0) d.at0 = now; else if (!p.at && d.at0 && now - d.at0 > 0.4) d.at0 = 0;
     const ta = d.at0 ? now - d.at0 : 9, phase = ta < 0.1 ? 1 : ta < 0.25 ? 2 : 0, el = phase ? Math.sin(Math.min(1, ta / 0.2) * Math.PI) * 4 : 0;
-    drawHeroSprite(ctx, d.x + Math.cos(p.a) * el, d.y + breathe + Math.sin(p.a) * el * 0.6, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, phase);
+    drawHeroSprite(ctx, d.x + Math.cos(p.a) * el, d.y + breathe + Math.sin(p.a) * el * 0.6, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, phase, tcol);
     if (zom) { ctx.filter = 'none'; const S = heroScale; sq(d.x - 4 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); sq(d.x + 2 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); }
     if (p.c === 'mage') {
       const dd = dirFromAngle(p.a), S = heroScale, gx = d.x + (dd === 'down' ? 6 * S : dd === 'up' ? 5 * S : dd === 'right' ? 2 * S : -2 * S), gy = d.y + breathe + 22 - (dd === 'up' ? 22 : 21) * S;

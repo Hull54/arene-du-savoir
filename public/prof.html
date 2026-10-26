@@ -308,8 +308,19 @@ $('eclair').onclick = () => send({ t: 'eclair' });
 // plein écran : seulement la carte (pour le projecteur). Échap pour revenir.
 $('plein').onclick = () => { const st = document.querySelector('.stage'); (st.requestFullscreen || st.webkitRequestFullscreen).call(st); };
 $('timer').onchange = () => send({ t: 'timer', min: +$('timer').value });
+// petit résumé du mode : au survol d'un bouton, dans la confirmation, puis sous les boutons une fois choisi
+let modeActuel = null;
+function resumeMode(m, apercu) {
+  const R = REGLES[m]; if (!R) return '';
+  return `<b>${apercu ? 'Aperçu · ' : ''}${R.ico} ${R.titre} : ${R.but}</b><br>${R.pts.join(' ')}<br><i>${CONSEILS[m] || ''}</i>`;
+}
+document.querySelectorAll('[data-mode]').forEach(b => {
+  b.onmouseenter = () => { $('conseil').innerHTML = resumeMode(b.dataset.mode, b.dataset.mode !== modeActuel); };
+  b.onmouseleave = () => { $('conseil').innerHTML = resumeMode(modeActuel); };
+});
 document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
-  if (confirm('Changer de mode commence une nouvelle manche. Continuer ?')) send({ t: 'mode', mode: b.dataset.mode, nb: +b.dataset.nb || 2 });
+  const R = REGLES[b.dataset.mode];
+  if (confirm(`${R.ico} ${R.titre} : ${R.but}\n\n${R.pts.map(t => '• ' + t).join('\n')}\n\nChanger de mode commence une nouvelle manche. Continuer ?`)) send({ t: 'mode', mode: b.dataset.mode, nb: +b.dataset.nb || 2 });
 });
 $('bossSel').onchange = () => {
   if (last && last.mode === 'boss' && !confirm('Changer de boss commence une nouvelle manche. Continuer ?')) { $('bossSel').value = last.bossKind; return; }
@@ -326,7 +337,7 @@ function info(m) {
   $('urls').innerHTML = local && m.urls.length ? m.urls.map(esc).join('<br>') : esc(location.origin);
   $('pause').textContent = m.paused ? '▶ Reprendre' : '⏸ Pause';
   document.querySelectorAll('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m.mode && (m.mode !== 'equipes' || +b.dataset.nb === m.nbTeams)));
-  $('conseil').textContent = CONSEILS[m.mode] || '';
+  if (modeActuel !== m.mode) { modeActuel = m.mode; $('conseil').innerHTML = resumeMode(m.mode); }
   if (document.activeElement !== $('timer')) $('timer').value = String(m.timer / 60);
   if (m.bosses && $('bossSel').options.length !== Object.keys(m.bosses).length) $('bossSel').innerHTML = Object.entries(m.bosses).map(([k, n]) => `<option value="${k}">${BOSS_INFO[k] ? BOSS_INFO[k].ico : ''} ${esc(n)}</option>`).join('');
   if (document.activeElement !== $('bossSel')) $('bossSel').value = m.bossKind;
