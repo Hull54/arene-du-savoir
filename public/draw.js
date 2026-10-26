@@ -699,6 +699,16 @@ function spriteFor(o, TH = THEMES.village) {
     P = new Painter(w + 4, h + 24); ax = 2; ay = 22;
     const b = h + 22, cx = Math.floor((w + 4) / 2);
     for (let y = 0; y < b; y++) { const hw = Math.max(0, Math.round((y / b) * (w / 2 + 1))); P.rect(cx - hw, y, hw * 2 + 1, 1, y % 5 === 0 ? '#4a4258' : '#5e5670'); P.px(cx - hw, y, '#7a7290'); }
+  } else if (kind === 'rayon') {   // grande étagère pleine de livres (on passe derrière)
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 20;
+    P.rect(1, 1, w, h + 19, '#6e4024'); P.rect(1, 1, w, 2, '#a86a3c'); P.rect(2, 3, w - 2, h + 15, '#3a2414');
+    const books = ['#c0303a', '#3f6fb5', '#3a8a4a', '#e8b84a', '#8e4ce0', '#e07a3a', '#2a9ad8', '#d8d0c0'];
+    for (const y of [4, 13, 22]) {
+      if (y + 8 > h + 18) break;
+      for (let x = 3, i = y * 7 + w; x < w - 1; i++) { const bw = 1 + (i % 3 === 0 ? 1 : 0), bh = 7 - (i % 4 === 1 ? 2 : 0); P.rect(x, y + 8 - bh, bw, bh, books[(i * 5) % books.length]); if (bw > 1) P.px(x, y + 9 - bh, '#ffffff55'); x += bw; if (i % 11 === 0) x += 2; }
+      P.rect(2, y + 8, w - 2, 1, '#8a5530');
+    }
+    P.rect(1, h + 19, w, 2, '#4a2a16');
   } else if (kind === 'pupitre') {   // pupitre d'élève avec sa chaise
     P = new Painter(w + 2, h + 12); ax = 1; ay = 8;
     P.rect(1, 4, w, h + 1, '#d9a35c'); P.rect(1, 4, w, 1, '#f0c27e'); P.rect(1, h + 5, w, 2, '#9a6a34');
@@ -807,6 +817,7 @@ const THEMES = {
   colisee: { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c9a36a', '#9e7c48', '#e2c08a', '#7a5e34'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e7c48' },
   ecole:   { herbe: ['#62b444', '#58a83d', '#72c450', '#43902f'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2f7a3f' },
   caverne: { herbe: ['#3a3446', '#342e40', '#443e52', '#2a2436'], falaise: ['#3a3248', '#2c263a', '#544a6a', '#16121e'], arbres: ['#2f4a3a', '#3f5a4a', '#5a7a5a', '#1f3328'], fond: '#0d0a14' },
+  biblio:  { herbe: ['#5dae3e', '#54a238', '#6cbd48', '#3f8a2e'], falaise: ['#8a5530', '#6e4024', '#a86a3c', '#4a2a16'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2a1a10' },
   marais:  { rustique: true, herbe: ['#6f8048', '#64743f', '#7d8f55', '#55653a'], falaise: ['#7a6a4a', '#5a4a32', '#9a8a62', '#3f3322'], arbres: ['#3f5a32', '#4f6d3a', '#6a8a4a', '#2a3f22'], fond: '#2a3f22' },
 };
 const HEAL_NOM = { fontaine: 'Fontaine de soin', source: 'Source de soin', autel: 'Autel de soin', feu: 'Feu de camp (soigne)' };
@@ -906,6 +917,15 @@ function casierSprite() {   // trois casiers bleus, une porte entrouverte
   P.rect(12, 3, 9, 34, '#1b1424'); line2(P, 21, 3, 25, 6, '#6a94d8');   // porte entrouverte : on peut s'y cacher
   return (casierCache = P.outline().canvas());
 }
+let pileCache = null;
+function pileSprite() {   // piles de livres et gros coussin (cachette de la bibliothèque)
+  if (pileCache) return pileCache;
+  const P = new Painter(36, 30);
+  P.ellipse(18, 20, 15, 8, '#3f6fb5'); P.ellipse(16, 18, 10, 5, '#6a94d8');   // pouf
+  const books = ['#c0303a', '#3a8a4a', '#e8b84a', '#8e4ce0', '#e07a3a'];
+  for (const [x, n] of [[2, 5], [26, 4], [12, 3]]) for (let k = 0; k < n; k++) { P.rect(x + (k % 2), 22 - k * 3 - (x === 12 ? 10 : 0), 8, 3, books[(k + x) % 5]); P.rect(x + 1 + (k % 2), 22 - k * 3 - (x === 12 ? 10 : 0), 6, 1, '#f4ecd8'); }
+  return (pileCache = P.outline().canvas());
+}
 function champiSprite(r) {   // touffe de champignons lumineux (cachette de la grotte)
   const P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
   P.ellipse(c, c + 3, r - 2, Math.round(r * 0.45), '#4a3e36');
@@ -914,6 +934,37 @@ function champiSprite(r) {   // touffe de champignons lumineux (cachette de la g
     P.rect(x - 1, y, 2, s, '#d8d0e8'); P.ellipse(x, y, s, Math.max(2, s - 2), k % 2 ? '#3fd0c8' : '#5ae0ff'); P.px(x - 1, y - 1, '#d8fffc');
   }
   return P.outline().canvas();
+}
+const livreCache = {};
+function livreSprite(n) {   // grand livre ouvert posé au sol (portail)
+  if (livreCache[n]) return livreCache[n];
+  const P = new Painter(40, 24), cov = n ? '#c0303a' : '#2a6ab8';
+  P.rect(2, 6, 36, 16, cov); P.rect(4, 4, 15, 16, '#f4ecd8'); P.rect(21, 4, 15, 16, '#f4ecd8'); P.rect(19, 4, 2, 17, '#c8b898');
+  for (let y = 7; y < 18; y += 3) { P.rect(6, y, 11, 1, '#8a7a6a'); P.rect(23, y, 11, 1, '#8a7a6a'); }
+  P.disc(12, 12, 3, n ? '#ff9ab0' : '#9fd6ff'); P.disc(28, 12, 3, n ? '#ff9ab0' : '#9fd6ff');
+  return (livreCache[n] = P.outline().canvas());
+}
+const livreVCache = {};
+function livreVolantSprite(c, fr) {   // livre qui bat des pages comme des ailes
+  const k = c + '-' + fr; if (livreVCache[k]) return livreVCache[k];
+  const P = new Painter(18, 12), cov = ['#c0303a', '#3f6fb5', '#3a8a4a', '#8e4ce0'][c];
+  if (fr) { line2(P, 9, 8, 2, 2, cov); line2(P, 9, 8, 16, 2, cov); line2(P, 9, 7, 3, 3, '#f4ecd8'); line2(P, 9, 7, 15, 3, '#f4ecd8'); }
+  else { P.rect(1, 5, 7, 3, cov); P.rect(10, 5, 7, 3, cov); P.rect(2, 4, 6, 2, '#f4ecd8'); P.rect(10, 4, 6, 2, '#f4ecd8'); }
+  P.rect(8, 4, 2, 5, shade(cov, 0.7));
+  return (livreVCache[k] = P.outline().canvas());
+}
+const fantomeCache = {};
+function fantomeSprite(fr) {   // fantôme bibliothécaire avec ses lunettes et son livre
+  if (fantomeCache[fr]) return fantomeCache[fr];
+  const P = new Painter(24, 30), b = '#e8f4ff', o = '#a8c8e8';
+  P.disc(12, 9, 8, b); P.rect(4, 9, 17, 14, b);
+  for (let i = 0; i < 4; i++) P.disc(6 + i * 4 + (fr ? 1 : 0), 23, 2, b);
+  P.rect(4, 14, 1, 8, o);
+  P.disc(9, 9, 2, '#1b1424'); P.disc(15, 9, 2, '#1b1424'); P.rect(9, 8, 7, 1, '#e8b84a'); P.px(9, 9, '#ffffff'); P.px(15, 9, '#ffffff');
+  P.rect(11, 13, 3, 1, '#7a8aa8');   // bouche : « chut »
+  P.rect(17, 12, 1, 4, b); P.px(17, 11, b);   // doigt sur la bouche
+  P.rect(5, 16, 9, 6, '#7a2a3a'); P.rect(6, 17, 7, 4, '#f4ecd8');   // livre
+  return (fantomeCache[fr] = P.outline().canvas());
 }
 const wagonCache = {};
 function wagonSprite(hz) {   // wagonnet de mine rempli de minerai brillant
@@ -1311,6 +1362,7 @@ function buildMapLayers(map) {
   }
   // buissons (cachettes) : dessus, pour couvrir à moitié les joueurs cachés
   for (const b of map.bushes) {
+    if (map.theme === 'biblio') { const s = pileSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2); continue; }
     if (map.theme === 'caverne') { const s = champiSprite(Math.round(b.r / PX)); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2); continue; }
     if (b.kind === 'casier') { const s = casierSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height + 12); continue; }
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
@@ -2103,8 +2155,12 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     img(itemSprite(k), x, y - 6 + Math.sin(now * 4 + x) * 3);
   }
 
-  // portails : tourbillon animé
-  for (const pair of map.portals || []) for (const [k, P] of pair.entries()) {
+  // portails : tourbillon animé (dans la bibliothèque : de grands livres ouverts qui brillent)
+  if (map.theme === 'biblio') for (const [n, pair] of (map.portals || []).entries()) for (const P of pair) {
+    img(livreSprite(n), P.x, P.y + 4);
+    for (let i = 0; i < 6; i++) { const t = (now * 0.8 + i / 6) % 1; sq(P.x + Math.sin(i * 2.1 + now) * 20, P.y - t * 60, 2, n ? '#ff9ab0' : '#9fd6ff'); }
+  }
+  else for (const pair of map.portals || []) for (const [k, P] of pair.entries()) {
     img(portalSprite(), P.x, P.y + 4);
     const col = ['#ffffff', '#e2ccff', '#b98cff', '#8e4ce0'], dir = k ? -1 : 1;
     for (let arm = 0; arm < 3; arm++) for (let i = 0; i < 9; i++) {
@@ -2421,6 +2477,21 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   // couche du dessus : feuillages, hauts des objets, buissons
   ctx.imageSmoothingEnabled = big;
   ctx.drawImage(topLayer, 0, 0, topLayer.width * PX, topLayer.height * PX);
+  // bibliothèque : livres qui volent autour de la rotonde, et le fantôme bibliothécaire
+  if (map.theme === 'biblio' && map.heal) for (let i = 0; i < 6; i++) {
+    const a = now * 0.5 + i * 1.05, r = 190 + Math.sin(now + i) * 30, x = map.heal.x + Math.cos(a) * r, y = map.heal.y - 40 + Math.sin(a) * r * 0.5;
+    const s = livreVolantSprite(i % 4, Math.floor(now * 8 + i) % 2), S = big ? 4 : PX;
+    ctx.fillStyle = '#00000025'; ctx.fillRect(Math.round(x) - 8, Math.round(y) + 60, 16, 4);
+    ctx.drawImage(s, Math.round(x - s.width * S / 2), Math.round(y - s.height * S / 2), s.width * S, s.height * S);
+  }
+  if (world.fa) {
+    const [x, y] = world.fa, S = big ? 4 : PX, s = fantomeSprite(Math.floor(now * 3) % 2);
+    ctx.save(); ctx.globalAlpha = 0.82;
+    ctx.fillStyle = '#00000030'; ctx.beginPath(); ctx.ellipse(x, y + 26, 20, 6, 0, 0, 7); ctx.fill();
+    ctx.drawImage(s, Math.round(x - s.width * S / 2), Math.round(y - s.height * S / 2 - 14 + Math.sin(now * 2) * 6), s.width * S, s.height * S);
+    ctx.globalAlpha = 0.18; ctx.strokeStyle = '#c8e8ff'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.arc(x, y, 150, 0, 7); ctx.stroke();
+    ctx.restore();
+  }
   // noms et barres de vie par-dessus tout
   ctx.font = `${big ? 46 : 15}px "Lexend", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
   for (const p of list) {

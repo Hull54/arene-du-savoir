@@ -172,7 +172,7 @@ function fin(A, id, nom, theme, desc) {
   return {
     id, nom, theme, desc, T, cols: COLS, rows: ROWS, W: COLS * T, H: ROWS * T,
     tiles: A.g.map(r => r.join('')), objs: A.objs, bushes: A.bushes, chests: A.chests, spots: A.spots, heal: A.heal,
-    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}), ...(A.rails ? { rails: A.rails } : {}),
+    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}), ...(A.rails ? { rails: A.rails } : {}), ...(A.fantome ? { fantome: A.fantome } : {}),
   };
 }
 
@@ -500,5 +500,31 @@ function caverne() {
   return fin(A, 'caverne', 'Caverne des Cristaux', 'caverne', 'Grotte dans le noir : cristaux lumineux, lave, wagonnets fous et champignons rebondissants');
 }
 
-const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne].map(f => f());
+// ---------- Bibliothèque ----------
+// Bibliothèque magique : allées de rayons, livres géants ouverts qui transportent ailleurs,
+// un fantôme bibliothécaire qui ralentit (« Chut ! ») et des livres qui volent autour de la rotonde.
+function bibliotheque() {
+  const A = atelier('bibliotheque', 6464, 'w');
+  A.border('x', 1);
+  // tapis : la rotonde au centre et les grandes allées
+  A.blob(26, 18, 6.5, 4.6, 't', 0.05);
+  A.fill(2, 17, 48, 2, 't'); A.fill(25, 2, 2, 32, 't');
+  // rayons : des rangées d'étagères (on passe derrière), avec des trouées pour circuler
+  for (const y of [4, 8, 12, 24, 28, 32]) for (const [x0, x1] of [[3, 10], [12, 22], [30, 40], [42, 49]]) A.obj('rayon', x0, y - 0.9, x1 - x0, 0.9);
+  // coins lecture : tables et fauteuils
+  for (const [x, y] of [[4, 14.6], [44, 14.6], [4, 20.6], [44, 20.6]]) A.obj('table', x, y, 2.4, 0.9);
+  // livres géants ouverts : ils te transportent à l'autre livre de la même couleur
+  A.portals.push([{ x: 8.5 * T, y: 15.3 * T }, { x: 43.5 * T, y: 21.5 * T }]);
+  A.portals.push([{ x: 43.5 * T, y: 15.3 * T }, { x: 8.5 * T, y: 21.5 * T }]);
+  A.setHeal(26, 18.2, 'autel');
+  // le fantôme bibliothécaire fait le tour de la rotonde
+  A.fantome = [[18, 13.5], [34, 13.5], [34, 22.5], [18, 22.5]].map(([x, y]) => ({ x: x * T, y: y * T }));
+  A.scatterBushes(6, 'wt');
+  for (const [x, y] of [[2, 2], [49, 2], [2, 33], [49, 33], [26, 10], [26, 26]]) A.chest(x, y);
+  A.scatterBarrels(3, 'w');
+  for (const [x, y] of [[8, 10], [44, 10], [8, 26], [44, 26], [16, 18], [36, 18]]) A.spot(x, y);
+  return fin(A, 'bibliotheque', 'Bibliothèque Magique', 'biblio', 'Allées de rayons, livres géants qui transportent, fantôme qui fait « Chut ! » et livres volants');
+}
+
+const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne, bibliotheque].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };
