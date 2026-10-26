@@ -3,6 +3,7 @@
 //
 // Tuiles (un caractère chacune) :
 //   sol     .  herbe   h hautes herbes (on s'y cache)   s sable   n neige   d chemin   p pavés   f dalles   w plancher   t tapis   B pont
+//   caverne o  sol de la grotte   R  rails des wagonnets
 //   école   a  asphalte de la cour   l  linoléum   y  plancher du gymnase   r  trampoline (te propulse)
 //   lent    m  boue / sables mouvants   =  gué (eau peu profonde)   j  Jell-O renversé (colle aux pieds)
 //   rapide  i  glace
@@ -171,7 +172,7 @@ function fin(A, id, nom, theme, desc) {
   return {
     id, nom, theme, desc, T, cols: COLS, rows: ROWS, W: COLS * T, H: ROWS * T,
     tiles: A.g.map(r => r.join('')), objs: A.objs, bushes: A.bushes, chests: A.chests, spots: A.spots, heal: A.heal,
-    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}),
+    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}), ...(A.rails ? { rails: A.rails } : {}),
   };
 }
 
@@ -464,5 +465,40 @@ function ecole() {
   return fin(A, 'ecole', 'École des Héros', 'ecole', 'Classes, corridor, cafétéria au Jell-O, gymnase à trampolines et cour aux ballons géants');
 }
 
-const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole].map(f => f());
+// ---------- Caverne ----------
+// Il fait noir : on ne voit qu'autour de son héros et des cristaux. Des wagonnets foncent sur les rails,
+// des champignons géants font rebondir, et une rivière de lave coupe la grotte.
+function caverne() {
+  const A = atelier('caverne', 8080, 'c');
+  // grandes salles reliées par des tunnels
+  const salles = [[9, 8, 6, 4.5], [26, 7, 7, 4], [43, 8, 6, 4.5], [10, 26, 7, 5], [27, 19, 9, 6], [43, 27, 6, 5]];
+  for (const [x, y, rx, ry] of salles) A.blob(x, y, rx, ry, 'o', 0.35);
+  for (const [a, b] of [[0, 1], [1, 2], [0, 3], [2, 5], [3, 4], [4, 5], [1, 4]]) {
+    const [x0, y0] = salles[a], [x1, y1] = salles[b], mx = (x0 + x1) / 2 + (a % 2 ? 3 : -3), my = (y0 + y1) / 2;
+    A.path([[x0, y0], [mx, my], [x1, y1]], 3, 'o');
+  }
+  // lac souterrain avec un pont, et une rivière de lave avec deux passerelles
+  A.blob(11, 27, 3.4, 2.2, '~', 0.25, 'o');
+  A.fill(11, 25, 1, 5, 'B');
+  A.path([[34, 1], [37, 8], [35, 14], [38, 20], [36, 27], [39, 35]], 1.6, 'L', 'o');
+  A.fill(34, 6, 6, 2, 'B'); A.fill(33, 20, 7, 2, 'B');
+  // rails : une boucle autour de la grande salle, deux wagonnets
+  A.rails = [[22, 15], [32, 15], [32, 24], [22, 24]].map(([x, y]) => ({ x: (x + 0.5) * T, y: (y + 0.5) * T }));
+  for (let k = 0; k < 4; k++) { const a = A.rails[k], b = A.rails[(k + 1) % 4]; A.path([[a.x / T - 0.5 + 0.5, a.y / T], [b.x / T, b.y / T]], 1, 'R'); }
+  for (let j = 14; j <= 25; j++) for (let i = 21; i <= 33; i++) if (A.get(i, j) === 'c' && (j === 15 || j === 24 || i === 22 || i === 32)) A.set(i, j, 'R');
+  for (let j = 14; j <= 25; j++) for (let i = 21; i <= 33; i++) if (A.get(i, j) === 'c') { let n = false; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (A.get(i + di, j + dj) === 'R') n = true; if (n) A.set(i, j, 'o'); }
+  // champignons rebondissants (comme les trampolines)
+  for (const [x, y] of [[7, 7], [44, 7], [44, 28], [27, 9]]) A.fill(x, y, 2, 2, 'r');
+  A.setHeal(27, 19.5, 'source');
+  // décor : cristaux lumineux, stalagmites, wagonnets abandonnés
+  for (const [x, y, k] of [[5, 6, 0], [13, 10, 1], [23, 5, 2], [30, 9, 0], [40, 6, 1], [47, 10, 2], [6, 28, 1], [15, 29, 0], [41, 25, 2], [47, 30, 0], [26, 22, 1], [29, 16, 2]]) if (A.free(x, y, 0, 'o')) A.obj('cristal' + k, x, y, 0.8, 0.6);
+  A.scatter('stalag', 14, 'o', 0.8, 0.6, 1);
+  for (const [x, y] of [[4, 9], [48, 6], [6, 30], [47, 31], [25, 5], [40, 28]]) A.chest(x, y);
+  A.scatterBarrels(4, 'o'); A.portal('o');
+  A.scatterBushes(6, 'o');
+  for (const [x, y] of [[9, 8], [26, 7], [43, 8], [10, 24], [43, 27], [18, 17]]) A.spot(x, y);
+  return fin(A, 'caverne', 'Caverne des Cristaux', 'caverne', 'Grotte dans le noir : cristaux lumineux, lave, wagonnets fous et champignons rebondissants');
+}
+
+const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };

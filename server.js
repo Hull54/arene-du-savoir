@@ -190,6 +190,8 @@ const badgesDe = p => [...new Set([...(badgesSeance[p.name] || []), ...((codeDe(
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
 let ballons = [];   // École : ballons géants qui roulent dans la cour
+let wagons = [];    // Caverne : wagonnets qui font le tour des rails
+const WAGON = { v: 270, r: 30, push: 110, stun: 0.6, dmg: 15 };
 const BALLON = { r: 34, v: 230, push: 120, stun: 0.5 };
 let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [], traps = [], smokes = [], ames = [];   // ames : coéquipiers K.O. qu'on peut relever
 let mode = 'libre', nbTeams = 2;
@@ -270,6 +272,7 @@ function setCarte(c) {
   chests = c.chests.map(ch => ({ ...ch, open: 0, by: 0, gold: false }));
   pickGold();
   barrels = c.barrels.map(b => ({ ...b, t: 0, fuse: 0, by: null }));
+  wagons = c.rails ? [0, 0.5].map(f => ({ s: f * railLong(c.rails), x: c.rails[0].x, y: c.rails[0].y, a: 0 })) : [];
   ballons = (c.ballons || []).map((b, i) => ({ x: b.x, y: b.y, vx: BALLON.v * (i % 2 ? -0.8 : 0.8), vy: BALLON.v * 0.6, rot: 0 }));
   items = []; itemTimer = 0;
   projectiles = []; fx = []; puddles = []; traps = []; smokes = []; ames = [];
@@ -898,6 +901,32 @@ function updateBallons(dt) {
       if (p.protect <= 0 && p.shield <= 0) p.stun = Math.max(p.stun || 0, BALLON.stun);
       fx.push({ k: 'boing', x: p.x, y: p.y - 30, t: 0.5, d: 0.5 });
       b.vx = -Math.cos(a) * Math.hypot(b.vx, b.vy); b.vy = -Math.sin(a) * Math.hypot(b.vx, b.vy);   // le ballon rebondit sur le joueur
+    }
+  }
+}
+
+// ---------- Wagonnets (Caverne) ----------
+// Ils suivent la boucle des rails sans s'arrêter : se faire frapper fait mal et projette sur le côté.
+function railLong(pts) { let L = 0; for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; L += Math.hypot(b.x - a.x, b.y - a.y); } return L; }
+function updateWagons(dt) {
+  const pts = carte.rails, L = railLong(pts);
+  for (const w of wagons) {
+    w.s = (w.s + WAGON.v * dt) % L;
+    let s = w.s;
+    for (let k = 0; k < pts.length; k++) {
+      const a = pts[k], b = pts[(k + 1) % pts.length], l = Math.hypot(b.x - a.x, b.y - a.y);
+      if (s <= l) { w.x = a.x + (b.x - a.x) * s / l; w.y = a.y + (b.y - a.y) * s / l; w.a = Math.atan2(b.y - a.y, b.x - a.x); break; }
+      s -= l;
+    }
+    for (const p of players.values()) {
+      if (!p.alive || p.busy || (p.ballonT || 0) > 0 || (p.dash && p.dash.saut) || Math.hypot(p.x - w.x, p.y - w.y) > WAGON.r + R) continue;
+      p.ballonT = 1;
+      // projeté sur le côté du rail
+      const nx = -Math.sin(w.a), ny = Math.cos(w.a), cote = (p.x - w.x) * nx + (p.y - w.y) * ny >= 0 ? 1 : -1;
+      for (let k = WAGON.push; k > 0; k -= 10) { const tx = p.x + nx * cote * k, ty = p.y + ny * cote * k; if (!blocked(tx, ty, R)) { p.x = tx; p.y = ty; break; } }
+      if (p.protect <= 0 && p.shield <= 0) p.stun = Math.max(p.stun || 0, WAGON.stun);
+      fx.push({ k: 'crit', x: p.x, y: p.y - 30, txt: 'Ouch !', t: 0.7, d: 0.7 });
+      damage(p, WAGON.dmg, null);
     }
   }
 }
@@ -1735,7 +1764,7 @@ function step() {
   if (!frozen) {
     bossThink(dt);
     updateLoot(dt);
-    updateBarrels(dt); updateBallons(dt);
+    updateBarrels(dt); updateBallons(dt); if (wagons.length) updateWagons(dt);
     updatePortals(dt);
     updatePuddles(dt); updateTraps(dt); updateAmes(dt);
     updateHill(dt);
@@ -1783,6 +1812,7 @@ function publicState() {
       (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0) | (p.dash && p.dash.saut ? 8192 : 0),
       p.team, gearCode(p),
     ]),
+    wg: wagons.length ? wagons.map(w => [Math.round(w.x), Math.round(w.y), +w.a.toFixed(2)]) : 0,
     bl: ballons.length ? ballons.map(b => [Math.round(b.x), Math.round(b.y), +b.rot.toFixed(1)]) : 0,
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
     fx: fx.map(f => { const o = {}; for (const k in f) o[k] = typeof f[k] === 'number' ? Math.round(f[k] * 100) / 100 : f[k]; return o; }),

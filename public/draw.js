@@ -686,6 +686,19 @@ function spriteFor(o, TH = THEMES.village) {
     P.rect(3, 3, w - 4, h + 8, '#9aa0ab'); P.rect(5, 1, w - 8, 2, '#9aa0ab'); P.rect(3, 3, 1, h + 8, '#c3c7d0');
     P.rect(Math.floor(w / 2), 5, 2, 8, '#6d7380'); P.rect(Math.floor(w / 2) - 2, 7, 6, 2, '#6d7380');
     P.rect(1, h + 10, w, 2, '#6c8f4a');
+  } else if (kind.startsWith('cristal')) {   // cristaux lumineux (bleu, rose, vert)
+    const pal = [['#5ae0ff', '#2a9ad8', '#d8fbff'], ['#ff7ad8', '#c03aa8', '#ffe0f6'], ['#7cff8a', '#2ab84a', '#e0ffe4']][+kind.slice(7) || 0];
+    P = new Painter(w + 10, h + 24); ax = 5; ay = 22;
+    const b = h + 22;
+    for (const [x0, hh, ww] of [[4, 18, 4], [9, 24, 5], [15, 14, 4], [1, 10, 3]]) {
+      P.rect(x0, b - hh, ww, hh, pal[1]); P.rect(x0, b - hh, 1, hh, pal[2]); P.rect(x0 + 1, b - hh, ww - 2, hh - 2, pal[0]);
+      P.px(x0 + Math.floor(ww / 2), b - hh - 1, pal[2]);
+    }
+    P.rect(0, b - 1, w + 10, 2, '#2a2436');
+  } else if (kind === 'stalag') {   // stalagmite
+    P = new Painter(w + 4, h + 24); ax = 2; ay = 22;
+    const b = h + 22, cx = Math.floor((w + 4) / 2);
+    for (let y = 0; y < b; y++) { const hw = Math.max(0, Math.round((y / b) * (w / 2 + 1))); P.rect(cx - hw, y, hw * 2 + 1, 1, y % 5 === 0 ? '#4a4258' : '#5e5670'); P.px(cx - hw, y, '#7a7290'); }
   } else if (kind === 'pupitre') {   // pupitre d'élève avec sa chaise
     P = new Painter(w + 2, h + 12); ax = 1; ay = 8;
     P.rect(1, 4, w, h + 1, '#d9a35c'); P.rect(1, 4, w, 1, '#f0c27e'); P.rect(1, h + 5, w, 2, '#9a6a34');
@@ -783,7 +796,7 @@ function peauSprite(w, h, blanc) {
 }
 
 // ---------- La carte (dessinée une seule fois, en tuiles de 16 pixels d'art) ----------
-const WALLS_T = 'b#kcxgT', WATER_T = '~vL', NATURAL_T = '.hsnmd~=icT';
+const WALLS_T = 'b#kcxgT', WATER_T = '~vL', NATURAL_T = '.hsnmd~=icTo';
 const THEMES = {
   village: { herbe: ['#5dae3e', '#54a238', '#6cbd48', '#3f8a2e'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2f7a3f', rustique: true },
   foret:   { rustique: true, herbe: ['#4f9a3c', '#478e36', '#5eab48', '#367a2c'], falaise: ['#a0623a', '#7a4524', '#c07f4c', '#5a3218'], arbres: ['#25603a', '#2f7a44', '#4f9a52', '#183f26'], fond: '#183f26' },
@@ -793,6 +806,7 @@ const THEMES = {
   cite:    { herbe: ['#6a8a55', '#61804e', '#76955f', '#4f6d42'], falaise: ['#8a8590', '#66626e', '#a8a4ae', '#46424e'], arbres: ['#3f6a3a', '#4a7a44', '#6a9a5a', '#2a4a28'], fond: '#46424e' },
   colisee: { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c9a36a', '#9e7c48', '#e2c08a', '#7a5e34'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e7c48' },
   ecole:   { herbe: ['#62b444', '#58a83d', '#72c450', '#43902f'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2f7a3f' },
+  caverne: { herbe: ['#3a3446', '#342e40', '#443e52', '#2a2436'], falaise: ['#3a3248', '#2c263a', '#544a6a', '#16121e'], arbres: ['#2f4a3a', '#3f5a4a', '#5a7a5a', '#1f3328'], fond: '#0d0a14' },
   marais:  { rustique: true, herbe: ['#6f8048', '#64743f', '#7d8f55', '#55653a'], falaise: ['#7a6a4a', '#5a4a32', '#9a8a62', '#3f3322'], arbres: ['#3f5a32', '#4f6d3a', '#6a8a4a', '#2a3f22'], fond: '#2a3f22' },
 };
 const HEAL_NOM = { fontaine: 'Fontaine de soin', source: 'Source de soin', autel: 'Autel de soin', feu: 'Feu de camp (soigne)' };
@@ -837,6 +851,48 @@ function peindreEcole(g, map, tile, TS) {
     g.drawImage(P.outline().canvas(), i * TS, j * TS);
   }
 }
+// Caverne : tout est noir sauf autour de mon héros, des coéquipiers, des cristaux, de la lave et des boules de feu
+let noirCv = null, lumieresCarte = null, lumieresDe = null;
+function drawNoir(ctx, world, map, mine, md, vw, vh, zoom, camX, camY, teams) {
+  if (lumieresDe !== map) {
+    lumieresDe = map; lumieresCarte = [];
+    for (const o of map.objs) if (o.kind.startsWith('cristal')) lumieresCarte.push([o.x + o.w / 2, o.y, 170]);
+    for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) if (map.tiles[j][i] === 'L' && (i + j) % 2 === 0) lumieresCarte.push([(i + 0.5) * map.T, (j + 0.5) * map.T, 110]);
+    if (map.heal) lumieresCarte.push([map.heal.x, map.heal.y, 180]);
+  }
+  const k = 0.5, W = Math.ceil(vw * k), H = Math.ceil(vh * k);
+  if (!noirCv) noirCv = document.createElement('canvas');
+  if (noirCv.width !== W || noirCv.height !== H) { noirCv.width = W; noirCv.height = H; }
+  const g = noirCv.getContext('2d');
+  g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
+  g.fillStyle = 'rgba(6,4,14,0.93)'; g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'destination-out';
+  const trou = (x, y, r) => {
+    const sx = (vw / 2 + (x - camX) * zoom) * k, sy = (vh / 2 + (y - camY) * zoom) * k, sr = r * zoom * k;
+    if (sx < -sr || sy < -sr || sx > W + sr || sy > H + sr) return;
+    const gr = g.createRadialGradient(sx, sy, sr * 0.25, sx, sy, sr);
+    gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(sx, sy, sr, 0, 7); g.fill();
+  };
+  trou(md.x, md.y, 270);
+  for (const p of world.p) if (p.al && p.id !== mine.id && teams && mine.tm >= 0 && p.tm === mine.tm) trou(p.x, p.y, 130);
+  for (const [x, y, r] of lumieresCarte) trou(x, y, r);
+  for (const [x, y, c] of world.b) trou(x, y, c === 'mage' ? 120 : 60);   // les boules de feu éclairent la grotte !
+  for (const f of world.fx) if (f.k === 'boom') trou(f.x, f.y, 200);
+  ctx.drawImage(noirCv, 0, 0, vw, vh);
+}
+function peindreChampignons(g, map, tile, TS) {   // champignons rebondissants (blocs 2×2 'r')
+  const vus = new Set();
+  for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) {
+    if (tile(i, j) !== 'r' || vus.has(j * map.cols + i)) continue;
+    for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) vus.add((j + b) * map.cols + i + a);
+    const P = new Painter(2 * TS, 2 * TS), c = TS;
+    P.ellipse(c, c + 2, TS - 3, TS - 8, '#c03a8a'); P.ellipse(c, c, TS - 5, TS - 10, '#e85aaa');
+    for (const [dx, dy, r] of [[-9, -3, 3], [6, -5, 2], [10, 3, 2], [-4, 5, 2], [1, -1, 1]]) P.disc(c + dx, c + dy, r, '#ffd6ee');
+    P.ellipse(c - 6, c - 6, 4, 2, '#ff9ad0');
+    g.drawImage(P.outline().canvas(), i * TS, j * TS);
+  }
+}
 let casierCache = null;
 function casierSprite() {   // trois casiers bleus, une porte entrouverte
   if (casierCache) return casierCache;
@@ -849,6 +905,25 @@ function casierSprite() {   // trois casiers bleus, une porte entrouverte
   }
   P.rect(12, 3, 9, 34, '#1b1424'); line2(P, 21, 3, 25, 6, '#6a94d8');   // porte entrouverte : on peut s'y cacher
   return (casierCache = P.outline().canvas());
+}
+function champiSprite(r) {   // touffe de champignons lumineux (cachette de la grotte)
+  const P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
+  P.ellipse(c, c + 3, r - 2, Math.round(r * 0.45), '#4a3e36');
+  for (let k = 0; k < 7; k++) {
+    const a = k / 7 * Math.PI * 2 + 0.3, d = k ? r * 0.55 : 0, x = c + Math.round(Math.cos(a) * d), y = c + Math.round(Math.sin(a) * d * 0.6), s = k ? 3 + (k % 3) : 6;
+    P.rect(x - 1, y, 2, s, '#d8d0e8'); P.ellipse(x, y, s, Math.max(2, s - 2), k % 2 ? '#3fd0c8' : '#5ae0ff'); P.px(x - 1, y - 1, '#d8fffc');
+  }
+  return P.outline().canvas();
+}
+const wagonCache = {};
+function wagonSprite(hz) {   // wagonnet de mine rempli de minerai brillant
+  if (wagonCache[hz]) return wagonCache[hz];
+  const w = hz ? 20 : 14, P = new Painter(w + 2, 20);
+  P.rect(1, 7, w, 9, '#6a4a2a'); P.rect(1, 7, w, 1, '#9a6a3a'); P.rect(1, 15, w, 1, '#3f2a16');
+  for (let x = 3; x < w; x += 5) P.rect(x, 8, 1, 7, '#9aa0ab');
+  for (const [x, y, c] of [[4, 5, '#ffd84a'], [8, 4, '#5ae0ff'], [12, 5, '#ff7ad8'], [6, 6, '#ffd84a'], [w - 3, 5, '#9aa0ab']]) P.disc(Math.min(x, w - 2), y, 2, c);
+  P.disc(4, 17, 2, '#2a2436'); P.disc(w - 3, 17, 2, '#2a2436');
+  return (wagonCache[hz] = P.outline().canvas());
 }
 let ballonCache = null;
 function ballonSprite(rot) {   // grand ballon rouge avec une bande blanche qui tourne
@@ -987,8 +1062,8 @@ function buildMapLayers(map) {
       if (shore) c = '#2f5a6e';
       else {
         const u = Math.min(1, wd[y * AW + x] / 16), cl = cells(x, y, 9, 21);
-        const W0 = map.theme === 'marais' ? [88, 128, 104] : map.theme === 'donjon' ? [58, 92, 128] : [92, 158, 176];
-        const W1 = map.theme === 'marais' ? [42, 72, 58] : map.theme === 'donjon' ? [24, 40, 70] : [34, 82, 112];
+        const W0 = map.theme === 'marais' ? [88, 128, 104] : map.theme === 'donjon' || map.theme === 'caverne' ? [58, 92, 128] : [92, 158, 176];
+        const W1 = map.theme === 'marais' ? [42, 72, 58] : map.theme === 'donjon' || map.theme === 'caverne' ? [24, 40, 70] : [34, 82, 112];
         const mix = i => Math.round(W0[i] + (W1[i] - W0[i]) * u);
         c = '#' + [mix(0), mix(1), mix(2)].map(v => v.toString(16).padStart(2, '0')).join('');
         if (cl.d2 - cl.d1 < 0.9 && u < 0.6) c = shade(c, 1.18);
@@ -1055,6 +1130,19 @@ function buildMapLayers(map) {
         for (let k = 1; k <= 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k]]) if (V(x + dx, y + dy) !== 't') d = Math.min(d, k);
         c = d === 1 ? '#7a2350' : d === 2 ? '#e3b341' : ((x + y) % 6 === 0 || (x - y + 600) % 6 === 0) ? '#c8508a' : '#a8336a';
       }
+      else if (t === 'o' || t === 'R' || (t === 'r' && map.theme === 'caverne')) {   // sol de la grotte : pierre sombre et cailloux
+        const cl = cells(x, y, 9, 101);
+        c = cl.d2 - cl.d1 < 1 ? '#463c36' : cl.id < 0.33 ? '#6a5e52' : cl.id < 0.66 ? '#62564a' : '#73665a';
+        if (h < 0.015) c = '#8a7c6c';
+        if (t === 'R') {   // rails : traverses de bois et deux barres d'acier, dans le sens des rails voisins
+          const hz = tile(tx - 1, ty) === 'R' || tile(tx + 1, ty) === 'R', vt2 = tile(tx, ty - 1) === 'R' || tile(tx, ty + 1) === 'R';
+          const a = hz && !vt2 ? x : y, b = hz && !vt2 ? ly : lx;
+          if (a % 6 < 3 && b > 1 && b < TS - 2) c = (a % 6 === 0) ? '#5a3a20' : '#7a4b25';
+          if (b === 4 || b === TS - 5) c = '#9aa0ab';
+          if (b === 3 || b === TS - 6) c = '#c8ccd4';
+          if (hz && vt2) { c = (lx === 4 || lx === TS - 5 || ly === 4 || ly === TS - 5) ? '#9aa0ab' : (x + y) % 6 < 3 ? '#7a4b25' : c; }
+        }
+      }
       else if (t === 'a') {   // asphalte de la cour : gris chaud, petits graviers
         c = noise(x / 14, y / 14, 31) > 0.6 ? '#6c6a72' : '#76747c'; if (h < 0.05) c = '#5e5c64'; else if (h > 0.985) c = '#8e8c94';
       }
@@ -1102,10 +1190,10 @@ function buildMapLayers(map) {
         if (q <= 3) c = q === 1 ? '#3e3a46' : (x + y) % 6 === 0 ? '#5a5664' : '#77737f';
       }
       // plage autour de l'eau
-      if (!'B=vLpfwtalyjr'.includes(t)) {
+      if (!'B=vLpfwtalyjrR'.includes(t)) {
         let nw = 9;
         for (let k = 1; k <= 3 && nw > 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k], [k, k], [-k, -k], [k, -k], [-k, k]]) if (isW(V(x + dx, y + dy))) { nw = Math.min(nw, k); break; }
-        if (nw <= 2) c = H ? '#d8e6f2' : map.theme === 'donjon' ? '#5a5a6a' : map.theme === 'marais' ? '#8a7a4a' : '#c8b27c';
+        if (nw <= 2) c = H ? '#d8e6f2' : map.theme === 'donjon' || map.theme === 'caverne' ? '#5a5a6a' : map.theme === 'marais' ? '#8a7a4a' : '#c8b27c';
         else if (nw === 3 && (t === '.' || t === 'n')) c = H ? '#c6d6e6' : map.theme === 'marais' ? '#6a5a32' : '#a8925e';
       }
     }
@@ -1115,6 +1203,7 @@ function buildMapLayers(map) {
   function dy0(y, cl) { return y - cl.py < -3; }
   g.putImageData(img, 0, 0);
   if (map.theme === 'ecole') peindreEcole(g, map, tile, TS);
+  if (map.theme === 'caverne') peindreChampignons(g, map, tile, TS);
 
   const top = document.createElement('canvas'); top.width = AW; top.height = AH;
   const tg = top.getContext('2d');
@@ -1222,6 +1311,7 @@ function buildMapLayers(map) {
   }
   // buissons (cachettes) : dessus, pour couvrir à moitié les joueurs cachés
   for (const b of map.bushes) {
+    if (map.theme === 'caverne') { const s = champiSprite(Math.round(b.r / PX)); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2); continue; }
     if (b.kind === 'casier') { const s = casierSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height + 12); continue; }
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
     const snow = map.theme === 'hiver', dark = map.theme === 'marais';
@@ -2181,6 +2271,12 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     } else {
       for (let i = 0; i < 7; i++) sq(x - Math.cos(a) * i * 3.2, y - Math.sin(a) * i * 3.2, 1, i === 0 ? '#e6ebf2' : i > 5 ? '#e04a3a' : '#7a4b25');
     }
+  }
+  // wagonnets de la grotte
+  for (const [x, y, a] of world.wg || []) {
+    ctx.fillStyle = '#00000050'; ctx.fillRect(Math.round(x) - 26, Math.round(y) + 14, 52, 8);
+    const s = wagonSprite(Math.abs(Math.cos(a)) > 0.5), S = big ? 4 : PX;
+    ctx.drawImage(s, Math.round(x - s.width * S / 2), Math.round(y - s.height * S / 2 - 6), s.width * S, s.height * S);
   }
   // ballons géants de la cour d'école
   for (const [x, y, rot] of world.bl || []) {

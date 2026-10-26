@@ -935,6 +935,7 @@ function frame(now) {
   cadreEquipe(teams, mine);
   if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (map.theme === 'caverne' && md) drawNoir(ctx, world, map, mine, md, vw, vh, zoom, camX, camY, teams);
   ambiance(now, vw, vh, zoom);
   if (flashRouge > 0) {   // touché : bords rouges un court instant
     flashRouge -= dt;
