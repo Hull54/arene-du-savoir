@@ -2076,11 +2076,11 @@ server.on('upgrade', (req, socket) => {
   socket.on('error', () => socket.destroy());
 });
 
-// Garder le serveur éveillé de 6 h à 22 h (heure du Québec) : il ne s'endort plus en soirée, donc il garde
+// Garder le serveur éveillé de 8 h à 22 h (heure du Québec) : il ne s'endort plus en soirée, donc il garde
 // les réglages de l'enseignant pour la pratique à la maison. Render donne l'adresse publique dans RENDER_EXTERNAL_URL.
 if (process.env.RENDER_EXTERNAL_URL) setInterval(() => {
   const h = +new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Toronto' }).format(new Date());
-  if (h >= 6 && h < 22) fetch(process.env.RENDER_EXTERNAL_URL + '/ping').catch(() => {});
+  if (h >= 8 && h < 22) fetch(process.env.RENDER_EXTERNAL_URL + '/ping').catch(() => {});
 }, 10 * 60 * 1000);
 
 // toutes les 5 s : on ferme les connexions d'élèves muettes depuis 20 s (l'appareil envoie un signe de vie)
