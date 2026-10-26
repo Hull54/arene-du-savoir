@@ -274,6 +274,8 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
 .equipes { display: grid; gap: 8px; margin-top: 12px; max-height: 40vh; overflow: auto; }
 .equipe { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel-2); text-align: left; }
 .equipe:hover { border-color: var(--gold); }
+.eq-ligne { display: flex; gap: 8px; align-items: stretch; } .eq-ligne .equipe { flex: 1; }
+.eq-del { padding: 0 14px; } .eq-del.sur { background: var(--rouge, #c8473a); color: #fff; }
 .equipe b { font-size: 1.2rem; color: var(--gold); letter-spacing: .05em; }
 .equipe span { color: var(--muted); font-size: .9rem; }
 .jetons { display: grid; gap: 6px; }
@@ -562,6 +564,14 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .sf-ouvrir { position: absolute; top: 10px; left: 10px; z-index: 35; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--cerne); background: var(--panel); font-size: 1.3rem; box-shadow: 0 3px 0 var(--cerne); padding: 0; }
 .ed-evts > label { margin-bottom: 8px; }
 .chrono { border: 2px solid var(--cerne); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-weight: 700; box-shadow: 0 3px 0 var(--cerne); font-variant-numeric: tabular-nums; }
+.valide { position: absolute; left: 0; top: 0; width: var(--cell); height: var(--cell); pointer-events: none; z-index: 9; }
+.valide b { position: absolute; right: -8%; top: -8%; width: 44%; height: 44%; border-radius: 50%; background: #2e9e5b; color: #fff; display: grid; place-items: center;
+  font-size: calc(var(--cell)*.28); font-weight: 900; border: 3px solid #fff8e8; box-shadow: 0 3px 8px rgba(0,0,0,.5); }
+.jauge { display: flex; align-items: center; gap: 6px; border: 2px solid var(--cerne); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 5px 12px; font-weight: 700; box-shadow: 0 3px 0 var(--cerne); }
+.jauge .segs { display: flex; gap: 3px; }
+.jauge .segs i { width: 12px; height: 16px; border-radius: 4px; background: #d8c8a4; border: 1px solid #8a7556; }
+.jauge .segs i.on { background: linear-gradient(#ffe48a, #e3a52f); border-color: #8a5a10; }
+.jauge.pleine { background: linear-gradient(#ffe48a, #f0b23a); animation: pulse 1s ease-in-out infinite alternate; cursor: pointer; }
 .chrono.bientot { background: var(--rouge); color: #fff4e0; animation: pulse 1s ease-in-out infinite alternate; }
 .recit { position: absolute; left: 50%; bottom: 18px; translate: -50% 0; z-index: 36; max-width: min(640px, 80%); padding: 10px 22px; text-align: center; pointer-events: none;
   background: var(--panel); color: var(--ink); border: 3px solid var(--cerne); border-radius: 12px; box-shadow: 0 4px 0 rgba(0,0,0,.4); font-family: var(--display); font-size: clamp(1.1rem, 2vw, 1.5rem); font-weight: 700; }
@@ -580,6 +590,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
     <div class="brand">Classe et Donjon<small>Manche <span id="round">1</span> · <span id="carte-nom"></span></small></div>
     <div class="turn" id="turn"></div>
     <button class="chrono" id="chrono" type="button" hidden title="Minuterie de la période"></button>
+    <button class="jauge" id="jauge" type="button" hidden title="Jauge d'équipe : chaque bonne réponse la remplit"></button>
     <div class="spacer"></div>
     <div class="tools" id="game-tools">
       <button class="btn" id="btn-d12" type="button">Lancer le d12</button>
@@ -1550,7 +1561,7 @@ function photoPartie() {
     objets: S.objets.map(o => ({ decouvert: o.decouvert, vide: o.vide })),
     portes: Object.fromEntries(Object.entries(S.portes).map(([k, p]) => [k, p.verrou])),
     secrets: S.secrets.map(s => s.trouve), deco: S.deco.map(d => [d.type, d.x, d.y]),
-    rep: S.rep || [], fini: S.fini || null, vu: S.vu ? Array.from(S.vu).join("") : null, brumeOff: !!S.brumeOff,
+    rep: S.rep || [], jauge: S.jauge || 0, fini: S.fini || null, vu: S.vu ? Array.from(S.vu).join("") : null, brumeOff: !!S.brumeOff,
   };
 }
 function restaurerPartie(p) {
@@ -1564,7 +1575,7 @@ function restaurerPartie(p) {
   for (const [k, v] of Object.entries(p.portes)) if (S.portes[k]) S.portes[k].verrou = v;
   p.secrets.forEach((t, i) => { if (S.secrets[i]) S.secrets[i].trouve = t; });
   S.deco = p.deco.map(([t, x, y], i) => ({ id: "d-" + i, type: t, x, y }));
-  S.rep = p.rep || []; S.brumeOff = !!p.brumeOff; S.evFaits = p.evFaits || []; S.dernierEvt = Date.now();
+  S.rep = p.rep || []; S.jauge = p.jauge || 0; S.brumeOff = !!p.brumeOff; S.evFaits = p.evFaits || []; S.dernierEvt = Date.now();
   if (p.vu && p.vu.length === W * H) S.vu = Uint8Array.from(p.vu, c => c === "1" ? 1 : 0);
   for (const h of S.heroes) { noms[h.cls] = h.nom; races[h.cls] = h.race; }
   if (!S.heroes[S.actif] || S.heroes[S.actif].pv <= 0 || S.heroes[S.actif].joue) { const i = S.heroes.findIndex(h => h.pv > 0 && !h.joue); S.actif = i < 0 ? 0 : i; }
@@ -1588,7 +1599,7 @@ async function ouvrirQuete(q) {
   const quand = p => new Date(p.date).toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
   const choix = await new Promise(resolve => {
     ouvrir(`<p class="sub kicker">${esc(q.nom)}</p><h2>Quelle équipe joue?</h2>
-      ${parties.length ? `<div class="equipes">${parties.map((p, i) => `<button type="button" class="equipe" data-i="${i}"><b>${esc(p.equipe)}</b><span>Chapitre ${p.chapitre + 1} · manche ${p.round} · ${quand(p)}</span></button>`).join("")}</div>`
+      ${parties.length ? `<div class="equipes">${parties.map((p, i) => `<div class="eq-ligne"><button type="button" class="equipe" data-i="${i}"><b>${esc(p.equipe)}</b><span>Chapitre ${p.chapitre + 1} · manche ${p.round} · ${quand(p)}</span></button><button type="button" class="btn eq-del" data-del="${i}" title="Supprimer la partie de cette équipe" aria-label="Supprimer la partie de l'équipe ${esc(p.equipe)}">🗑</button></div>`).join("")}</div>`
         : `<p class="sub">Aucune équipe n'a encore commencé cette quête.</p>`}
       <p class="sub" style="margin-top:14px">Nouvelle équipe : choisis un code (ex. : DRAGONS, EQUIPE3).</p>
       <input id="code-eq" class="field" maxlength="12" autocomplete="off" placeholder="Code d'équipe">
@@ -1604,7 +1615,15 @@ async function ouvrirQuete(q) {
     };
     document.getElementById("eq-go").onclick = go;
     inp.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
-    modal.onclick = e => { const b = e.target.closest("[data-i]"); if (b) { fermer(); resolve({ p: parties[Number(b.dataset.i)] }); } };
+    modal.onclick = async e => {
+      const d = e.target.closest("[data-del]");
+      if (d) {
+        const p = parties[Number(d.dataset.del)];
+        if (!d.classList.contains("sur")) { d.classList.add("sur"); d.textContent = "Supprimer?"; setTimeout(() => { if (d.isConnected) { d.classList.remove("sur"); d.textContent = "🗑"; } }, 4000); return; }
+        await Stock.supprimerPartie(p.id); d.closest(".eq-ligne").remove(); toast(`La partie de l'équipe ${p.equipe} est supprimée.`); return;
+      }
+      const b = e.target.closest("[data-i]"); if (b) { fermer(); resolve({ p: parties[Number(b.dataset.i)] }); }
+    };
   });
   EQUIPE = choix.p ? choix.p.equipe : choix.code;
   await chargerFiche();
@@ -1635,7 +1654,8 @@ const heros = () => S.heroes[S.actif];
 const vivants = () => S.heroes.filter(h => h.pv > 0);
 const ennemisVivants = () => S.enemies.filter(e => e.pv > 0);
 
-function vue(a, b) {
+function vue(a, b) { return dist(a, b) <= 1 || voit(a, b) || voit(b, a); }
+function voit(a, b) {
   const dx = b.x - a.x, dy = b.y - a.y, n = Math.max(Math.abs(dx), Math.abs(dy)) * 4;
   for (let i = 1; i < n; i++) {
     const x = Math.round(a.x + dx * i / n), y = Math.round(a.y + dy * i / n);
@@ -1655,6 +1675,8 @@ function sournois(h, e) {
   if (deDos(e, h)) return "de dos";
   return null;
 }
+// Attaque combinée : un autre héros debout touche aussi le monstre
+const allieCombo = (h, e) => S.heroes.find(v => v !== h && v.pv > 0 && dist(v, e) <= 1) || null;
 const plusProche = h => ennemisVivants().sort((a, b) => dist(a, h) - dist(b, h))[0] || null;
 
 function atteignables(from, max, sauf) {
@@ -1892,6 +1914,7 @@ function renderHL() {
     for (const t of ciblesMode()) cell(t.x, t.y, S.mode.p.cible === "tile" ? "free" : "tgt");
   } else if (mjReach) {
     for (const n of mjReach.values()) cell(n.x, n.y, "mj");
+    if (mjSel) { cell(mjSel.x, mjSel.y, "tgt"); for (const v of vivants()) if (dist(v, mjSel) <= 1) cell(v.x, v.y, "atk"); }
   } else if (h && !S.busy && h.actions > 0 && h.pv > 0 && !S.fini) {
     reachCache = atteignables(h, st(h).dep, h);
     for (const n of reachCache.values()) cell(n.x, n.y, "reach");
@@ -1918,7 +1941,7 @@ function renderSide() {
     const hearts = Array.from({ length: s.pv }, (_, k) => ICON.coeur(k < h.pv)).join("");
     const fioles = Array.from({ length: s.mana }, (_, k) => ICON.fiole(k < h.mana)).join("");
     const chips = [h.pv <= 0 ? '<span class="chip ko">À terre</span>' : "", h.force ? '<span class="chip">Force brute</span>' : "",
-      S.phase === "heros" && h.joue && h.pv > 0 ? '<span class="chip">A joué</span>' : ""].join("");
+      S.phase === "heros" && h.joue && h.pv > 0 ? '<span class="chip">✓ A joué</span>' : ""].join("");
     const peut = h === actif && h.actions > 0 && !S.busy && !S.fini;
     const pw = h === actif ? `<div class="powers">${c.p.map((p, j) =>
       `<button class="pw" type="button" data-pw="${j}" ${peut && h.mana >= p.cout ? "" : "disabled"}><b>${p.nom}</b><span>${p.cout ? p.cout + " mana" : "Sans mana"} · ${p.desc}</span></button>`).join("")}</div>` : "";
@@ -1956,7 +1979,7 @@ function renderTop() {
   document.getElementById("btn-auto").hidden = S.phase !== "mj";
   document.getElementById("btn-mj-end").hidden = S.phase !== "mj";
   document.getElementById("btn-auto").disabled = document.getElementById("btn-mj-end").disabled = S.busy;
-  majSouffleur(); majChrono();
+  majSouffleur(); majChrono(); majJauge();
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const de = n => (/^[aeiouyhàâéèêîôû]/i.test(n) ? "d'" : "de ") + esc(n);
@@ -1972,6 +1995,15 @@ function flotter(x, y, txt, color) {
   el.style.transform = `translate(${x * CELL}px, ${y * CELL}px)`; ents.appendChild(el); setTimeout(() => el.remove(), 1200);
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// Petit crochet vert sur le jeton : l'action est bien enregistrée
+function valide(ent) {
+  if (!ent || !ents) return;
+  const el = document.createElement("div"); el.className = "valide"; el.innerHTML = "<b>✓</b>";
+  el.style.transform = `translate(${ent.x * CELL}px, ${ent.y * CELL}px)`; ents.appendChild(el);
+  try { bruit("coche"); } catch {}
+  if (!RM.matches) el.firstChild.animate([{ transform: "scale(0)", opacity: 0 }, { transform: "scale(1.3)", opacity: 1, offset: .25 }, { transform: "scale(1)", opacity: 1, offset: .4 }, { transform: "scale(1)", opacity: 1, offset: .8 }, { transform: "scale(.9)", opacity: 0 }], { duration: 1400, easing: "ease-out" });
+  setTimeout(() => el.remove(), 1400);
+}
 
 // ---------- animations des jetons ----------
 const RM = matchMedia("(prefers-reduced-motion: reduce)");
@@ -2015,7 +2047,7 @@ async function frapper(h, e) {
 // ---------- sons, musique, ambiance et météo (tout est généré : aucun fichier à charger) ----------
 const TRAMES = { lugubre: "Lugubre (épouvante)", mystere: "Mystère", aventure: "Aventure", foret: "Forêt enchantée", village: "Village joyeux", aucune: "Aucune musique" };
 const METEOS = { aucune: "Aucune", pluie: "Pluie", orage: "Orage (pluie et éclairs)", eclairs: "Éclairs au loin (intérieur)", brouillard: "Brouillard", neige: "Neige", lucioles: "Lucioles", braises: "Braises et cendres" };
-const AMBIANCES = { auto: "Selon la météo", vent: "Vent qui hurle", foret: "Forêt (feuillage)", marais: "Marais", crypte: "Crypte (gouttes, grondements)", maison: "Vieille maison (craquements, horloge)", grotte: "Grotte", feu: "Feu de camp", aucune: "Aucune" };
+const AMBIANCES = { auto: "Selon la météo", vent: "Vent qui hurle", foret: "Forêt (feuillage)", marais: "Marais", crypte: "Crypte (gouttes, grondements)", maison: "Vieille maison (craquements, horloge)", grotte: "Grotte", feu: "Feu de camp", taverne: "Taverne animée", village: "Village (oiseaux, cloche)", riviere: "Rivière", aucune: "Aucune" };
 const ANIMAUX = { hiboux: "Hiboux", loups: "Loups", corbeaux: "Corbeaux", grillons: "Grillons", grenouilles: "Grenouilles", chauves: "Chauves-souris", oiseaux: "Oiseaux", rats: "Rats" };
 const SOLS = { pierre: "Pierre", herbe: "Herbe", terre: "Terre", bois: "Plancher de bois", neige: "Neige", gravier: "Gravier" };
 
@@ -2148,6 +2180,7 @@ function bruit(nom, opt = {}) {
       chaine(o, fl, g, out); versRev(g, .4);
       souffle(out, t + .8, 200, 1, .004, .7, .3, "lowpass", .3); break;
     }
+    case "coche": note(out, "sine", 1318.5, t, .004, .09, .18); note(out, "sine", 1760, t + .07, .004, .07, .22); break;
     case "ok": [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => note(out, "triangle", f, t + i * .08, .005, .2, .5, .4)); break;
     case "echec": [311.1, 233.1].forEach((f, i) => note(out, "triangle", f, t + i * .22, .01, .25, .45, .2)); break;
     case "de": souffle(out, t, 2600, 2, .001, .3, .03); break;
@@ -2261,20 +2294,28 @@ function ambianceDemarrer(nom, pluie, animaux) {
   }
   if (nom === "maison") { const v = boucle(350, "bandpass", 1, .06); lfo(v.g.gain, .07, .04); hasard(2000, .3, t => cri("craque", a.bus, t, .8)); hasard(6000, .35, t => cri("tictac", a.bus, t, .6)); }
   if (nom === "feu") { boucle(400, "lowpass", .7, .2); hasard(500, .7, t => cri("crepite", a.bus, t, 1)); }
+  if (nom === "taverne") {
+    const v = boucle(650, "bandpass", .9, .1); lfo(v.g.gain, .3, .05); const v2 = boucle(1100, "bandpass", 2, .04); lfo(v2.fl.frequency, .2, 300);
+    hasard(1600, .45, t => { const f = 2200 + Math.random() * 1400; note(a.bus, "triangle", f, t, .002, .05, .3, .3); note(a.bus, "sine", f * 1.5, t + .01, .002, .03, .25, .3); });
+    hasard(700, .4, t => cri("crepite", a.bus, t, .4));
+  }
+  if (nom === "village") { const v = boucle(1900, "bandpass", .5, .04); lfo(v.g.gain, .1, .03); hasard(3000, .4, t => cri("oiseaux", a.bus, t, .7)); hasard(20000, .35, t => cloche(a.bus, 330, t, .05, .8)); }
+  if (nom === "riviere") { const v = boucle(800, "bandpass", .5, .2); lfo(v.g.gain, .17, .07); boucle(3200, "highpass", .5, .05); hasard(600, .6, t => cri("goutte", a.bus, t, .35)); }
   if (pluie) { boucle(1500, "lowpass", .5, .32); boucle(5500, "highpass", .5, .05); hasard(400, .5, t => cri("goutte", a.bus, t, .5)); }
   for (const an of animaux || []) {
     const rythme = { grillons: [1200, .7], grenouilles: [2200, .4], chauves: [5000, .3], oiseaux: [3500, .35], rats: [7000, .3], corbeaux: [9000, .35], hiboux: [10000, .4], loups: [16000, .35] }[an];
     if (rythme) hasard(rythme[0], rythme[1], t => cri(an, a.bus, t, an === "grillons" || an === "oiseaux" ? .8 : 1));
   }
 }
-const ambDefaut = met => ({ brouillard: "vent", neige: "vent", lucioles: "foret", braises: "feu" }[met] || "aucune");
+// Ambiance « auto » : d'abord la météo, sinon le sol du lieu
+const ambDefaut = (met, c) => ({ brouillard: "vent", neige: "vent", lucioles: "foret", braises: "feu" }[met] || { bois: "maison", herbe: "foret", terre: "grotte", neige: "vent", gravier: "vent" }[c && c.sol] || "aucune");
 // Règle la musique, l'ambiance et la météo selon la quête et le chapitre affichés
 function fxChapitre() {
   meteoMaj();
   if (!SON.ctx) return;
   const q = fxQuete(), c = fxCarte(), met = meteoActive();
   const mus = c && c.musique && c.musique !== "quete" ? c.musique : (q && q.musique) || "mystere";
-  const amb = c && c.ambiance && c.ambiance !== "auto" ? c.ambiance : ambDefaut(met);
+  const amb = c && c.ambiance && c.ambiance !== "auto" ? c.ambiance : ambDefaut(met, c);
   const ambCle = [amb, ["pluie", "orage", "eclairs"].includes(met), ...((c && c.animaux) || [])].join(",");
   const [m0, a0] = SON.cle.split("|");
   if (m0 !== mus) { if (THEMES[mus]) musiqueDemarrer(mus); else musiqueArreter(); }
@@ -2602,6 +2643,7 @@ function ouvrirFiches(nouvelle) {
 function noter(type, quoi, ok) {
   if (!S || S.phase === "edit" || !S.rep) return;
   const h = S.qui || (S.phase === "heros" ? heros() : null);
+  if (ok && S.phase !== "edit") remplirJauge();
   S.rep.push({ t: type, q: String(quoi).replace(/<[^>]+>/g, "").slice(0, 120), ok: ok ? 1 : 0, h: h ? h.nom : "", c: h ? h.cls : "", ch: S.chapitre });
   if (h) progres(h, s => {
     if (!ok) { s.serie = 0; return; }
@@ -2657,6 +2699,8 @@ const RECITS = {
   mage: ["Un éclair bleu jaillit des mains de {h} et frappe {e}!", "{h} murmure une formule : {e} est secoué par la magie!", "Les étoiles de la robe de {h} brillent… BOUM! {e} est touché!"],
   guerrier: ["{h} abat son arme de toutes ses forces sur {e}!", "CLANG! {h} frappe {e} sans hésiter!", "{h} pousse un cri de guerre et frappe {e}!"],
   voleur: ["{h} se glisse dans l'ombre et frappe {e} par surprise!", "Plus rapide que l'éclair, {h} touche {e}!", "{e} n'a rien vu venir : {h} était déjà là!"],
+  aide: ["{h} accourt pour aider {e}!", "« Je suis là! » crie {h} en rejoignant {e}.", "{h} tend la main à {e} : ensemble, on y arrive!"],
+  combo: ["{h} frappent ensemble : {e} ne sait plus où donner de la tête!", "Coup combiné! {h} attaquent {e} en même temps!", "Travail d'équipe! {h} encerclent {e}!"],
   vaincu: ["{e} s'effondre dans un dernier grognement!", "{e} disparaît dans un nuage de poussière!", "{e} vacille… et tombe! Hourra!"],
   rate: ["{h} hésite une seconde de trop…", "Oups! {h} glisse sur une pierre…", "{h} rate son coup de justesse!"],
   pare: ["{h} pare le coup au dernier moment!", "{h} esquive d'un bond agile!", "Le bouclier de {h} encaisse le choc!"],
@@ -2690,6 +2734,38 @@ function dire(texte, look) {
   speechSynthesis.speak(u); return true;
 }
 const taire = () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); };
+
+// ---------- jauge d'équipe ----------
+const JAUGE_MAX = 8;
+function remplirJauge() {
+  const avant = S.jauge || 0; if (avant >= JAUGE_MAX) return;
+  S.jauge = avant + 1; majJauge();
+  if (S.jauge === JAUGE_MAX) { setTimeout(() => { bruit("tresor"); toast("⚡ La jauge d'équipe est pleine! Le super-pouvoir est prêt.", 4500); }, 900); }
+}
+function majJauge() {
+  const el = document.getElementById("jauge"); if (!el) return;
+  if (!S || S.phase === "edit") { el.hidden = true; return; }
+  const n = S.jauge || 0, plein = n >= JAUGE_MAX;
+  el.hidden = false; el.classList.toggle("pleine", plein);
+  el.innerHTML = `⚡ <span class="segs">${Array.from({ length: JAUGE_MAX }, (_, i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span>${plein ? " Super-pouvoir!" : ""}`;
+}
+document.getElementById("jauge").onclick = async () => {
+  if (!S || S.busy || S.fini) return;
+  if ((S.jauge || 0) < JAUGE_MAX) return toast(`Jauge d'équipe : ${S.jauge || 0} sur ${JAUGE_MAX}. Chaque bonne réponse de la classe la remplit!`, 3500);
+  const v = await choisir("⚡ Super-pouvoir d'équipe!", "Grâce à toutes vos bonnes réponses, l'équipe déchaîne sa puissance. La classe vote :",
+    [{ txt: "💚 Vague de guérison (+2 PV à tous)", v: "soin", cls: "gold" }, { txt: "☄️ Pluie d'étoiles (−2 PV aux monstres proches)", v: "etoiles", cls: "blue" }, { txt: "🔷 Source de mana (+2 mana à tous)", v: "mana" }, { txt: "Plus tard", v: "non" }]);
+  if (v === "non") return;
+  S.jauge = 0; S.busy = true; render();
+  bruit("magie"); secousse(1);
+  const vivs = vivants();
+  for (const h of vivs) { etincelles(h, "#ffe08a", 16, 1.3); anim(h, "power"); }
+  await sleep(700);
+  if (v === "soin") { for (const h of vivs) { const g = Math.min(2, st(h).pv - h.pv); if (g > 0) { h.pv += g; flotter(h.x, h.y, "+" + g, "#72d39b"); anim(h, "heal"); } } bruit("soin"); }
+  if (v === "mana") { for (const h of vivs) { const g = Math.min(2, st(h).mana - h.mana); if (g > 0) { h.mana += g; flotter(h.x, h.y, "+" + g, "#7fb7ff"); anim(h, "heal"); } } bruit("soin"); }
+  if (v === "etoiles") for (const e of ennemisVivants().filter(e => vivs.some(h => dist(h, e) <= 5))) { await projectile(vivs[0], e, "#ffe08a"); await blesser(e, 2); }
+  log(`<b>Super-pouvoir d'équipe!</b>`); toast("⚡ Bravo l'équipe!", 3000);
+  S.busy = false; verifierFin(); render(); for (const h of vivs) valide(h);
+};
 
 // ---------- minuterie de la période ----------
 const PERIODE = { debut: 0, duree: 0, alerte: false, fin: false, rep0: 0, badges: [] };
@@ -2802,6 +2878,9 @@ function majSouffleur() {
       if (h.pv === 1) aDire += S.inv.vie ? " « Il te reste 1 PV : pense à la potion de vie! »" : " « Prudence, il te reste 1 PV! »";
     } else aDire = `« Encore ${n} ${a}, ${h.nom}! »`;
     faire = "L'élève touche une case verte pour se déplacer, ou touche un monstre, un objet ou un mur pour agir. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
+    const cible = ennemisAPortee(h).find(e => allieCombo(h, e));
+    if (cible && n > 0) faire += ` 🤝 Combo possible sur ${cible.nom} : un coéquipier le touche déjà (+1 dégât).`;
+    else if (!S.entraide) faire += " 🤝 Si une réponse est ratée, un coéquipier peut venir aider (une fois par manche).";
   } else if (S.phase === "mj") {
     const cle = "mj" + S.round;
     if (sfCle !== cle) {
@@ -2815,7 +2894,7 @@ function majSouffleur() {
     else if (vivantsE.every(e => e.bouge)) { aDire = "« Les monstres ont joué. Héros, préparez-vous! »"; faire = `Touche « Fin du tour du MJ » pour lancer la manche ${S.round + 1}.`; }
     else {
       aDire = boss ? (S.carte.repliqueBoss ? guillemets(S.carte.repliqueBoss) : `« ${boss.nom} chancelle! Encore un effort, héros! »`) : sfLigne;
-      faire = "1. Touche « Faire jouer les ennemis » (ou glisse chaque monstre selon sa vitesse). 2. Un élève attaqué fait une division pour se défendre. 3. Touche « Fin du tour du MJ ».";
+      faire = "1. Touche « Faire jouer les ennemis », ou touche un monstre puis une case rouge pour le déplacer. 2. Un élève attaqué fait une division pour se défendre. 3. Touche « Fin du tour du MJ ».";
     }
   }
   if (PERIODE.fin) faire = "⏰ Temps écoulé : terminez la manche. L'écran « À suivre… » apparaîtra à la fin du tour du MJ. " + faire;
@@ -2930,7 +3009,7 @@ async function lancer(el, final) {
   el.classList.add("rolling");
   const b = el.querySelector("b");
   const t0 = performance.now(), dur = RM.matches ? 0 : 900;
-  while (performance.now() - t0 < dur) { b.textContent = 1 + Math.floor(Math.random() * 12); bruit("de"); await sleep(70); }
+  while (performance.now() - t0 < dur) { b.textContent = 1 + Math.floor(Math.random() * 12); try { bruit("de"); } catch {} await sleep(70); }
   b.textContent = final; el.classList.remove("rolling");
 }
 const d12 = () => 1 + Math.floor(Math.random() * 12);
@@ -2957,7 +3036,8 @@ function epreuveMath(op, titre, danger) {
     pad.style.visibility = "hidden";
     if (op === "×") {
       const a = d12(), b = d12();
-      await Promise.all([lancer(document.getElementById("d1"), a), lancer(document.getElementById("d2"), b)]);
+      try { await Promise.all([lancer(document.getElementById("d1"), a), lancer(document.getElementById("d2"), b)]); }
+      catch { document.querySelectorAll(".die b").forEach((el, i) => el.textContent = i ? b : a); }
       q = { txt: `${a} × ${b}`, rep: a * b };
     } else q = genCalcul(op);
     qel.textContent = q.txt + " = ?";
@@ -3083,7 +3163,21 @@ async function defendre(h, e, deg) {
 async function faireAction(epreuve, succes, attaquant) {
   const h = heros();
   h.actions--; S.busy = true; S.debut = false; render();
-  const ok = await epreuve();
+  let ok = await epreuve();
+  if (!ok && !S.entraide && S.phase === "heros" && h.pv > 0) {
+    const amis = vivants().filter(v => v !== h);
+    if (amis.length) {
+      const v = await choisir("🤝 Entraide!", `Un coéquipier peut venir au secours ${de(h.nom)} et répondre à une nouvelle question. Une seule fois par manche!`,
+        [...amis.map((a, i) => ({ txt: "🤝 " + esc(a.nom), v: i, cls: "gold" })), { txt: "Non merci", v: -1 }]);
+      if (v >= 0) {
+        const a = amis[v]; S.entraide = true;
+        log(`${esc(a.nom)} vient à la rescousse ${de(h.nom)}!`); raconter("aide", a, { nom: h.nom });
+        await anim(a, "hop");
+        S.qui = a; ok = await epreuve(); S.qui = null;
+        if (ok) { progres(a, s => s.aide = (s.aide || 0) + 1); bruit("tresor"); etincelles(a, "#ffe08a", 12); log("Bravo! L'entraide sauve l'action."); }
+      }
+    }
+  }
   if (ok) await succes(h);
   else {
     raconter("rate", h);
@@ -3093,8 +3187,8 @@ async function faireAction(epreuve, succes, attaquant) {
     h.actions = 0;
   }
   S.busy = false;
-  verifierFin(); render();
-  if (S.phase === "heros" && !S.fini && (h.actions <= 0 || h.pv <= 0)) await finTourHeros();
+  verifierFin(); render(); if (h.pv > 0) valide(h);
+  if (S.phase === "heros" && !S.fini && (h.actions <= 0 || h.pv <= 0)) { await sleep(500); await finTourHeros(); }
 }
 
 async function deplacer(h, x, y, deja) {
@@ -3108,8 +3202,8 @@ async function deplacer(h, x, y, deja) {
   if (S.carte !== carte) return;
   await arrivee(h);
   if (S.carte !== carte || S.fini) return;
-  render();
-  if (h.actions <= 0) setTimeout(finTourHeros, 400);
+  render(); valide(h);
+  if (h.actions <= 0) setTimeout(finTourHeros, 700);
 }
 
 async function attaquer(h, e) {
@@ -3121,10 +3215,13 @@ async function attaquer(h, e) {
     let deg = st(h).deg;
     if (h.force) { deg *= 2; h.force = false; }
     if (ruse) { deg *= 2; log(`Attaque sournoise ${ruse} : dégâts doublés!`); }
+    const allie = allieCombo(h, e);
+    if (allie) { deg += 1; log(`Attaque combinée avec ${esc(allie.nom)} : +1 dégât!`); anim(allie, "lunge", e); progres(allie, s => s.combo = (s.combo || 0) + 1); }
     let parts = { [e.id]: deg };
     const autres = ennemisAPortee(h);
     if (c.distrib && autres.length > 1) parts = await distribuer(deg, 1, [e, ...autres.filter(x => x !== e)], "Partage tes dégâts");
-    log(`${esc(h.nom)} réussit son attaque (−${deg} PV).`); raconter(h.cls, h, e);
+    log(`${esc(h.nom)} réussit son attaque (−${deg} PV).`);
+    if (allie) raconter("combo", { nom: `${h.nom} et ${allie.nom}` }, e); else raconter(h.cls, h, e);
     for (const [id, n] of Object.entries(parts)) if (n) { const cible = S.enemies.find(x => x.id === id); await frapper(h, cible); await blesser(cible, n); }
   }, e);
 }
@@ -3218,11 +3315,11 @@ async function finTourHeros() {
   await sleep(300);
   for (const e of ennemisVivants()) if (e.poison) { log(`Le poison ronge ${e.nom} (−1 PV).`); await blesser(e, 1); }
   verifierFin(); render();
-  toast("Tour du MJ : glisse chaque monstre selon sa vitesse, ou fais-les jouer automatiquement.", 4500);
+  toast("Tour du MJ : touche un monstre, puis une case rouge pour le déplacer. Ou fais-les jouer automatiquement.", 4500);
 }
 function finTourMJ() {
   if (S.busy || S.fini) return;
-  S.round++; S.phase = "heros"; mjReach = null;
+  S.round++; S.phase = "heros"; mjReach = null; mjSel = null; S.entraide = false;
   for (const h of S.heroes) { h.joue = h.pv <= 0; h.actions = h.pv > 0 ? S.nbActions : 0; }
   S.actif = S.heroes.findIndex(h => h.pv > 0);
   log(`— Manche ${S.round} —`);
@@ -3248,11 +3345,11 @@ async function ennemisAuto() {
         const n = Math.min(E[e.type].pas, pts.length - 1), [nx, ny] = pts[n], [px, py] = pts[n - 1];
         e.face = [nx - px, ny - py];
         e.bouge = true;
-        await marcher(e, pts.slice(0, n + 1)); await sleep(150);
+        await marcher(e, pts.slice(0, n + 1)); valide(e); await sleep(250);
         adj = cibles.find(h => dist(h, e) <= 1);
       }
     }
-    if (adj) { await defendre(adj, e, e.deg); verifierFin(); if (S.fini) break; }
+    if (adj) { e.bouge = true; await defendre(adj, e, e.deg); valide(e); verifierFin(); if (S.fini) break; }
   }
   S.busy = false; verifierFin(); render();
 }
@@ -3479,13 +3576,30 @@ function menu(x, y, titre, texte, boutons) {
 }
 
 const NOMPORTE = { cle: "Porte à clé", levier: "Grille à levier", sceau: "Porte scellée" };
+let mjSel = null;
+async function deplacerMonstre(e, x, y) {
+  const pts = chemin(mjReach, e, x, y); if (!pts || pts.length < 2) return;
+  const [px, py] = pts[pts.length - 2]; e.face = [x - px, y - py]; e.bouge = true;
+  mjSel = null; mjReach = null; S.busy = true; render();
+  await marcher(e, pts);
+  S.busy = false; render(); valide(e);
+  if (vivants().some(v => dist(v, e) <= 1)) setTimeout(() => clicMJ(e.x, e.y), 350);
+}
 function clicMJ(x, y) {
+  if (mjSel && mjReach && mjReach.has(key(x, y)) && !enemyAt(x, y) && !heroAt(x, y) && !(mjSel.x === x && mjSel.y === y)) return deplacerMonstre(mjSel, x, y);
+  const deja = mjSel;
+  if (mjSel) { mjSel = null; mjReach = null; renderHL(); }
   const e = enemyAt(x, y), hh = heroAt(x, y), p = porte(x, y), o = objAt(x, y), pn = pnjAt(x, y);
   if (pn) { menu(x, y, esc(pn.nom), "", [{ txt: "Faire parler", fn: () => parler(pn) }]); return; }
   if (e) {
     const adj = vivants().filter(v => dist(v, e) <= 1);
-    menu(x, y, e.nom, `${e.pv} PV sur ${e.pvMax} · vitesse ${E[e.type].pas}${e.poison ? " · empoisonné" : ""}${e.bouge ? " · a bougé" : " · glisse-le pour le déplacer"}`, [
-      ...adj.map(v => ({ txt: `Attaquer ${esc(v.nom)}`, op: "÷", fn: async () => { S.busy = true; render(); await defendre(v, e, e.deg); S.busy = false; verifierFin(); render(); } })),
+    if (!e.bouge && e.pv > 0) {
+      mjSel = e; mjReach = atteignables(e, E[e.type].pas, e); renderHL();
+      // 1re touche : on choisit le monstre (cases rouges). 2e touche sur lui : ses options.
+      if (!adj.length && deja !== e) { fermerMenu(); bruit("grogne"); toast(`${e.nom} : touche une case rouge pour le déplacer (touche-le encore pour ses options).`, 3500); return; }
+    }
+    menu(x, y, e.nom, `${e.pv} PV sur ${e.pvMax} · vitesse ${E[e.type].pas}${e.poison ? " · empoisonné" : ""}${e.bouge ? " · a bougé" : " · touche une case rouge pour le déplacer"}`, [
+      ...adj.map(v => ({ txt: `Attaquer ${esc(v.nom)}`, op: "÷", fn: async () => { mjSel = null; mjReach = null; S.busy = true; render(); await defendre(v, e, e.deg); e.bouge = true; S.busy = false; verifierFin(); render(); valide(e); } })),
       { txt: "Tourner", fn: () => { e.face = [-e.face[1], e.face[0]]; render(); } },
       { txt: "Retirer 1 PV", fn: () => blesser(e, 1) },
       { txt: "Faire disparaître", fn: () => { e.pv = 0; log(`${e.nom} disparaît dans l'ombre.`); render(); } },
@@ -3543,7 +3657,7 @@ function clicCase(x, y) {
   if (e) {
     const ok = aPortee(h, e) && h.actions > 0;
     menu(x, y, e.nom, `${e.pv} PV sur ${e.pvMax}${e.poison ? " · empoisonné" : ""}`, [
-      { txt: ok ? "Attaquer" + (sournois(h, e) ? ` ${sournois(h, e)} ×2` : "") : (C[h.cls].portee > 1 ? "Hors de portée ou caché" : "Approche-toi pour attaquer"), op: "×", off: !ok, fn: () => attaquer(h, e) },
+      { txt: ok ? "Attaquer" + (sournois(h, e) ? ` ${sournois(h, e)} ×2` : "") + (allieCombo(h, e) ? ` 🤝 combo +1` : "") : (C[h.cls].portee > 1 ? "Hors de portée ou caché" : "Approche-toi pour attaquer"), op: "×", off: !ok, fn: () => attaquer(h, e) },
     ]);
     return;
   }
@@ -3622,7 +3736,7 @@ board.addEventListener("pointerup", ev => {
     drawPath(null); mjReach = null;
     if (d.ent.kind === "hero") { if (reachCache && reachCache.has(key(c.x, c.y))) deplacer(d.ent.e, c.x, c.y, true); else render(); }
     else {
-      if (d.reach.has(key(c.x, c.y))) { const pts = chemin(d.reach, d.ent.e, c.x, c.y), [px, py] = pts[pts.length - 2]; d.ent.e.face = [c.x - px, c.y - py]; d.ent.e.x = c.x; d.ent.e.y = c.y; d.ent.e.bouge = true; render(); anim(d.ent.e, "bond"); bruit("pas", { sol: solIci(c.x, c.y) }); }
+      if (d.reach.has(key(c.x, c.y)) && !(c.x === d.ent.e.x && c.y === d.ent.e.y)) { const e = d.ent.e, pts = chemin(d.reach, e, c.x, c.y), [px, py] = pts[pts.length - 2]; e.face = [c.x - px, c.y - py]; e.x = c.x; e.y = c.y; e.bouge = true; mjSel = null; render(); anim(e, "bond"); bruit("pas", { sol: solIci(c.x, c.y) }); valide(e); if (vivants().some(v => dist(v, e) <= 1)) setTimeout(() => clicMJ(e.x, e.y), 350); }
       else render();
     }
   } else if (overlay.hidden) clicCase(c.x, c.y);
