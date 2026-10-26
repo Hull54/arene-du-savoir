@@ -165,7 +165,12 @@ body.editing .side { grid-template-rows: minmax(0, 1fr); }
 
 /* Fenêtres d'épreuve */
 .overlay { position: fixed; inset: 0; z-index: 100; background: rgba(8,5,3,.72); display: grid; place-items: center; padding: 16px; }
-.modal { background: var(--panel); border: 2px solid var(--gold); border-radius: 18px; padding: 22px 26px; width: min(560px, 100%); box-sizing: border-box; display: grid; gap: 14px; text-align: center;
+.modal-x, .menu-x { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--cerne, #2b1f16); background: #f6ead0; color: var(--ink, #2b1d12);
+  font-size: 22px; font-weight: 900; line-height: 1; display: grid; place-items: center; cursor: pointer; z-index: 5; box-shadow: 0 2px 0 var(--cerne, #2b1f16); padding: 0; }
+.modal-x:hover, .menu-x:hover { background: var(--rouge, #c8473a); color: #fff; }
+.menu-x { top: 6px; right: 6px; width: 30px; height: 30px; font-size: 16px; }
+.menu h4 { padding-right: 34px; }
+.modal { position: relative; background: var(--panel); border: 2px solid var(--gold); border-radius: 18px; padding: 22px 26px; width: min(560px, 100%); box-sizing: border-box; display: grid; gap: 14px; text-align: center;
   box-shadow: 0 30px 80px rgba(0,0,0,.7); max-height: 100%; overflow: auto; }
 .modal.danger { border-color: var(--bad); }
 .modal.large { width: min(1100px, 100%); }
@@ -1607,6 +1612,7 @@ async function sauvegarderPartie(discret) {
 const codeEquipe = s => s.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9]/g, "").slice(0, 12);
 // Choix de l'équipe : chaque code a sa propre sauvegarde de la quête
 async function ouvrirQuete(q) {
+  const ancienne = QUETE;
   QUETE = q;
   try { localStorage.setItem("donjon-quete", q.id); } catch {}
   const parties = (await Stock.parties(q.id)).filter(p => q.chapitres[p.chapitre]);
@@ -1617,7 +1623,7 @@ async function ouvrirQuete(q) {
         : `<p class="sub">Aucune équipe n'a encore commencé cette quête.</p>`}
       <p class="sub" style="margin-top:14px">Nouvelle équipe : choisis un code (ex. : DRAGONS, EQUIPE3).</p>
       <input id="code-eq" class="field" maxlength="12" autocomplete="off" placeholder="Code d'équipe">
-      <div class="row"><button class="btn gold" type="button" id="eq-go">Commencer la quête</button></div>
+      <div class="row"><button class="btn" type="button" id="eq-annuler">Retour à la carte</button><button class="btn gold" type="button" id="eq-go">Commencer la quête</button></div>
       <p class="sub" id="eq-msg"></p>`);
     const inp = document.getElementById("code-eq");
     inp.oninput = () => { const c = codeEquipe(inp.value); if (inp.value !== c) inp.value = c; };
@@ -1628,6 +1634,7 @@ async function ouvrirQuete(q) {
       fermer(); resolve(p ? { p } : { code: c });
     };
     document.getElementById("eq-go").onclick = go;
+    document.getElementById("eq-annuler").onclick = () => { fermer(); resolve(null); };
     inp.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
     modal.onclick = async e => {
       const d = e.target.closest("[data-del]");
@@ -1642,6 +1649,7 @@ async function ouvrirQuete(q) {
       const b = e.target.closest("[data-i]"); if (b) { fermer(); resolve({ p: parties[Number(b.dataset.i)] }); }
     };
   });
+  if (!choix) { QUETE = ancienne || q; if (S && S.phase !== "edit") document.getElementById("quete-sel").value = QUETE.id; afficherMonde(); return; }
   EQUIPE = choix.p ? choix.p.equipe : choix.code;
   await chargerFiche();
   setTimeout(demarrerPeriode, 0);
@@ -3023,7 +3031,19 @@ document.getElementById("ed-evt-add").onclick = () => {
 // ---------- fenêtres ----------
 const overlay = document.getElementById("overlay"), modal = document.getElementById("modal");
 let keyHandler = null;
-function ouvrir(html, danger) { modal.onclick = null; modal.innerHTML = html; modal.classList.toggle("danger", !!danger); overlay.hidden = false; fermerMenu(); }
+function ouvrir(html, danger) { modal.onclick = null; modal.innerHTML = html; modal.classList.toggle("danger", !!danger); overlay.hidden = false; fermerMenu(); boutonX(); }
+// Le X de fermeture : il appuie sur le bouton « Fermer / Annuler / Plus tard… » de la fenêtre.
+// Les fenêtres sans sortie (question, vote, défense) n'en ont pas : il faut y répondre.
+const SORTIE = /^(✖ )?(Fermer|Annuler|Plus tard|Non merci|Rester sur la carte|Voir la carte|Garder|Retour)/;
+function boutonX() {
+  const vieux = modal.querySelector(":scope > .modal-x"); if (vieux) vieux.remove();
+  const cible = modal.querySelector("[data-fermer]") || [...modal.querySelectorAll("button")].find(b => !b.disabled && SORTIE.test(b.textContent.trim()));
+  if (!cible) return;
+  const x = document.createElement("button"); x.type = "button"; x.className = "modal-x"; x.textContent = "✕"; x.setAttribute("aria-label", "Fermer"); x.title = "Fermer";
+  x.onclick = e => { e.stopPropagation(); cible.click(); };
+  modal.prepend(x);
+}
+new MutationObserver(() => { if (!overlay.hidden && !modal.querySelector(":scope > .modal-x")) boutonX(); }).observe(modal, { childList: true });
 function fermer() { overlay.hidden = true; modal.innerHTML = ""; keyHandler = null; }
 document.addEventListener("keydown", e => { if (keyHandler && !overlay.hidden) keyHandler(e); });
 
@@ -3579,6 +3599,7 @@ function parler(p) {
         <div class="row"><span class="sub">${i + 1} / ${lignes.length}</span>${PREF.voix !== "non" && voixFr() ? `<button class="btn" id="ecoute" type="button" aria-label="Écouter">🔊 Écouter</button>` : ""}<button class="btn gold" id="nx" type="button">${i < lignes.length - 1 ? "Suivant" : "Terminer"}</button></div>`);
       const ec = document.getElementById("ecoute"); if (ec) ec.onclick = () => dire(lignes[i], p.look);
       if ((PREF.voix || "auto") === "auto") dire(lignes[i], p.look);
+      const sx = document.createElement("button"); sx.type = "button"; sx.hidden = true; sx.dataset.fermer = 1; sx.onclick = () => { taire(); fermer(); resolve(); }; modal.appendChild(sx); boutonX();
       document.getElementById("nx").onclick = () => { taire(); if (i < lignes.length - 1) { i++; draw(); } else { fermer(); resolve(); } };
     };
     draw();
@@ -3607,14 +3628,14 @@ function fermerMenu() { if (menuEl) { menuEl.remove(); menuEl = null; } }
 function menu(x, y, titre, texte, boutons) {
   fermerMenu();
   menuEl = document.createElement("div"); menuEl.className = "menu";
-  menuEl.innerHTML = `<h4>${titre}</h4>${texte ? `<p>${texte}</p>` : ""}${boutons.map((b, i) => `<button class="btn" type="button" data-i="${i}" ${b.off ? "disabled" : ""}>${b.txt}${b.op ? `<span class="op">${b.op}</span>` : ""}</button>`).join("")}`;
+  menuEl.innerHTML = `<button class="menu-x" type="button" data-x aria-label="Fermer" title="Fermer">✕</button><h4>${titre}</h4>${texte ? `<p>${texte}</p>` : ""}${boutons.map((b, i) => `<button class="btn" type="button" data-i="${i}" ${b.off ? "disabled" : ""}>${b.txt}${b.op ? `<span class="op">${b.op}</span>` : ""}</button>`).join("")}`;
   wrap.appendChild(menuEl);
   const br = board.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
   let left = br.left - wr.left + (x + 1) * CELL + 6, top = br.top - wr.top + y * CELL;
   if (left + menuEl.offsetWidth > wr.width) left = br.left - wr.left + x * CELL - menuEl.offsetWidth - 6;
   left = Math.max(0, left); top = Math.max(0, Math.min(top, wr.height - menuEl.offsetHeight));
   menuEl.style.left = left + "px"; menuEl.style.top = top + "px";
-  menuEl.onclick = e => { const b = e.target.closest("button"); if (b && !b.disabled) { fermerMenu(); boutons[b.dataset.i].fn(); } };
+  menuEl.onclick = e => { const b = e.target.closest("button"); if (b && b.hasAttribute("data-x")) { fermerMenu(); if (mjSel) { mjSel = null; mjReach = null; mjAttente = null; drawPath(null); renderHL(); } return; } if (b && !b.disabled) { fermerMenu(); boutons[b.dataset.i].fn(); } };
 }
 
 const NOMPORTE = { cle: "Porte à clé", levier: "Grille à levier", sceau: "Porte scellée" };
