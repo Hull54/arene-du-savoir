@@ -547,6 +547,20 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .badge { background: #efe2c4; border: 2px solid var(--cerne); }
 .badge.eu { background: #fff2c9; border-color: var(--cerne); box-shadow: 0 0 0 2px var(--gold); }
 .bst small, .fiche-stats { color: var(--muted); }
+/* souffleur du MJ */
+.souffleur { position: absolute; top: 10px; left: 10px; z-index: 35; width: min(430px, 46%); box-sizing: border-box; padding: 8px 12px 10px; display: grid; gap: 6px;
+  background: var(--panel); color: var(--ink); border: 3px solid var(--cerne); border-radius: 10px; box-shadow: 0 4px 0 rgba(0,0,0,.35); font-size: .95rem; line-height: 1.3; }
+.souffleur .sf-t { margin: -8px 0 0 -12px; justify-self: start; padding: 2px 14px 3px 10px; background: #7a52b3; color: #fff4e0; font-family: var(--display); font-weight: 700; font-size: .95rem;
+  border: 2px solid var(--cerne); border-top: 0; border-left: 0; border-radius: 0 0 6px 0; }
+.souffleur .sf-l { display: grid; grid-template-columns: 92px 1fr; gap: 8px; }
+.souffleur .sf-l b { font-size: .8rem; color: var(--rouge); text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+.souffleur .sf-l:first-of-type span { font-family: var(--display); font-size: 1.08rem; }
+.souffleur { pointer-events: none; opacity: .94; }
+.souffleur button { pointer-events: auto; }
+.souffleur .sf-min { position: absolute; top: 4px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--cerne); background: #f6ead0; font-weight: 700; line-height: 1; padding: 0; }
+.souffleur #sf-evt { justify-self: end; padding: 6px 12px; font-size: .9rem; }
+.sf-ouvrir { position: absolute; top: 10px; left: 10px; z-index: 35; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--cerne); background: var(--panel); font-size: 1.3rem; box-shadow: 0 3px 0 var(--cerne); padding: 0; }
+.evt { display: grid; gap: 6px; padding: 10px; margin-bottom: 8px; border: 2px dashed rgba(43,31,22,.45); border-radius: 10px; background: #fbf4e2; }
 /* éléments posés sur la carte : restent sombres et lisibles */
 .tok .tag { color: #f6ead2; }
 .nametag { color: #f6ead2; }
@@ -573,6 +587,14 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
   </header>
   <div class="main">
     <div class="board-wrap" id="wrap">
+      <div class="souffleur" id="souffleur" hidden>
+        <button class="sf-min" id="sf-min" type="button" aria-label="Réduire le souffleur" title="Réduire">–</button>
+        <p class="sf-t">Souffleur du MJ</p>
+        <div class="sf-l"><b>🎙️ À dire</b><span id="sf-dire"></span></div>
+        <div class="sf-l"><b>👉 À faire</b><span id="sf-faire"></span></div>
+        <button class="btn" id="sf-evt" type="button" hidden>🎲 Événement surprise</button>
+      </div>
+      <button class="sf-ouvrir" id="sf-ouvrir" type="button" hidden title="Afficher le souffleur du MJ">🎙️</button>
       <div class="board" id="board">
         <canvas id="terrain"></canvas>
         <div class="layer" id="hl"></div>
@@ -614,6 +636,12 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
           <p class="hint">Animaux qu'on entend au loin :</p>
           <div class="chips" id="ed-ani"></div>
           <p class="hint">Les cases d'eau font toujours « splash ». On entend le résultat tout de suite.</p>
+        </div>
+        <div class="ed-evts">
+          <h4>Événements du chapitre</h4>
+          <p class="hint">Un message à lire (et un effet) qui apparaît au début de la manche choisie. Les événements surprises au hasard se règlent dans Réglages.</p>
+          <div id="ed-evts"></div>
+          <button class="btn" type="button" id="ed-evt-add">+ Événement</button>
         </div>
         <div>
           <h4>Image de fond</h4>
@@ -1395,7 +1423,7 @@ const noms = {}, races = {};
 const clone = o => JSON.parse(JSON.stringify(o));
 // Complète un chapitre ancien ou importé avec les champs attendus
 function normaliser(ch) {
-  return Object.assign({ nom: "Chapitre", intro: "", image: null, imageId: null, ratio: null, enemies: [], objets: [], portes: {}, pnj: [], secrets: [], deco: [], sorties: [],
+  return Object.assign({ nom: "Chapitre", intro: "", image: null, imageId: null, ratio: null, evenements: [], enemies: [], objets: [], portes: {}, pnj: [], secrets: [], deco: [], sorties: [],
     heroes: { archer: [1, 1], mage: [2, 1], guerrier: [1, 2], voleur: [2, 2] } }, ch);
 }
 function construire(carte, phase, chapitre = 0) {
@@ -1405,7 +1433,7 @@ function construire(carte, phase, chapitre = 0) {
   W = carte.grid[0].length; H = carte.grid.length;
   const niveau = S ? S.niveau : "5e", nbActions = S ? S.nbActions : 2;
   S = {
-    carte, chapitre, grid: carte.grid.map(r => r.split("")), round: 1, debut: true, phase, actif: 0, mode: null, busy: false, niveau, nbActions, fini: null,
+    carte, chapitre, grid: carte.grid.map(r => r.split("")), round: 1, evFaits: [], dernierEvt: Date.now(), debut: true, phase, actif: 0, mode: null, busy: false, niveau, nbActions, fini: null,
     inv: { vie: 0, mana: 0, cle: 0 }, log: [],
     heroes: Object.keys(C).map(c => ({ id: "h-" + c, cls: c, race: races[c] || RACE_DEFAUT[c], nom: noms[c] || C[c].nom,
       x: carte.heroes[c][0], y: carte.heroes[c][1], actions: nbActions, joue: false, force: false }))
@@ -1460,7 +1488,7 @@ function demarrerQuete(q) {
 function montrerIntro() {
   const c = S.carte;
   if (!c.intro || !c.intro.trim()) return;
-  ouvrir(`<p class="sub kicker">${esc(QUETE.nom)} · Chapitre ${S.chapitre + 1}</p><h2>${esc(c.nom)}</h2>
+  ouvrir(`<p class="sub kicker">${esc(QUETE.nom)} · Chapitre ${S.chapitre + 1} · à lire à voix haute</p><h2>${esc(c.nom)}</h2>
     <div class="intro">${esc(c.intro).replace(/\n/g, "<br>")}</div>
     <div class="row"><button class="btn gold" id="go" type="button">Commencer</button></div>`);
   document.getElementById("go").onclick = fermer;
@@ -1469,7 +1497,7 @@ function montrerIntro() {
 // Photo de la partie en cours, pour la reprendre la semaine suivante
 function photoPartie() {
   return {
-    quete: QUETE.id, equipe: EQUIPE, chapitre: S.chapitre, round: S.round, actif: S.actif, debut: S.debut, nbActions: S.nbActions, niveau: S.niveau, date: new Date().toISOString(),
+    quete: QUETE.id, equipe: EQUIPE, evFaits: S.evFaits || [], chapitre: S.chapitre, round: S.round, actif: S.actif, debut: S.debut, nbActions: S.nbActions, niveau: S.niveau, date: new Date().toISOString(),
     grid: S.grid.map(r => r.join("")), inv: S.inv, log: S.log.slice(0, 40), groupeDebut: S.groupeDebut || null,
     heroes: S.heroes.map(h => ({ cls: h.cls, race: h.race, nom: h.nom, x: h.x, y: h.y, pv: h.pv, mana: h.mana, force: h.force, joue: h.joue, actions: h.actions })),
     enemies: S.enemies.map(e => ({ id: e.id, type: e.type, x: e.x, y: e.y, pv: e.pv, poison: e.poison, face: e.face })),
@@ -1490,7 +1518,7 @@ function restaurerPartie(p) {
   for (const [k, v] of Object.entries(p.portes)) if (S.portes[k]) S.portes[k].verrou = v;
   p.secrets.forEach((t, i) => { if (S.secrets[i]) S.secrets[i].trouve = t; });
   S.deco = p.deco.map(([t, x, y], i) => ({ id: "d-" + i, type: t, x, y }));
-  S.rep = p.rep || []; S.brumeOff = !!p.brumeOff;
+  S.rep = p.rep || []; S.brumeOff = !!p.brumeOff; S.evFaits = p.evFaits || []; S.dernierEvt = Date.now();
   if (p.vu && p.vu.length === W * H) S.vu = Uint8Array.from(p.vu, c => c === "1" ? 1 : 0);
   for (const h of S.heroes) { noms[h.cls] = h.nom; races[h.cls] = h.race; }
   if (!S.heroes[S.actif] || S.heroes[S.actif].pv <= 0 || S.heroes[S.actif].joue) { const i = S.heroes.findIndex(h => h.pv > 0 && !h.joue); S.actif = i < 0 ? 0 : i; }
@@ -1881,6 +1909,7 @@ function renderTop() {
   document.getElementById("btn-auto").hidden = S.phase !== "mj";
   document.getElementById("btn-mj-end").hidden = S.phase !== "mj";
   document.getElementById("btn-auto").disabled = document.getElementById("btn-mj-end").disabled = S.busy;
+  majSouffleur();
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const de = n => (/^[aeiouyhàâéèêîôû]/i.test(n) ? "d'" : "de ") + esc(n);
@@ -2575,6 +2604,138 @@ async function telecharger(nom, data, type) {
   catch (e) { return e && e.code === "declined" ? "refuse" : "erreur"; }
 }
 
+// ---------- souffleur du MJ et événements ----------
+const EFFETS = { rien: "Message seulement", monstre: "Un monstre surgit", vie: "Potion de vie trouvée", mana: "Potion de mana trouvée", soin: "+1 PV à tous les héros",
+  piege: "Piège : un héros doit se défendre", defi: "Défi de calcul (potion à gagner)", eclair: "Coup de tonnerre" };
+const SURPRISES = [
+  { titre: "Des renforts!", texte: "Un cri résonne au loin… {monstre} surgit des ombres et fonce vers vous!", effet: "monstre" },
+  { titre: "Un trésor oublié", texte: "En marchant, {heros} heurte une petite bourse de cuir. À l'intérieur : une potion de vie!", effet: "vie" },
+  { titre: "Une source magique", texte: "Une douce lumière bleue flotte dans l'air. Tous les héros sentent leurs forces revenir.", effet: "soin" },
+  { titre: "Attention, un piège!", texte: "Clic! Le sol s'enfonce sous les pieds de {heros}…", effet: "piege" },
+  { titre: "Le défi du sphinx", texte: "Une voix ancienne murmure : « Résolvez mon calcul, héros, et je vous offrirai un cadeau. »", effet: "defi" },
+  { titre: "Un messager ailé", texte: "Un corbeau se pose devant vous, dépose un flacon bleu… puis s'envole en croassant.", effet: "mana" },
+  { titre: "Le tonnerre gronde", texte: "Un éclair déchire le ciel! Les monstres sursautent… et vous aussi!", effet: "eclair" },
+];
+const DIRE_MJ = [
+  "« Les ombres s'agitent… {monstre} vous a repérés! »",
+  "« Un grondement résonne. {monstre} s'avance vers vous! »",
+  "« Silence… retenez votre souffle. C'est au tour des monstres! »",
+  "« {monstre} renifle l'air : il sent votre présence… »",
+  "« Un frisson parcourt l'équipe. Quelque chose approche… »",
+];
+const PREF_EVT = () => PREF.evts || "4";
+let sfCle = "", sfLigne = "";
+function majSouffleur() {
+  const box = document.getElementById("souffleur"), btn = document.getElementById("sf-ouvrir");
+  const actif = S && S.phase !== "edit" && !S.fini && PREF.souffleur !== false;
+  box.hidden = !actif || !!PREF.sfMin; btn.hidden = !actif || !PREF.sfMin;
+  if (!actif) return;
+  let dire = "", faire = "";
+  const vivantsE = ennemisVivants();
+  if (S.phase === "heros") {
+    const h = heros(); if (!h) return;
+    const n = h.actions, a = n > 1 ? "actions" : "action";
+    if (n === S.nbActions) {
+      const portee = ennemisAPortee(h)[0], proche = plusProche(h);
+      dire = `« ${h.nom}, c'est ton tour! Tu as ${n} ${a}. »`;
+      if (portee) dire += ` « ${portee.nom} est à ta portée : tu peux l'attaquer! »`;
+      else if (proche) dire += ` « ${proche.nom} est à ${dist(h, proche)} cases. »`;
+      if (h.pv === 1) dire += S.inv.vie ? " « Il te reste 1 PV : pense à la potion de vie! »" : " « Prudence, il te reste 1 PV! »";
+    } else dire = `« Encore ${n} ${a}, ${h.nom}! »`;
+    faire = "L'élève touche une case verte pour se déplacer, ou touche un monstre, un objet ou un mur pour agir. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
+  } else if (S.phase === "mj") {
+    const cle = "mj" + S.round;
+    if (sfCle !== cle) { sfCle = cle; const m = pick(vivantsE.length ? vivantsE : [{ nom: "Un monstre" }]); sfLigne = pick(DIRE_MJ).replace("{monstre}", m.nom); }
+    const boss = vivantsE.find(e => e.boss && e.pv <= e.pvMax / 3);
+    if (!vivantsE.length) { dire = "« Tout est calme… pour l'instant. »"; faire = "Aucun monstre debout : touche « Fin du tour du MJ »."; }
+    else if (vivantsE.every(e => e.bouge)) { dire = "« Les monstres ont joué. Héros, préparez-vous! »"; faire = `Touche « Fin du tour du MJ » pour lancer la manche ${S.round + 1}.`; }
+    else {
+      dire = boss ? `« ${boss.nom} chancelle! Encore un effort, héros! »` : sfLigne;
+      faire = "1. Touche « Faire jouer les ennemis » (ou glisse chaque monstre selon sa vitesse). 2. Un élève attaqué fait une division pour se défendre. 3. Touche « Fin du tour du MJ ».";
+    }
+  }
+  document.getElementById("sf-dire").textContent = dire;
+  document.getElementById("sf-faire").textContent = faire;
+  document.getElementById("sf-evt").hidden = S.phase !== "mj" || S.busy;
+}
+document.getElementById("sf-min").onclick = () => { PREF.sfMin = true; sauverPref(); majSouffleur(); };
+document.getElementById("sf-ouvrir").onclick = () => { PREF.sfMin = false; sauverPref(); majSouffleur(); };
+document.getElementById("sf-evt").onclick = () => { if (S && !S.busy) jouerEvenement(surprise()); };
+function surprise() {
+  let l = SURPRISES.filter(x => x.titre !== S.derniereSurprise);
+  if (ennemisVivants().length >= 6) l = l.filter(x => x.effet !== "monstre");
+  const ev = pick(l); S.derniereSurprise = ev.titre; return ev;
+}
+function monstreRenfort(ev) {
+  if (ev.monstre && E[ev.monstre]) return ev.monstre;
+  const l = (S.carte.enemies || []).map(([t]) => t).filter(t => E[t] && !E[t].boss);
+  return l.length ? pick(l) : "gobelin";
+}
+async function jouerEvenement(ev) {
+  if (!S || S.fini) return;
+  const vivs = vivants(); if (!vivs.length) return;
+  const h = pick(vivs), t = ev.effet === "monstre" ? monstreRenfort(ev) : null;
+  const texte = (ev.texte || "").replace(/\{heros\}/g, h.nom).replace(/\{monstre\}/g, t ? E[t].nom : "Un monstre");
+  S.busy = true; render();
+  bruit(ev.effet === "monstre" ? "grogne" : ev.effet === "piege" ? "aie" : "cloche");
+  if (ev.effet === "eclair" && typeof eclair === "function") eclair(false);
+  await new Promise(res => {
+    ouvrir(`<p class="sub kicker">Événement · à lire à voix haute</p><h2>${esc(ev.titre || "Événement!")}</h2>
+      ${texte ? `<div class="intro">${esc(texte).replace(/\n/g, "<br>")}</div>` : ""}
+      <p class="sub">${esc(EFFETS[ev.effet] || EFFETS.rien)}</p>
+      <div class="row"><button class="btn gold" type="button" id="ev-ok">Continuer</button></div>`);
+    document.getElementById("ev-ok").onclick = () => { fermer(); res(); };
+  });
+  log(`Événement : <b>${esc(ev.titre || "Événement")}</b>.`);
+  switch (ev.effet) {
+    case "monstre": { const c = caseLibrePres(h.x + (h.x < W / 2 ? 3 : -3), h.y) || caseLibrePres(h.x, h.y); if (c) { faireApparaitre(t, c.x, c.y); secousse(1); } break; }
+    case "vie": case "mana": S.inv[ev.effet]++; bruit("tresor"); etincelles(h, "#ffe08a", 14); toast(`+1 ${ITEMS[ev.effet].nom}`); break;
+    case "soin": for (const v of vivs) if (v.pv < st(v).pv) { v.pv++; flotter(v.x, v.y, "+1", "#72d39b"); anim(v, "heal"); } bruit("soin"); break;
+    case "piege": S.busy = false; await defendre(h, null, 1); break;
+    case "defi": { S.busy = false; const ok = await epreuveMath("×", "Le défi de l'équipe"); if (ok) { S.inv.vie++; bruit("tresor"); toast("Défi réussi : +1 potion de vie!"); log("Défi réussi : +1 potion de vie."); } else log("Le défi est raté… dommage!"); break; }
+    case "eclair": secousse(1.5); break;
+  }
+  S.busy = false; S.dernierEvt = Date.now(); verifierFin(); render();
+}
+async function evenementsManche() {
+  if (!S || S.fini) return;
+  S.evFaits = S.evFaits || [];
+  const perso = (S.carte.evenements || []).map((ev, i) => [ev, i]).filter(([ev, i]) => Number(ev.manche) === S.round && !S.evFaits.includes(i));
+  for (const [ev, i] of perso) { S.evFaits.push(i); await jouerEvenement(ev); if (S.fini) return; }
+  if (perso.length) return;
+  const r = PREF_EVT();
+  if (r === "0") return;
+  const due = r.startsWith("m") ? Date.now() - (S.dernierEvt || Date.now()) >= Number(r.slice(1)) * 60000 : S.round > 1 && (S.round - 1) % Number(r) === 0;
+  if (due) await jouerEvenement(surprise());
+}
+function renderEvtsEditeur(force) {
+  const el = document.getElementById("ed-evts"), evs = ED.carte.evenements = ED.carte.evenements || [];
+  const types = Object.fromEntries(Object.entries(E).map(([k, d]) => [k, d.nom]));
+  const opts = (obj, v) => Object.entries(obj).map(([k, n]) => `<option value="${esc(k)}" ${k === v ? "selected" : ""}>${esc(n)}</option>`).join("");
+  const html = evs.map((ev, i) => `<div class="evt" data-ev="${i}">
+      <div class="dims"><label>À la manche <input type="number" min="1" max="60" data-evf="manche" value="${Number(ev.manche) || 1}"></label><label>Effet <select data-evf="effet">${opts(EFFETS, ev.effet || "rien")}</select></label></div>
+      ${ev.effet === "monstre" ? `<label>Quel monstre? <select data-evf="monstre">${opts({ "": "Au hasard (monstres du chapitre)", ...types }, ev.monstre || "")}</select></label>` : ""}
+      <label>Titre <input data-evf="titre" maxlength="50" value="${esc(ev.titre || "")}" placeholder="Ex. : La cloche sonne!"></label>
+      <label>Texte à lire à voix haute <textarea data-evf="texte" rows="3" placeholder="{heros} = un héros au hasard, {monstre} = le monstre qui surgit">${esc(ev.texte || "")}</textarea></label>
+      <button class="btn" type="button" data-evdel>Retirer cet événement</button></div>`).join("") || `<p class="hint">Aucun événement prévu dans ce chapitre.</p>`;
+  if (force || el.dataset.h !== html) { el.innerHTML = html; el.dataset.h = html; }
+}
+document.getElementById("ed-evts").addEventListener("input", e => {
+  const f = e.target.dataset.evf, b = e.target.closest("[data-ev]"); if (!f || !b || !ED) return;
+  const ev = ED.carte.evenements[Number(b.dataset.ev)];
+  ev[f] = f === "manche" ? Math.max(1, Number(e.target.value) || 1) : e.target.value;
+  if (f === "effet") renderEvtsEditeur(true); else document.getElementById("ed-evts").dataset.h = "";
+});
+document.getElementById("ed-evts").addEventListener("click", e => {
+  const d = e.target.closest("[data-evdel]"), b = e.target.closest("[data-ev]"); if (!d || !b || !ED) return;
+  ED.carte.evenements.splice(Number(b.dataset.ev), 1); renderEvtsEditeur(true);
+});
+document.getElementById("ed-evt-add").onclick = () => {
+  const evs = ED.carte.evenements = ED.carte.evenements || [];
+  evs.push({ manche: evs.length ? Number(evs[evs.length - 1].manche) + 2 : 3, effet: "rien", titre: "", texte: "" });
+  renderEvtsEditeur(true);
+};
+
 // ---------- fenêtres ----------
 const overlay = document.getElementById("overlay"), modal = document.getElementById("modal");
 let keyHandler = null;
@@ -2884,6 +3045,7 @@ function finTourMJ() {
   log(`— Manche ${S.round} —`);
   render(); toast(`Manche ${S.round} : au tour ${de(heros().nom)}!`);
   sauvegarderPartie(true);
+  evenementsManche();
 }
 // Les monstres qui n'ont pas encore bougé s'approchent du héros le plus proche et attaquent au contact
 async function ennemisAuto() {
@@ -3353,6 +3515,7 @@ function renderEditeur() {
   set("ed-mus", ED.carte.musique || "quete"); set("ed-met", ED.carte.meteo || "aucune"); set("ed-amb", ED.carte.ambiance || "auto"); set("ed-sol", ED.carte.sol || "pierre");
   document.getElementById("ed-ani").innerHTML = Object.entries(ANIMAUX).map(([k, n]) => `<button type="button" data-a="${k}" aria-pressed="${(ED.carte.animaux || []).includes(k)}">${n}</button>`).join(""); set("ed-nom", ED.carte.nom); set("ed-intro", ED.carte.intro || "");
   document.getElementById("ed-cols").value = W; document.getElementById("ed-rows").value = H;
+  if (!document.getElementById("ed-evts").contains(document.activeElement)) renderEvtsEditeur();
   document.getElementById("ed-noimg").disabled = !(ED.carte.image || ED.carte.imageId);
   document.getElementById("ed-chaps").innerHTML = ED.quete.chapitres.map((c, i) => `<button class="chap ${i === ED.ch ? "on" : ""}" type="button" data-ch="${i}">${i + 1}. ${esc(c.nom)}</button>`).join("");
   document.getElementById("ed-ch-del").disabled = ED.quete.chapitres.length < 2;
@@ -3825,6 +3988,8 @@ document.getElementById("btn-reg").onclick = () => {
     <div class="reg">
       <label>Actions par tour <select id="r-act">${opt(S.nbActions, [[2, "2 actions"], [3, "3 actions"]])}</select></label>
       <label>Additions et soustractions <select id="r-niv">${opt(S.niveau, [["facile", "2 chiffres"], ["5e", "3 chiffres"]])}</select></label>
+      <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
+      <label>Souffleur du MJ <select id="r-souf">${opt(PREF.souffleur === false ? "0" : "1", [["1", "Affiché sur le plateau"], ["0", "Caché"]])}</select></label>
     </div>
     <div class="row"><button class="btn blue" type="button" id="r-edit">Créateur de quêtes</button><button class="btn" type="button" id="r-reset">Recommencer le chapitre</button><button class="btn" type="button" id="r-restart">Recommencer la quête</button></div>
     <div class="row"><button class="btn gold" type="button" id="r-equipe">Changer d'équipe</button><button class="btn blue" type="button" id="r-bilan">Bilan de l'enseignant</button><button class="btn" type="button" id="r-fiches">Fiches des héros</button>${S.carte.brume ? `<button class="btn" type="button" id="r-brume">${S.brumeOff ? "Remettre le brouillard" : "Dévoiler toute la carte"}</button>` : ""}</div>
@@ -3845,6 +4010,8 @@ document.getElementById("btn-reg").onclick = () => {
     render();
   };
   document.getElementById("r-niv").onchange = e => { S.niveau = e.target.value; };
+  document.getElementById("r-evt").onchange = e => { PREF.evts = e.target.value; sauverPref(); S.dernierEvt = Date.now(); };
+  document.getElementById("r-souf").onchange = e => { PREF.souffleur = e.target.value === "1"; PREF.sfMin = false; sauverPref(); majSouffleur(); };
   document.getElementById("r-vol").oninput = e => { PREF.vol = e.target.value / 100; PREF.muet = false; sonVolumes(); sauverPref(); };
   document.getElementById("r-vol").onchange = () => bruit("pas");
   document.getElementById("r-mus").onchange = e => { PREF.musique = e.target.value === "1"; sonVolumes(); sauverPref(); };
