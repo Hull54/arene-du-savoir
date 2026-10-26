@@ -1323,7 +1323,7 @@ const C = {
         { id: "tp", nom: "Téléportation", desc: "Va sur n'importe quelle case libre", cout: 1, cible: "tile" }] },
   guerrier: { nom: "Guerrier", pv: 6, mana: 2, dep: 4, deg: 5, portee: 1, distrib: false, rim: "#9aa3ad",
     p: [{ id: "force", nom: "Force brute", desc: "Prochaine attaque : dégâts doublés", cout: 1, cible: "self" },
-        { id: "priere", nom: "Prière du combattant", desc: "Retrouve 1 PV", cout: 0, cible: "self" }] },
+        { id: "priere", nom: "Prière du combattant", desc: "Retrouve 1 PV", cout: 1, cible: "self" }] },
   voleur: { nom: "Voleur", pv: 4, mana: 3, dep: 6, deg: 3, portee: 1, distrib: false, rim: "#c9b437",
     p: [{ id: "camo", nom: "Camouflage", desc: "Enlève la moitié des PV d'un ennemi (6 au plus contre un boss)", cout: 1, cible: "enemy" },
         { id: "pickpocket", nom: "Pickpocket", desc: "Déverrouille un cadenas", cout: 1, cible: "door" }] },
@@ -3212,6 +3212,18 @@ async function faireAction(epreuve, succes, attaquant) {
   if (S.phase === "heros" && !S.fini && (h.actions <= 0 || h.pv <= 0)) { await sleep(500); await finTourHeros(); }
 }
 
+async function donnerPotion(h, v) {
+  if (!S.inv.vie || h.actions <= 0) return;
+  S.inv.vie--; h.actions--; S.debut = false;
+  const releve = v.pv <= 0;
+  v.pv = Math.min(st(v).pv, Math.max(0, v.pv) + 1);
+  if (releve) v.joue = true; // il se relève, mais rejouera à la prochaine manche
+  await anim(h, "lunge", v); bruit("soin"); etincelles(v, "#72d39b", 14); flotter(v.x, v.y, "+1", "#72d39b"); await anim(v, "heal");
+  log(releve ? `${esc(h.nom)} relève ${esc(v.nom)} avec une potion de vie!` : `${esc(h.nom)} donne une potion de vie à ${esc(v.nom)} (+1 PV).`);
+  progres(h, s => s.aide = (s.aide || 0) + 1);
+  render(); valide(v);
+  if (h.actions <= 0) setTimeout(finTourHeros, 700);
+}
 async function deplacer(h, x, y, deja) {
   if (!reachCache || !reachCache.has(key(x, y))) return;
   const pts = chemin(reachCache, h, x, y);
@@ -3631,10 +3643,10 @@ function clicMJ(x, y) {
       { txt: "Faire disparaître", fn: () => { e.pv = 0; log(`${e.nom} disparaît dans l'ombre.`); render(); } },
     ]);
   } else if (hh) {
-    menu(x, y, esc(hh.nom), `${hh.pv} PV · ${hh.mana} mana`, [
+    menu(x, y, `🛠 Outil du MJ · ${esc(hh.nom)}`, `${hh.pv} PV · ${hh.mana} mana. Pour arbitrer ou corriger une erreur : ça ne fait pas partie des règles.`, [
       { txt: "Infliger −1 PV", fn: async () => { hh.pv = Math.max(0, hh.pv - 1); flotter(x, y, "−1", "#ff8a80"); await anim(hh, "hit"); verifierFin(); render(); } },
-      { txt: "Soigner +1 PV", off: hh.pv >= st(hh).pv, fn: () => { hh.pv++; flotter(x, y, "+1", "#72d39b"); anim(hh, "heal"); render(); } },
-      { txt: "Rendre 1 mana", off: hh.mana >= st(hh).mana, fn: () => { hh.mana++; anim(hh, "heal"); render(); } },
+      { txt: "Corriger : +1 PV", off: hh.pv >= st(hh).pv, fn: () => { hh.pv++; flotter(x, y, "+1", "#72d39b"); anim(hh, "heal"); render(); } },
+      { txt: "Corriger : +1 mana", off: hh.mana >= st(hh).mana, fn: () => { hh.mana++; anim(hh, "heal"); render(); } },
     ]);
   } else if (p) {
     menu(x, y, NOMPORTE[p.par] || "Porte", p.verrou ? "Fermée" : "Ouverte", [
@@ -3679,6 +3691,13 @@ function clicCase(x, y) {
     S.attente = { x, y }; renderHL(); drawPath(chemin(reachCache, h, x, y)); bruit("pas", { sol: solIci(x, y) }); return;
   }
   if (hh === h) return menuExplorer(h, x, y);
+  if (hh && hh !== h && dist(h, hh) <= 1 && hh.pv < st(hh).pv && (hh.pv <= 0 || hh.joue || h.actions < S.nbActions)) {
+    // Soigner un coéquipier : il faut une potion de vie dans l'inventaire, et ça coûte 1 action
+    const peut = S.inv.vie > 0 && h.actions > 0;
+    return menu(x, y, esc(hh.nom), hh.pv <= 0 ? `${esc(hh.nom)} est à terre.` : `${hh.pv} PV sur ${st(hh).pv}.`, [
+      { txt: !S.inv.vie ? "Il faut une potion de vie" : hh.pv <= 0 ? "Relever avec une potion de vie" : "Donner une potion de vie", off: !peut, fn: () => donnerPotion(h, hh) },
+    ]);
+  }
   if (hh && hh !== h) {
     if (hh.joue || hh.pv <= 0) return toast(hh.pv <= 0 ? `${hh.nom} est à terre.` : `${hh.nom} a déjà joué cette manche.`);
     if (h.actions < S.nbActions) return toast(`${h.nom} a commencé son tour. Termine-le d'abord.`);
