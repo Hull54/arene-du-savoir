@@ -1622,7 +1622,10 @@ async function ouvrirQuete(q) {
       if (d) {
         const p = parties[Number(d.dataset.del)];
         if (!d.classList.contains("sur")) { d.classList.add("sur"); d.textContent = "Supprimer?"; setTimeout(() => { if (d.isConnected) { d.classList.remove("sur"); d.textContent = "🗑"; } }, 4000); return; }
-        await Stock.supprimerPartie(p.id); d.closest(".eq-ligne").remove(); toast(`La partie de l'équipe ${p.equipe} est supprimée.`); return;
+        d.disabled = true; d.textContent = "…";
+        if (await Stock.supprimerPartie(p.id)) { d.closest(".eq-ligne").remove(); toast(`✓ La partie de l'équipe ${p.equipe} est bien supprimée (compte et appareil).`, 4000); }
+        else { d.disabled = false; d.classList.remove("sur"); d.textContent = "🗑"; toast("La suppression n'a pas fonctionné. Vérifie la connexion et réessaie.", 5000); }
+        return;
       }
       const b = e.target.closest("[data-i]"); if (b) { fermer(); resolve({ p: parties[Number(b.dataset.i)] }); }
     };
@@ -4175,9 +4178,16 @@ const Stock = {
     if (this.db) { try { await this.db.doc("reglages/monde").set(d); return true; } catch {} }
     return !!(await IDB.put("reglages", d));
   },
+  // Supprime la partie du compte et de l'appareil, puis relit pour s'assurer qu'elle n'existe plus
   async supprimerPartie(id) {
-    if (this.db) { try { await this.db.doc("parties/" + id).delete(); } catch {} }
+    let ok = true;
+    if (this.db) {
+      try { await this.db.doc("parties/" + id).delete(); } catch {}
+      try { if ((await this.db.doc("parties/" + id).get()).exists) ok = false; } catch { ok = false; }
+    }
     await IDB.del("parties", id);
+    if ((await IDB.all("parties")).some(p => p.id === id)) ok = false;
+    return ok;
   },
   async exporter() {
     const qs = (await this.quetes()).map(clone);
