@@ -124,6 +124,10 @@
   .choices button:hover { background: #ffe9a8; }
   .choices button.good { background: #a8e6a1; }
   .choices button.bad { background: #ffb3a8; }
+  .ouvert.dictee input { width: min(440px, 70vw); font-size: 26px; }
+  .ecoute { grid-column: 1 / -1; justify-self: center; font-size: 20px; padding: 8px 18px; }
+  .diff b { background: #ffb3a7; color: #8a1a1a; } .diff u { background: #ffb3a7; text-decoration: none; padding: 0 2px; }
+  .bilan { text-align: left; max-height: 46vh; overflow: auto; font-size: 17px; } .bilan div { padding: 6px 0; border-top: 1px solid #00000022; }
   .exp { display: none; margin-top: 10px; padding: 10px 14px; background: #fff7d6; border: 3px solid #d9a93a; font-size: 18px; text-align: left; }
   .exp.on { display: block; }
   .msg { min-height: 26px; margin-top: 12px; font-weight: 600; font-size: 17px; }
@@ -475,6 +479,13 @@ function connect(name, cls, code = '', solo = false) {
       lastHp = mp ? mp.hp : null;
       me = m.me;
     } else if (m.t === 'pg') { const r = (performance.now() - m.k) / 1000; if (r >= 0 && r < 3) rtt = rtt ? rtt * 0.7 + r * 0.3 : r; }
+    else if (m.t === 'ctlFin') {   // contrôle terminé pour moi : on attend les autres
+      answering = false; $('quiz').style.display = 'flex'; $('qHead').className = 'ko chest'; $('qHead').textContent = '📝 Tu as terminé !';
+      $('qTag').textContent = ''; $('qSvg').innerHTML = ''; $('qChoices').innerHTML = ''; $('qExp').className = 'exp';
+      $('qText').textContent = m.total ? `Tu as ${m.ok} bonne${m.ok > 1 ? 's' : ''} réponse${m.ok > 1 ? 's' : ''} sur ${m.total}.` : 'Bravo pour ton travail !';
+      $('qMsg').textContent = 'Attends que tout le monde ait fini. Ton bilan arrive à la fin.';
+    }
+    else if (m.t === 'ctlBilan') ctlBilan = m;
     else if (m.t === 'q') showQuestion(m);
     else if (m.t === 'res') showResult(m);
     else if (m.t === 'close') { answering = false; $('quiz').style.display = 'none'; }
@@ -538,16 +549,23 @@ function showQuestion(m) {
     let t = m.temps || 20; Son.play('eclair');
     const upd = () => { head.textContent = m.bouclier ? `🛡️ Bouclier du savoir ! Si la majorité répond juste, il se brise. ${t} s` : `⚡ Question éclair pour toute la classe ! ${t} s`; t = Math.max(0, t - 1); };
     upd(); qTimer = setInterval(upd, 1000);
-  } else head.textContent = '💫 Tu es K.O. ! Réponds pour revenir au combat.';
+  } else if (qKind === 'controle') { head.className = 'ko chest'; head.textContent = m.dire ? `🎧 Dictée · ${m.num} sur ${m.total}` : `📝 Contrôle · Question ${m.num} sur ${m.total}`; }
+  else head.textContent = '💫 Tu es K.O. ! Réponds pour revenir au combat.';
   $('qTag').textContent = m.notion ? `${m.matiere} · ${m.notion}` : m.matiere;
   $('qSvg').innerHTML = m.svg || '';
   $('qText').textContent = m.question;
   $('qMsg').textContent = ''; $('qExp').className = 'exp';
   const box = $('qChoices'); box.innerHTML = '';
-  qOuvert = !!m.ouvert; qVoixTxt = m.question + (qOuvert ? '' : ' … ' + m.choix.join(' … ou … '));
+  qOuvert = !!m.ouvert; qVoixTxt = m.dire || m.question + (qOuvert ? '' : ' … ' + m.choix.join(' … ou … '));
+  if (m.dire) {   // dictée : le jeu lit le mot, on peut réécouter
+    const b = document.createElement('button'); b.className = 'btn ecoute'; b.textContent = '🔊 Réécouter';
+    b.onclick = () => $('qVoix').onclick(); box.appendChild(b);
+    setTimeout(() => $('qVoix').onclick(), 250);
+  }
   if (qOuvert) {   // niveau défi : on tape la réponse
-    const d = document.createElement('div'); d.className = 'ouvert';
-    d.innerHTML = '<input id="qIn" inputmode="decimal" autocomplete="off" placeholder="?"><button class="btn" id="qOk">Valider</button>';
+    const d = document.createElement('div'); d.className = 'ouvert' + (m.dire ? ' dictee' : '');
+    d.innerHTML = m.dire ? '<input id="qIn" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Écris ici"><button class="btn" id="qOk">Valider</button>'
+      : '<input id="qIn" inputmode="decimal" autocomplete="off" placeholder="?"><button class="btn" id="qOk">Valider</button>';
     box.appendChild(d);
     const valider = () => { if (!answering || !$('qIn').value.trim()) return; answering = false; $('qIn').disabled = true; sendMsg({ t: 'ans', i: -1, txt: $('qIn').value }); };
     $('qOk').onclick = valider; $('qIn').onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') valider(); };
@@ -573,7 +591,35 @@ $('qVoix').onclick = () => {
     const v = speechSynthesis.getVoices().find(v => v.lang === 'fr-CA') || speechSynthesis.getVoices().find(v => v.lang.startsWith('fr')); if (v) u.voice = v;
     speechSynthesis.speak(u); } catch {}
 };
+// dictée : les lettres fausses en rouge, les lettres oubliées marquées d'un _
+function diffDictee(tape, bonne) {
+  const a = [...tape], b = [...bonne], L = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let x = a.length - 1; x >= 0; x--) for (let y = b.length - 1; y >= 0; y--) L[x][y] = a[x] === b[y] ? L[x + 1][y + 1] + 1 : Math.max(L[x + 1][y], L[x][y + 1]);
+  let x = 0, y = 0, h = '';
+  const esc = c => c.replace(/[&<>]/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[s]));
+  if (L[0][0] * 2 < Math.max(a.length, b.length)) return `<b>${esc(tape)}</b>`;   // mot très différent : pas de comparaison lettre par lettre
+  while (x < a.length || y < b.length) {
+    if (x < a.length && y < b.length && a[x] === b[y]) { h += esc(a[x]); x++; y++; }
+    else if (y < b.length && (x >= a.length || L[x][y + 1] >= L[x + 1][y])) { h += '<u>_</u>'; y++; }
+    else { h += `<b>${esc(a[x])}</b>`; x++; }
+  }
+  return h;
+}
+let ctlBilan = null;
 function showResult(m) {
+  if (m.kind === 'controle') {
+    answering = false;
+    if (m.neutre) { $('qMsg').textContent = '✔️ Réponse enregistrée'; return; }
+    const d = document.querySelector('.ouvert'); if (d) d.classList.add(m.ok ? 'good' : 'bad');
+    const btns = [...$('qChoices').children], chosenBtn = btns.find(b => b.classList.contains('chosen'));
+    if (!qOuvert) { if (m.ok) chosenBtn && chosenBtn.classList.add('good'); else { chosenBtn && chosenBtn.classList.add('bad'); btns[m.bonne] && btns[m.bonne].classList.add('good'); } }
+    Son.play(m.ok ? 'bon' : 'faux');
+    if (m.ok) $('qMsg').textContent = '✅ Bravo !';
+    else if (m.tape != null) { $('qMsg').innerHTML = `❌ Tu as écrit : <span class="diff">${diffDictee(m.tape, m.bonneTxt)}</span><br>✏️ Il fallait écrire : <b>${m.bonneTxt.replace(/[&<>]/g, '')}</b>`; }
+    else $('qMsg').textContent = '❌ Pas tout à fait.' + (m.bonneTxt ? ` La bonne réponse est ${m.bonneTxt}.` : '');
+    if (!m.ok && m.explication && m.tape == null) { $('qExp').textContent = '💡 À retenir : ' + m.explication; $('qExp').className = 'exp on'; }
+    return;
+  }
   if (qOuvert) {
     const d = document.querySelector('.ouvert'); if (d) d.classList.add(m.ok ? 'good' : 'bad');
     if (!m.ok && m.bonneTxt) m.explication = `La bonne réponse est ${m.bonneTxt}.` + (m.explication ? ' ' + m.explication : '');
@@ -640,6 +686,22 @@ function showFin(m) {
   const bn = m.boss ? m.boss.nom : 'Le Roi Gluant';
   h.textContent = m.titre ? m.titre : m.why === 'boss-gagne' ? `🎉 Victoire ! ${bn} est vaincu !` : m.why === 'boss-perdu' ? `${m.boss ? BOSS_INFO[m.boss.k].ico : '👑'} ${bn} a gagné cette fois…` : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
   card.appendChild(h);
+  if (m.controle) {   // contrôle ou dictée : mon bilan, pas de podium
+    const b = ctlBilan, t = document.createElement('div'); t.className = 'finlist';
+    if (b) {
+      t.innerHTML = `<b>${b.ok} sur ${b.total}</b> ${b.ok === b.total ? '🌟 Parfait !' : b.ok >= b.total * 0.8 ? '👏 Très bien !' : b.ok >= b.total * 0.6 ? '🙂 Bien !' : '💪 On continue de pratiquer !'}`;
+      card.appendChild(t);
+      if (b.erreurs.length) {
+        const l = document.createElement('div'); l.className = 'bilan';
+        const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+        l.innerHTML = '<b>À revoir :</b>' + b.erreurs.map(e => `<div>${e.n}. ${e.question ? esc(e.question) + '<br>' : ''}Ta réponse : ${b.dictee && e.ta !== '(pas de réponse)' ? `<span class="diff">${diffDictee(e.ta, e.bonne)}</span>` : esc(e.ta)} · Bonne réponse : <b>${esc(e.bonne)}</b></div>`).join('');
+        card.appendChild(l);
+      }
+    }
+    const w = document.createElement('div'); w.className = 'msg'; w.textContent = 'Ton enseignant a reçu tes résultats.';
+    card.appendChild(w); $('fin').style.display = 'flex'; ctlBilan = null;
+    return;
+  }
   if (m.teams) {
     const t = document.createElement('div'); t.className = 'finlist';
     t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${m.teams[0].nom} gagnent !</b>`;

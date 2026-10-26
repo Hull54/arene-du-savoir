@@ -116,7 +116,7 @@ const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
   { nom: 'Verts', color: '#3fbf5a' }, { nom: 'Jaunes', color: '#f2c94c' },
 ];
-const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement' };
+const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement', controle: 'Contrôle', dictee: 'Dictée' };
 const TEAM_MODES = new Set(['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie']);
 const coop = () => mode === 'boss' || mode === 'survie';   // toute la classe ensemble : pas de dégâts entre joueurs
 // noms d'équipes propres à certains modes
@@ -189,6 +189,9 @@ function badge(p, id) {
 const badgesDe = p => [...new Set([...(badgesSeance[p.name] || []), ...((codeDe(p) || {}).badges || [])])];
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
+// Contrôle et dictée : mêmes questions pour tous, dans le même ordre, sans combat
+let ctl = null;
+const ctlReglages = { n: 10, correction: false, mots: [] };
 let ballons = [];   // École : ballons géants qui roulent dans la cour
 let wagons = [];    // Caverne : wagonnets qui font le tour des rails
 let fantome = null; // Bibliothèque : le fantôme bibliothécaire
@@ -528,6 +531,7 @@ function answer(p, i, txt) {
   if (eclair) { if (eclair.ids.includes(p.id) && !eclair.answers.has(p.id)) eclair.answers.set(p.id, i); return; }
   if (!p.question) return;
   const Q = p.question;
+  if (Q.kind === 'controle') return answerControle(p, Q, i, txt);
   if (Q.ouvert && typeof txt === 'string') i = norm(txt) === norm(Q.q.choix[Q.q.reponse]) ? Q.answer : -1;
   const ok = i === Q.answer;
   record(p, Q.q, ok);
@@ -911,6 +915,76 @@ function updateBallons(dt) {
       b.vx = -Math.cos(a) * Math.hypot(b.vx, b.vy); b.vy = -Math.sin(a) * Math.hypot(b.vx, b.vy);   // le ballon rebondit sur le joueur
     }
   }
+}
+
+// ---------- Contrôle et dictée ----------
+// Chaque élève répond à son rythme. L'enseignant voit l'avancement en direct et reçoit un bilan à la fin.
+// La correction après chaque question est un choix de l'enseignant ; sinon tout arrive à la fin.
+const normDictee = t => String(t).trim().toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/\s*([.!?])$/, '');
+function setupControle() {
+  const dictee = mode === 'dictee';
+  let qs = [];
+  if (dictee) qs = ctlReglages.mots.map(mot => ({ q: { question: 'Écoute bien et écris ce que tu entends.', choix: [mot], reponse: 0, matiere: 'Français', notion: 'Dictée', dire: mot }, order: [0], answer: 0, ouvert: true }));
+  else {
+    const fictif = { name: null, recent: [] };
+    for (let k = 0; qs.length < ctlReglages.n && k < ctlReglages.n * 6; k++) {
+      const Q = newQuestion(fictif);
+      if (qs.some(x => x.q.question === Q.q.question)) continue;
+      if (ouvertTous && /^[\d\s\u00a0.,]+$/.test(Q.q.choix[Q.q.reponse])) Q.ouvert = true;
+      qs.push(Q);
+    }
+  }
+  ctl = { qs, dictee, correction: ctlReglages.correction, eleves: new Map() };
+  for (const p of players.values()) commencerControle(p);
+}
+function commencerControle(p) {
+  p.busy = true; p.busyT = 1e9; p.question = null;
+  if (p.bot) return;   // les robots attendent sans bouger
+  if (!ctl.eleves.has(p.name)) ctl.eleves.set(p.name, { i: 0, rep: [], fini: false });
+  p.ctlNext = 0.1;
+}
+function questionControle(p) {
+  const e = ctl.eleves.get(p.name);
+  if (!e) return;
+  if (e.i >= ctl.qs.length) {
+    e.fini = true; p.question = null;
+    send(p.conn, { t: 'ctlFin', ...(ctl.correction ? { ok: e.rep.filter(r => r.ok).length, total: ctl.qs.length } : {}) });
+    const eleves = [...players.values()].filter(q => !q.bot && ctl.eleves.has(q.name));
+    if (eleves.length && eleves.every(q => ctl.eleves.get(q.name).fini)) endRound('controle');
+    return;
+  }
+  const Q = ctl.qs[e.i];
+  p.question = { ...Q, kind: 'controle' };
+  send(p.conn, questionMsg(Q, 'controle', { num: e.i + 1, total: ctl.qs.length, ...(Q.ouvert ? { ouvert: true } : {}), ...(Q.q.dire ? { dire: Q.q.dire, choix: [], question: Q.q.question } : {}) }));
+}
+function answerControle(p, Q, i, txt) {
+  const e = ctl && ctl.eleves.get(p.name);
+  if (!e || e.fini) return;
+  const tape = typeof txt === 'string' ? txt.slice(0, 80) : '';
+  const ok = Q.ouvert ? (Q.q.dire ? normDictee(tape) === normDictee(Q.q.choix[0]) : norm(tape) === norm(Q.q.choix[Q.q.reponse])) : i === Q.answer;
+  e.rep[e.i] = { ok, txt: Q.ouvert ? tape : Q.order[i] != null ? Q.q.choix[Q.order[i]] : '' };
+  const s = (stats[p.name][Q.q.notion] = stats[p.name][Q.q.notion] || { ok: 0, ko: 0 });
+  if (ok) { s.ok++; p.good++; } else { s.ko++; p.bad++; }
+  e.i++; p.question = null;
+  if (ctl.correction) send(p.conn, { t: 'res', kind: 'controle', ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, tape: Q.q.dire ? tape : undefined, explication: ok ? '' : expl(Q.q) });
+  else send(p.conn, { t: 'res', kind: 'controle', neutre: true });
+  p.ctlNext = !ctl.correction ? 0.4 : ok ? 1.3 : Q.q.dire ? 4.5 : expl(Q.q) ? 4.5 : 3;
+}
+// à la fin : chaque élève reçoit son bilan, l'enseignant reçoit le rapport complet
+function finControle() {
+  const eleves = [...ctl.eleves.entries()].map(([nom, e]) => ({ nom, ok: e.rep.filter(r => r && r.ok).length, fait: e.i, rep: ctl.qs.map((_, k) => e.rep[k] || null) }));
+  const questions = ctl.qs.map((Q, k) => {
+    const rep = eleves.map(x => x.rep[k]).filter(Boolean);
+    return { texte: Q.q.dire ? `🎧 ${Q.q.dire}` : Q.q.question, notion: Q.q.notion, bonne: Q.q.choix[Q.q.reponse], reussite: rep.length ? Math.round(rep.filter(r => r.ok).length / rep.length * 100) : null };
+  });
+  for (const p of players.values()) {
+    const e = ctl.eleves.get(p.name);
+    if (!e || p.bot) continue;
+    send(p.conn, { t: 'ctlBilan', dictee: ctl.dictee, total: ctl.qs.length, ok: e.rep.filter(r => r && r.ok).length,
+      erreurs: ctl.qs.map((Q, k) => ({ k, Q, r: e.rep[k] })).filter(x => !x.r || !x.r.ok).map(({ k, Q, r }) => ({ n: k + 1, question: Q.q.dire ? '' : Q.q.question, ta: r ? r.txt : '(pas de réponse)', bonne: Q.q.choix[Q.q.reponse] })) });
+  }
+  const rapport = { t: 'ctlRapport', dictee: ctl.dictee, total: ctl.qs.length, questions, eleves };
+  for (const c of conns) if (c.role === 'prof') send(c, rapport);
 }
 
 // ---------- Wagonnets (Caverne) ----------
@@ -1536,6 +1610,7 @@ function endRound(why) {
     Object.assign(ended, { titre: hum ? `🧄 ${hum} humain${hum > 1 ? 's ont' : ' a'} survécu : les Humains gagnent !` : '🧟 Les zombies ont contaminé tout le monde !', unite: 'joueur', sous: 'Survie et contagion' });
   }
   if (mode === 'entrainement') Object.assign(ended, { sous: 'Le plus de robots vaincus' });
+  if (ctl) { Object.assign(ended, { titre: ctl.dictee ? '🎧 Dictée terminée !' : '📝 Contrôle terminé !', top: [], cerveaux: [], controle: true }); finControle(); }
   // badges de fin de manche
   for (const p of ps) {
     if (why === 'boss-gagne') badge(p, 'boss');
@@ -1579,7 +1654,7 @@ function newRound() {
   for (const k in stats) stats[k] = {};
   timer.left = timer.dur;
   boss = null; hill = null; flags = null; minions = []; bombs = []; beams = [];
-  runes = []; cart = null; surv = null; zomb = null;
+  runes = []; cart = null; surv = null; zomb = null; ctl = null;
   if (mode === 'boss') spawnBoss();
   if (mode === 'colline') placeHill();
   if (mode === 'drapeau') setupFlags();
@@ -1588,6 +1663,7 @@ function newRound() {
   if (mode === 'survie') setupSurvie();
   if (mode === 'zombie') setupZombie();
   if (mode === 'entrainement') ensureBots();
+  if (mode === 'controle' || mode === 'dictee') setupControle();
   if (flags || cart) for (const q of players.values()) Object.assign(q, freeSpot(q.team));
   chests.forEach(c => { c.open = 0; c.by = 0; });
   goldFrom = -1; pickGold();
@@ -1767,6 +1843,7 @@ function step() {
     p.sautT = Math.max(0, (p.sautT || 0) - dt); p.ballonT = Math.max(0, (p.ballonT || 0) - dt);
     p.hidden = p.revealed <= 0 && (inBush(p) || smokes.some(z => Math.hypot(z.x - p.x, z.y - p.y) < z.r));
     if (p.busy) {
+      if (p.ctlNext > 0 && (p.ctlNext -= dt) <= 0 && ctl) questionControle(p);
       if (p.goldNext && (p.goldNext.t -= dt) <= 0) { const g = p.goldNext; p.goldNext = null; askQuestion(p, 'chest', { chest: g.chest, gold: true, step: 2, nOk: g.nOk }); }
       if ((p.busyT -= dt) <= 0) cancelChest(p);
       continue;
@@ -1907,6 +1984,7 @@ const infoT = setInterval(() => {
     carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
     eclairDur, tempete: tempeteOn, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
+    ctl: ctl ? { total: ctl.qs.length, correction: ctl.correction, dictee: ctl.dictee, eleves: [...ctl.eleves.entries()].map(([nom, e]) => ({ nom, fait: e.i, ok: e.rep.filter(r => r && r.ok).length })) } : null,
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
     players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n', bg: p.bot ? [] : badgesDe(p), ge: p.gele > 0 ? 1 : 0, cd: p.code ? 1 : 0 })), ouvert: ouvertTous,
   });
@@ -1959,6 +2037,7 @@ function onMessage(conn, msg) {
         q.debut = Date.now();
         ensureBots();
       }
+      if (ctl && !ended) commencerControle(conn.player);   // arrivé pendant le contrôle : il commence (ou reprend où il était)
     }
       if (ended) send(conn, { t: 'fin', ...ended });
       if (cart) send(conn, { t: 'route', pts: cart.pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
@@ -1977,7 +2056,7 @@ function onMessage(conn, msg) {
     case 'pow': if (p && !(p.gele > 0)) power(p); break;
     case 'super': if (p && !(p.gele > 0)) superPower(p); break;
     case 'pet': if (p && !(p.gele > 0)) petPower(p); break;
-    case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 30) : undefined); break;
+    case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 120) : undefined); break;
     case 'look': if (p && cleanLook(m.look)) {
       p.look = cleanLook(m.look);
       p.maxHp = CLASSES[p.cls].hp + (raceDe(p).pv || 0); p.hp = Math.min(p.hp, p.maxHp);
@@ -2058,6 +2137,11 @@ function onMessage(conn, msg) {
       assignTeams();
       newRound();
       addFeed(`🎮 Mode : ${MODES[mode]}${mode === 'equipes' || mode === 'colline' ? ' (' + nbTeams + ' équipes)' : ''}`);
+      break;
+    case 'ctlReglages':   // contrôle et dictée : nombre de questions, correction, mots de la dictée
+      ctlReglages.n = clamp(Math.round(+m.n || 10), 3, 30);
+      ctlReglages.correction = !!m.correction;
+      if (Array.isArray(m.mots)) ctlReglages.mots = m.mots.map(s => String(s).trim().slice(0, 80)).filter(Boolean).slice(0, 40);
       break;
     case 'timer':
       timer.dur = [0, 3, 5, 10, 15, 20].includes(m.min) ? m.min * 60 : 0;

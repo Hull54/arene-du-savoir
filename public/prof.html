@@ -112,6 +112,19 @@
       </div>
     </div>
     <div class="box">
+      <h2>📝 Contrôle et dictée</h2>
+      <div class="perso">
+        <div class="pbanks">Mode calme, sans combat : tout le monde reçoit les mêmes questions, dans le même ordre, et répond à son rythme. Le contrôle utilise les notions cochées plus bas.</div>
+        <div class="prow">Questions : <select id="ctlN"><option>5</option><option selected>10</option><option>15</option><option>20</option></select>
+          <label><input type="checkbox" id="ctlCorr"> Montrer la correction après chaque question</label></div>
+        <div class="prow"><button id="ctlGo">📝 Lancer le contrôle</button></div>
+        <textarea id="ctlMots" rows="4" placeholder="Dictée : un mot ou une phrase par ligne. Le jeu les lit à voix haute, l'élève écrit."></textarea>
+        <div class="prow"><button id="dicGo">🎧 Lancer la dictée</button><span id="ctlMsg"></span></div>
+        <div id="ctlProg"></div>
+        <div id="ctlRap"></div>
+      </div>
+    </div>
+    <div class="box">
       <h2>Carte</h2>
       <div class="cartes" id="cartes"></div>
     </div>
@@ -187,13 +200,49 @@ ws.onmessage = e => {
     if (!world.rg) $('rglCard').dataset.m = '';
     $('regles').textContent = world.rg ? '▶ Jouer !' : '📜 Règles';
   }
-  else if (m.t === 'info') info(m);
+  else if (m.t === 'info') { info(m); majCtl(m.ctl); }
+  else if (m.t === 'ctlRapport') rapportCtl(m);
   else if (m.t === 'eclairRes') eclairRes(m);
   else if (m.t === 'fin') { showFin(m); send({ t: 'bilans', silent: true }); }   // l'historique des séances se met à jour à chaque fin de manche
   else if (m.t === 'debut') $('fin').style.display = 'none';
   else if (m.t === 'route') ROUTE = m.pts;
   else if (m.t === 'bilans') { sauverHisto(m.memoire); if (!m.silent) bilans(m); }
 };
+// ----- Contrôle et dictée -----
+try { $('ctlMots').value = localStorage.getItem('arene-dictee') || ''; const r = JSON.parse(localStorage.getItem('arene-ctl') || 'null'); if (r) { $('ctlN').value = String(r.n); $('ctlCorr').checked = !!r.correction; } } catch {}
+$('ctlMots').oninput = () => { try { localStorage.setItem('arene-dictee', $('ctlMots').value); } catch {} };
+function lancerCtl(m) {
+  const mots = $('ctlMots').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (m === 'dictee' && !mots.length) { $('ctlMsg').textContent = 'Écris d\'abord les mots de la dictée.'; return; }
+  const R = REGLES[m];
+  if (!confirm(`${R.ico} ${R.titre} : ${R.but}\n\n${R.pts.map(t => '• ' + t).join('\n')}\n\nCela commence une nouvelle manche. Continuer ?`)) return;
+  const reg = { n: +$('ctlN').value, correction: $('ctlCorr').checked };
+  try { localStorage.setItem('arene-ctl', JSON.stringify(reg)); } catch {}
+  send({ t: 'ctlReglages', ...reg, mots }); send({ t: 'mode', mode: m });
+  $('ctlMsg').textContent = ''; $('ctlRap').innerHTML = '';
+}
+$('ctlGo').onclick = () => lancerCtl('controle');
+$('dicGo').onclick = () => lancerCtl('dictee');
+function majCtl(c) {   // avancement en direct
+  if (!c) { $('ctlProg').innerHTML = ''; return; }
+  $('ctlProg').innerHTML = `<table><tr><th>Élève</th><th>Avancement</th><th>Bonnes</th></tr>${c.eleves.map(e => `<tr><td>${esc(e.nom)}</td><td>${e.fait} / ${c.total}${e.fait >= c.total ? ' ✅' : ''}</td><td>${e.ok}</td></tr>`).join('')}</table>`;
+}
+let ctlRapport = null;
+function rapportCtl(r) {   // à la fin : résultats par élève et par question, à copier dans Excel
+  ctlRapport = r;
+  const pct = (a, b) => b ? Math.round(a / b * 100) + ' %' : '';
+  $('ctlRap').innerHTML = `<h3>${r.dictee ? '🎧 Résultats de la dictée' : '📝 Résultats du contrôle'}</h3>
+    <table><tr><th>Élève</th><th>Note</th><th></th></tr>${r.eleves.map(e => `<tr><td>${esc(e.nom)}</td><td>${e.ok} / ${r.total}</td><td>${pct(e.ok, r.total)}</td></tr>`).join('')}</table>
+    <table style="margin-top:8px"><tr><th>#</th><th>Question</th><th>Réussite</th></tr>${r.questions.map((q, k) => `<tr><td>${k + 1}</td><td title="Bonne réponse : ${esc(q.bonne)}">${esc(q.texte)}</td><td>${q.reussite == null ? '–' : q.reussite + ' %'}</td></tr>`).join('')}</table>
+    <button class="sec" id="ctlCopie" style="margin-top:8px">📋 Copier pour Excel</button>`;
+  $('ctlCopie').onclick = () => {
+    const l = [['Élève', 'Note', 'Sur', ...r.questions.map((q, k) => `Q${k + 1}`)].join('\t')];
+    for (const e of r.eleves) l.push([e.nom, e.ok, r.total, ...e.rep.map(x => x ? (x.ok ? '✔ ' : '✘ ') + x.txt : '')].join('\t'));
+    l.push(''); l.push(['Question', 'Bonne réponse', 'Réussite'].join('\t'));
+    r.questions.forEach((q, k) => l.push([`Q${k + 1} ${q.texte}`, q.bonne, q.reussite == null ? '' : q.reussite + ' %'].join('\t')));
+    navigator.clipboard.writeText(l.join('\n')).then(() => { $('ctlCopie').textContent = '✅ Copié ! Colle dans Excel'; });
+  };
+}
 $('pause').onclick = () => send({ t: 'pause' });
 $('regles').onclick = () => send({ t: 'regles' });
 $('eclDur').onchange = e => send({ t: 'eclairdur', s: +e.target.value });
@@ -213,6 +262,8 @@ const CONSEILS = {
   survie: '📘 Apprentissage · Conseil : niveau Facile pour qui en a besoin, éclair de 30 s entre les vagues.',
   zombie: '📗🎉 Révision et plaisir · Conseil : manche courte (4 min par défaut).',
   entrainement: '📘 Échauffement · Conseil : 3 à 5 min en début de séance, contre des robots seulement.',
+  controle: '📝 Évaluation · Conseil : minuterie de 10 à 15 min ; la manche finit seule quand tout le monde a terminé.',
+  dictee: '🎧 Évaluation · Conseil : écouteurs si possible ; l\'élève peut réécouter autant qu\'il veut.',
 };
 // ----- Codes des élèves : gardés dans ce navigateur, envoyés au jeu à chaque connexion -----
 const BADGE_ICO = { serie5: '🔥', serie10: '🌋', studieux: '📚', sansFaute: '🎯', sauveur: '💚', couronne: '👑', coffres: '🗝️', runes: '✨', boss: '🐉', vagues: '🌊', chariot: '🛒', survivant: '🧄' };

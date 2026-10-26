@@ -54,6 +54,8 @@ Object.assign(REGLES, {
   survie: { ico: '🌊', titre: 'Survie coopérative', but: 'Toute la classe ensemble contre 8 vagues de monstres !', pts: ['On ne peut pas se blesser entre nous.', 'Chaque vague est plus forte que la précédente.', 'Entre deux vagues : une question éclair. Bonne réponse = bonus de force.', 'Si tout le monde tombe en même temps, les monstres gagnent.'] },
   zombie: { ico: '🧟', titre: 'Contagion', but: 'Humains : survivez ! Zombies : attrapez tout le monde !', pts: ['Un zombie qui te touche te pose une question : bonne réponse = tu résistes 3 secondes.', 'Mauvaise réponse : tu deviens un zombie à ton tour.', 'Les coups des humains repoussent et étourdissent les zombies.', 'Survivre rapporte des points. Les zombies vont un peu plus vite.'] },
   entrainement: { ico: '🎯', titre: 'Entraînement', but: 'Entraîne-toi contre les robots !', pts: ['Les élèves ne peuvent pas se blesser entre eux : seulement les robots.', 'Les robots frappent moins fort.', 'Les questions reviennent plus souvent sur les notions que tu rates.'] },
+  controle: { ico: '📝', titre: 'Contrôle', but: 'Réponds à toutes les questions, à ton rythme.', pts: ['Pas de combat : ton héros reste à sa place.', 'Tout le monde a les mêmes questions.', 'Prends ton temps et relis-toi : ton bilan arrive à la fin.'] },
+  dictee: { ico: '🎧', titre: 'Dictée', but: 'Écoute et écris chaque mot ou phrase.', pts: ['Le jeu lit à voix haute. Appuie sur 🔊 Réécouter autant que tu veux.', 'Attention aux accents et à la ponctuation !', 'Ton bilan arrive à la fin.'] },
 });
 // Modes en équipes : noms et scores affichés en haut de l'écran
 const MODES_EQUIPE = ['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie'];
@@ -78,7 +80,7 @@ let ROUTE = null;   // chemin du chariot (reçu au début de la manche)
 const REGLE_KO = 'Tu tombes ? Réponds à une question pour revenir au combat.';
 function reglesHTML(mode, extra = '') {
   const R = REGLES[mode] || REGLES.libre;
-  return `<h2 class="rgT">${R.ico} ${R.titre}</h2><div class="rgB">${R.but}</div><ul class="rgL">${R.pts.map(t => `<li>${t}</li>`).join('')}<li>💫 ${REGLE_KO}</li></ul>${extra}`;
+  return `<h2 class="rgT">${R.ico} ${R.titre}</h2><div class="rgB">${R.but}</div><ul class="rgL">${R.pts.map(t => `<li>${t}</li>`).join('')}${mode === 'controle' || mode === 'dictee' ? '' : `<li>💫 ${REGLE_KO}</li>`}</ul>${extra}`;
 }
 
 // Décode l'état compact envoyé par le serveur
