@@ -560,6 +560,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .souffleur .sf-min { position: absolute; top: 4px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--cerne); background: #f6ead0; font-weight: 700; line-height: 1; padding: 0; }
 .souffleur #sf-evt { justify-self: end; padding: 6px 12px; font-size: .9rem; }
 .sf-ouvrir { position: absolute; top: 10px; left: 10px; z-index: 35; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--cerne); background: var(--panel); font-size: 1.3rem; box-shadow: 0 3px 0 var(--cerne); padding: 0; }
+.ed-evts > label { margin-bottom: 8px; }
 .evt { display: grid; gap: 6px; padding: 10px; margin-bottom: 8px; border: 2px dashed rgba(43,31,22,.45); border-radius: 10px; background: #fbf4e2; }
 /* éléments posés sur la carte : restent sombres et lisibles */
 .tok .tag { color: #f6ead2; }
@@ -638,6 +639,9 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
           <p class="hint">Les cases d'eau font toujours « splash ». On entend le résultat tout de suite.</p>
         </div>
         <div class="ed-evts">
+          <h4>Répliques du MJ</h4>
+          <label>Pendant le tour des monstres (une réplique par ligne; {monstre} et {heros} sont remplacés) <textarea id="ed-rep" rows="4" placeholder="Ex. : La pleine lune perce le brouillard… {monstre} hurle!"></textarea></label>
+          <label>Quand le boss est presque vaincu <input id="ed-repboss" maxlength="160" placeholder="Ex. : Le comte siffle de rage!"></label>
           <h4>Événements du chapitre</h4>
           <p class="hint">Un message à lire (et un effet) qui apparaît au début de la manche choisie. Les événements surprises au hasard se règlent dans Réglages.</p>
           <div id="ed-evts"></div>
@@ -926,6 +930,23 @@ const HALLOWEEN = {
     "loups",
     "corbeaux",
     "grillons"
+   ],
+   "repliques": "« La pleine lune perce le brouillard… Au loin, le loup-garou hurle! »\n« Les citrouilles maudites ricanent dans le noir. Leurs yeux s'allument! »\n« Le vent fait grincer la vieille grille… Quelque chose rôde dans le jardin. »\n« Léo tremble : “Vous avez entendu? Ça vient des buissons!” »\n« Des feuilles mortes tourbillonnent. {monstre} vous a vus! »",
+   "repliqueBoss": "« Le loup-garou gémit et recule… Encore un effort, héros! »",
+   "evenements": [
+    {
+     "manche": 3,
+     "effet": "rien",
+     "titre": "La cloche sonne",
+     "texte": "DONG… DONG… DONG… La cloche de la maison Blackwood sonne treize coups.\n\nLéo crie : « C'est le signal du comte! Dépêchez-vous! »"
+    },
+    {
+     "manche": 6,
+     "effet": "monstre",
+     "monstre": "citrouille",
+     "titre": "Le potager se réveille",
+     "texte": "Une citrouille roule hors du potager… et se met à ricaner! {monstre} apparaît près de {heros}!"
+    }
    ]
   },
   {
@@ -1176,6 +1197,22 @@ const HALLOWEEN = {
    "animaux": [
     "chauves",
     "rats"
+   ],
+   "repliques": "« Les chandelles vacillent… Une voix murmure : “Personne ne sort de la maison Blackwood…” »\n« Un éclair illumine le hall. Pendant une seconde, vous voyez une silhouette au fond du couloir! »\n« Le plancher craque sous des pas lourds… La créature du docteur approche! »\n« Les fantômes traversent les murs en riant. Ils vous ont trouvés! »\n« Du fond de la crypte, le comte Vladislav ricane : “Approchez, petits héros…” »",
+   "repliqueBoss": "« Le comte Vladislav siffle de rage : “Vous ne m'aurez pas si facilement!” »",
+   "evenements": [
+    {
+     "manche": 2,
+     "effet": "eclair",
+     "titre": "Les portes claquent",
+     "texte": "BANG! Toutes les portes de la maison claquent en même temps.\n\nMadame Blackwood chuchote : « Il sait que vous êtes ici… »"
+    },
+    {
+     "manche": 5,
+     "effet": "vie",
+     "titre": "L'étagère du docteur",
+     "texte": "Sur une étagère, une fiole rouge tombe et roule jusqu'aux pieds de {heros}. Une potion de vie!"
+    }
    ]
   }
  ],
@@ -1562,7 +1599,7 @@ async function ouvrirQuete(q) {
   });
   EQUIPE = choix.p ? choix.p.equipe : choix.code;
   await chargerFiche();
-  if (choix.p) { restaurerPartie(choix.p); toast(`Bon retour, équipe ${EQUIPE}!`); return; }
+  if (choix.p) { restaurerPartie(choix.p); toast(`Bon retour, équipe ${EQUIPE}!`); precedemment(); return; }
   if (!Object.keys(FICHE.heros || {}).length) await ouvrirFiches(true);
   demarrerQuete(q);
 }
@@ -2624,6 +2661,29 @@ const DIRE_MJ = [
   "« Un frisson parcourt l'équipe. Quelque chose approche… »",
 ];
 const PREF_EVT = () => PREF.evts || "4";
+const guillemets = t => /^[«“"]/.test(t.trim()) ? t.trim() : `« ${t.trim()} »`;
+// « Précédemment… » : résumé à lire quand une équipe reprend sa partie
+function precedemment() {
+  if (!S || S.phase === "edit") return;
+  const net = t => String(t).replace(/<[^>]+>/g, "").trim();
+  const blesses = S.heroes.filter(h => h.pv > 0 && h.pv < st(h).pv).map(h => `${h.nom} est blessé (${h.pv} PV sur ${st(h).pv})`);
+  const ko = S.heroes.filter(h => h.pv <= 0).map(h => `${h.nom} est à terre`);
+  const sac = Object.entries(S.inv).filter(([, n]) => n > 0).map(([k, n]) => (n > 1 ? n + " × " : "") + itemInfo(k).nom);
+  const restants = ennemisVivants(), boss = restants.find(e => e.boss);
+  const trouves = S.secrets.filter(x => x.trouve).length;
+  const souvenirs = S.log.map(net).filter(t => t && !t.startsWith("—") && !t.startsWith("Partie reprise") && !t.startsWith("Chapitre ")).slice(0, 3).reverse();
+  const lignes = [
+    `L'équipe ${EQUIPE} explore « ${S.carte.nom} », chapitre ${S.chapitre + 1} sur ${QUETE.chapitres.length}. Nous en sommes à la manche ${S.round}.`,
+    [...ko, ...blesses].length ? [...ko, ...blesses].join(". ") + "." : "Tous les héros sont en pleine forme.",
+    sac.length ? `Dans le sac de l'équipe : ${sac.join(", ")}.` : "Le sac de l'équipe est vide.",
+    trouves ? `Vous avez déjà découvert ${trouves} secret${trouves > 1 ? "s" : ""} ici.` : "",
+    restants.length ? `Il reste ${restants.length} monstre${restants.length > 1 ? "s" : ""} dans les parages${boss ? `, et ${boss.nom} vous attend toujours` : ""}…` : "Plus aucun monstre ne rôde ici… pour l'instant.",
+  ].filter(Boolean);
+  ouvrir(`<p class="sub kicker">${esc(QUETE.nom)} · à lire à voix haute</p><h2>Précédemment…</h2>
+    <div class="intro">${lignes.map(esc).join("<br><br>")}${souvenirs.length ? `<br><br><b>Les derniers moments :</b><br>${souvenirs.map(t => "• " + esc(t)).join("<br>")}` : ""}</div>
+    <div class="row"><button class="btn gold" type="button" id="prec-ok">On reprend l'aventure!</button></div>`);
+  document.getElementById("prec-ok").onclick = fermer;
+}
 let sfCle = "", sfLigne = "";
 function majSouffleur() {
   const box = document.getElementById("souffleur"), btn = document.getElementById("sf-ouvrir");
@@ -2645,12 +2705,17 @@ function majSouffleur() {
     faire = "L'élève touche une case verte pour se déplacer, ou touche un monstre, un objet ou un mur pour agir. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
   } else if (S.phase === "mj") {
     const cle = "mj" + S.round;
-    if (sfCle !== cle) { sfCle = cle; const m = pick(vivantsE.length ? vivantsE : [{ nom: "Un monstre" }]); sfLigne = pick(DIRE_MJ).replace("{monstre}", m.nom); }
+    if (sfCle !== cle) {
+      sfCle = cle;
+      const m = pick(vivantsE.length ? vivantsE : [{ nom: "Un monstre" }]), h = pick(vivants().length ? vivants() : S.heroes);
+      const propres = String(S.carte.repliques || "").split("\n").map(l => l.trim()).filter(Boolean);
+      sfLigne = guillemets(pick(propres.length ? propres : DIRE_MJ)).replace(/\{monstre\}/g, m.nom).replace(/\{heros\}/g, h.nom);
+    }
     const boss = vivantsE.find(e => e.boss && e.pv <= e.pvMax / 3);
     if (!vivantsE.length) { dire = "« Tout est calme… pour l'instant. »"; faire = "Aucun monstre debout : touche « Fin du tour du MJ »."; }
     else if (vivantsE.every(e => e.bouge)) { dire = "« Les monstres ont joué. Héros, préparez-vous! »"; faire = `Touche « Fin du tour du MJ » pour lancer la manche ${S.round + 1}.`; }
     else {
-      dire = boss ? `« ${boss.nom} chancelle! Encore un effort, héros! »` : sfLigne;
+      dire = boss ? (S.carte.repliqueBoss ? guillemets(S.carte.repliqueBoss) : `« ${boss.nom} chancelle! Encore un effort, héros! »`) : sfLigne;
       faire = "1. Touche « Faire jouer les ennemis » (ou glisse chaque monstre selon sa vitesse). 2. Un élève attaqué fait une division pour se défendre. 3. Touche « Fin du tour du MJ ».";
     }
   }
@@ -2730,6 +2795,8 @@ document.getElementById("ed-evts").addEventListener("click", e => {
   const d = e.target.closest("[data-evdel]"), b = e.target.closest("[data-ev]"); if (!d || !b || !ED) return;
   ED.carte.evenements.splice(Number(b.dataset.ev), 1); renderEvtsEditeur(true);
 });
+document.getElementById("ed-rep").oninput = e => { ED.carte.repliques = e.target.value; };
+document.getElementById("ed-repboss").oninput = e => { ED.carte.repliqueBoss = e.target.value; };
 document.getElementById("ed-evt-add").onclick = () => {
   const evs = ED.carte.evenements = ED.carte.evenements || [];
   evs.push({ manche: evs.length ? Number(evs[evs.length - 1].manche) + 2 : 3, effet: "rien", titre: "", texte: "" });
@@ -3516,6 +3583,7 @@ function renderEditeur() {
   document.getElementById("ed-ani").innerHTML = Object.entries(ANIMAUX).map(([k, n]) => `<button type="button" data-a="${k}" aria-pressed="${(ED.carte.animaux || []).includes(k)}">${n}</button>`).join(""); set("ed-nom", ED.carte.nom); set("ed-intro", ED.carte.intro || "");
   document.getElementById("ed-cols").value = W; document.getElementById("ed-rows").value = H;
   if (!document.getElementById("ed-evts").contains(document.activeElement)) renderEvtsEditeur();
+  set("ed-rep", ED.carte.repliques || ""); set("ed-repboss", ED.carte.repliqueBoss || "");
   document.getElementById("ed-noimg").disabled = !(ED.carte.image || ED.carte.imageId);
   document.getElementById("ed-chaps").innerHTML = ED.quete.chapitres.map((c, i) => `<button class="chap ${i === ED.ch ? "on" : ""}" type="button" data-ch="${i}">${i + 1}. ${esc(c.nom)}</button>`).join("");
   document.getElementById("ed-ch-del").disabled = ED.quete.chapitres.length < 2;
@@ -3992,7 +4060,7 @@ document.getElementById("btn-reg").onclick = () => {
       <label>Souffleur du MJ <select id="r-souf">${opt(PREF.souffleur === false ? "0" : "1", [["1", "Affiché sur le plateau"], ["0", "Caché"]])}</select></label>
     </div>
     <div class="row"><button class="btn blue" type="button" id="r-edit">Créateur de quêtes</button><button class="btn" type="button" id="r-reset">Recommencer le chapitre</button><button class="btn" type="button" id="r-restart">Recommencer la quête</button></div>
-    <div class="row"><button class="btn gold" type="button" id="r-equipe">Changer d'équipe</button><button class="btn blue" type="button" id="r-bilan">Bilan de l'enseignant</button><button class="btn" type="button" id="r-fiches">Fiches des héros</button>${S.carte.brume ? `<button class="btn" type="button" id="r-brume">${S.brumeOff ? "Remettre le brouillard" : "Dévoiler toute la carte"}</button>` : ""}</div>
+    <div class="row"><button class="btn gold" type="button" id="r-equipe">Changer d'équipe</button><button class="btn blue" type="button" id="r-bilan">Bilan de l'enseignant</button><button class="btn" type="button" id="r-fiches">Fiches des héros</button><button class="btn" type="button" id="r-prec">« Précédemment… »</button>${S.carte.brume ? `<button class="btn" type="button" id="r-brume">${S.brumeOff ? "Remettre le brouillard" : "Dévoiler toute la carte"}</button>` : ""}</div>
     <h3 class="reg-t">Son et ambiance</h3>
     <div class="reg">
       <label>Volume <input type="range" id="r-vol" min="0" max="100" value="${Math.round(PREF.vol * 100)}"></label>
@@ -4028,6 +4096,7 @@ document.getElementById("btn-reg").onclick = () => {
   document.getElementById("r-ok").onclick = fermer;
   document.getElementById("r-bilan").onclick = () => ouvrirBilan();
   document.getElementById("r-fiches").onclick = () => { fermer(); ouvrirFiches(false); };
+  document.getElementById("r-prec").onclick = () => { fermer(); precedemment(); };
   const rb = document.getElementById("r-brume"); if (rb) rb.onclick = () => { S.brumeOff = !S.brumeOff; fermer(); render(); };
   document.getElementById("r-equipe").onclick = async () => { fermer(); await sauvegarderPartie(true); await ouvrirQuete(QUETE); };
 };
