@@ -192,6 +192,8 @@ let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
 let ballons = [];   // École : ballons géants qui roulent dans la cour
 let wagons = [];    // Caverne : wagonnets qui font le tour des rails
 let fantome = null; // Bibliothèque : le fantôme bibliothécaire
+let vent = null, canonCd = new Map();    // Bateaux volants : coups de vent, recharge des canons
+const VENT = { tous: 14, dur: 3, force: 90 }, CANON = { cd: 2.5, v: 520, dmg: 30, r: 14, life: 1.6 };
 const FANTOME = { v: 70, r: 150, slow: 1.2 };
 const WAGON = { v: 270, r: 30, push: 110, stun: 0.6, dmg: 15 };
 const BALLON = { r: 34, v: 230, push: 120, stun: 0.5 };
@@ -274,6 +276,8 @@ function setCarte(c) {
   chests = c.chests.map(ch => ({ ...ch, open: 0, by: 0, gold: false }));
   pickGold();
   barrels = c.barrels.map(b => ({ ...b, t: 0, fuse: 0, by: null }));
+  vent = c.vent ? { t: VENT.tous, actif: 0, a: 0 } : null;
+  canonCd = new Map();
   fantome = c.fantome ? { s: 0, x: c.fantome[0].x, y: c.fantome[0].y, a: 0, chut: 0 } : null;
   wagons = c.rails ? [0, 0.5].map(f => ({ s: f * railLong(c.rails), x: c.rails[0].x, y: c.rails[0].y, a: 0 })) : [];
   ballons = (c.ballons || []).map((b, i) => ({ x: b.x, y: b.y, vx: BALLON.v * (i % 2 ? -0.8 : 0.8), vy: BALLON.v * 0.6, rot: 0 }));
@@ -678,6 +682,7 @@ function attack(p) {
   p.revealed = 1;                       // attaquer révèle le joueur caché dans un buisson
   const fromShadow = p.stealth > 0;
   p.stealth = 0;
+  if (carte.vent && tirCanon(p)) return;
   if (a.type === 'proj') return shoot(p, p.angle, a, a.dmg * (sword(p) - 1));
   fx.push({ k: 'slash', x: p.x, y: p.y, a: p.angle, r: a.range + R, arc: a.arc, t: 0.18, d: 0.18 });
   const base = a.dmg * sword(p);
@@ -917,6 +922,27 @@ function surBoucle(pts, s, o) {
     if (s <= l) { o.x = a.x + (b.x - a.x) * s / l; o.y = a.y + (b.y - a.y) * s / l; o.a = Math.atan2(b.y - a.y, b.x - a.x); return; }
     s -= l;
   }
+}
+// ---------- Bateaux volants : vent et canons ----------
+function updateVent(dt) {
+  if (vent.actif > 0) {
+    vent.actif -= dt;
+    const dx = Math.cos(vent.a) * VENT.force * dt, dy = Math.sin(vent.a) * VENT.force * dt;
+    for (const p of players.values()) if (p.alive && !p.busy && !p.dash) { if (!blocked(p.x + dx, p.y, R)) p.x += dx; if (!blocked(p.x, p.y + dy, R)) p.y += dy; }
+  } else if ((vent.t -= dt) <= 0) {
+    vent.t = VENT.tous + rand(-3, 3); vent.actif = VENT.dur; vent.a = pick([0, Math.PI, Math.PI / 2, -Math.PI / 2]);
+    addFeed(`💨 Coup de vent vers ${['l\'est', 'le sud', 'l\'ouest', 'le nord'][Math.round(((vent.a / (Math.PI / 2)) % 4 + 4) % 4)]} !`);
+  }
+}
+// à côté d'un canon, l'attaque tire un gros boulet vers l'autre navire
+function tirCanon(p) {
+  const c = carte.objs.find(o => o.kind === 'canon' && Math.hypot(o.x + o.w / 2 - p.x, o.y + o.h / 2 - p.y) < 70);
+  if (!c || (canonCd.get(c) || 0) > Date.now()) return false;
+  canonCd.set(c, Date.now() + CANON.cd * 1000);
+  const x = c.x + c.w / 2 + Math.cos(c.dir) * 40, y = c.y + c.h / 2 + Math.sin(c.dir) * 40;
+  projectiles.push({ x, y, vx: Math.cos(c.dir) * CANON.v, vy: Math.sin(c.dir) * CANON.v, r: CANON.r, dmg: CANON.dmg, life: CANON.life, owner: p.id, cls: 'boulet' });
+  fx.push({ k: 'boom', x, y, r: 40, t: 0.3, d: 0.3 });
+  return true;
 }
 // ---------- Fantôme bibliothécaire ----------
 // Il fait sa ronde lentement : près de lui, « Chut ! », on avance au ralenti.
@@ -1782,7 +1808,7 @@ function step() {
   if (!frozen) {
     bossThink(dt);
     updateLoot(dt);
-    updateBarrels(dt); updateBallons(dt); if (wagons.length) updateWagons(dt); if (fantome) updateFantome(dt);
+    updateBarrels(dt); updateBallons(dt); if (wagons.length) updateWagons(dt); if (fantome) updateFantome(dt); if (vent) updateVent(dt);
     updatePortals(dt);
     updatePuddles(dt); updateTraps(dt); updateAmes(dt);
     updateHill(dt);
@@ -1830,6 +1856,7 @@ function publicState() {
       (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0) | (p.dash && p.dash.saut ? 8192 : 0),
       p.team, gearCode(p),
     ]),
+    vt: vent && vent.actif > 0 ? +vent.a.toFixed(2) : null,
     fa: fantome ? [Math.round(fantome.x), Math.round(fantome.y)] : 0,
     wg: wagons.length ? wagons.map(w => [Math.round(w.x), Math.round(w.y), +w.a.toFixed(2)]) : 0,
     bl: ballons.length ? ballons.map(b => [Math.round(b.x), Math.round(b.y), +b.rot.toFixed(1)]) : 0,

@@ -709,6 +709,20 @@ function spriteFor(o, TH = THEMES.village) {
       P.rect(2, y + 8, w - 2, 1, '#8a5530');
     }
     P.rect(1, h + 19, w, 2, '#4a2a16');
+  } else if (kind === 'mat') {   // mât avec une grande voile blanche et un drapeau pirate
+    P = new Painter(44, 70); ax = 22 - w / 2; ay = 70 - h - 1;
+    P.rect(21, 4, 3, 66, '#7a4b25'); P.rect(21, 4, 1, 66, '#a86a3c');
+    P.rect(8, 14, 29, 2, '#5a361e'); P.rect(10, 40, 25, 2, '#5a361e');
+    for (let y = 16; y < 40; y++) { const b = Math.round(Math.sin((y - 16) / 24 * Math.PI) * 4); P.rect(9 - b, y, 27 + b * 2, 1, y % 6 === 0 ? '#e8e0d0' : '#f8f4ec'); }
+    P.rect(24, 0, 10, 6, '#1b1424'); P.px(28, 2, '#ffffff'); P.px(29, 2, '#ffffff'); P.px(28, 4, '#ffffff'); P.px(30, 4, '#ffffff');
+  } else if (kind === 'canon') {   // canon noir sur son affût, tourné vers l'autre navire
+    const bas = o.dir > 0;
+    P = new Painter(w + 6, h + 14); ax = 3; ay = 10;
+    P.rect(2, 10, w + 2, h + 2, '#7a4b25'); P.rect(2, 10, w + 2, 1, '#a86a3c');
+    P.disc(4, h + 12, 2, '#4a2a16'); P.disc(w + 2, h + 12, 2, '#4a2a16');
+    const cx = Math.floor((w + 6) / 2);
+    if (bas) { P.rect(cx - 3, 6, 6, h + 8, '#2a2833'); P.rect(cx - 4, h + 12, 8, 2, '#3a3846'); P.rect(cx - 2, 6, 1, h + 6, '#5a5664'); }
+    else { P.rect(cx - 3, 0, 6, h + 10, '#2a2833'); P.rect(cx - 4, 0, 8, 2, '#3a3846'); P.rect(cx - 2, 2, 1, h + 6, '#5a5664'); }
   } else if (kind === 'pupitre') {   // pupitre d'élève avec sa chaise
     P = new Painter(w + 2, h + 12); ax = 1; ay = 8;
     P.rect(1, 4, w, h + 1, '#d9a35c'); P.rect(1, 4, w, 1, '#f0c27e'); P.rect(1, h + 5, w, 2, '#9a6a34');
@@ -818,6 +832,7 @@ const THEMES = {
   ecole:   { herbe: ['#62b444', '#58a83d', '#72c450', '#43902f'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2f7a3f' },
   caverne: { herbe: ['#3a3446', '#342e40', '#443e52', '#2a2436'], falaise: ['#3a3248', '#2c263a', '#544a6a', '#16121e'], arbres: ['#2f4a3a', '#3f5a4a', '#5a7a5a', '#1f3328'], fond: '#0d0a14' },
   biblio:  { herbe: ['#5dae3e', '#54a238', '#6cbd48', '#3f8a2e'], falaise: ['#8a5530', '#6e4024', '#a86a3c', '#4a2a16'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2a1a10' },
+  ciel:    { herbe: ['#62b444', '#58a83d', '#72c450', '#43902f'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#8fd0f0' },
   marais:  { rustique: true, herbe: ['#6f8048', '#64743f', '#7d8f55', '#55653a'], falaise: ['#7a6a4a', '#5a4a32', '#9a8a62', '#3f3322'], arbres: ['#3f5a32', '#4f6d3a', '#6a8a4a', '#2a3f22'], fond: '#2a3f22' },
 };
 const HEAL_NOM = { fontaine: 'Fontaine de soin', source: 'Source de soin', autel: 'Autel de soin', feu: 'Feu de camp (soigne)' };
@@ -976,6 +991,7 @@ function wagonSprite(hz) {   // wagonnet de mine rempli de minerai brillant
   P.disc(4, 17, 2, '#2a2436'); P.disc(w - 3, 17, 2, '#2a2436');
   return (wagonCache[hz] = P.outline().canvas());
 }
+const hashI = i => { let h = Math.imul(i ^ 0x5bd1e995, 2654435761) >>> 0; return (h % 10007) / 10007; };
 let ballonCache = null;
 function ballonSprite(rot) {   // grand ballon rouge avec une bande blanche qui tourne
   const k = ((Math.round(rot * 4) % 8) + 8) % 8;
@@ -1127,6 +1143,16 @@ function buildMapLayers(map) {
       const cl = cells(x, y, 14, 41);
       c = cl.d2 - cl.d1 < 0.9 ? '#a8d0e8' : Math.sin((x + y * 0.4) * 0.25 + noise(x / 20, y / 20) * 6) > 0.92 ? '#ffffff' : h < 0.5 ? '#d4ecf8' : '#cde8f6';
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (V(x + dx, y + dy) !== 'i') c = '#9fc6e0';
+    } else if (t === 'v' && map.theme === 'ciel') {
+      // ----- le ciel : bleu, nuages ; sous les îles de la terre, sous les navires la coque -----
+      let sous = null, k = 1;
+      for (; k <= 16; k++) { const u = V(x, y - k); if (u !== 'v') { sous = u; break; } }
+      if (sous && (sous === 'x' || sous === 'e' || sous === 'w') && k <= 12) c = k <= 2 ? OUT : (x + Math.floor(y / 3)) % 9 === 0 ? '#4a2a16' : k % 4 === 0 ? '#5a361e' : '#7a4b25';
+      else if (sous && (sous === '.' || sous === 'h') && k <= 14 - Math.abs(Math.sin(x * 0.3)) * 6) c = k <= 1 ? OUT : hsh(x, y, 81) < 0.3 ? '#6a4a2a' : k < 5 ? '#8a5a32' : '#9a7a5a';
+      else {
+        const nu = noise(x / 26, y / 18, 77) + noise(x / 9, y / 9, 78) * 0.3;
+        c = nu > 0.92 ? '#ffffff' : nu > 0.84 ? '#e8f4fc' : nu > 0.78 ? '#c8e6f8' : hsh(x >> 1, y >> 1, 79) < y / AH * 0.8 ? '#82c8ee' : '#8fd0f0';
+      }
     } else if (t === 'v') {
       const up = V(x, y - 1) !== 'v', up2 = V(x, y - 3) !== 'v';
       c = up ? OUT : up2 ? '#3a3046' : V(x, y - 6) !== 'v' ? '#241c30' : '#0f0b16';
@@ -1180,6 +1206,12 @@ function buildMapLayers(map) {
         let d = 9;
         for (let k = 1; k <= 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k]]) if (V(x + dx, y + dy) !== 't') d = Math.min(d, k);
         c = d === 1 ? '#7a2350' : d === 2 ? '#e3b341' : ((x + y) % 6 === 0 || (x - y + 600) % 6 === 0) ? '#c8508a' : '#a8336a';
+      }
+      else if (t === 'e') {   // pont du navire : longues planches, clous
+        const row = Math.floor(y / 4), seg = Math.floor((x + row * 11) / 24);
+        c = y % 4 === 3 ? '#7a4b25' : (row + seg) % 2 ? '#c08a52' : '#b07a45';
+        if ((x + row * 11) % 24 === 0) c = '#7a4b25';
+        if ((x + row * 11) % 24 === 2 && y % 4 === 1) c = '#5a5664';
       }
       else if (t === 'o' || t === 'R' || (t === 'r' && map.theme === 'caverne')) {   // sol de la grotte : pierre sombre et cailloux
         const cl = cells(x, y, 9, 101);
@@ -1241,7 +1273,7 @@ function buildMapLayers(map) {
         if (q <= 3) c = q === 1 ? '#3e3a46' : (x + y) % 6 === 0 ? '#5a5664' : '#77737f';
       }
       // plage autour de l'eau
-      if (!'B=vLpfwtalyjrR'.includes(t)) {
+      if (!'B=vLpfwtalyjrRe'.includes(t)) {
         let nw = 9;
         for (let k = 1; k <= 3 && nw > 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k], [k, k], [-k, -k], [k, -k], [-k, k]]) if (isW(V(x + dx, y + dy))) { nw = Math.min(nw, k); break; }
         if (nw <= 2) c = H ? '#d8e6f2' : map.theme === 'donjon' || map.theme === 'caverne' ? '#5a5a6a' : map.theme === 'marais' ? '#8a7a4a' : '#c8b27c';
@@ -2306,7 +2338,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
   drawChutes(ctx, sq, dtW, heroScale);
   // projectiles
   for (const [x, y, c, a] of world.b) {
-    if (c === 'mage') {
+    if (c === 'boulet') {   // boulet de canon
+      ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(x, y + 22, 12, 4, 0, 0, 7); ctx.fill();
+      sq(x - 9, y - 9, 6, OUT); sq(x - 7, y - 7, 5, '#2a2833'); sq(x - 5, y - 5, 2, '#6a6878');
+      sq(x - Math.cos(a) * 20, y - Math.sin(a) * 20, 3, '#c8c8d0aa'); sq(x - Math.cos(a) * 34, y - Math.sin(a) * 34, 2, '#e8e8eeaa');
+    } else if (c === 'mage') {
       sq(x - 6, y - 6, 4, '#ff4a1a'); sq(x - 3, y - 3, 2, '#ffe27a');
       sq(x - Math.cos(a) * 14, y - Math.sin(a) * 14, 2, '#ff8a1e'); sq(x - Math.cos(a) * 24, y - Math.sin(a) * 24, 1, '#ffb347');
     } else if (c === 'druide') {   // graine magique et feuilles
@@ -2326,6 +2362,16 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       sq(x - 9, y - 9, 6, '#3a9a44'); sq(x - 6, y - 6, 4, '#5ac85a'); sq(x - 6, y - 6, 1, '#d0ffc0');
     } else {
       for (let i = 0; i < 7; i++) sq(x - Math.cos(a) * i * 3.2, y - Math.sin(a) * i * 3.2, 1, i === 0 ? '#e6ebf2' : i > 5 ? '#e04a3a' : '#7a4b25');
+    }
+  }
+  // coup de vent : des traits blancs qui filent
+  if (world.vt != null) {
+    const ca = Math.cos(world.vt), sa = Math.sin(world.vt), ox = md ? md.x : map.W / 2, oy = md ? md.y : map.H / 2, span = mine ? 700 : map.W;
+    ctx.fillStyle = '#ffffffcc';
+    for (let i = 0; i < (mine ? 26 : 60); i++) {
+      const u = ((now * 1.6 + hashI(i) ) % 1) * 2 - 1, v = hashI(i + 99) * 2 - 1;
+      const x = ox + (ca * u - sa * v) * span, y = oy + (sa * u + ca * v) * span * 0.7;
+      for (let k = 0; k < 6; k++) sq(x - ca * k * 6, y - sa * k * 6, 1, '#ffffffbb');
     }
   }
   // wagonnets de la grotte

@@ -3,6 +3,7 @@
 //
 // Tuiles (un caractère chacune) :
 //   sol     .  herbe   h hautes herbes (on s'y cache)   s sable   n neige   d chemin   p pavés   f dalles   w plancher   t tapis   B pont
+//   ciel    e  pont de navire (le vide autour : v, on tire par-dessus)
 //   caverne o  sol de la grotte   R  rails des wagonnets
 //   école   a  asphalte de la cour   l  linoléum   y  plancher du gymnase   r  trampoline (te propulse)
 //   lent    m  boue / sables mouvants   =  gué (eau peu profonde)   j  Jell-O renversé (colle aux pieds)
@@ -172,7 +173,7 @@ function fin(A, id, nom, theme, desc) {
   return {
     id, nom, theme, desc, T, cols: COLS, rows: ROWS, W: COLS * T, H: ROWS * T,
     tiles: A.g.map(r => r.join('')), objs: A.objs, bushes: A.bushes, chests: A.chests, spots: A.spots, heal: A.heal,
-    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}), ...(A.rails ? { rails: A.rails } : {}), ...(A.fantome ? { fantome: A.fantome } : {}),
+    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}), ...(A.rails ? { rails: A.rails } : {}), ...(A.fantome ? { fantome: A.fantome } : {}), ...(A.vent ? { vent: A.vent } : {}),
   };
 }
 
@@ -526,5 +527,46 @@ function bibliotheque() {
   return fin(A, 'bibliotheque', 'Bibliothèque Magique', 'biblio', 'Allées de rayons, livres géants qui transportent, fantôme qui fait « Chut ! » et livres volants');
 }
 
-const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne, bibliotheque].map(f => f());
+// ---------- Bateaux volants ----------
+// Deux navires pirates dans les nuages, reliés par des passerelles et des îles flottantes.
+// Des canons tirent des boulets (on attaque à côté d'un canon) et des coups de vent poussent tout le monde.
+function ciel() {
+  const A = atelier('ciel', 9191, 'v');
+  // un navire : pont en planches, bastingage tout autour, pointe à l'avant
+  const navire = (x0, y0, L, Hh, versDroite) => {
+    for (let j = 0; j < Hh; j++) for (let i = 0; i < L; i++) {
+      const u = versDroite ? i / L : 1 - i / L, demi = (Hh / 2) * (u > 0.75 ? Math.max(0.15, (1 - u) / 0.25) : 1), dy = Math.abs(j + 0.5 - Hh / 2);
+      if (dy < demi) A.set(x0 + i, y0 + j, 'e');
+    }
+    for (let j = y0 - 1; j <= y0 + Hh; j++) for (let i = x0 - 1; i <= x0 + L; i++) {
+      if (A.get(i, j) !== 'v') continue;
+      let n = false; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (A.get(i + di, j + dj) === 'e') n = true;
+      if (n) A.set(i, j, 'x');
+    }
+  };
+  navire(3, 2, 28, 10, true);
+  navire(21, 24, 28, 10, false);
+  // îles flottantes
+  for (const [x, y, rx, ry] of [[9, 20, 4.5, 3], [26, 17.5, 4, 2.6], [43, 14, 4.5, 3]]) { A.blob(x, y, rx, ry, '.', 0.3, 'v'); }
+  // passerelles (on enlève le bastingage où elles arrivent)
+  for (const pts of [[[9, 10], [9, 20]], [[9, 20], [26, 17.5]], [[26, 17.5], [43, 14]], [[43, 14], [43, 26]], [[26, 11], [26, 17.5]], [[26, 17.5], [26, 26]]]) A.path(pts, 2, 'e', 'vx');
+  // cabines du capitaine
+  A.house(6, 4, 6, 5, 'x', 'w', ['e'], false); A.chest(7, 5);
+  A.house(40, 27, 6, 5, 'x', 'w', ['w'], false); A.chest(44, 30);
+  // mâts, canons (ils tirent vers l'autre navire), tonneaux
+  A.obj('mat', 18, 6.6, 0.8, 0.8); A.obj('mat', 32, 28.6, 0.8, 0.8);
+  for (const x of [14, 22]) A.obj('canon', x, 10, 1, 0.8);
+  for (const x of [27, 35]) A.obj('canon', x, 24.4, 1, 0.8);
+  A.objs.filter(o => o.kind === 'canon').forEach(o => { o.dir = o.y < 15 * T ? Math.PI / 2 : -Math.PI / 2; });
+  A.setHeal(26, 17.6, 'source');
+  A.scatter('oak', 3, '.', 1, 0.8, 1);
+  A.scatterBushes(4, '.');
+  A.scatterBarrels(4, 'e');
+  for (const [x, y] of [[28, 4], [24, 31], [9, 20], [43, 14]]) A.chest(x, y);
+  for (const [x, y] of [[20, 4], [30, 29], [10, 21], [44, 15], [26, 15]]) A.spot(x, y);
+  A.vent = true;
+  return fin(A, 'ciel', 'Bateaux Volants', 'ciel', 'Deux navires pirates dans les nuages : canons, passerelles, îles flottantes et coups de vent');
+}
+
+const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne, bibliotheque, ciel].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };
