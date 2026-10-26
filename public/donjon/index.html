@@ -69,6 +69,10 @@ body.editing .board { cursor: crosshair; }
 .hl.atk { border-radius: 50%; box-shadow: inset 0 0 0 3px var(--bad); }
 .hl.near { border-radius: 50%; box-shadow: inset 0 0 0 3px var(--gold); }
 .hl.wall { background: repeating-linear-gradient(45deg, rgba(231,89,77,.45) 0 6px, rgba(231,89,77,.15) 6px 12px); }
+.hl.confirme { display: grid; place-items: center; z-index: 3; }
+.hl.confirme b { width: 70%; height: 70%; border-radius: 50%; background: #2e9e5b; color: #fff; display: grid; place-items: center; font-size: calc(var(--cell)*.42); font-weight: 900;
+  border: 3px solid #fff8e8; box-shadow: 0 3px 10px rgba(0,0,0,.55); animation: pulse .8s ease-in-out infinite alternate; }
+.hl.mj.confirme b { background: #c8473a; }
 .hl.water { background: repeating-linear-gradient(-45deg, rgba(63,144,221,.5) 0 6px, rgba(63,144,221,.2) 6px 12px); }
 @keyframes pulse { from { opacity: .55; } to { opacity: 1; } }
 
@@ -781,7 +785,7 @@ const HALLOWEEN = {
   "Clé de la crypte": "Ouvre la serrure de la porte scellée du caveau.",
   "Page du journal": "Le mot de passe du docteur Blackwood est écrit dessus."
  },
- "fin": "Le comte Vladislav tombe en poussière! Max court rejoindre son petit frère Léo dans le jardin.\n\nLes premiers rayons du soleil se lèvent sur la maison Blackwood. Le vieux jardinier fantôme sourit, puis disparaît doucement dans la lumière.\n\nGrâce à vous, l'Halloween est sauvée!",
+ "fin": "Le comte Vladislav tombe en poussière! Max court rejoindre son petit frère Léo dans le jardin.\n\nLes premiers rayons du soleil se lèvent sur la maison Blackwood. La vieille jardinière fantôme sourit, puis disparaît doucement dans la lumière.\n\nGrâce à vous, l'Halloween est sauvée!",
  "chapitres": [
   {
    "nom": "Le jardin hanté",
@@ -850,14 +854,14 @@ const HALLOWEEN = {
      "look": "enfant",
      "x": 6,
      "y": 12,
-     "dialogue": "S'il vous plaît, aidez-moi! Mon grand frère Max est entré dans la maison Blackwood pour un défi.\n\nIl n'est jamais ressorti… Et tout à l'heure, la cloche de la maison a sonné treize coups!\n\nLes grands disent qu'un comte très ancien dort sous la maison : le comte Vladislav. Un vampire!\n\nLa porte de la maison est fermée à clé. Le vieux jardinier saurait quoi faire… mais il est mort depuis longtemps. On dit que son fantôme se promène encore près de la fontaine."
+     "dialogue": "S'il vous plaît, aidez-moi! Mon grand frère Max est entré dans la maison Blackwood pour un défi.\n\nIl n'est jamais ressorti… Et tout à l'heure, la cloche de la maison a sonné treize coups!\n\nLes grands disent qu'un comte très ancien dort sous la maison : le comte Vladislav. Un vampire!\n\nLa porte de la maison est fermée à clé. La vieille jardinière saurait quoi faire… mais elle est morte depuis longtemps. On dit que son fantôme se promène encore près de la fontaine."
     },
     {
-     "nom": "Le jardinier fantôme",
+     "nom": "La jardinière fantôme",
      "look": "fantome",
      "x": 10,
      "y": 6,
-     "dialogue": "Ouuuh… N'ayez pas peur, je ne suis qu'un vieux jardinier fantôme.\n\nUn loup-garou rôde dans mon jardin chaque nuit de pleine lune. Il a volé la clé de la maison et la cache dans sa tanière, parmi les statues, en bas à droite.\n\nÉcoutez bien : ce qui dort sous la maison craint ce qui pousse dans mon potager.\n\nCreusez dans la platebande de gauche, au milieu, juste au-dessus de l'allée. Vous en aurez besoin plus tard!"
+     "dialogue": "Ouuuh… N'ayez pas peur, je ne suis qu'une vieille jardinière fantôme.\n\nUn loup-garou rôde dans mon jardin chaque nuit de pleine lune. Il a volé la clé de la maison et la cache dans sa tanière, parmi les statues, en bas à droite.\n\nÉcoutez bien : ce qui dort sous la maison craint ce qui pousse dans mon potager.\n\nCreusez dans la platebande de gauche, au milieu, juste au-dessus de l'allée. Vous en aurez besoin plus tard!"
     }
    ],
    "secrets": [
@@ -1920,9 +1924,11 @@ function renderHL() {
   } else if (mjReach) {
     for (const n of mjReach.values()) cell(n.x, n.y, "mj");
     if (mjSel) { cell(mjSel.x, mjSel.y, "tgt"); for (const v of vivants()) if (dist(v, mjSel) <= 1) cell(v.x, v.y, "atk"); }
+    if (mjSel && mjAttente) out.push(`<div class="hl mj confirme" style="transform:translate(${mjAttente.x * CELL}px,${mjAttente.y * CELL}px)"><b>✓</b></div>`);
   } else if (h && !S.busy && h.actions > 0 && h.pv > 0 && !S.fini) {
     reachCache = atteignables(h, st(h).dep, h);
     for (const n of reachCache.values()) cell(n.x, n.y, "reach");
+    if (S.attente && reachCache.has(key(S.attente.x, S.attente.y))) out.push(`<div class="hl confirme" style="transform:translate(${S.attente.x * CELL}px,${S.attente.y * CELL}px)"><b>✓</b></div>`);
     for (const e of ennemisAPortee(h)) cell(e.x, e.y, "atk");
     for (const o of S.objets) if (!o.vide && dist(h, o) <= 1) cell(o.x, o.y, "near");
     for (const p of S.pnj) if (dist(h, p) <= 1) cell(p.x, p.y, "near");
@@ -2886,7 +2892,7 @@ function majSouffleur() {
       else if (proche) aDire += ` « ${proche.nom} est à ${dist(h, proche)} cases. »`;
       if (h.pv === 1) aDire += S.inv.vie ? " « Il te reste 1 PV : pense à la potion de vie! »" : " « Prudence, il te reste 1 PV! »";
     } else aDire = `« Encore ${n} ${a}, ${h.nom}! »`;
-    faire = "L'élève touche une case verte pour se déplacer, ou touche un monstre, un objet ou un mur pour agir. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
+    faire = "L'élève touche une case verte, puis le ✓ pour confirmer son déplacement, ou touche un monstre, un objet ou un mur pour agir. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
     const cible = ennemisAPortee(h).find(e => allieCombo(h, e));
     if (cible && n > 0) faire += ` 🤝 Combo possible sur ${cible.nom} : un coéquipier le touche déjà (+1 dégât).`;
     else if (!S.entraide) faire += " 🤝 Si une réponse est ratée, un coéquipier peut venir aider (une fois par manche).";
@@ -2903,7 +2909,7 @@ function majSouffleur() {
     else if (vivantsE.every(e => e.bouge)) { aDire = "« Les monstres ont joué. Héros, préparez-vous! »"; faire = `Touche « Fin du tour du MJ » pour lancer la manche ${S.round + 1}.`; }
     else {
       aDire = boss ? (S.carte.repliqueBoss ? guillemets(S.carte.repliqueBoss) : `« ${boss.nom} chancelle! Encore un effort, héros! »`) : sfLigne;
-      faire = "1. Touche « Faire jouer les ennemis », ou touche un monstre puis une case rouge pour le déplacer. 2. Un élève attaqué fait une division pour se défendre. 3. Touche « Fin du tour du MJ ».";
+      faire = "1. Touche « Faire jouer les ennemis », ou touche un monstre, une case rouge, puis le ✓ pour le déplacer. 2. Un élève attaqué fait une division pour se défendre. 3. Touche « Fin du tour du MJ ».";
     }
   }
   if (PERIODE.fin) faire = "⏰ Temps écoulé : terminez la manche. L'écran « À suivre… » apparaîtra à la fin du tour du MJ. " + faire;
@@ -3321,6 +3327,7 @@ async function executerPouvoir(h, p, cible) {
 
 async function finTourHeros() {
   if (S.phase !== "heros" || S.fini) return;
+  if (S.attente) { S.attente = null; drawPath(null); }
   const h = heros(); h.joue = true; h.actions = 0;
   const next = S.heroes.findIndex(x => !x.joue && x.pv > 0);
   if (next >= 0) { S.actif = next; toast(`Au tour ${de(heros().nom)}!`); render(); return; }
@@ -3334,7 +3341,7 @@ async function finTourHeros() {
 }
 function finTourMJ() {
   if (S.busy || S.fini) return;
-  S.round++; S.phase = "heros"; mjReach = null; mjSel = null; S.entraide = false;
+  S.round++; S.phase = "heros"; mjReach = null; mjSel = null; mjAttente = null; S.attente = null; S.entraide = false;
   for (const h of S.heroes) { h.joue = h.pv <= 0; h.actions = h.pv > 0 ? S.nbActions : 0; }
   S.actif = S.heroes.findIndex(h => h.pv > 0);
   log(`— Manche ${S.round} —`);
@@ -3591,18 +3598,22 @@ function menu(x, y, titre, texte, boutons) {
 }
 
 const NOMPORTE = { cle: "Porte à clé", levier: "Grille à levier", sceau: "Porte scellée" };
-let mjSel = null;
+let mjSel = null, mjAttente = null;
 async function deplacerMonstre(e, x, y) {
   const pts = chemin(mjReach, e, x, y); if (!pts || pts.length < 2) return;
   const [px, py] = pts[pts.length - 2]; e.face = [x - px, y - py]; e.bouge = true;
-  mjSel = null; mjReach = null; S.busy = true; render();
+  mjSel = null; mjReach = null; drawPath(null); S.busy = true; render();
   await marcher(e, pts);
   S.busy = false; render(); valide(e);
   if (vivants().some(v => dist(v, e) <= 1)) setTimeout(() => clicMJ(e.x, e.y), 350);
 }
 function clicMJ(x, y) {
-  if (mjSel && mjReach && mjReach.has(key(x, y)) && !enemyAt(x, y) && !heroAt(x, y) && !(mjSel.x === x && mjSel.y === y)) return deplacerMonstre(mjSel, x, y);
+  if (mjSel && mjReach && mjReach.has(key(x, y)) && !enemyAt(x, y) && !heroAt(x, y) && !(mjSel.x === x && mjSel.y === y)) {
+    if (mjAttente && mjAttente.x === x && mjAttente.y === y) { mjAttente = null; return deplacerMonstre(mjSel, x, y); }
+    mjAttente = { x, y }; fermerMenu(); renderHL(); drawPath(chemin(mjReach, mjSel, x, y), "#ff9b8f"); return;
+  }
   const deja = mjSel;
+  mjAttente = null; drawPath(null);
   if (mjSel) { mjSel = null; mjReach = null; renderHL(); }
   const e = enemyAt(x, y), hh = heroAt(x, y), p = porte(x, y), o = objAt(x, y), pn = pnjAt(x, y);
   if (pn) { menu(x, y, esc(pn.nom), "", [{ txt: "Faire parler", fn: () => parler(pn) }]); return; }
@@ -3611,7 +3622,7 @@ function clicMJ(x, y) {
     if (!e.bouge && e.pv > 0) {
       mjSel = e; mjReach = atteignables(e, E[e.type].pas, e); renderHL();
       // 1re touche : on choisit le monstre (cases rouges). 2e touche sur lui : ses options.
-      if (!adj.length && deja !== e) { fermerMenu(); bruit("grogne"); toast(`${e.nom} : touche une case rouge pour le déplacer (touche-le encore pour ses options).`, 3500); return; }
+      if (!adj.length && deja !== e) { fermerMenu(); bruit("grogne"); toast(`${e.nom} : touche une case rouge, puis le ✓ pour confirmer (touche-le encore pour ses options).`, 3500); return; }
     }
     menu(x, y, e.nom, `${e.pv} PV sur ${e.pvMax} · vitesse ${E[e.type].pas}${e.poison ? " · empoisonné" : ""}${e.bouge ? " · a bougé" : " · touche une case rouge pour le déplacer"}`, [
       ...adj.map(v => ({ txt: `Attaquer ${esc(v.nom)}`, op: "÷", fn: async () => { mjSel = null; mjReach = null; S.busy = true; render(); await defendre(v, e, e.deg); e.bouge = true; S.busy = false; verifierFin(); render(); valide(e); } })),
@@ -3652,6 +3663,8 @@ function clicCase(x, y) {
     return;
   }
   if (S.busy) return;
+  const att = S.attente;
+  if (att) { S.attente = null; drawPath(null); renderHL(); }
   const pn = pnjAt(x, y);
   if (pn) {
     const pres = dist(h, pn) <= 1;
@@ -3661,7 +3674,9 @@ function clicCase(x, y) {
   if (reachCache && reachCache.has(key(x, y))) {
     const brille = S.secrets.some(sc => sc.x === x && sc.y === y && !sc.trouve && sc.visible && sc.action !== "entrer");
     if (brille && dist(h, { x, y }) <= 1) return menuExplorer(h, x, y, [{ txt: "Aller ici", fn: () => deplacer(h, x, y) }]);
-    return deplacer(h, x, y);
+    // 1re touche : on montre le chemin et un ✓. Toucher le ✓ confirme le déplacement.
+    if (att && att.x === x && att.y === y) return deplacer(h, x, y);
+    S.attente = { x, y }; renderHL(); drawPath(chemin(reachCache, h, x, y)); bruit("pas", { sol: solIci(x, y) }); return;
   }
   if (hh === h) return menuExplorer(h, x, y);
   if (hh && hh !== h) {
@@ -3726,6 +3741,7 @@ board.addEventListener("pointermove", ev => {
   const c = cellAt(ev);
   if (drag && drag.edit) { peindre(c.x, c.y, false); return; }
   if (!drag) {
+    if (S.attente || mjAttente) return;
     if (reachCache && reachCache.has(key(c.x, c.y))) drawPath(chemin(reachCache, heros(), c.x, c.y)); else drawPath(null);
     return;
   }
