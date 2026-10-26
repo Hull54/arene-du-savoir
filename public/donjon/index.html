@@ -619,6 +619,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
       <button class="btn" id="btn-save" type="button">Sauvegarder</button>
       <button class="btn" id="btn-monde" type="button">Monde</button>
       <button class="btn" id="btn-son" type="button" aria-label="Couper le son" title="Son"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path class="ondes" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="x" d="M16 9l6 6M22 9l-6 6"/></svg></button>
+      <button class="btn" id="btn-plein" type="button" title="Plein écran" aria-label="Plein écran">⛶</button>
       <button class="btn blue" id="btn-reg" type="button">Réglages</button>
     </div>
   </header>
@@ -722,7 +723,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 </div>
 <div class="monde" id="monde" hidden>
   <div class="monde-top"><div class="brand">Le Royaume d'Hull<small>Classe et Donjon · touche un lieu pour partir à l'aventure</small></div><span class="spacer"></span>
-    <div class="tools"><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
+    <div class="tools"><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
   <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-pins" id="m-pins"></div></div></div>
   <input type="file" id="m-file" accept="image/*,application/pdf" hidden>
 </div>
@@ -4523,6 +4524,13 @@ document.getElementById("m-file").addEventListener("change", async e => {
   let f = e.target.files[0]; e.target.value = "";
   if (!f) return;
   if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) { try { f = await pdfEnImage(f); } catch { toast("Ce PDF n'a pas pu être lu."); return; } }
+  // Un GIF ou un WebP peut être animé : on le garde tel quel (le redessiner figerait l'animation)
+  if (/^image\/(gif|webp)$/.test(f.type) || /\.(gif|webp)$/i.test(f.name)) {
+    if (f.size > 15 * 1024 * 1024) { toast("Cette image animée est trop lourde (plus de 15 Mo). Essaie une version plus petite."); return; }
+    toast("Image animée en cours d'envoi…");
+    MONDE.image = await blobDataUrl(f);
+    await Stock.sauverMonde(MONDE); afficherMonde(); return;
+  }
   const url = URL.createObjectURL(f), im = new Image();
   im.onload = async () => {
     const k = Math.min(1, 2400 / Math.max(im.width, im.height)), cv = document.createElement("canvas");
@@ -4534,6 +4542,23 @@ document.getElementById("m-file").addEventListener("change", async e => {
   im.onerror = () => toast("Cette image n'a pas pu être lue.");
   im.src = url;
 });
+// ---------- plein écran ----------
+function pleinEcran() {
+  const d = document, el = d.documentElement;
+  const actif = d.fullscreenElement || d.webkitFullscreenElement;
+  try {
+    if (actif) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+    else {
+      const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!req || !(d.fullscreenEnabled ?? d.webkitFullscreenEnabled ?? true)) throw 0;
+      Promise.resolve(req.call(el)).catch(() => toast("Plein écran refusé ici. Utilise le bouton d'agrandissement de Claude, ou la touche F11 sur l'ordinateur du TBI.", 6000));
+    }
+  } catch { toast("Plein écran refusé ici. Utilise le bouton d'agrandissement de Claude, ou la touche F11 sur l'ordinateur du TBI.", 6000); }
+}
+function majPlein() { const on = !!(document.fullscreenElement || document.webkitFullscreenElement); for (const b of document.querySelectorAll("#btn-plein, #m-plein")) { b.title = on ? "Quitter le plein écran" : "Plein écran"; b.setAttribute("aria-pressed", on); } }
+document.getElementById("btn-plein").onclick = pleinEcran;
+document.getElementById("m-plein").onclick = pleinEcran;
+document.addEventListener("fullscreenchange", majPlein); document.addEventListener("webkitfullscreenchange", majPlein);
 new ResizeObserver(() => { if (!document.getElementById("monde").hidden) ajusterMonde(); }).observe(document.getElementById("m-wrap"));
 
 // ---------- taille du plateau ----------
