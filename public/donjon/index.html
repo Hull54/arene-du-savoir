@@ -1566,6 +1566,7 @@ function photoPartie() {
   };
 }
 function restaurerPartie(p) {
+  p = clone(p); // une sauvegarde lue du compte est figée : on travaille sur une copie
   construire(QUETE.chapitres[p.chapitre], "heros", p.chapitre);
   Object.assign(S, { round: p.round, actif: p.actif, debut: p.debut, nbActions: p.nbActions || S.nbActions, niveau: p.niveau || S.niveau, inv: p.inv, log: p.log || [], groupeDebut: p.groupeDebut });
   S.grid = p.grid.map(r => r.split(""));
@@ -4114,7 +4115,7 @@ const Stock = {
   },
   async quetes() {
     const list = [];
-    if (this.db) { try { (await this.db.collection("quetes").get()).docs.forEach(d => list.push(d.data())); } catch {} }
+    if (this.db) { try { (await this.db.collection("quetes").get()).docs.forEach(d => list.push(clone(d.data()))); } catch {} }
     const locales = await IDB.all("quetes");
     // Cartes de la version précédente : chacune devient une quête d'un chapitre
     const vieilles = (await IDB.all("cartes")).map(c => ({ id: c.id, nom: c.nom, chapitres: [c] }));
@@ -4148,7 +4149,7 @@ const Stock = {
   },
   async parties(qid) {
     const list = [];
-    if (this.db) { try { (await this.db.collection("parties").where("quete", "==", qid).get()).docs.forEach(d => list.push(d.data())); } catch {} }
+    if (this.db) { try { (await this.db.collection("parties").where("quete", "==", qid).get()).docs.forEach(d => list.push(clone(d.data()))); } catch {} }
     for (const p of await IDB.all("parties")) if (p.quete === qid && !list.some(x => x.id === p.id)) list.push(p);
     // Ancienne sauvegarde sans code d'équipe
     for (const p of list) if (!p.equipe) p.equipe = "CLASSE";
@@ -4156,7 +4157,7 @@ const Stock = {
   },
   // Fiches des héros : une par code d'équipe, valable pour toutes les quêtes
   async equipe(code) {
-    if (this.db) { try { const d = await this.db.doc("equipes/" + code).get(); if (d.exists) return d.data(); } catch {} }
+    if (this.db) { try { const d = await this.db.doc("equipes/" + code).get(); if (d.exists) return clone(d.data()); } catch {} }
     return (await IDB.all("equipes")).find(x => x.id === code) || null;
   },
   async sauverEquipe(f) {
@@ -4165,7 +4166,7 @@ const Stock = {
     return !!(await IDB.put("equipes", d));
   },
   async chargerMonde() {
-    if (this.db) { try { const d = await this.db.doc("reglages/monde").get(); if (d.exists) return d.data(); } catch {} }
+    if (this.db) { try { const d = await this.db.doc("reglages/monde").get(); if (d.exists) return clone(d.data()); } catch {} }
     return (await IDB.all("reglages")).find(x => x.id === "monde") || null;
   },
   async sauverMonde(m) {
