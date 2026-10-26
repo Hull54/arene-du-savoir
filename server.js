@@ -116,7 +116,7 @@ const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
   { nom: 'Verts', color: '#3fbf5a' }, { nom: 'Jaunes', color: '#f2c94c' },
 ];
-const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement', controle: 'Contrôle', dictee: 'Dictée' };
+const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement', controle: 'Contrôle' };
 const TEAM_MODES = new Set(['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie']);
 const coop = () => mode === 'boss' || mode === 'survie';   // toute la classe ensemble : pas de dégâts entre joueurs
 // noms d'équipes propres à certains modes
@@ -282,7 +282,7 @@ function setCarte(c) {
   vent = c.vent ? { t: VENT.tous, actif: 0, a: 0 } : null;
   canonCd = new Map();
   fantome = c.fantome ? { s: 0, x: c.fantome[0].x, y: c.fantome[0].y, a: 0, chut: 0 } : null;
-  wagons = c.rails ? [0, 0.5].map(f => ({ s: f * railLong(c.rails), x: c.rails[0].x, y: c.rails[0].y, a: 0 })) : [];
+  wagons = c.rails ? (c.rails.length >= 4 && railLong(c.rails) > 3000 ? [0, 1 / 3, 2 / 3] : [0, 0.5]).map(f => ({ s: f * railLong(c.rails), x: c.rails[0].x, y: c.rails[0].y, a: 0 })) : [];
   ballons = (c.ballons || []).map((b, i) => ({ x: b.x, y: b.y, vx: BALLON.v * (i % 2 ? -0.8 : 0.8), vy: BALLON.v * 0.6, rot: 0 }));
   items = []; itemTimer = 0;
   projectiles = []; fx = []; puddles = []; traps = []; smokes = []; ames = [];

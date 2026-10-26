@@ -55,7 +55,6 @@ Object.assign(REGLES, {
   zombie: { ico: '🧟', titre: 'Contagion', but: 'Humains : survivez ! Zombies : attrapez tout le monde !', pts: ['Un zombie qui te touche te pose une question : bonne réponse = tu résistes 3 secondes.', 'Mauvaise réponse : tu deviens un zombie à ton tour.', 'Les coups des humains repoussent et étourdissent les zombies.', 'Survivre rapporte des points. Les zombies vont un peu plus vite.'] },
   entrainement: { ico: '🎯', titre: 'Entraînement', but: 'Entraîne-toi contre les robots !', pts: ['Les élèves ne peuvent pas se blesser entre eux : seulement les robots.', 'Les robots frappent moins fort.', 'Les questions reviennent plus souvent sur les notions que tu rates.'] },
   controle: { ico: '📝', titre: 'Contrôle', but: 'Réponds à toutes les questions, à ton rythme.', pts: ['Pas de combat : ton héros reste à sa place.', 'Tout le monde a les mêmes questions.', 'Prends ton temps et relis-toi : ton bilan arrive à la fin.'] },
-  dictee: { ico: '🎧', titre: 'Dictée', but: 'Écoute et écris chaque mot ou phrase.', pts: ['Le jeu lit à voix haute. Appuie sur 🔊 Réécouter autant que tu veux.', 'Attention aux accents et à la ponctuation !', 'Ton bilan arrive à la fin.'] },
 });
 // Modes en équipes : noms et scores affichés en haut de l'écran
 const MODES_EQUIPE = ['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie'];
@@ -711,12 +710,56 @@ function spriteFor(o, TH = THEMES.village) {
       P.rect(2, y + 8, w - 2, 1, '#8a5530');
     }
     P.rect(1, h + 19, w, 2, '#4a2a16');
-  } else if (kind === 'mat') {   // mât avec une grande voile blanche et un drapeau pirate
-    P = new Painter(44, 70); ax = 22 - w / 2; ay = 70 - h - 1;
-    P.rect(21, 4, 3, 66, '#7a4b25'); P.rect(21, 4, 1, 66, '#a86a3c');
-    P.rect(8, 14, 29, 2, '#5a361e'); P.rect(10, 40, 25, 2, '#5a361e');
-    for (let y = 16; y < 40; y++) { const b = Math.round(Math.sin((y - 16) / 24 * Math.PI) * 4); P.rect(9 - b, y, 27 + b * 2, 1, y % 6 === 0 ? '#e8e0d0' : '#f8f4ec'); }
-    P.rect(24, 0, 10, 6, '#1b1424'); P.px(28, 2, '#ffffff'); P.px(29, 2, '#ffffff'); P.px(28, 4, '#ffffff'); P.px(30, 4, '#ffffff');
+  } else if (kind === 'mat') {   // grand mât : vergues, grande voile gonflée (rayée ou noire), crâne, nid-de-pie
+    const noir = o.coul === 'noir', V1 = noir ? '#3a3846' : '#f8f4ec', V2 = noir ? '#2a2833' : '#c9433a', V3 = noir ? '#4a4858' : '#e8e0d0';
+    P = new Painter(84, 112); ax = 42 - w / 2; ay = 112 - h - 1;
+    P.rect(41, 10, 3, 102, '#7a4b25'); P.rect(41, 10, 1, 102, '#a86a3c');
+    P.rect(35, 5, 15, 7, '#5a361e'); P.rect(35, 5, 15, 1, '#8a5a32');                         // nid-de-pie
+    P.rect(6, 20, 73, 3, '#5a361e'); P.rect(10, 66, 65, 2, '#5a361e');
+    for (let y = 23; y < 66; y++) {
+      const b = Math.round(Math.sin((y - 23) / 43 * Math.PI) * 7);
+      for (let x = 8 - b; x < 77 + b; x++) P.px(x, y, noir ? (y % 8 === 0 ? V3 : V1) : (Math.floor((x - 8 + b) / 10) % 2 ? V2 : (y % 8 === 0 ? V3 : V1)));
+    }
+    if (o.crane) {   // tête de mort au milieu de la voile
+      const C = noir ? '#f4f0e6' : '#1b1424', F = noir ? V1 : '#f8f4ec', cx = 42, cy = 40;
+      P.rect(cx - 9, cy - 9, 19, 22, F); P.disc(cx, cy, 8, C); P.rect(cx - 5, cy + 6, 11, 5, C);
+      P.disc(cx - 3, cy, 2, F); P.disc(cx + 3, cy, 2, F); P.px(cx, cy + 4, F); for (const dx of [-3, 0, 3]) P.rect(cx + dx, cy + 8, 1, 3, F);
+      for (const k of [-1, 0, 1]) { line2(P, cx - 12, cy + 12 + k, cx + 12, cy + 19 + k, C); line2(P, cx + 12, cy + 12 + k, cx - 12, cy + 19 + k, C); }
+    }
+    P.rect(44, 0, 16, 9, noir ? '#1b1424' : '#c9433a'); P.px(51, 3, '#ffffff'); P.px(53, 3, '#ffffff'); P.px(51, 6, '#ffffff'); P.px(53, 6, '#ffffff');
+  } else if (kind === 'grandlivre') {   // livre géant debout : dos coloré, bandes dorées, titre
+    const hh = 40 + Math.floor(hashI(o.x * 7 + o.y) * 18), cols = ['#c9433a', '#3f6fb5', '#4f9a52', '#a05ad8', '#e07a2a', '#2a9a9a', '#d8507a'];
+    const C = cols[Math.floor(hashI(o.x * 13 + o.y * 3) * cols.length)];
+    P = new Painter(w + 2, h + hh); ax = 1; ay = hh;
+    P.rect(1, 2, w, h + hh - 3, C); P.rect(1, 2, 2, h + hh - 3, shade(C, 1.25)); P.rect(w - 1, 2, 2, h + hh - 3, shade(C, 0.7));
+    P.rect(1, 0, w, 3, '#f4ecd8'); P.rect(1, h + hh - 3, w, 2, '#f4ecd8');                    // pages en haut
+    for (const y of [8, hh - 4]) { P.rect(1, y, w, 2, '#e3b341'); P.rect(1, y + 2, w, 1, '#9a6a1e'); }
+    for (let y = 16; y < hh - 10; y += 4) P.rect(Math.floor(w / 2) - 2, y, 4, 2, '#f4ecd8');
+  } else if (kind === 'cube') {   // bloc de l'alphabet : une grosse lettre sur la face avant
+    const cols = { A: '#e0405a', B: '#3f8fd8', C: '#4fb85a', D: '#ffc83a', E: '#a05ad8', Z: '#ff8a3a' }, C = cols[o.lettre] || '#e0405a';
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 22;
+    P.rect(1, 2, w, 14, shade(C, 1.25)); P.rect(1, 16, w, h + 4, C); P.rect(1, 16, w, 1, shade(C, 0.75));
+    P.rect(3, 19, w - 4, h, '#f8f4ec');
+    lettrePix(P, o.lettre, Math.floor(w / 2) - 4, 20, 3, shade(C, 0.6));
+    P.rect(4, 5, w - 6, 8, shade(C, 1.4));
+  } else if (kind === 'globe') {   // globe terrestre géant sur son pied
+    P = new Painter(w + 4, h + 34); ax = 2; ay = 32; const cx = Math.floor((w + 4) / 2);
+    P.rect(cx - 8, h + 26, 16, 6, '#7a4b25'); P.rect(cx - 1, 26, 3, h + 2, '#5a361e');
+    P.disc(cx, 15, 13, '#3f8fd8');
+    for (const [x, y, r] of [[-5, -4, 5], [4, 2, 6], [-2, 7, 3], [6, -7, 3]]) P.disc(cx + x, 15 + y, r, '#4fb85a');
+    for (let k = 0; k < 40; k++) { const a = k / 40 * Math.PI * 2; P.px(cx + Math.round(Math.cos(a) * 15), 15 + Math.round(Math.sin(a) * 15), '#e3b341'); }
+    P.px(cx - 6, 8, '#bfe4ff'); P.px(cx - 5, 7, '#bfe4ff');
+  } else if (kind === 'telescope') {   // télescope de cuivre pointé vers les étoiles
+    P = new Painter(w + 20, h + 30); ax = 10; ay = 28;
+    line2(P, 14, h + 28, 18, 16, '#5a361e'); line2(P, 22, h + 28, 18, 16, '#5a361e'); line2(P, 18, h + 28, 18, 16, '#5a361e');
+    for (let k = 0; k < 22; k++) { const r = 2 + Math.floor(k / 7); P.rect(6 + k, 20 - k - r, 1, r * 2 + 1, k % 7 === 0 ? '#9a6a1e' : '#e3b341'); }
+    P.rect(28, 1, 3, 3, '#bfe4ff');
+  } else if (kind === 'barre') {   // gouvernail : roue à poignées sur son pied
+    P = new Painter(w + 8, h + 22); ax = 4; ay = 20; const cx = Math.floor((w + 8) / 2);
+    P.rect(cx - 2, 12, 4, h + 9, '#5a361e');
+    for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; line2(P, cx, 10, cx + Math.round(Math.cos(a) * 9), 10 + Math.round(Math.sin(a) * 9), '#8a5a32'); P.px(cx + Math.round(Math.cos(a) * 10), 10 + Math.round(Math.sin(a) * 10), '#c99a5c'); }
+    for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2; P.px(cx + Math.round(Math.cos(a) * 6), 10 + Math.round(Math.sin(a) * 6), '#a86a3c'); }
+    P.disc(cx, 10, 2, '#e3b341');
   } else if (kind === 'canon') {   // canon noir sur son affût, tourné vers l'autre navire
     const bas = o.dir > 0;
     P = new Painter(w + 6, h + 14); ax = 3; ay = 10;
@@ -878,6 +921,120 @@ function peindreEcole(g, map, tile, TS) {
     for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; P.px(c + Math.round(Math.cos(a) * (r - 1.5)), c + 1 + Math.round(Math.sin(a) * (r - 4.5)), '#9fd6ff'); }
     g.drawImage(P.outline().canvas(), i * TS, j * TS);
   }
+  for (const d of map.decos || []) if (d.kind === 'bus') g.drawImage(busSprite(d), Math.round(d.x / PX), Math.round(d.y / PX));
+}
+// autobus scolaire vu de haut (sans toit) : murs jaunes avec fenêtres, allée, bancs verts, porte avant et sortie de secours
+function busSprite(d) {
+  const T = 16, w = Math.round(d.w / PX), h = Math.round(d.h / PX), e = 6, P = new Painter(w, h);
+  const J = '#f2b82a', Jc = '#ffd86a', Jf = '#c98f1e', V = '#9fd6ff', N = '#1b1424';
+  P.rect(0, 0, w, h, J);
+  P.rect(e, e, w - 2 * e, h - 2 * e, '#4a4652');                                   // plancher
+  for (let x = e + 2; x < w - e; x += 3) P.rect(x, e, 1, h - 2 * e, '#55515e');       // caoutchouc strié
+  P.rect(e + 26, Math.round(h / 2) - 4, w - 2 * e - 28, 8, '#5d5868');                  // allée
+  for (let x = e + 28; x < w - e - 2; x += 4) P.rect(x, Math.round(h / 2) - 4, 2, 8, '#67626f');
+  // fenêtres le long des murs nord et sud
+  for (const y of [2, h - 4]) for (let x = 36; x < w - 10; x += 19) P.rect(x, y, 14, 2, V);
+  P.rect(0, 0, w, 1, Jc); P.rect(0, h - 1, w, 1, Jf);
+  P.rect(1, 6, 2, h - 12, V); P.rect(3, 6, 1, h - 12, '#d8f0ff');                    // pare-brise (avant, à gauche)
+  P.rect(0, 2, 2, 4, '#ffffff'); P.rect(0, h - 6, 2, 4, '#ffffff');                     // phares
+  // porte avant (nord) : marches
+  P.rect(Math.round(0.6 * T), 0, Math.round(1.4 * T), e, '#8a8794'); P.rect(Math.round(0.6 * T), 2, Math.round(1.4 * T), 1, '#a9a6b2');
+  P.rect(Math.round(0.6 * T) - 1, 0, 1, e, V); P.rect(Math.round(2 * T), 0, 1, e, V);
+  // sortie de secours (arrière) : cadre rouge
+  const y0 = Math.round(1.1 * T), y1 = Math.round(2.5 * T);
+  P.rect(w - e, y0, e, y1 - y0, '#5d5868'); P.rect(w - e, y0 - 1, e, 1, '#e0405a'); P.rect(w - e, y1, e, 1, '#e0405a');
+  // siège du chauffeur et volant
+  P.rect(Math.round(0.45 * T), Math.round(2.35 * T), 13, 13, '#6b4423'); P.rect(Math.round(0.45 * T) + 10, Math.round(2.35 * T), 3, 13, '#4a2e18');
+  P.disc(Math.round(0.45 * T) - 1, Math.round(2.75 * T), 3, N); P.disc(Math.round(0.45 * T) - 1, Math.round(2.75 * T), 1, '#4a4652');
+  // bancs verts, dossier à l'arrière de chaque banc
+  for (let x = 2.4; x < 8.5 - 1.2; x += 1.2) for (const y of [0.35, 3.6 - 0.35 - 0.7]) {
+    const sx = Math.round(x * T), sy = Math.round(y * T);
+    P.rect(sx, sy, 12, 11, '#3f8a52'); P.rect(sx + 1, sy + 1, 7, 9, '#4fa060'); P.rect(sx + 9, sy, 3, 11, '#2a5a36');
+  }
+  return P.outline().canvas();
+}
+// Bateaux volants : beaupré, trappes, drapeaux pirates (dessus)
+function peindreCiel(g, tg, map) {
+  // passerelles : cordes tendues de chaque côté, avec des poteaux
+  const t = (i, j) => (map.tiles[j] || '')[i];
+  for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) {
+    if (t(i, j) !== 'B') continue;
+    for (const [di, x] of [[-1, 0], [1, 15]]) if (t(i + di, j) === 'v') {
+      g.fillStyle = '#d8c8a0'; g.fillRect(i * 16 + x, j * 16, 1, 16); g.fillStyle = '#8a7a5a'; g.fillRect(i * 16 + x + (di < 0 ? 1 : -1), j * 16, 1, 16);
+      if (j % 2 === 0) { g.fillStyle = '#5a361e'; g.fillRect(i * 16 + x - 1, j * 16 + 6, 3, 4); }
+    }
+  }
+  for (const d of map.decos || []) {
+    const x = Math.round(d.x / PX), y = Math.round(d.y / PX), w = Math.round(d.w / PX), h = Math.round(d.h / PX);
+    if (d.kind === 'beaupre') {
+      const P = new Painter(w + 6, h + 24), r = d.dir > 0, X = i => r ? i : w + 5 - i, my = 12 + Math.floor(h / 2);
+      for (let i = 0; i < w; i++) { const yy = my - Math.round(i * 0.18); P.rect(X(i), yy - 1, 1, 3, i % 9 === 0 ? '#5a361e' : '#8a5a32'); P.px(X(i), yy - 1, '#b8844c'); }
+      const tx = w - 2, ty = my - Math.round(tx * 0.18);
+      for (let k = 0; k < 14; k++) for (let j = 0; j <= k; j++) P.px(X(tx - 14 + k), ty - 2 - j + Math.round(k * 0.18) - 0, k % 4 === 0 ? '#e8e0d0' : '#f8f4ec');   // foc
+      line2(P, X(0), my - 8, X(tx), ty - 1, '#d8c8a0'); line2(P, X(0), my + 8, X(tx), ty + 1, '#d8c8a0');
+      P.disc(X(tx + 1), ty, 2, '#e3b341');
+      g.drawImage(P.outline().canvas(), r ? x : x - 6, y - 12);
+    } else if (d.kind === 'trappe') {   // écoutille : grille de bois
+      g.fillStyle = '#3a2414'; g.fillRect(x, y, w, h); g.fillStyle = '#1b1424'; g.fillRect(x + 2, y + 2, w - 4, h - 4);
+      g.fillStyle = '#8a5a32'; for (let i = x + 2; i < x + w - 2; i += 4) g.fillRect(i, y + 2, 1, h - 4); for (let j = y + 2; j < y + h - 2; j += 4) g.fillRect(x + 2, j, w - 4, 1);
+    } else if (d.kind === 'drapeau') {   // grand drapeau pirate à la poupe
+      const P = new Painter(26, 50), rouge = d.coul === 'rouge', F = rouge ? '#c9433a' : '#1b1424', C = rouge ? '#1b1424' : '#f4f0e6';
+      P.rect(2, 2, 2, 48, '#5a361e'); P.disc(3, 2, 2, '#e3b341');
+      for (let j = 0; j < 14; j++) for (let i = 0; i < 20; i++) P.px(4 + i, 4 + j + Math.round(Math.sin(i / 3) * 1.2), F);
+      P.disc(13, 9, 3, C); P.rect(11, 12, 5, 2, C); P.px(12, 9, F); P.px(14, 9, F); line2(P, 8, 13, 18, 17, C); line2(P, 18, 13, 8, 17, C);
+      tg.drawImage(P.outline().canvas(), x, y - 44);
+    }
+  }
+}
+// petite police 3×5 pour les lettres du tapis-puzzle et des blocs
+const POLICE = { A: '010101111101101', B: '110101110101110', C: '011100100100011', D: '110101101101110', E: '111100110100111', F: '111100110100100', G: '011100101101011', H: '101101111101101', I: '111010010010111', J: '001001001101010', K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '110101101101101', O: '010101101101010', P: '110101110100100', Q: '010101101110011', R: '110101110101101', S: '011100010001110', T: '111010010010010', U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101', Y: '101101010010010', Z: '111001010100111' };
+function lettrePix(P, l, x, y, k, c) {
+  const f = POLICE[l]; if (!f) return;
+  for (let j = 0; j < 5; j++) for (let i = 0; i < 3; i++) if (f[j * 3 + i] === '1') P.rect(x + i * k, y + j * k, k, k, c);
+}
+// Bibliothèque : lettres du tapis, grand livre ouvert sous l'autel, bougies qui flottent
+function peindreBiblio(g, tg, map) {
+  const t = (i, j) => (map.tiles[j] || '')[i];
+  for (let j = 0; j < map.rows; j += 2) for (let i = 0; i < map.cols; i += 2) {
+    if (t(i, j) !== 'q' || t(i + 1, j + 1) !== 'q') continue;
+    const l = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[(i * 7 + j * 3) % 26], P = new Painter(32, 32);
+    lettrePix(P, l, 10, 6, 4, '#f8f4ec'); g.drawImage(P.canvas(), i * 16, j * 16);
+  }
+  for (const d of map.decos || []) {
+    const x = Math.round(d.x / PX), y = Math.round(d.y / PX), w = Math.round(d.w / PX), h = Math.round(d.h / PX);
+    if (d.kind === 'livreouvert') {   // grand livre ouvert : deux pages et des lignes d'écriture
+      const P = new Painter(w, h), mx = Math.floor(w / 2);
+      P.rect(0, 2, w, h - 2, '#7a2350');
+      for (const [x0, x1] of [[3, mx - 1], [mx + 1, w - 3]]) { P.rect(x0, 0, x1 - x0, h - 5, '#f8f0dc'); for (let yy = 6; yy < h - 9; yy += 4) P.rect(x0 + 4, yy, x1 - x0 - 8 - (yy % 8 ? 6 : 0), 1, '#b8a888'); }
+      P.rect(mx - 1, 0, 2, h - 4, '#c8b898'); P.rect(mx + 6, h - 6, 3, 8, '#e0405a');
+      g.drawImage(P.outline().canvas(), x, y);
+    } else if (d.kind === 'bougie') {
+      const P = new Painter(9, 22);
+      P.ellipse(4, 4, 3, 4, '#ffd84a'); P.ellipse(4, 5, 1, 2, '#fff6c0'); P.rect(2, 8, 5, 10, '#f4ecd8'); P.rect(2, 8, 1, 10, '#ffffff'); P.rect(1, 17, 7, 2, '#e3b341');
+      tg.fillStyle = 'rgba(255,216,74,0.16)'; tg.beginPath(); tg.arc(x + 4, y - 30, 14, 0, 7); tg.fill();
+      tg.drawImage(P.outline().canvas(), x, y - 34);
+    }
+  }
+}
+// Mine : étais de bois avec une lanterne, champignons lumineux
+function peindreMine(g, tg, map) {
+  for (const d of map.decos || []) {
+    const x = Math.round(d.x / PX), y = Math.round(d.y / PX);
+    if (d.kind === 'etai') {   // deux poteaux de chaque côté de la galerie, une poutre par-dessus (couche du dessus)
+      const L = 58, P = new Painter(d.v ? 20 : L, d.v ? L : 20);
+      if (!d.v) { P.rect(2, 6, 4, 14, '#6b4423'); P.rect(L - 6, 6, 4, 14, '#6b4423'); P.rect(0, 2, L, 5, '#8a5a32'); P.rect(0, 2, L, 1, '#b8844c'); P.rect(L / 2 - 2, 7, 4, 6, '#3a3846'); P.rect(L / 2 - 1, 8, 2, 3, '#ffd84a'); }
+      else { P.rect(6, 2, 14, 4, '#6b4423'); P.rect(6, L - 6, 14, 4, '#6b4423'); P.rect(2, 0, 5, L, '#8a5a32'); P.rect(2, 0, 1, L, '#b8844c'); P.rect(7, L / 2 - 2, 6, 4, '#3a3846'); P.rect(8, L / 2 - 1, 3, 2, '#ffd84a'); }
+      const cx = x + 8, cy = y + 8;
+      tg.fillStyle = 'rgba(255,200,90,0.22)'; tg.beginPath(); tg.arc(cx, cy, 12, 0, 7); tg.fill();
+      tg.drawImage(P.outline().canvas(), d.v ? cx - 4 : cx - L / 2, d.v ? cy - L / 2 : cy - 10);
+    } else if (d.kind === 'champilum') {   // champignon qui brille (cyan ou rose)
+      const C = d.c ? ['#ff7ad0', '#ffc0ea'] : ['#4ae8e0', '#c0fff8'], P = new Painter(14, 14);
+      P.rect(6, 7, 2, 6, '#e8e0d0'); P.ellipse(7, 6, 6, 3, C[0]); P.px(5, 5, C[1]); P.px(9, 6, C[1]); P.px(7, 4, C[1]);
+      P.rect(1, 11, 2, 3, '#e8e0d0'); P.ellipse(2, 10, 2, 1, C[0]);
+      g.fillStyle = d.c ? 'rgba(255,122,208,0.25)' : 'rgba(74,232,224,0.25)'; g.beginPath(); g.arc(x + 4, y + 4, 11, 0, 7); g.fill();
+      g.drawImage(P.outline().canvas(), x - 3, y - 4);
+    }
+  }
 }
 // Caverne : tout est noir sauf autour de mon héros, des coéquipiers, des cristaux, de la lave et des boules de feu
 let noirCv = null, lumieresCarte = null, lumieresDe = null;
@@ -887,6 +1044,7 @@ function drawNoir(ctx, world, map, mine, md, vw, vh, zoom, camX, camY, teams) {
     for (const o of map.objs) if (o.kind.startsWith('cristal')) lumieresCarte.push([o.x + o.w / 2, o.y, 170]);
     for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) if (map.tiles[j][i] === 'L' && (i + j) % 2 === 0) lumieresCarte.push([(i + 0.5) * map.T, (j + 0.5) * map.T, 110]);
     if (map.heal) lumieresCarte.push([map.heal.x, map.heal.y, 180]);
+    for (const d of map.decos || []) if (d.kind === 'etai') lumieresCarte.push([d.x + d.w / 2, d.y + d.h / 2, 150]); else if (d.kind === 'champilum') lumieresCarte.push([d.x + d.w / 2, d.y + d.h / 2, 95]);
   }
   const k = 0.5, W = Math.ceil(vw * k), H = Math.ceil(vh * k);
   if (!noirCv) noirCv = document.createElement('canvas');
@@ -924,14 +1082,14 @@ function peindreChampignons(g, map, tile, TS) {   // champignons rebondissants (
 let casierCache = null;
 function casierSprite() {   // trois casiers bleus, une porte entrouverte
   if (casierCache) return casierCache;
-  const P = new Painter(34, 40);
+  const P = new Painter(34, 26);
   for (let k = 0; k < 3; k++) {
     const x = 1 + k * 11;
-    P.rect(x, 2, 10, 36, k === 1 ? '#2f5aa0' : '#3f6fb5'); P.rect(x, 2, 10, 1, '#6a94d8');
-    for (let y = 5; y < 12; y += 2) P.rect(x + 2, y, 6, 1, '#2a4a80');
-    P.rect(x + 7, 18, 2, 3, '#c8d0dc');
+    P.rect(x, 2, 10, 22, k === 1 ? '#2f5aa0' : '#3f6fb5'); P.rect(x, 2, 10, 1, '#6a94d8');
+    for (let y = 5; y < 10; y += 2) P.rect(x + 2, y, 6, 1, '#2a4a80');
+    P.rect(x + 7, 13, 2, 3, '#c8d0dc');
   }
-  P.rect(12, 3, 9, 34, '#1b1424'); line2(P, 21, 3, 25, 6, '#6a94d8');   // porte entrouverte : on peut s'y cacher
+  P.rect(12, 3, 9, 20, '#1b1424'); line2(P, 21, 3, 25, 6, '#6a94d8');   // porte entrouverte : on peut s'y cacher
   return (casierCache = P.outline().canvas());
 }
 let pileCache = null;
@@ -1121,6 +1279,10 @@ function buildMapLayers(map) {
           else if (ly % 4 === 3 || ((Math.floor(ly / 4) % 2 ? x + 4 : x) % 8 === 0)) c = P[1];
           if (!WALLS_T.includes(tile(tx, ty - 1)) && ly === 0) c = P[4];
           if (h < 0.03) c = P[4];
+          if (t === 'x' && map.theme === 'ciel') {   // bastingage du galion : liseré doré côté ciel, montants
+            const vide = d => V(x + d, y) === 'v' || V(x - d, y) === 'v' || V(x, y + d) === 'v' || V(x, y - d) === 'v';
+            if (vide(1)) c = '#9a6a1e'; else if (vide(2)) c = '#e3b341'; else if (x % 12 === 0) c = P[3];
+          }
         }
         if (edge) c = OUT;
       }
@@ -1128,7 +1290,11 @@ function buildMapLayers(map) {
       // ----- eau : plus profonde au large, reflets discrets -----
       let shore = false;
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = V(x + dx, y + dy); if (n !== '~' && n !== 'B' && n !== '=') shore = true; }
-      if (shore) c = '#2f5a6e';
+      if (map.theme === 'biblio') {   // lac d'encre : violet très foncé, volutes et étincelles magiques
+        const u = Math.min(1, wd[y * AW + x] / 14), sw = Math.sin(x * 0.15 + Math.sin(y * 0.12) * 4 + noise(x / 18, y / 18, 9) * 5);
+        c = shore ? '#1b1424' : u < 0.2 ? '#4a2a6e' : sw > 0.93 ? '#5a3a8a' : u < 0.5 ? '#2e1a4a' : '#1f1236';
+        if (!shore && h > 0.996) c = hsh(x, y, 7) < 0.5 ? '#c8a0ff' : '#ffd84a';
+      } else if (shore) c = '#2f5a6e';
       else {
         const u = Math.min(1, wd[y * AW + x] / 16), cl = cells(x, y, 9, 21);
         const W0 = map.theme === 'marais' ? [88, 128, 104] : map.theme === 'donjon' || map.theme === 'caverne' ? [58, 92, 128] : [92, 158, 176];
@@ -1149,7 +1315,11 @@ function buildMapLayers(map) {
       // ----- le ciel : bleu, nuages ; sous les îles de la terre, sous les navires la coque -----
       let sous = null, k = 1;
       for (; k <= 16; k++) { const u = V(x, y - k); if (u !== 'v') { sous = u; break; } }
-      if (sous && (sous === 'x' || sous === 'e' || sous === 'w') && k <= 12) c = k <= 2 ? OUT : (x + Math.floor(y / 3)) % 9 === 0 ? '#4a2a16' : k % 4 === 0 ? '#5a361e' : '#7a4b25';
+      if (sous && (sous === 'x' || sous === 'e' || sous === 'w') && k <= 14) {   // flanc du navire : planches, liseré doré, sabords
+        c = k <= 1 || k === 14 ? OUT : k === 4 ? '#e3b341' : k === 5 ? '#9a6a1e' : k >= 12 ? '#3a2414' : (x + Math.floor(y / 3)) % 9 === 0 ? '#4a2a16' : k % 3 === 0 ? '#5a361e' : '#7a4b25';
+        const sx = x % 22;
+        if (k >= 7 && k <= 10 && sx >= 8 && sx <= 13) c = (k === 7 || k === 10 || sx === 8 || sx === 13) ? '#2a1a10' : '#120c18';
+      }
       else if (sous && (sous === '.' || sous === 'h') && k <= 14 - Math.abs(Math.sin(x * 0.3)) * 6) c = k <= 1 ? OUT : hsh(x, y, 81) < 0.3 ? '#6a4a2a' : k < 5 ? '#8a5a32' : '#9a7a5a';
       else {
         const nu = noise(x / 26, y / 18, 77) + noise(x / 9, y / 9, 78) * 0.3;
@@ -1169,9 +1339,24 @@ function buildMapLayers(map) {
       const along = hr >= vr;   // on traverse de gauche à droite
       const a = along ? x : y, b = along ? y : x, bTile = along ? ly : lx;
       const sideA = along ? tile(tx, ty - 1) !== 'B' : tile(tx - 1, ty) !== 'B', sideB = along ? tile(tx, ty + 1) !== 'B' : tile(tx + 1, ty) !== 'B';
+      if (map.theme === 'biblio') {   // crayon géant : gomme rose, bague argent, corps jaune à facettes, mine pointue
+        const dI = along ? [1, 0] : [0, 1], cI = along ? [0, 1] : [1, 0];
+        let a0 = 0, a1 = 0, b0 = 0, b1 = 0;
+        while (tile(tx - dI[0] * (a0 + 1), ty - dI[1] * (a0 + 1)) === 'B') a0++;
+        while (tile(tx + dI[0] * (a1 + 1), ty + dI[1] * (a1 + 1)) === 'B') a1++;
+        while (tile(tx - cI[0] * (b0 + 1), ty - cI[1] * (b0 + 1)) === 'B') b0++;
+        while (tile(tx + cI[0] * (b1 + 1), ty + cI[1] * (b1 + 1)) === 'B') b1++;
+        const len = (a0 + a1 + 1) * TS, pos = a0 * TS + (along ? lx : ly), wid = (b0 + b1 + 1) * TS, q = b0 * TS + (along ? ly : lx), m = Math.abs(q + 0.5 - wid / 2) / (wid / 2);
+        const pointe = (along ? tx : ty) * 2 > (along ? 52 : 36);   // la mine pointe vers l'île
+        const p2 = pointe ? len - 1 - pos : pos;
+        if (p2 > len - 14) { const r = (len - p2) / 14; c = m > r ? '#1f1236' : r < 0.35 ? '#3a3846' : '#e8c89a'; }
+        else c = p2 < 6 ? (m > 0.9 ? OUT : '#ff8aa8') : p2 < 9 ? '#c8d0dc' : m > 0.92 ? OUT : m < 0.15 ? '#fff0a0' : m < 0.55 ? '#ffd84a' : '#e8b83a';
+        if (p2 >= 6 && p2 < 9 && m > 0.92) c = OUT;
+      } else {
       c = a % 5 === 4 ? '#6b4423' : (Math.floor(a / 5) % 2 ? '#b07a45' : '#a06c3c');
       if (a % 5 === 0) c = '#c99060';
       if ((sideA && bTile < 2) || (sideB && bTile > TS - 3)) c = bTile === 0 || bTile === TS - 1 ? OUT : '#5a3a1e';
+      }
     } else {
       // ----- sols -----
       if (t === '.') { const p = noise(x / 18, y / 18, 3); c = p > 0.62 ? TH.herbe[1] : p < 0.3 ? TH.herbe[2] : TH.herbe[0]; if (h < 0.02) c = TH.herbe[3]; }
@@ -1195,6 +1380,11 @@ function buildMapLayers(map) {
         if (x % 8 === 1 && y % 8 !== 0 && map.theme !== 'donjon') c = '#66719a';
         if (map.theme === 'donjon' && h < 0.015) c = '#3f4762';
       }
+      else if (t === 'w' && map.theme === 'biblio') {   // parquet en losanges (arlequin), deux bois
+        const u = x + y, v = x - y + 999, a = Math.floor(u / 10) % 2, b = Math.floor(v / 10) % 2;
+        c = u % 10 === 0 || v % 10 === 0 ? '#7a4b25' : a ^ b ? '#c8925a' : '#9a6638';
+        if (h < 0.02) c = shade(c, 1.1);
+      }
       else if (t === 'w' && !TH.rustique) {
         const row = Math.floor(y / 4);
         c = y % 4 === 3 || (x + row * 5) % 13 === 0 ? '#a87a48' : row % 2 ? '#e2b67c' : '#d8ab70';
@@ -1203,6 +1393,18 @@ function buildMapLayers(map) {
         const cl = cells(x, y, 6, 71);
         c = cl.d2 - cl.d1 < 1.1 ? '#6e5a40' : cl.id < 0.33 ? '#b39a74' : cl.id < 0.66 ? '#a48c68' : '#c2aa82';
         if (cl.d2 - cl.d1 >= 1.1 && x - cl.px + y - cl.py < -2) c = shade(c, 1.08);
+      }
+      else if (t === 'q') {   // tapis-puzzle en mousse : grandes pièces de couleur (les lettres sont peintes après)
+        const pi = Math.floor(x / 32), pj = Math.floor(y / 32), cols = ['#e0405a', '#3f8fd8', '#ffc83a', '#4fb85a', '#a05ad8', '#ff8a3a'];
+        c = cols[(pi * 3 + pj * 5) % 6]; const bx = x % 32, by = y % 32;
+        if (bx === 0 || by === 0) c = shade(c, 0.7);
+        else if ((bx === 15 || bx === 16) && by > 12 && by < 20 || (by === 15 || by === 16) && bx > 12 && bx < 20) c = shade(c, 0.85);   // tenons du puzzle
+        if (h < 0.02) c = shade(c, 0.93);
+      }
+      else if (t === 'u') {   // tapis étoilé de l'observatoire
+        let d = 9; for (let k = 1; k <= 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k]]) if (V(x + dx, y + dy) !== 'u') d = Math.min(d, k);
+        c = d === 1 ? '#1b1424' : d === 2 ? '#e3b341' : noise(x / 22, y / 22, 12) > 0.7 ? '#2a2a6e' : '#1f2458';
+        if (d > 2 && h > 0.985) c = h > 0.995 ? '#ffd84a' : '#ffffff';
       }
       else if (t === 't') {
         let d = 9;
@@ -1293,6 +1495,9 @@ function buildMapLayers(map) {
   const top = document.createElement('canvas'); top.width = AW; top.height = AH;
   const tg = top.getContext('2d');
   g.imageSmoothingEnabled = false; tg.imageSmoothingEnabled = false;
+  if (map.theme === 'ciel') peindreCiel(g, tg, map);
+  if (map.theme === 'biblio') peindreBiblio(g, tg, map);
+  if (map.theme === 'caverne') peindreMine(g, tg, map);
   let seed = 11;
   const R = (a, b) => { seed = (seed * 16807) % 2147483647; return a + (seed / 2147483647) * (b - a); };
   const dot = (x, y, c) => { g.fillStyle = c; g.fillRect(Math.round(x), Math.round(y), 1, 1); };
@@ -1301,7 +1506,7 @@ function buildMapLayers(map) {
   // petits décors sans collision : touffes, fleurs, cailloux, champignons, os, nénuphars…
   for (let n = 0; n < AW * AH / 90; n++) {
     const x = Math.floor(R(2, AW - 3)), y = Math.floor(R(2, AH - 3)), t = V(x, y), r = R(0, 1);
-    if (near(x, y, 2, WALLS_T + '~vLB')) { if (t === '~' && !near(x, y, 3, WALLS_T + '.snd') && r < 0.06 && map.theme !== 'donjon') { g.fillStyle = '#3d9a4a'; g.fillRect(x - 1, y, 4, 2); g.fillRect(x, y - 1, 2, 4); if (r < 0.025) dot(x + 1, y, '#f7a8d0'); } continue; }
+    if (near(x, y, 2, WALLS_T + '~vLB')) { if (t === '~' && !near(x, y, 3, WALLS_T + '.snd') && r < 0.06 && map.theme !== 'donjon' && map.theme !== 'biblio') { g.fillStyle = '#3d9a4a'; g.fillRect(x - 1, y, 4, 2); g.fillRect(x, y - 1, 2, 4); if (r < 0.025) dot(x + 1, y, '#f7a8d0'); } continue; }
     if (t === '.') {
       if (r < 0.35 && TH.rustique) {   // touffe d'herbe : brins foncés à la base, pointes claires
         const d = shade(TH.herbe[3], 0.9), l = shade(TH.herbe[2], 1.15);
@@ -1398,7 +1603,7 @@ function buildMapLayers(map) {
   for (const b of map.bushes) {
     if (map.theme === 'biblio') { const s = pileSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2); continue; }
     if (map.theme === 'caverne') { const s = champiSprite(Math.round(b.r / PX)); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2); continue; }
-    if (b.kind === 'casier') { const s = casierSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height + 12); continue; }
+    if (b.kind === 'casier') { const s = casierSprite(); g.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height + 6); continue; }
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
     const snow = map.theme === 'hiver', dark = map.theme === 'marais';
     // cachette : buisson de fougères pointues vert lime avec des baies violettes (bien différent des arbres ronds)
