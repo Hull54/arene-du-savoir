@@ -189,6 +189,8 @@ function badge(p, id) {
 const badgesDe = p => [...new Set([...(badgesSeance[p.name] || []), ...((codeDe(p) || {}).badges || [])])];
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
+let ballons = [];   // École : ballons géants qui roulent dans la cour
+const BALLON = { r: 34, v: 230, push: 120, stun: 0.5 };
 let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [], traps = [], smokes = [], ames = [];   // ames : coéquipiers K.O. qu'on peut relever
 let mode = 'libre', nbTeams = 2;
 let boss = null;
@@ -268,6 +270,7 @@ function setCarte(c) {
   chests = c.chests.map(ch => ({ ...ch, open: 0, by: 0, gold: false }));
   pickGold();
   barrels = c.barrels.map(b => ({ ...b, t: 0, fuse: 0, by: null }));
+  ballons = (c.ballons || []).map((b, i) => ({ x: b.x, y: b.y, vx: BALLON.v * (i % 2 ? -0.8 : 0.8), vy: BALLON.v * 0.6, rot: 0 }));
   items = []; itemTimer = 0;
   projectiles = []; fx = []; puddles = []; traps = []; smokes = []; ames = [];
 }
@@ -677,6 +680,7 @@ function attack(p) {
     if (Math.hypot(dx, dy) < a.range + R + boss.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.5) hitBoss(base * (fromShadow ? 1.5 : 1), p);
   }
   if (minions.length) hitMinions(m => Math.hypot(m.x - p.x, m.y - p.y) < a.range + R + SBIRE.r && angDiff(Math.atan2(m.y - p.y, m.x - p.x), p.angle) < a.arc / 2 + 0.4, base, p);
+  for (const b of ballons) if (Math.hypot(b.x - p.x, b.y - p.y) < a.range + R + BALLON.r && angDiff(Math.atan2(b.y - p.y, b.x - p.x), p.angle) < a.arc / 2 + 0.4) frapperBallon(b, p.angle, 1.5);
   for (const b of barrels) {
     const dx = b.x - p.x, dy = b.y - p.y;
     if (!b.t && Math.hypot(dx, dy) < a.range + R + BARREL.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.3) lightBarrel(b, p);
@@ -851,7 +855,7 @@ function dashStep(p, dt) {
   const bx = blocked(p.x + mx, p.y, R), by = blocked(p.x, p.y + my, R);
   if (!bx) p.x += mx;
   if (!by) p.y += my;
-  if (p.cls === 'guerrier') {
+  if (p.cls === 'guerrier' && !D.saut) {
     // la charge bouscule les adversaires touchés
     const d = CLASSES.guerrier.dash, len = Math.hypot(D.vx, D.vy);
     for (const o of players.values()) {
@@ -863,6 +867,39 @@ function dashStep(p, dt) {
     if (boss && boss.hp > 0 && !D.hit.has('boss') && Math.hypot(boss.x - p.x, boss.y - p.y) < boss.r + R + 6) { D.hit.add('boss'); hitBoss(d.dmg, p); }
   }
   if ((D.t -= dt) <= 0 || (bx && by)) { p.dash = null; if (p.cls !== 'archer') fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.3, d: 0.3 }); }
+}
+
+// ---------- Ballons géants (École) ----------
+// Ils roulent et rebondissent sur les murs. Un ballon qui te frappe te renverse (sans dégâts) ;
+// un coup d'arme ou un tir l'envoie ailleurs.
+// les ballons restent sur l'asphalte de la cour
+function bloqueBallon(x, y) {
+  const k = BALLON.r * 0.8;
+  return MV.heurte(carte, DUR, x, y, BALLON.r) || [[0, 0], [k, 0], [-k, 0], [0, k], [0, -k]].some(([dx, dy]) => tileAt(x + dx, y + dy) !== 'a');
+}
+function frapperBallon(b, ang, force = 1) {
+  const v = BALLON.v * (1.5 + 0.3 * force); b.vx = Math.cos(ang) * v; b.vy = Math.sin(ang) * v;
+}
+function updateBallons(dt) {
+  for (const b of ballons) {
+    const sp = Math.hypot(b.vx, b.vy);
+    if (sp > BALLON.v) { const k = Math.max(BALLON.v, sp - 120 * dt) / sp; b.vx *= k; b.vy *= k; }   // ralentit après un coup
+    const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
+    if (bloqueBallon(nx, b.y)) b.vx = -b.vx; else b.x = nx;
+    if (bloqueBallon(b.x, ny)) b.vy = -b.vy; else b.y = ny;
+    b.rot += sp * dt / BALLON.r;
+    for (const p of players.values()) {
+      if (!p.alive || p.dash || (p.ballonT || 0) > 0 || p.busy) continue;
+      const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy);
+      if (d > BALLON.r + R) continue;
+      p.ballonT = 1;
+      const a = Math.atan2(dy, dx);
+      for (let k = BALLON.push; k > 0; k -= 10) { const tx = p.x + Math.cos(a) * k, ty = p.y + Math.sin(a) * k; if (!blocked(tx, ty, R)) { p.x = tx; p.y = ty; break; } }
+      if (p.protect <= 0 && p.shield <= 0) p.stun = Math.max(p.stun || 0, BALLON.stun);
+      fx.push({ k: 'boing', x: p.x, y: p.y - 30, t: 0.5, d: 0.5 });
+      b.vx = -Math.cos(a) * Math.hypot(b.vx, b.vy); b.vy = -Math.sin(a) * Math.hypot(b.vx, b.vy);   // le ballon rebondit sur le joueur
+    }
+  }
 }
 
 // ---------- Tonneaux explosifs ----------
@@ -1654,6 +1691,7 @@ function step() {
     p.shield = Math.max(0, p.shield - dt); p.protect = Math.max(0, p.protect - dt);
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
     p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt); p.stun = Math.max(0, (p.stun || 0) - dt); p.atkT = Math.max(0, (p.atkT || 0) - dt);
+    p.sautT = Math.max(0, (p.sautT || 0) - dt); p.ballonT = Math.max(0, (p.ballonT || 0) - dt);
     p.hidden = p.revealed <= 0 && (inBush(p) || smokes.some(z => Math.hypot(z.x - p.x, z.y - p.y) < z.r));
     if (p.busy) {
       if (p.goldNext && (p.goldNext.t -= dt) <= 0) { const g = p.goldNext; p.goldNext = null; askQuestion(p, 'chest', { chest: g.chest, gold: true, step: 2, nOk: g.nOk }); }
@@ -1684,13 +1722,20 @@ function step() {
     p.vb = vb;
     // boue ×0.55, gué ×0.7, glace ×1.4
     const coince = MV.pas(p, mx, my, vb * MV.terrain(tileAt(p.x, p.y + 12)) * dt, blocked, R);
+    // trampoline du gymnase : un grand bond dans la direction où l'on va (ou où l'on regarde)
+    if (tileAt(p.x, p.y + 12) === 'r' && !(p.sautT > 0)) {
+      const a = mx || my ? Math.atan2(my, mx) : p.angle;
+      p.dash = { vx: Math.cos(a) * 640, vy: Math.sin(a) * 640, t: 0.4, hit: new Set(), saut: true };
+      p.sautT = 0.9;
+      fx.push({ k: 'boing', x: p.x, y: p.y + 10, t: 0.5, d: 0.5 });
+    }
     if (p.bot && p.moveAngle != null && coince) { p.moveAngle += Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1); p.stuckT = 0.4; p.path = null; }
   }
 
   if (!frozen) {
     bossThink(dt);
     updateLoot(dt);
-    updateBarrels(dt);
+    updateBarrels(dt); updateBallons(dt);
     updatePortals(dt);
     updatePuddles(dt); updateTraps(dt); updateAmes(dt);
     updateHill(dt);
@@ -1706,6 +1751,8 @@ function step() {
       const owner = players.get(b.owner) || null;
       const bar = b.owner !== -1 && barrels.find(o => !o.t && Math.hypot(o.x - b.x, o.y - b.y) < BARREL.r + b.r);
       if (bar) { lightBarrel(bar, owner); return false; }
+      const bal = ballons.find(o => Math.hypot(o.x - b.x, o.y - b.y) < BALLON.r + b.r);
+      if (bal) { frapperBallon(bal, Math.atan2(b.vy, b.vx)); return false; }
       if (b.owner !== -1 && boss && boss.hp > 0 && Math.hypot(boss.x - b.x, boss.y - 20 - b.y) < boss.r + b.r) { hitBoss(b.dmg, owner); return false; }
       if (b.owner !== -1 && minions.length && hitMinions(m => Math.hypot(m.x - b.x, m.y - b.y) < SBIRE.r + b.r + 6, b.dmg, owner)) return false;
       for (const o of players.values()) {
@@ -1733,9 +1780,10 @@ function publicState() {
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0),
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0) | (p.dash && p.dash.saut ? 8192 : 0),
       p.team, gearCode(p),
     ]),
+    bl: ballons.length ? ballons.map(b => [Math.round(b.x), Math.round(b.y), +b.rot.toFixed(1)]) : 0,
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
     fx: fx.map(f => { const o = {}; for (const k in f) o[k] = typeof f[k] === 'number' ? Math.round(f[k] * 100) / 100 : f[k]; return o; }),
     ch: chests.map(c => (c.open > 0 ? 1 : 0)).join(''),

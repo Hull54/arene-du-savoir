@@ -3,7 +3,8 @@
 //
 // Tuiles (un caractère chacune) :
 //   sol     .  herbe   h hautes herbes (on s'y cache)   s sable   n neige   d chemin   p pavés   f dalles   w plancher   t tapis   B pont
-//   lent    m  boue / sables mouvants   =  gué (eau peu profonde)
+//   école   a  asphalte de la cour   l  linoléum   y  plancher du gymnase   r  trampoline (te propulse)
+//   lent    m  boue / sables mouvants   =  gué (eau peu profonde)   j  Jell-O renversé (colle aux pieds)
 //   rapide  i  glace
 //   eau     ~  eau   v  fosse   L  lave          (bloquent les joueurs, pas les flèches)
 //   murs    b  briques   #  pierre   k  mur du donjon   c  falaise   x  rondins   g  gradins   T  arbres denses
@@ -82,7 +83,7 @@ function atelier(id, seed, base) {
     // objets (en tuiles) : rectangle de collision
     obj(kind, x, y, w, h) { A.objs.push({ kind, x: Math.round(x * T), y: Math.round(y * T), w: Math.round(w * T), h: Math.round(h * T) }); },
     chest(x, y) { A.chests.push({ x: Math.round((x + 0.5) * T), y: Math.round((y + 0.5) * T) }); },
-    bush(x, y, r = 1.2) { A.bushes.push({ x: Math.round(x * T), y: Math.round(y * T), r: Math.round(r * T) }); },
+    bush(x, y, r = 1.2, kind) { A.bushes.push({ x: Math.round(x * T), y: Math.round(y * T), r: Math.round(r * T), ...(kind ? { kind } : {}) }); },
     spot(x, y) { A.spots.push({ x: Math.round((x + 0.5) * T), y: Math.round((y + 0.5) * T) }); },
     setHeal(x, y, kind) { A.heal = { x: Math.round(x * T), y: Math.round(y * T), r: 110, heal: 10, kind }; },
     // une case libre : sol permis tout autour, loin des objets
@@ -156,7 +157,7 @@ function fin(A, id, nom, theme, desc) {
   // un buisson ne doit pas chevaucher un arbre ou un meuble (on ne le distinguerait plus) : on le déplace un peu
   const touche = (bx, by, r) => A.objs.some(o => bx + r > o.x - 16 && bx - r < o.x + o.w + 16 && by + r > o.y - 90 && by - r < o.y + o.h + 12);
   A.bushes.forEach((b, n) => {
-    if (!touche(b.x, b.y, b.r)) return;
+    if (b.kind || !touche(b.x, b.y, b.r)) return;   // les casiers restent contre leur mur
     const i0 = Math.floor(b.x / T), j0 = Math.floor(b.y / T), sol = A.get(i0, j0);
     for (let d = 1; d <= 10; d++) for (let j = j0 - d; j <= j0 + d; j++) for (let i = i0 - d; i <= i0 + d; i++) {
       if (Math.max(Math.abs(i - i0), Math.abs(j - j0)) !== d) continue;
@@ -170,7 +171,7 @@ function fin(A, id, nom, theme, desc) {
   return {
     id, nom, theme, desc, T, cols: COLS, rows: ROWS, W: COLS * T, H: ROWS * T,
     tiles: A.g.map(r => r.join('')), objs: A.objs, bushes: A.bushes, chests: A.chests, spots: A.spots, heal: A.heal,
-    barrels: A.barrels, portals: A.portals,
+    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}),
   };
 }
 
@@ -410,5 +411,58 @@ function marais() {
   return fin(A, 'marais', 'Marais Gluant', 'marais', 'Boue qui ralentit, passerelles et cabane de la sorcière');
 }
 
-const CARTES = [village, cite, desert, donjon, hiver, colisee, marais].map(f => f());
+// ---------- École ----------
+// L'école, avec des surprises : trampolines au gymnase, Jell-O renversé à la cafétéria,
+// casiers où se cacher et ballons géants qui roulent dans la cour.
+function ecole() {
+  const A = atelier('ecole', 4242, '.');
+  A.border('T', 1);
+  // ===== le bâtiment (nord) =====
+  A.fill(1, 1, 50, 14, 'b');
+  A.fill(2, 7, 35, 3, 'l');                                                  // grand corridor
+  const classe = (x, y, w, h, porte) => { A.fill(x, y, w, h, 'w'); A.fill(x + Math.floor(w / 2) - 1, porte, 2, 1, 'w'); };
+  classe(2, 2, 10, 4, 6); classe(13, 2, 10, 4, 6);                           // classes du haut
+  classe(2, 11, 10, 3, 10); classe(13, 11, 10, 3, 10);                       // classes du bas
+  // cafétéria (au nord du corridor) : du Jell-O renversé partout
+  A.fill(24, 2, 13, 4, 'l'); A.fill(29, 6, 3, 1, 'l');
+  for (const [x, y, rx, ry] of [[27, 3.5, 1.6, 0.9], [33.5, 4, 1.4, 1], [30.5, 2.8, 1.1, 0.7]]) A.blob(x, y, rx, ry, 'j', 0.4, 'l');
+  // hall d'entrée vers la cour, et salle des profs (interdite… mais il y a un trésor !)
+  A.fill(24, 10, 4, 5, 'l'); A.fill(29, 11, 8, 3, 'w'); A.fill(29, 10, 2, 1, 'w');
+  // gymnase (à l'est) : grand plancher, portes vers le corridor et vers la cour
+  A.fill(38, 2, 12, 12, 'y'); A.fill(37, 7, 1, 3, 'y'); A.fill(43, 14, 2, 1, 'y');
+  for (const [x, y] of [[40, 4], [46, 4], [43, 9], [40, 11], [46, 11]]) A.fill(x, y, 2, 2, 'r');   // trampolines
+  // portes vers l'extérieur
+  A.fill(24, 14, 4, 1, 'l');
+  // ===== dehors =====
+  A.fill(13, 16, 28, 18, 'a');                                               // cour d'école
+  A.fill(24, 15, 4, 1, 'a');
+  A.path([[44, 15], [44, 18], [40, 20]], 3, 'a', '.');
+  A.path([[13, 19], [8, 20], [7, 26], [7, 30]], 1.4, 'd', '.');               // sentier dans le parc
+  A.blob(7, 24, 3, 2, 's', 0.2);                                             // carré de sable
+  A.fill(42, 22, 8, 11, 'p');                                                // stationnement des autobus
+  A.setHeal(7, 30.5, 'fontaine');
+  // ballons géants : ils roulent dans la cour (rectangle où ils naissent)
+  A.ballons = [{ x: 22 * T, y: 22 * T }, { x: 32 * T, y: 28 * T }];
+  // ===== meubles et décor =====
+  for (const [x0, y0] of [[2, 2], [13, 2]]) { A.obj('tableau', x0 + 3, y0, 4, 0.5); for (let i = 0; i < 3; i++) A.obj('pupitre', x0 + 1.3 + i * 3, y0 + 2.2, 1.2, 0.7); }
+  for (const [x0, y0] of [[2, 11], [13, 11]]) { for (let i = 0; i < 3; i++) A.obj('pupitre', x0 + 1.3 + i * 3, y0 + 1.6, 1.2, 0.7); }
+  for (const [x, y] of [[25, 2.4], [32, 4.6]]) A.obj('tablecaf', x, y, 3, 0.8);
+  A.obj('sofa', 32, 11.2, 3, 0.8); A.obj('shelf', 29.4, 11, 1.4, 0.9);
+  A.obj('panier', 38.4, 7.4, 0.6, 1.2); A.obj('panier', 49, 7.4, 0.6, 1.2);
+  A.obj('panier', 14, 23.5, 0.6, 1.2); A.obj('panier', 39.4, 23.5, 0.6, 1.2);
+  A.obj('balancoire', 3, 18, 4, 1); A.obj('glissade', 9, 17.6, 1.4, 2);
+  A.obj('bus', 43, 24, 5.5, 2.2); A.obj('bus', 43, 29, 5.5, 2.2);
+  for (const [x, y] of [[3.5, 21], [11, 21.5], [3, 27], [11, 31], [8.5, 33], [2.5, 33]]) A.obj('oak', x, y, 1, 0.8);
+  // casiers où l'on se cache, le long du corridor
+  for (const x of [6, 17, 33]) A.bush(x, 7.6, 1.05, 'casier');
+  for (const x of [11.5, 22]) A.bush(x, 9.4, 1.05, 'casier');
+  A.scatterBushes(4, '.');
+  // coffres : dans les classes, la salle des profs et la cour
+  for (const [x, y] of [[2, 2], [22, 13], [35, 12], [48, 12], [20, 32], [8, 22]]) A.chest(x, y);
+  A.portal('a'); A.scatterBarrels(3, 'a');
+  for (const [x, y] of [[6, 4], [17, 12], [30, 3], [44, 6], [26, 25], [45, 33], [5, 31]]) A.spot(x, y);
+  return fin(A, 'ecole', 'École des Héros', 'ecole', 'Classes, corridor, cafétéria au Jell-O, gymnase à trampolines et cour aux ballons géants');
+}
+
+const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };

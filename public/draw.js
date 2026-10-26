@@ -85,7 +85,7 @@ function reglesHTML(mode, extra = '') {
 function unpackWorld(w) {
   w.pz = w.pz || [];
   w.mn = w.mn || [];
-  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024), sz: !!(f & 2048), at: !!(f & 4096) }));
+  w.p = w.p.map(([id, n, c, l, x, y, a, hp, m, k, f, tm, g]) => ({ id, n, c, l, x, y, a, hp, m, k, tm, g: g || 0, al: !!(f & 1), sh: !!(f & 2), pr: !!(f & 4), hd: !!(f & 8), inv: !!(f & 16), st: !!(f & 32), fa: !!(f & 64), bz: !!(f & 128), dz: !!(f & 256), lz: !!(f & 512), sl: !!(f & 1024), sz: !!(f & 2048), at: !!(f & 4096), sj: !!(f & 8192) }));
   return w;
 }
 
@@ -686,6 +686,52 @@ function spriteFor(o, TH = THEMES.village) {
     P.rect(3, 3, w - 4, h + 8, '#9aa0ab'); P.rect(5, 1, w - 8, 2, '#9aa0ab'); P.rect(3, 3, 1, h + 8, '#c3c7d0');
     P.rect(Math.floor(w / 2), 5, 2, 8, '#6d7380'); P.rect(Math.floor(w / 2) - 2, 7, 6, 2, '#6d7380');
     P.rect(1, h + 10, w, 2, '#6c8f4a');
+  } else if (kind === 'pupitre') {   // pupitre d'élève avec sa chaise
+    P = new Painter(w + 2, h + 12); ax = 1; ay = 8;
+    P.rect(1, 4, w, h + 1, '#d9a35c'); P.rect(1, 4, w, 1, '#f0c27e'); P.rect(1, h + 5, w, 2, '#9a6a34');
+    P.rect(2, h + 7, 1, 3, '#55525f'); P.rect(w - 1, h + 7, 1, 3, '#55525f');
+    P.rect(4, 5, 5, 3, '#ffffff'); P.rect(4, 5, 5, 1, '#9fc3f0'); P.rect(w - 6, 5, 1, 4, '#ffd84a'); P.px(w - 6, 9, '#e0405a');   // cahier et crayon
+    P.rect(Math.floor(w / 2) - 3, h + 8, 6, 3, '#3f6fb5'); P.rect(Math.floor(w / 2) - 3, h + 8, 6, 1, '#6a94d8');               // chaise
+  } else if (kind === 'tableau') {   // tableau vert accroché au mur
+    P = new Painter(w + 2, h + 20); ax = 1; ay = 18;
+    P.rect(1, 2, w, 16, '#8b5a2b'); P.rect(2, 3, w - 2, 14, '#2f6a4a');
+    for (let i = 0; i < 4; i++) P.rect(5 + i * 9, 6 + (i % 2) * 4, 6, 1, '#e8f2e8');
+    P.rect(6, 12, 3, 1, '#e8f2e8'); P.px(7, 11, '#e8f2e8'); P.px(7, 13, '#e8f2e8');   // un « + »
+    P.rect(w - 14, 6, 8, 1, '#ffd84a'); P.rect(w - 14, 9, 6, 1, '#ff9ab0');
+    P.rect(1, 17, w, 2, '#a87a48'); P.rect(6, 16, 3, 1, '#ffffff');
+  } else if (kind === 'tablecaf') {   // longue table de cafétéria avec des cabarets
+    P = new Painter(w + 2, h + 10); ax = 1; ay = 6;
+    P.rect(1, 4, w, h + 1, '#c8d0dc'); P.rect(1, 4, w, 1, '#e8eef4'); P.rect(1, h + 5, w, 2, '#8a93a0');
+    for (let x = 4; x < w - 6; x += 12) { P.rect(x, 5, 8, 5, '#e0a03a'); P.rect(x + 1, 6, 3, 3, '#7cc25a'); P.rect(x + 5, 6, 2, 2, '#e0405a'); P.px(x + 4, 8, '#ffffff'); }
+    P.rect(3, h + 7, 2, 3, '#55525f'); P.rect(w - 3, h + 7, 2, 3, '#55525f');
+  } else if (kind === 'sofa') {
+    P = new Painter(w + 2, h + 12); ax = 1; ay = 9;
+    P.rect(1, 2, w, 9, '#8e4ce0'); P.rect(1, 2, w, 2, '#b07af0'); P.rect(1, 10, w, h + 2, '#7a3ac8');
+    P.rect(1, 6, 4, h + 6, '#6a2ab0'); P.rect(w - 3, 6, 4, h + 6, '#6a2ab0'); P.rect(Math.floor(w / 2), 11, 1, h, '#5a2a98');
+    P.rect(6, 4, 6, 5, '#ffd84a');   // coussin
+  } else if (kind === 'panier') {   // panier de basket sur son poteau
+    P = new Painter(18, 40); ax = 9 - w / 2; ay = 40 - h - 1;
+    P.rect(8, 10, 2, 29, '#55525f'); P.rect(8, 10, 1, 29, '#7a7684');
+    P.rect(2, 1, 14, 10, '#ffffff'); P.rect(6, 4, 6, 5, '#e0405a'); P.rect(7, 5, 4, 3, '#ffffff');
+    P.rect(5, 10, 8, 1, '#ff8a1e'); for (let i = 0; i < 4; i++) P.px(6 + i * 2, 11 + (i % 2), '#f4f0e6');
+  } else if (kind === 'balancoire') {   // balançoire : portique et deux sièges
+    P = new Painter(w + 2, h + 30); ax = 1; ay = 28;
+    P.rect(1, 2, w, 2, '#e0405a'); line2(P, 3, 4, 1, h + 28, '#e0405a'); line2(P, w - 2, 4, w, h + 28, '#e0405a');
+    for (const sx of [Math.floor(w / 3), Math.floor(w * 2 / 3)]) { P.rect(sx, 4, 1, 18, '#55525f'); P.rect(sx + 5, 4, 1, 18, '#55525f'); P.rect(sx - 1, 22, 8, 2, '#3f6fb5'); }
+  } else if (kind === 'glissade') {   // glissade jaune
+    P = new Painter(w + 10, h + 26); ax = 1; ay = 24;
+    P.rect(1, 2, 2, h + 22, '#55525f'); P.rect(w - 2, 2, 2, h + 22, '#55525f');
+    for (let y = 6; y < h + 22; y += 5) P.rect(1, y, w, 1, '#7a7684');
+    for (let k = 0; k < h + 18; k++) P.rect(w - 4 + Math.round(k * 0.45), 4 + k, 6, 1, k % 4 ? '#ffd84a' : '#e8b83a');
+    P.rect(1, 1, w, 2, '#e0405a');
+  } else if (kind === 'bus') {   // autobus scolaire jaune
+    P = new Painter(w + 2, h + 18); ax = 1; ay = 16;
+    P.rect(1, 2, w, h + 12, '#f2b82a'); P.rect(1, 2, w, 2, '#ffd86a'); P.rect(1, h + 10, w, 4, '#3a3640');
+    for (let x = 4; x < w - 14; x += 9) { P.rect(x, 6, 7, 6, '#2f3a52'); P.rect(x + 1, 7, 2, 2, '#9fd6ff'); }
+    P.rect(w - 12, 5, 10, 9, '#2f3a52'); P.rect(w - 11, 6, 3, 3, '#9fd6ff');
+    P.rect(1, 15, w, 1, '#1b1424'); P.rect(4, 17, w - 6, 2, '#1b1424');
+    for (const wx of [8, w - 12]) { P.disc(wx, h + 14, 3, '#1b1424'); P.disc(wx, h + 14, 1, '#9aa0ab'); }
+    P.rect(w - 2, 10, 2, 3, '#ffffff'); P.rect(3, 22, 18, 3, '#1b1424');
   } else if (kind === 'well') {
     P = new Painter(w + 2, h + 18); ax = 1; ay = 16;
     P.ellipse(Math.floor(w / 2) + 1, h + 8, Math.floor(w / 2), Math.floor(h / 2) + 1, '#9aa0ab');
@@ -746,9 +792,75 @@ const THEMES = {
   hiver:   { rustique: true, herbe: ['#eef4fa', '#e2ebf4', '#ffffff', '#c8d8e8'], falaise: ['#b8cde0', '#8aa3be', '#e4eff8', '#6a84a0'], arbres: ['#2f6a4a', '#3f8a5a', '#e8f2fa', '#1f4a35'], fond: '#8aa3be' },
   cite:    { herbe: ['#6a8a55', '#61804e', '#76955f', '#4f6d42'], falaise: ['#8a8590', '#66626e', '#a8a4ae', '#46424e'], arbres: ['#3f6a3a', '#4a7a44', '#6a9a5a', '#2a4a28'], fond: '#46424e' },
   colisee: { herbe: ['#8fb35a', '#82a650', '#9cc065', '#6f9445'], falaise: ['#c9a36a', '#9e7c48', '#e2c08a', '#7a5e34'], arbres: ['#3f7a3a', '#4f9a4a', '#6cb860', '#2a5a2e'], fond: '#9e7c48' },
+  ecole:   { herbe: ['#62b444', '#58a83d', '#72c450', '#43902f'], falaise: ['#b86f3c', '#8a4a26', '#d68e52', '#6a3a1e'], arbres: ['#3a9238', '#4aa842', '#7ccd58', '#23652a'], fond: '#2f7a3f' },
   marais:  { rustique: true, herbe: ['#6f8048', '#64743f', '#7d8f55', '#55653a'], falaise: ['#7a6a4a', '#5a4a32', '#9a8a62', '#3f3322'], arbres: ['#3f5a32', '#4f6d3a', '#6a8a4a', '#2a3f22'], fond: '#2a3f22' },
 };
 const HEAL_NOM = { fontaine: 'Fontaine de soin', source: 'Source de soin', autel: 'Autel de soin', feu: 'Feu de camp (soigne)' };
+
+// ---------- École : lignes peintes, trampolines, casiers, ballons ----------
+function peindreEcole(g, map, tile, TS) {
+  const blanc = '#f4f0e6', jaune = '#ffd84a';
+  // gymnase : contour du terrain et cercle du centre
+  let i0 = 99, i1 = 0, j0 = 99, j1 = 0;
+  for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) if (tile(i, j) === 'y') { i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j); }
+  if (i1 > i0) {
+    const x0 = i0 * TS + 6, y0 = j0 * TS + 6, x1 = (i1 + 1) * TS - 6, y1 = (j1 + 1) * TS - 6;
+    g.strokeStyle = '#3f6fb5'; g.lineWidth = 2; g.strokeRect(x0, y0, x1 - x0, y1 - y0);
+    g.beginPath(); g.moveTo((x0 + x1) / 2, y0); g.lineTo((x0 + x1) / 2, y1); g.stroke();
+    g.beginPath(); g.arc((x0 + x1) / 2, (y0 + y1) / 2, 14, 0, 7); g.stroke();
+  }
+  // cour : terrain de basket, marelle et « carré » (ballon-poing)
+  const T = TS, cx = 27 * T, cy = 24 * T;
+  g.strokeStyle = blanc; g.lineWidth = 2;
+  g.strokeRect(14.6 * T, 19.5 * T, 25.2 * T, 9 * T);
+  g.beginPath(); g.moveTo(cx, 19.5 * T); g.lineTo(cx, 28.5 * T); g.stroke();
+  g.beginPath(); g.arc(cx, cy, 2 * T, 0, 7); g.stroke();
+  for (const [ax, s] of [[14.6 * T, 1], [39.8 * T, -1]]) { g.beginPath(); g.arc(ax, cy, 3.2 * T, -Math.PI / 2, Math.PI / 2, s < 0); g.stroke(); }
+  // marelle
+  const mx = 21 * T, my = 33.2 * T;
+  for (const [i, j] of [[0, 0], [0, -1], [-0.5, -2], [0.5, -2], [0, -3], [-0.5, -4], [0.5, -4], [0, -5]]) {
+    g.strokeStyle = jaune; g.strokeRect(mx + i * T - T / 2, my + j * T * 0.8, T, T * 0.8);
+  }
+  // ballon-poing : un carré de 4 cases
+  const qx = 33 * T, qy = 30 * T;
+  g.strokeStyle = '#7fd0ff'; g.strokeRect(qx, qy, 4 * T, 4 * T * 0.75);
+  g.beginPath(); g.moveTo(qx + 2 * T, qy); g.lineTo(qx + 2 * T, qy + 3 * T); g.moveTo(qx, qy + 1.5 * T); g.lineTo(qx + 4 * T, qy + 1.5 * T); g.stroke();
+  // trampolines (blocs de 2×2 tuiles 'r')
+  const vus = new Set();
+  for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) {
+    if (tile(i, j) !== 'r' || vus.has(j * map.cols + i)) continue;
+    for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) vus.add((j + b) * map.cols + i + a);
+    const P = new Painter(2 * TS, 2 * TS), c = TS, r = TS - 2;
+    P.ellipse(c, c + 1, r, r - 3, '#3f6fb5');
+    P.ellipse(c, c, r - 3, r - 6, '#1b1424'); P.ellipse(c - 3, c - 3, 5, 2, '#3a3a56');
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; P.px(c + Math.round(Math.cos(a) * (r - 1.5)), c + 1 + Math.round(Math.sin(a) * (r - 4.5)), '#9fd6ff'); }
+    g.drawImage(P.outline().canvas(), i * TS, j * TS);
+  }
+}
+let casierCache = null;
+function casierSprite() {   // trois casiers bleus, une porte entrouverte
+  if (casierCache) return casierCache;
+  const P = new Painter(34, 40);
+  for (let k = 0; k < 3; k++) {
+    const x = 1 + k * 11;
+    P.rect(x, 2, 10, 36, k === 1 ? '#2f5aa0' : '#3f6fb5'); P.rect(x, 2, 10, 1, '#6a94d8');
+    for (let y = 5; y < 12; y += 2) P.rect(x + 2, y, 6, 1, '#2a4a80');
+    P.rect(x + 7, 18, 2, 3, '#c8d0dc');
+  }
+  P.rect(12, 3, 9, 34, '#1b1424'); line2(P, 21, 3, 25, 6, '#6a94d8');   // porte entrouverte : on peut s'y cacher
+  return (casierCache = P.outline().canvas());
+}
+let ballonCache = null;
+function ballonSprite(rot) {   // grand ballon rouge avec une bande blanche qui tourne
+  const k = ((Math.round(rot * 4) % 8) + 8) % 8;
+  ballonCache = ballonCache || [];
+  if (ballonCache[k]) return ballonCache[k];
+  const P = new Painter(26, 26), c = 13;
+  P.disc(c, c, 11, '#e0405a');
+  for (let t = -11; t <= 11; t++) { const a = k / 8 * Math.PI, x = c + Math.round(Math.cos(a) * t), y = c + Math.round(Math.sin(a) * t); P.px(x, y, '#ffffff'); P.px(x + Math.round(-Math.sin(a)), y + Math.round(Math.cos(a)), '#ffffff'); }
+  P.disc(c - 4, c - 4, 2, '#ff9aa8');
+  return (ballonCache[k] = P.outline().canvas());
+}
 
 let mapLayer = null, topLayer = null, mapAnim = null;
 function buildMapLayers(map) {
@@ -943,6 +1055,26 @@ function buildMapLayers(map) {
         for (let k = 1; k <= 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k]]) if (V(x + dx, y + dy) !== 't') d = Math.min(d, k);
         c = d === 1 ? '#7a2350' : d === 2 ? '#e3b341' : ((x + y) % 6 === 0 || (x - y + 600) % 6 === 0) ? '#c8508a' : '#a8336a';
       }
+      else if (t === 'a') {   // asphalte de la cour : gris chaud, petits graviers
+        c = noise(x / 14, y / 14, 31) > 0.6 ? '#6c6a72' : '#76747c'; if (h < 0.05) c = '#5e5c64'; else if (h > 0.985) c = '#8e8c94';
+      }
+      else if (t === 'l') {   // linoléum en damier : corridor et cafétéria
+        const cx = Math.floor(x / 8), cy = Math.floor(y / 8);
+        c = (cx + cy) % 2 ? '#e8e0cc' : (map.theme === 'ecole' && (cx * 3 + cy * 5) % 7 === 0 ? '#7fb2d8' : '#cfc4aa');
+        if (x % 8 === 0 || y % 8 === 0) c = shade(c, 0.9);
+      }
+      else if (t === 'y' || t === 'r') {   // plancher verni du gymnase
+        const row = Math.floor(x / 5);
+        c = (y + row * 7) % 19 === 0 ? '#b07a3e' : row % 2 ? '#e6b06a' : '#dca562';
+        if (x % 5 === 4) c = '#c08848';
+        if (h > 0.99) c = '#f2c886';
+      }
+      else if (t === 'j') {   // Jell-O renversé : rouge translucide, reflets
+        const cl = cells(x, y, 7, 91);
+        c = cl.d2 - cl.d1 < 1 ? '#a8203a' : cl.id < 0.5 ? '#e0405a' : '#d03450';
+        if (x - cl.px + y - cl.py < -3 && cl.d1 < 3) c = '#ff9aa8';
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (V(x + dx, y + dy) !== 'j') c = '#7a1428';
+      }
       else if (t === 'm') {
         const qs = map.theme === 'desert';
         c = qs ? (Math.sin(Math.hypot(x - tx * TS, y - ty * TS) * 0.6) > 0.7 ? '#c49a50' : '#d8b46a') : (noise(x / 6, y / 6, 7) > 0.68 ? '#5a4c26' : h < 0.05 ? '#8f7d48' : '#6b5c30');
@@ -970,7 +1102,7 @@ function buildMapLayers(map) {
         if (q <= 3) c = q === 1 ? '#3e3a46' : (x + y) % 6 === 0 ? '#5a5664' : '#77737f';
       }
       // plage autour de l'eau
-      if (t !== 'B' && t !== '=' && t !== 'v' && t !== 'L' && t !== 'p' && t !== 'f' && t !== 'w' && t !== 't') {
+      if (!'B=vLpfwtalyjr'.includes(t)) {
         let nw = 9;
         for (let k = 1; k <= 3 && nw > 3; k++) for (const [dx, dy] of [[k, 0], [-k, 0], [0, k], [0, -k], [k, k], [-k, -k], [k, -k], [-k, k]]) if (isW(V(x + dx, y + dy))) { nw = Math.min(nw, k); break; }
         if (nw <= 2) c = H ? '#d8e6f2' : map.theme === 'donjon' ? '#5a5a6a' : map.theme === 'marais' ? '#8a7a4a' : '#c8b27c';
@@ -982,6 +1114,7 @@ function buildMapLayers(map) {
   }
   function dy0(y, cl) { return y - cl.py < -3; }
   g.putImageData(img, 0, 0);
+  if (map.theme === 'ecole') peindreEcole(g, map, tile, TS);
 
   const top = document.createElement('canvas'); top.width = AW; top.height = AH;
   const tg = top.getContext('2d');
@@ -1089,6 +1222,7 @@ function buildMapLayers(map) {
   }
   // buissons (cachettes) : dessus, pour couvrir à moitié les joueurs cachés
   for (const b of map.bushes) {
+    if (b.kind === 'casier') { const s = casierSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height + 12); continue; }
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
     const snow = map.theme === 'hiver', dark = map.theme === 'marais';
     // cachette : buisson de fougères pointues vert lime avec des baies violettes (bien différent des arbres ronds)
@@ -1981,6 +2115,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       img(minionSprite(f.c || 'citrouille', 0, 0), px, py, big ? 5 : 2);
     } else if (f.k === 'zap') {
       for (let i = 0; i <= 14; i++) { const u = i / 14; sq(f.x + (f.x2 - f.x) * u + Math.sin(i * 2 + now * 30) * 6, f.y - 30 + (f.y2 - f.y) * u, 2, i % 2 ? '#ffe27a' : '#ffffff'); }
+    } else if (f.k === 'boing') {   // trampoline ou ballon : anneaux et « Boing ! »
+      ctx.globalAlpha = Math.min(1, t * 2); ctx.strokeStyle = '#ffd84a'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(f.x, f.y + 10, 10 + (1 - t) * 40, 4 + (1 - t) * 14, 0, 0, 7); ctx.stroke();
+      ctx.font = '700 16px Lexend, sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 4; ctx.strokeStyle = OUT; ctx.fillStyle = '#ffd84a';
+      ctx.strokeText('Boing !', f.x, f.y - 30 - (1 - t) * 20); ctx.fillText('Boing !', f.x, f.y - 30 - (1 - t) * 20);
     } else if (f.k === 'dust') {
       for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; sq(f.x + Math.cos(a) * 22 * (1.3 - t), f.y + Math.sin(a) * 8 * (1.3 - t), 3, i % 2 ? '#d8cfc0' : '#b8ad9a'); }
     } else if (f.k === 'tp') {
@@ -2042,6 +2181,12 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     } else {
       for (let i = 0; i < 7; i++) sq(x - Math.cos(a) * i * 3.2, y - Math.sin(a) * i * 3.2, 1, i === 0 ? '#e6ebf2' : i > 5 ? '#e04a3a' : '#7a4b25');
     }
+  }
+  // ballons géants de la cour d'école
+  for (const [x, y, rot] of world.bl || []) {
+    ctx.fillStyle = '#00000040'; ctx.beginPath(); ctx.ellipse(x, y + 30, 30, 9, 0, 0, 7); ctx.fill();
+    const s = ballonSprite(rot), S = big ? 4 : PX;
+    ctx.drawImage(s, Math.round(x - s.width * S / 2), Math.round(y - s.height * S / 2 - 4), s.width * S, s.height * S);
   }
   // joueurs et boss (du haut vers le bas)
   const list = world.p.filter(p => p.al).sort((p, q) => p.y - q.y);
@@ -2125,8 +2270,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     if (zom) ctx.filter = 'hue-rotate(75deg) saturate(1.7) brightness(0.85)';   // les zombies deviennent verdâtres
     // attaque : le coup (0,1 s), puis la fin du geste ; le héros avance un peu vers sa cible
     if (p.at && !d.at0) d.at0 = now; else if (!p.at && d.at0 && now - d.at0 > 0.4) d.at0 = 0;
+    // trampoline : le héros monte et redescend (l'ombre reste au sol)
+    if (p.sj && !d.sj0) d.sj0 = now; else if (!p.sj && d.sj0 && now - d.sj0 > 0.45) d.sj0 = 0;
+    const saut = d.sj0 ? Math.sin(Math.min(1, (now - d.sj0) / 0.42) * Math.PI) * 40 : 0;
     const ta = d.at0 ? now - d.at0 : 9, phase = ta < 0.1 ? 1 : ta < 0.25 ? 2 : 0, el = phase ? Math.sin(Math.min(1, ta / 0.2) * Math.PI) * 4 : 0;
-    drawHeroSprite(ctx, d.x + Math.cos(p.a) * el, d.y + breathe + Math.sin(p.a) * el * 0.6, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, phase, tcol);
+    drawHeroSprite(ctx, d.x + Math.cos(p.a) * el, d.y + breathe + Math.sin(p.a) * el * 0.6 - saut, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, phase, tcol);
     if (zom) { ctx.filter = 'none'; const S = heroScale; sq(d.x - 4 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); sq(d.x + 2 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); }
     if (p.c === 'mage') {
       const dd = dirFromAngle(p.a), S = heroScale, gx = d.x + (dd === 'down' ? 6 * S : dd === 'up' ? 5 * S : dd === 'right' ? 2 * S : -2 * S), gy = d.y + breathe + 22 - (dd === 'up' ? 22 : 21) * S;

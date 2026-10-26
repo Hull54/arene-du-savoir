@@ -40,8 +40,8 @@
     if (touchObj(c, x, y, r)) return true;
     return !!(c.heal && c.heal.kind !== 'source' && Math.hypot(x - c.heal.x, y - c.heal.y) < 30 + r);
   }
-  // Boue, gué, glace
-  const terrain = t => t === 'm' ? 0.55 : t === '=' ? 0.7 : t === 'i' ? 1.4 : 1;
+  // Boue, gué, glace, Jell-O
+  const terrain = t => t === 'm' || t === 'j' ? 0.55 : t === '=' ? 0.7 : t === 'i' ? 1.4 : 1;
 
   // Un pas : chaque axe séparément, et on glisse sur le côté d'un coin au lieu de rester coincé.
   // Retourne vrai si le héros est bloqué dans les deux directions.
