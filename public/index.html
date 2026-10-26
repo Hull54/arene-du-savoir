@@ -411,6 +411,9 @@ $('go').onclick = () => partir(false);
 $('solo').onclick = () => partir(true);
 // copie de la fiche du code sur cet appareil : elle revient avec l'élève si le serveur s'est endormi
 const lireFiche = code => { try { return JSON.parse(localStorage.getItem('arene-fiche-' + code) || 'null'); } catch { return null; } };
+// copie des notions et questions choisies par l'enseignant : sert à la maison si le serveur s'est endormi
+const lireReglages = () => { try { return JSON.parse(localStorage.getItem('arene-reglages') || 'null'); } catch { return null; } };
+const garderReglages = r => { try { const a = lireReglages(); if (!a || !(a.v > r.v)) localStorage.setItem('arene-reglages', JSON.stringify(r)); } catch {} };
 const garderFiche = rec => { try { localStorage.setItem('arene-fiche-' + rec.code, JSON.stringify(rec)); } catch {} };
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('next').disabled) showStep(2); };
 
@@ -438,7 +441,7 @@ function connect(name, cls, code = '', solo = false) {
   SOLO = solo; dernier = [name, cls, code, solo];
   myCls = cls;
   ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + (solo ? '/maison' : ''));
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined, fiche: code ? lireFiche(code) || undefined : undefined }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined, fiche: code ? lireFiche(code) || undefined : undefined, reglages: solo ? lireReglages() || undefined : undefined }));
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     vuServeur = Date.now();
@@ -470,6 +473,7 @@ function connect(name, cls, code = '', solo = false) {
     else if (m.t === 'item') { if (m.gear) toast(`${m.ico} ${m.nom} ! (${m.bonus})`); else if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play(m.gear ? 'serie' : 'objet'); }
     else if (m.t === 'portail') Son.play('tp');
     else if (m.t === 'or') { monOr = Math.max(0, monOr + m.n); sauverOr(); if (m.n > 1) toast(`🪙 +${m.n} pièces d'or !`); }
+    else if (m.t === 'reglages') garderReglages(m.r);
     else if (m.t === 'compteMaj') { garderFiche(m.rec); monOr = m.rec.or; achats = m.rec.achats; sauverOr(); }
     else if (m.t === 'complet') { ws.onclose = null; alert('Beaucoup d\'élèves s\'entraînent en ce moment. Réessaie dans quelques minutes !'); location.reload(); }
     else if (m.t === 'compte') { if (m.rec) garderFiche(m.rec); $('name').value = m.nom; monOr = m.or; achats = m.achats || []; mesBadges = m.badges || []; sauverOr(); toast(`🔑 Bienvenue ${m.nom} ! Tu as ${m.or} pièce${m.or > 1 ? 's' : ''} d'or.`); }

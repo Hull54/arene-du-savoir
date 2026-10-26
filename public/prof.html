@@ -168,7 +168,7 @@ let map = null, world = null, W0 = null, last = null;
 const disp = new Map();
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
-ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
+ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); if (notionsOn) send({ t: 'subjects', list: notionsOn }); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
 // coupure : on attend que le serveur réponde de nouveau, puis on recharge la page toute seule
 ws.onclose = () => {
   $('urls').textContent = '📶 Connexion perdue… reconnexion automatique';
@@ -252,6 +252,17 @@ setTimeout(renderCodes, 0);   // après la définition de esc()
 // ----- Mes questions : gardées dans ce navigateur, envoyées au jeu à chaque connexion -----
 let perso = [];
 try { perso = JSON.parse(localStorage.getItem('arene-perso') || '[]'); } catch {}
+// notions cochées : gardées dans ce navigateur et renvoyées au jeu à chaque ouverture (le serveur gratuit oublie tout en s'endormant)
+let notionsOn = null;
+try { notionsOn = JSON.parse(localStorage.getItem('arene-notions') || 'null'); } catch {}
+function cocher(liste, s, on) {
+  const set = new Set(liste.filter(x => x.on).map(x => x.s));
+  on ? set.add(s) : set.delete(s);
+  for (const x of liste) if (x.s === s) x.on = on;
+  notionsOn = [...set];
+  try { localStorage.setItem('arene-notions', JSON.stringify(notionsOn)); } catch {}
+  send({ t: 'subject', s, on });
+}
 const envoyerPerso = () => { try { localStorage.setItem('arene-perso', JSON.stringify(perso)); } catch {} send({ t: 'perso', qs: perso }); renderPerso(); };
 function renderPerso() {
   const par = {};
@@ -346,12 +357,12 @@ function info(m) {
       const g = document.createElement('div');
       g.className = 'grp';
       g.innerHTML = `${esc(mat)} <a data-v="1">tout</a><a data-v="0">aucune</a>`;
-      g.querySelectorAll('a').forEach(a => a.onclick = () => m.subjects.filter(x => x.m === mat).forEach(x => send({ t: 'subject', s: x.s, on: a.dataset.v === '1' })));
+      g.querySelectorAll('a').forEach(a => a.onclick = () => m.subjects.filter(x => x.m === mat).forEach(x => cocher(m.subjects, x.s, a.dataset.v === '1')));
       $('subjects').appendChild(g);
       for (const { s, on } of m.subjects.filter(x => x.m === mat)) {
         const l = document.createElement('label');
         l.innerHTML = `<input type="checkbox" ${on ? 'checked' : ''}> ${esc(s)}`;
-        l.querySelector('input').onchange = ev => send({ t: 'subject', s, on: ev.target.checked });
+        l.querySelector('input').onchange = ev => cocher(m.subjects, s, ev.target.checked);
         $('subjects').appendChild(l);
       }
     }

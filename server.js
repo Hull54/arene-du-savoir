@@ -155,6 +155,8 @@ let paused = false;
 const subjects = new Set(NOTIONS.map(n => n.s));
 // Questions de l'enseignant (gardées dans son navigateur et renvoyées à chaque connexion de /prof)
 let PERSO = [], PERSO_BRUT = [];
+let reglagesV = 0;   // heure du dernier réglage de l'enseignant (0 : rien depuis le démarrage du serveur)
+const reglagesEleve = () => ({ subjects: [...subjects], perso: PERSO_BRUT, ouvert: ouvertTous, v: reglagesV });
 const str = (v, n) => typeof v === 'string' ? v.trim().slice(0, n) : '';
 function setPerso(qs) {
   if (!Array.isArray(qs)) return;
@@ -1844,6 +1846,15 @@ function onMessage(conn, msg) {
       }
       send(conn, { ...welcome(), id: conn.player.id, nom: conn.player.name });
       if (rec) send(conn, { t: 'compte', nom: rec.nom, or: rec.or, achats: rec.achats, badges: rec.badges, rec });
+      // réglages de l'enseignant : l'appareil en garde une copie ; à la maison, la copie sert si le serveur s'est endormi depuis
+      const cp = m.reglages;
+      if (solo && !(opts.depuis && opts.depuis.v) && cp && typeof cp === 'object' && +cp.v > 0) {
+        setPerso(cp.perso);
+        const ok = (Array.isArray(cp.subjects) ? cp.subjects : []).filter(s => NOTIONS.some(n => n.s === s));
+        if (ok.length) { subjects.clear(); for (const s of ok) subjects.add(s); }
+        ouvertTous = !!cp.ouvert; reglagesV = +cp.v;
+      }
+      if (reglagesV) send(conn, { t: 'reglages', r: reglagesEleve() });
       if (solo) {   // à la maison : sa révision ciblée revient (séance de classe et pratiques précédentes), et des robots
         const q = conn.player, mem = memoire[q.name] || (memoire[q.name] = {});
         const depuis = opts.depuis && opts.depuis.memoire[q.name];
@@ -1890,8 +1901,11 @@ function onMessage(conn, msg) {
   }
   if (conn.role !== 'prof') return;
   switch (m.t) {
-    case 'subject': m.on ? subjects.add(m.s) : subjects.delete(m.s); break;
-    case 'perso': setPerso(m.qs); break;
+    case 'subject': m.on ? subjects.add(m.s) : subjects.delete(m.s); reglagesV = Date.now(); break;
+    case 'subjects':   // notions gardées dans le navigateur de l'enseignant, renvoyées à l'ouverture du tableau de bord
+      if (Array.isArray(m.list)) { const ok = m.list.filter(s => NOTIONS.some(n => n.s === s)); if (ok.length) { subjects.clear(); for (const s of ok) subjects.add(s); reglagesV = Date.now(); } }
+      break;
+    case 'perso': setPerso(m.qs); reglagesV = Date.now(); break;
     case 'codes':   // liste des codes (au chargement du tableau de bord) : on garde la version la plus récente de chaque fiche
       if (Array.isArray(m.list)) for (const r of m.list.slice(0, 60)) {
         if (!r || typeof r.code !== 'string' || typeof r.nom !== 'string') continue;
@@ -1973,12 +1987,12 @@ function onClose(conn) {
 if (solo) {   // à la maison : entraînement contre des robots, avec les notions et les questions choisies par l'enseignant
   mode = 'entrainement';
   const r = opts.depuis;
-  if (r) { setPerso(r.perso); subjects.clear(); for (const n of r.subjects) subjects.add(n); Object.assign(niveaux, r.niveaux); ouvertTous = r.ouvert; }
+  if (r) { setPerso(r.perso); subjects.clear(); for (const n of r.subjects) subjects.add(n); Object.assign(niveaux, r.niveaux); ouvertTous = r.ouvert; reglagesV = r.v; }
 }
 return {
   conns, onMessage, onClose,
   arreter() { clearInterval(infoT); clearInterval(stepT); },
-  reglages: () => ({ perso: PERSO_BRUT, subjects: [...subjects], niveaux: { ...niveaux }, ouvert: ouvertTous, memoire }),
+  reglages: () => ({ perso: PERSO_BRUT, subjects: [...subjects], niveaux: { ...niveaux }, ouvert: ouvertTous, memoire, v: reglagesV }),
 };
 }   // fin de creerMonde
 
@@ -1993,6 +2007,7 @@ const server = http.createServer((req, res) => {
   if (file === '/') file = '/index.html';
   if (file === '/prof') file = '/prof.html';
   if (file === '/guide') file = '/guide.html';
+  if (file === '/ping') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
   const full = path.join(PUBLIC, path.normalize(file));
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(full, (err, data) => {
@@ -2060,6 +2075,13 @@ server.on('upgrade', (req, socket) => {
   socket.on('close', () => { monde.onClose(conn); if (monde !== classe) { monde.arreter(); MONDES.delete(monde); } });
   socket.on('error', () => socket.destroy());
 });
+
+// Garder le serveur éveillé de 6 h à 22 h (heure du Québec) : il ne s'endort plus en soirée, donc il garde
+// les réglages de l'enseignant pour la pratique à la maison. Render donne l'adresse publique dans RENDER_EXTERNAL_URL.
+if (process.env.RENDER_EXTERNAL_URL) setInterval(() => {
+  const h = +new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Toronto' }).format(new Date());
+  if (h >= 6 && h < 22) fetch(process.env.RENDER_EXTERNAL_URL + '/ping').catch(() => {});
+}, 10 * 60 * 1000);
 
 // toutes les 5 s : on ferme les connexions d'élèves muettes depuis 20 s (l'appareil envoie un signe de vie)
 setInterval(() => {
