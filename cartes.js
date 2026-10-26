@@ -136,6 +136,23 @@ function atelier(id, seed, base) {
 }
 
 function fin(A, id, nom, theme, desc) {
+  // ponts : la terre doit continuer au bout de chaque pont (sinon l'eau qui touche l'entrée bloque le passage).
+  // Le pont traverse dans le sens de sa longueur.
+  const vusB = new Set();
+  for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+    if (A.get(i, j) !== 'B' || vusB.has(j * COLS + i)) continue;
+    let i1 = i, j1 = j;
+    while (A.get(i1 + 1, j) === 'B') i1++;
+    while (A.get(i, j1 + 1) === 'B') j1++;
+    for (let b = j; b <= j1; b++) for (let a = i; a <= i1; a++) vusB.add(b * COLS + a);
+    const vert = j1 - j >= i1 - i;
+    for (let a = vert ? i : j; a <= (vert ? i1 : j1); a++) for (const [d0, s] of [[vert ? j : i, -1], [vert ? j1 : i1, 1]])
+      for (let k = 1; k <= 2; k++) {
+        const x = vert ? a : d0 + s * k, y = vert ? d0 + s * k : a;
+        if (!WATER.has(A.get(x, y))) break;
+        A.set(x, y, '.');
+      }
+  }
   // un buisson ne doit pas chevaucher un arbre ou un meuble (on ne le distinguerait plus) : on le déplace un peu
   const touche = (bx, by, r) => A.objs.some(o => bx + r > o.x - 16 && bx - r < o.x + o.w + 16 && by + r > o.y - 90 && by - r < o.y + o.h + 12);
   A.bushes.forEach((b, n) => {
