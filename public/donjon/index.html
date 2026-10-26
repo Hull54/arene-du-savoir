@@ -301,10 +301,18 @@ html, body, button, .board, .modal { touch-action: manipulation; }
 .m-fond img { object-fit: cover; }
 .m-fond svg text { font-family: var(--display); }
 .m-pins { position: absolute; inset: 0; }
-.pin { position: absolute; translate: -50% -50%; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; touch-action: none; }
-.pin-coin { width: clamp(44px, 5vw, 76px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 0 0 3px #120d09, 0 0 0 6px var(--gold), 0 8px 18px rgba(0,0,0,.6); animation: pinpulse 2.4s ease-in-out infinite; }
-.pin-coin svg { width: 100%; height: 100%; display: block; }
-.pin-nom { background: rgba(20,14,8,.88); border: 1px solid var(--gold); border-radius: 10px; padding: 5px 10px; font-family: var(--display); font-weight: 700; font-size: clamp(.85rem, 1.2vw, 1.15rem); color: var(--gold); text-align: left; line-height: 1.15; white-space: nowrap; }
+.pin { position: absolute; translate: -50% -100%; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; touch-action: none; }
+.pin { flex-direction: column; gap: 0; }
+.pin-coin { width: max(26px, calc(var(--mw, 900px) * .036)); aspect-ratio: 1; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 0 0 2px #120d09, 0 0 0 4px var(--gold), 0 6px 12px rgba(0,0,0,.6); animation: pinpulse 2.4s ease-in-out infinite; }
+.pin::after { content: ""; width: 0; height: 0; border-left: max(6px, calc(var(--mw, 900px) * .008)) solid transparent; border-right: max(6px, calc(var(--mw, 900px) * .008)) solid transparent;
+  border-top: max(9px, calc(var(--mw, 900px) * .013)) solid var(--gold); margin-top: 2px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
+.pin .pin-nom { display: none; }
+.pin.edit .pin-nom, .pin:hover .pin-nom, .pin:focus-visible .pin-nom { display: block; position: absolute; bottom: 100%; left: 50%; translate: -50% -6px; z-index: 2; font-size: max(10px, calc(var(--mw, 900px) * .013)); padding: 3px 8px; }
+.pin .pin-nom small { display: none; }
+.pin-del { position: absolute; top: -10px; right: -16px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff4e0; background: var(--rouge, #c8473a); color: #fff; font-size: 14px; display: grid; place-items: center; cursor: pointer; z-index: 3; }
+.pin-del.sur { width: auto; padding: 0 8px; border-radius: 99px; font-weight: 700; font-family: var(--body); }
+.pin-coin svg, .pin-coin img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.pin-nom { pointer-events: none; background: rgba(20,14,8,.88); border: 1px solid var(--gold); border-radius: 10px; padding: 5px 10px; font-family: var(--display); font-weight: 700; font-size: clamp(.85rem, 1.2vw, 1.15rem); color: var(--gold); text-align: left; line-height: 1.15; white-space: nowrap; }
 .pin-nom small { display: block; font-family: var(--body); font-weight: 400; font-size: .72em; color: var(--ink); }
 .pin:hover .pin-coin, .pin:focus-visible .pin-coin { scale: 1.08; }
 .pin.edit { cursor: grab; }
@@ -709,7 +717,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 </div>
 <div class="monde" id="monde" hidden>
   <div class="monde-top"><div class="brand">Le Royaume d'Hull<small>Classe et Donjon · touche un lieu pour partir à l'aventure</small></div><span class="spacer"></span>
-    <div class="tools"><button class="btn" type="button" id="m-edit">Déplacer les lieux</button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
+    <div class="tools"><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
   <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-pins" id="m-pins"></div></div></div>
   <input type="file" id="m-file" accept="image/*,application/pdf" hidden>
 </div>
@@ -4208,7 +4216,7 @@ const Stock = {
     return (await IDB.all("reglages")).find(x => x.id === "monde") || null;
   },
   async sauverMonde(m) {
-    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null };
+    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, caches: m.caches || [] };
     if (d.image && d.image.startsWith("data:") && this.assets) { try { const b = dataUrlBlob(d.image); d.image = "asset:" + (await this.assets.upload(b, { type: b.type })).id; m.image = d.image; } catch {} }
     if (this.db) { try { await this.db.doc("reglages/monde").set(d); return true; } catch {} }
     return !!(await IDB.put("reglages", d));
@@ -4405,7 +4413,7 @@ const MONDE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 100
 const LIEUX_DEFAUT = { demo: [0.613, 0.335], "halloween-vladislav": [0.316, 0.705] };
 const PLACES_LIBRES = [[0.76, 0.43], [0.71, 0.75], [0.26, 0.42], [0.54, 0.6], [0.79, 0.62], [0.4, 0.56], [0.66, 0.5], [0.44, 0.3], [0.33, 0.57], [0.6, 0.78], [0.84, 0.5], [0.5, 0.45]];
 let MONDE = { image: null, lieux: {} }, mondeEdit = false;
-const quetesDuMonde = () => [DEMO, ...INTEGREES.filter(q => q !== DEMO), ...QUETES.filter(q => !INTEGREES.some(i => i.id === q.id))];
+const quetesDuMonde = () => [DEMO, ...INTEGREES.filter(q => q !== DEMO), ...QUETES.filter(q => !INTEGREES.some(i => i.id === q.id))].filter(q => !(MONDE.caches || []).includes(q.id));
 function lieuDe(q, pris) {
   if (MONDE.lieux[q.id]) return MONDE.lieux[q.id];
   if (LIEUX_DEFAUT[q.id]) return LIEUX_DEFAUT[q.id];
@@ -4423,12 +4431,15 @@ async function afficherMonde() {
     const [x, y] = lieuDe(q, pris); pris.push([x, y]);
     const equipes = (await Stock.parties(q.id)).length;
     const boss = (q.monstres || []).find(mo => mo.boss);
-    pins.push(`<button class="pin${mondeEdit ? " edit" : ""}" type="button" data-q="${esc(q.id)}" style="left:${x * 100}%;top:${y * 100}%">
+    pins.push(`<button class="pin${mondeEdit ? " edit" : ""}" type="button" data-q="${esc(q.id)}" title="${esc(q.nom)}" aria-label="${esc(q.nom)}" style="left:${x * 100}%;top:${y * 100}%">
+      ${mondeEdit ? `<span class="pin-del" data-del="${esc(q.id)}" role="button" aria-label="Retirer ${esc(q.nom)}">🗑</span>` : ""}
       <span class="pin-coin">${boss ? imgMon(boss.look) || MONSVG[boss.look] || SVG[boss.look] || SVG.roi : q.id === "demo" ? imgMon("roi") : SVG.coffreDore}</span>
       <span class="pin-nom">${esc(q.nom.replace(" (démo)", ""))}<small>${q.chapitres.length} chapitre${q.chapitres.length > 1 ? "s" : ""}${equipes ? ` · ${equipes} équipe${equipes > 1 ? "s" : ""}` : ""}</small></span></button>`);
   }
   document.getElementById("m-pins").innerHTML = pins.join("");
-  document.getElementById("m-edit").textContent = mondeEdit ? "Terminer" : "Déplacer les lieux";
+  document.getElementById("m-edit").textContent = mondeEdit ? "Terminer" : "Modifier les lieux";
+  const nc = (MONDE.caches || []).length, rc = document.getElementById("m-caches");
+  rc.hidden = !mondeEdit || !nc; rc.textContent = `Réafficher les quêtes retirées (${nc})`;
   document.getElementById("m-close").hidden = !S;
   ajusterMonde();
 }
@@ -4437,7 +4448,7 @@ function ajusterMonde() {
   const fond = carte.querySelector(".m-fond img, .m-fond svg");
   const ratio = fond && fond.naturalWidth ? fond.naturalHeight / fond.naturalWidth : 1000 / 1600;
   const w = Math.min(wrap.clientWidth, wrap.clientHeight / ratio);
-  carte.style.width = w + "px"; carte.style.height = w * ratio + "px";
+  carte.style.width = w + "px"; carte.style.height = w * ratio + "px"; carte.style.setProperty("--mw", w + "px");
 }
 function fermerMonde() { document.getElementById("monde").hidden = true; mondeEdit = false; }
 async function choisirLieu(id) {
@@ -4458,6 +4469,7 @@ document.getElementById("m-pins").addEventListener("click", e => {
 });
 // Mode « Déplacer les lieux » : glisser une épingle sur la carte
 document.getElementById("m-pins").addEventListener("pointerdown", e => {
+  if (e.target.closest("[data-del]")) return;
   const b = e.target.closest("[data-q]"); if (!b || !mondeEdit) return;
   e.preventDefault(); b.setPointerCapture(e.pointerId);
   const r = document.getElementById("m-carte").getBoundingClientRect();
@@ -4470,6 +4482,18 @@ document.getElementById("m-pins").addEventListener("pointerdown", e => {
   b.addEventListener("pointermove", bouger); b.addEventListener("pointerup", fin);
 });
 document.getElementById("m-edit").onclick = () => { mondeEdit = !mondeEdit; afficherMonde(); };
+// Retirer une quête de la carte : les quêtes fournies sont seulement cachées, les quêtes créées sont supprimées
+document.getElementById("m-pins").addEventListener("click", async e => {
+  const d = e.target.closest("[data-del]"); if (!d) return;
+  e.stopPropagation();
+  const id = d.dataset.del, q = quetesDuMonde().find(x => x.id === id); if (!q) return;
+  const fournie = INTEGREES.some(i => i.id === id);
+  if (!d.classList.contains("sur")) { d.classList.add("sur"); d.textContent = fournie ? "Retirer?" : "Supprimer?"; setTimeout(() => { if (d.isConnected) { d.classList.remove("sur"); d.textContent = "🗑"; } }, 4000); return; }
+  if (fournie) { MONDE.caches = [...new Set([...(MONDE.caches || []), id])]; await Stock.sauverMonde(MONDE); toast(`« ${q.nom} » est retirée de la carte. Tu peux la réafficher au besoin.`, 4500); }
+  else { await Stock.supprimerQuete(id); delete MONDE.lieux[id]; await Stock.sauverMonde(MONDE); await remplirQuetes(QUETE && QUETE.id !== id ? QUETE.id : DEMO.id); toast(`La quête « ${q.nom} » est supprimée.`, 4000); }
+  afficherMonde();
+}, true);
+document.getElementById("m-caches").onclick = async () => { MONDE.caches = []; await Stock.sauverMonde(MONDE); afficherMonde(); toast("Toutes les quêtes sont de retour sur la carte."); };
 document.getElementById("m-close").onclick = fermerMonde;
 document.getElementById("m-creer").onclick = () => { fermerMonde(); ouvrirEditeur(); document.getElementById("ed-new").click(); };
 document.getElementById("btn-monde").onclick = afficherMonde;
