@@ -2167,55 +2167,88 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
     P.rect(26, 15, 8, 1 + mo, F('#2a0808')); P.rect(26, 15, 8, 1, G('#f4ecd8')); if (a) P.rect(27, 18, 6, 1, G('#e8e0d0'));
     if (f % 2 === 0 || a) { line(1, 14, 4, 18, G('#fff6a0')); line(4, 18, 1, 20, G('#fff6a0')); line(58, 14, 55, 18, G('#fff6a0')); line(55, 18, 58, 20, G('#fff6a0')); }
   } else if (k === 'prof' || k === 'prof2') {
-    // Le Prof, vu de face, style chibi trapu : grosse tête barbue, épaules énormes, petites jambes.
-    // Chemise de chasse à carreaux, jeans, Converse, casquette noire ; fâché : lunettes de soleil. Gant de boxe à droite.
-    const C = c => F(c), fache = k === 'prof2', cx = 30;
-    const skin = '#f0b48a', skinD = '#cf8a62', beard = '#b4532a', beardD = '#8a3a1c', beardH = '#d8743c';
-    const red = '#d23a32', redD = '#a02622', line3 = '#4a161a', jean = '#3f6aa8', jeanD = '#2c4c80';
-    const plaid = (x, y) => { const a = (x + 60) % 7 === 0, b = y % 7 === 3; return C(a && b ? line3 : a || b ? redD : red); };
-    const fill = (x0, y0, w, h, f) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) P.px(x, y, f(x, y)); };
-    // jambes en jeans et Converse
-    for (const [x, l] of [[20, lA], [32, lB]]) {
-      fill(x, 41, 9, 7 + l, (xx) => C(xx === x + 8 ? jeanD : jean)); P.rect(x + 2, 43, 1, 3 + l, C('#5a88c8'));
-      P.rect(x - 2, 47 + l, 12, 4, C('#f4f0e6')); P.rect(x - 2, 50 + l, 12, 1, C('#b8b0a0')); P.rect(x - 2, 51 + l, 12, 1, C('#22181c'));
-      P.rect(x - 1, 48 + l, 3, 2, C('#ffffff')); P.rect(x + 3, 48 + l, 5, 1, C('#22181c'));
-    }
-    // torse très large (trapèze), carreaux, boutons
-    for (let y = 20; y <= 40; y++) { const hw = Math.round(y < 25 ? 15 + (y - 20) * 1.6 : 23 - Math.max(0, y - 30) * 0.6); for (let x = cx - hw; x < cx + hw; x++) P.px(x, y, plaid(x, y)); }
-    P.rect(cx - 1, 27, 2, 13, C(line3)); for (let y = 29; y < 40; y += 4) P.px(cx, y, G('#f4ecd8'));
-    P.rect(17, 39, 26, 3, C('#4a2e1c')); P.rect(28, 39, 4, 3, G('#e0b84a'));
-    // bras énormes : épaules à carreaux, manches roulées, avant-bras
-    const bras = (ox, dir) => {
-      for (let y = 19; y <= 34; y++) { const r = Math.round(7 * Math.sqrt(1 - ((y - 27) / 8.5) ** 2)); for (let x = ox - r; x <= ox + r; x++) P.px(x, y, plaid(x, y)); }
-      P.rect(ox - 6, 33, 13, 2, C('#e8d0b8')); P.rect(ox - 6, 34, 13, 1, C('#c8b098'));
-      // avant-bras costauds (style Popeye), ombre côté extérieur
-      for (let y = 35; y <= 41; y++) { const r = Math.round(4 + 2 * Math.sin((y - 35) / 6 * Math.PI)); for (let x = ox - r; x <= ox + r; x++) P.px(x, y, C((x - ox) * dir >= r - 1 ? skinD : skin)); }
-      P.px(ox - dir, 37, C(skinD)); P.px(ox, 38, C(skinD));
+    // Le Prof, façon brute chibi : masse ronde et voûtée, tête enfoncée entre d'énormes trapèzes,
+    // bras qui pendent jusqu'aux genoux avec des poings géants, petites jambes. Barbe rousse, casquette,
+    // chemise de chasse à carreaux, jeans, Converse ; fâché : lunettes de soleil. Gant de boxe à droite.
+    const fache = k === 'prof2', cx = 30, ink = F('#2a1416');
+    const skin = '#eeb088', beard = '#c0582c', red = '#cc3a30', jean = '#3e64a0';
+    const [sH, sM, sD] = T(skin), [bH, bM, bD] = T(beard);
+    const RT = [F('#e8604c'), F(red), F('#962420'), F('#6e1a18')];          // rouge : reflet, moyen, ombre, ligne
+    const LT = [F('#a8302a'), F('#7e1e1c'), F('#561214')];                    // lignes du carreau selon l'éclairage
+    // ellipse à carreaux avec volume (lumière en haut à gauche) et contour intérieur foncé
+    const plaidBall = (ex, ey, rx, ry) => {
+      P.ellipse(ex, ey, rx + 1, ry + 1, ink);
+      for (let y = Math.ceil(ey - ry); y <= ey + ry; y++) for (let x = Math.ceil(ex - rx); x <= ex + rx; x++) {
+        const u = (x - ex) / rx, v = (y - ey) / ry; if (u * u + v * v > 1) continue;
+        const n = u * 0.55 + v * 0.75, t = n < -0.55 ? 0 : n > 0.5 ? 2 : 1;
+        const lv = (x + 64) % 6 === 0, lh = (y + 1) % 6 === 0;
+        P.px(x, y, lv && lh ? RT[3] : lv || lh ? LT[t] : RT[t]);
+      }
     };
-    bras(8, -1); bras(52, 1);
-    const yf = 44 + (a ? 0 : sw);
-    if (a) {   // coup de poing : le gant fonce vers l'avant (en gros plan devant le torse)
-      P.ellipse(8, 43, 5, 4, C(skin)); P.rect(5, 42, 6, 1, C(skinD));
-      P.ellipse(42, 30, 9, 8, C('#e0302a')); P.ellipse(40, 27, 4, 3, C('#ff6a5a')); P.rect(35, 36, 15, 3, G('#f4f0e6')); P.rect(46, 26, 2, 7, C('#a01c18'));
-      for (let k = 0; k < 4; k++) P.px(54 + k, 22 + k * 3, G('#fff6a0'));
+    const skinBall = (ex, ey, rx, ry, c = skin) => { P.ellipse(ex, ey, rx + 1, ry + 1, ink); ball(ex, ey, rx, ry, c); };
+    // petites jambes trapues en jeans, grosses Converse
+    for (const [x, l] of [[22, lA], [34, lB]]) {
+      P.rect(x - 4, 39, 9, 9 + l, ink); box(x - 3, 40, 7, 7 + l, jean); P.rect(x - 1, 42, 1, 3, F('#6a90c8'));
+      P.rect(x - 5, 46 + l, 12, 6, ink); box(x - 4, 47 + l, 10, 3, '#f4f0e6'); P.rect(x - 4, 50 + l, 10, 1, F('#c8c0b0'));
+      P.rect(x - 3, 47 + l, 3, 2, F('#ffffff')); P.rect(x + 1, 48 + l, 4, 1, ink);
+    }
+    // ventre/torse : une grosse masse ronde à carreaux, ceinture
+    plaidBall(cx, 29, 17, 12);
+    P.rect(16, 38, 28, 3, ink); P.rect(17, 38, 26, 2, F('#5a3420')); P.rect(28, 38, 4, 2, G('#e8c050'));
+    P.rect(cx, 24, 1, 14, RT[3]); for (let y = 27; y < 38; y += 4) P.px(cx + 1, y, F('#f0e6d0'));
+    // trapèzes énormes : la tête s'enfonce dedans
+    plaidBall(16, 21, 10, 8); plaidBall(44, 21, 10, 8);
+    // bras qui pendent : biceps à carreaux, manche roulée, avant-bras épais
+    const swing = a ? 0 : sw;
+    const bras = (ox, d, s) => {
+      plaidBall(ox, 27, 7, 9);
+      P.rect(ox - 6, 34, 13, 3, ink); P.rect(ox - 5, 34, 11, 2, F('#e6d2b8'));
+      P.rect(ox - 5 + d, 37, 11, 6 + s, ink); box(ox - 4 + d, 37, 9, 5 + s, skin);
+    };
+    bras(8, -1, -swing);
+    if (!a) bras(52, 1, swing);
+    else { plaidBall(51, 24, 7, 7); P.rect(46, 29, 9, 3, ink); P.rect(47, 29, 7, 2, F('#e6d2b8')); }
+    // poings géants : gauche nu, droit dans un gant de boxe rouge
+    { const y = 47 - swing; skinBall(7, y, 7, 5); P.rect(1, y - 1, 12, 1, F(sD)); for (const x of [4, 7, 10]) P.rect(x, y - 4, 1, 3, F(sD)); P.rect(9, y + 1, 4, 1, F(sD)); }
+    if (a) {   // coup de poing : le gant fonce vers l'avant, en gros plan devant le ventre
+      skinBall(46, 32, 4, 3);
+      P.ellipse(40, 34, 11, 10, ink); ball(40, 34, 10, 9, '#e02c28'); P.rect(44, 25, 2, 9, F('#9a1a16'));
+      P.rect(46, 39, 9, 5, ink); P.rect(47, 40, 7, 3, G('#f4f0e6'));
+      for (let i = 0; i < 4; i++) P.px(55 + (i % 2), 26 + i * 4, G('#fff6a0'));
     } else {
-      P.ellipse(8, yf, 5, 4, C(skin)); P.rect(5, yf - 1, 6, 1, C(skinD)); P.px(6, yf + 1, C(skinD)); P.px(9, yf + 1, C(skinD));
-      P.rect(46, 40, 12, 2, G('#f4f0e6')); P.ellipse(52, yf + 1, 6, 5, C('#e0302a')); P.ellipse(50, yf - 1, 2, 2, C('#ff6a5a')); P.rect(48, yf + 2, 8, 1, C('#a01c18'));
+      P.rect(46, 41 + swing, 13, 3, ink); P.rect(47, 41 + swing, 11, 2, G('#f4f0e6'));
+      P.ellipse(53, 48 + swing, 8, 6, ink); ball(53, 48 + swing, 7, 5, '#e02c28'); P.rect(48, 50 + swing, 9, 1, F('#9a1a16'));
     }
-    // tête : visage, oreilles, casquette noire à l'envers
-    P.ellipse(cx, 13, 11, 10, C(skin)); P.rect(19, 11, 2, 4, C(skinD)); P.rect(40, 11, 2, 4, C(skinD));
-    P.ellipse(cx, 5, 11, 5, C('#24222c')); P.rect(19, 6, 23, 2, C('#24222c')); P.rect(22, 3, 10, 1, C('#3e3c4a')); P.rect(28, 7, 5, 1, C('#6a3a1e'));
-    // yeux et sourcils (ou lunettes de soleil quand il est fâché)
-    if (fache) { P.rect(21, 10, 19, 4, C('#15121c')); P.rect(23, 11, 5, 1, G('#5a8ab8')); P.rect(33, 11, 5, 1, G('#5a8ab8')); P.rect(29, 10, 3, 1, C('#c8a040')); }
-    else {
-      P.rect(23, 11, 4, 2, G('#f8f4ec')); P.rect(34, 11, 4, 2, G('#f8f4ec')); P.rect(25, 11, 2, 2, G('#2a4a80')); P.rect(34, 11, 2, 2, G('#2a4a80'));
-      for (let i = 0; i < 5; i++) { P.rect(22 + i, 9 + Math.floor(i / 2), 1, 2, C('#6a3418')); P.rect(38 - i, 9 + Math.floor(i / 2), 1, 2, C('#6a3418')); }
+    // grande barbe rousse sur la poitrine
+    for (let y = 15; y <= 33; y++) {
+      const hw = y < 22 ? 11 : Math.round(11 - (y - 22) * 0.75);
+      for (let x = cx - hw - 1; x <= cx + hw + 1; x++) {
+        const edge = Math.abs(x - cx) > hw || y === 33;
+        const n = (x - cx) / 11 * 0.5 + (y - 22) / 11 * 0.6;
+        P.px(x, y, edge ? ink : ((x * 3 + y * 7) % 13 === 0) ? F(bD) : n < -0.45 ? F(bH) : n > 0.45 ? F(bD) : F(bM));
+      }
     }
-    P.rect(29, 13, 3, 3, C(skinD)); P.px(28, 15, C(skinD)); P.px(32, 15, C(skinD));
-    // grosse barbe rousse jusqu'à la poitrine
-    for (let y = 12; y <= 29; y++) { const hw = y < 16 ? 10 : Math.round(12 - Math.max(0, y - 21) * 1.1); for (let x = cx - hw; x <= cx + hw; x++) { if (y < 16 && Math.abs(x - cx) < 8) continue; P.px(x, y, C(((x * 3 + y * 5) % 11 === 0) ? beardD : (x - cx + y) % 9 === 0 ? beardH : beard)); } }
-    P.rect(24, 16, 13, 2, C(beardD)); P.rect(25, 16, 11, 1, C(beard));   // moustache
-    if (a) { P.rect(26, 18, 9, 4, C('#3a0808')); P.rect(26, 18, 9, 1, G('#f4ecd8')); } else P.rect(27, 19, 7, 1, C('#3a0808'));
+    for (let y = 24; y < 32; y += 3) for (let x = cx - 6; x <= cx + 6; x += 4) P.px(x + (y % 2), y, F(bD));
+    // tête ronde, enfoncée
+    P.ellipse(cx, 13, 11, 10, ink); ball(cx, 13, 10, 9, skin);
+    P.rect(18, 12, 2, 4, F(sD)); P.rect(41, 12, 2, 4, F(sD));
+    // joues et barbe sur les côtés du visage
+    for (let y = 13; y <= 19; y++) { P.rect(19, y, 3 + Math.max(0, y - 16), 1, F(bM)); P.rect(39 - Math.max(0, y - 16), y, 3 + Math.max(0, y - 16), 1, F(bM)); }
+    // casquette noire à l'envers
+    P.ellipse(cx, 6, 11, 5, ink); P.ellipse(cx, 6, 10, 4, F('#2c2a34')); P.rect(23, 3, 9, 1, F('#4a4858')); P.rect(20, 9, 21, 1, ink);
+    P.rect(27, 9, 7, 1, F('#5a4a3a'));
+    // yeux plissés sous des sourcils épais (ou lunettes de soleil quand il est fâché)
+    if (fache) {
+      P.rect(21, 11, 19, 4, ink); P.rect(22, 11, 7, 3, F('#16141e')); P.rect(32, 11, 7, 3, F('#16141e'));
+      P.rect(23, 11, 3, 1, G('#7aa8d8')); P.rect(33, 11, 3, 1, G('#7aa8d8'));
+    } else {
+      P.rect(24, 12, 3, 2, ink); P.rect(34, 12, 3, 2, ink); P.px(25, 12, G('#f8f4ec')); P.px(35, 12, G('#f8f4ec'));
+      for (let i = 0; i < 6; i++) { P.rect(22 + i, 9 + (i >> 1), 1, 2, F('#7a3818')); P.rect(39 - i, 9 + (i >> 1), 1, 2, F('#7a3818')); }
+    }
+    // nez, moustache, bouche
+    P.rect(29, 14, 3, 3, F(sD)); P.px(29, 14, F(sH));
+    P.rect(23, 17, 15, 2, F(bD)); P.rect(24, 17, 13, 1, F(bM));
+    if (a) { P.rect(26, 19, 9, 4, ink); P.rect(27, 19, 7, 1, G('#f4ecd8')); P.rect(28, 21, 5, 1, F('#c04040')); } else P.rect(27, 19, 7, 1, ink);
   } else if (k === 'empereur') {
     const ar = '#585d68', [aH, am, aD, aDD] = T(ar), red = '#ff3a2a', mo = a ? 3 : 1;
     // cape rouge sombre derrière
