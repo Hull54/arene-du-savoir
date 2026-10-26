@@ -929,7 +929,8 @@ function frame(now) {
   const sx = secousse > 0.02 ? (Math.random() - 0.5) * secousse * 12 : 0, sy = secousse > 0.02 ? (Math.random() - 0.5) * secousse * 12 : 0;
   ctx.translate(Math.round(vw / 2 - camX * zoom + sx), Math.round(vh / 2 - camY * zoom + sy)); ctx.scale(zoom, zoom);
   const teams = equipesDe(world, equipes());
-  if (mine) mine.aim = aim;
+  if (mouseAim && performance.now() - lastMouse < 3000) aim = Math.atan2(mouse.y - meScreen.y, mouse.x - meScreen.x);   // la mire suit la souris à chaque image
+  if (mine) { mine.aim = aim; mine.aimD = mouseAim && performance.now() - lastMouse < 3000 ? Math.hypot(mouse.x - meScreen.x, mouse.y - meScreen.y) / zoom : null; }
   drawWorld(ctx, world, map, mine, disp, PX, teams);
   cadreEquipe(teams, mine);
   if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };

@@ -1752,6 +1752,8 @@ function drawVisee(ctx, world, map, mine, md, disp, B, now) {
     let best = null;
     for (const c of cibles) { const dx = c.x - md.x, dy = c.y - md.y, along = dx * ca + dy * sa, perp = Math.abs(-dx * sa + dy * ca); if (along > 0 && along < L + c.r && perp < c.r + (atk.r || 6) && (!best || along < best.along)) best = { c, along }; }
     if (best) { touche.push(best.c); L = Math.min(L, best.along); }
+    // la ligne s'arrête à la croix de la souris (ou court devant le héros au clavier)
+    L = Math.min(L, mine.aimD != null ? Math.max(30, mine.aimD) : 150);
     for (let k = 26; k < L - 8; k += 12) {
       const x = Math.round(ox + ca * k), y = Math.round(oy + sa * k);
       ctx.globalAlpha = (pret ? 1 : 0.4) * (1 - 0.5 * k / portee);
@@ -1913,6 +1915,8 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
 
   if (!leger) drawBestioles(ctx, world, map, sq, dtW, now);
   if (world.zt) drawTempete(ctx, world.zt, map, sq, now, big);
+  // visée sous les effets et les tirs : elle ne cache jamais une boule de feu
+  if (mine && mine.al && md) drawVisee(ctx, world, map, mine, md, disp, world.boss, now);
   // effets
   for (const f of world.fx) {
     const t = f.t / f.d;
@@ -2057,7 +2061,6 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     }
     bossDrawn = true;
   };
-  if (mine && mine.al && md) drawVisee(ctx, world, map, mine, md, disp, B, now);
   // sbires
   const mk = B ? SBIRE_DE[B[6]] || 'slime' : world.mk || 'slime';
   for (const [x, y, hp, fl, a] of world.mn) {
