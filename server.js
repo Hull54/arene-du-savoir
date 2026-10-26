@@ -1993,6 +1993,7 @@ const server = http.createServer((req, res) => {
   if (file === '/') file = '/index.html';
   if (file === '/prof') file = '/prof.html';
   if (file === '/guide') file = '/guide.html';
+  if (file === '/donjon' || file === '/donjon/') file = '/donjon/index.html';   // Classe et Donjon (page statique)
   const full = path.join(PUBLIC, path.normalize(file));
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(full, (err, data) => {
