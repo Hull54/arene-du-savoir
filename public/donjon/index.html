@@ -561,6 +561,12 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .souffleur #sf-evt { justify-self: end; padding: 6px 12px; font-size: .9rem; }
 .sf-ouvrir { position: absolute; top: 10px; left: 10px; z-index: 35; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--cerne); background: var(--panel); font-size: 1.3rem; box-shadow: 0 3px 0 var(--cerne); padding: 0; }
 .ed-evts > label { margin-bottom: 8px; }
+.chrono { border: 2px solid var(--cerne); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-weight: 700; box-shadow: 0 3px 0 var(--cerne); font-variant-numeric: tabular-nums; }
+.chrono.bientot { background: var(--rouge); color: #fff4e0; animation: pulse 1s ease-in-out infinite alternate; }
+.recit { position: absolute; left: 50%; bottom: 18px; translate: -50% 0; z-index: 36; max-width: min(640px, 80%); padding: 10px 22px; text-align: center; pointer-events: none;
+  background: var(--panel); color: var(--ink); border: 3px solid var(--cerne); border-radius: 12px; box-shadow: 0 4px 0 rgba(0,0,0,.4); font-family: var(--display); font-size: clamp(1.1rem, 2vw, 1.5rem); font-weight: 700; }
+.recit.on { animation: recit 3.4s ease forwards; }
+@keyframes recit { 0% { opacity: 0; translate: -50% 12px; } 8%, 85% { opacity: 1; translate: -50% 0; } 100% { opacity: 0; } }
 .evt { display: grid; gap: 6px; padding: 10px; margin-bottom: 8px; border: 2px dashed rgba(43,31,22,.45); border-radius: 10px; background: #fbf4e2; }
 /* éléments posés sur la carte : restent sombres et lisibles */
 .tok .tag { color: #f6ead2; }
@@ -573,6 +579,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
   <header class="top">
     <div class="brand">Classe et Donjon<small>Manche <span id="round">1</span> · <span id="carte-nom"></span></small></div>
     <div class="turn" id="turn"></div>
+    <button class="chrono" id="chrono" type="button" hidden title="Minuterie de la période"></button>
     <div class="spacer"></div>
     <div class="tools" id="game-tools">
       <button class="btn" id="btn-d12" type="button">Lancer le d12</button>
@@ -596,6 +603,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
         <button class="btn" id="sf-evt" type="button" hidden>🎲 Événement surprise</button>
       </div>
       <button class="sf-ouvrir" id="sf-ouvrir" type="button" hidden title="Afficher le souffleur du MJ">🎙️</button>
+      <div class="recit" id="recit" hidden></div>
       <div class="board" id="board">
         <canvas id="terrain"></canvas>
         <div class="layer" id="hl"></div>
@@ -642,6 +650,7 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
           <h4>Répliques du MJ</h4>
           <label>Pendant le tour des monstres (une réplique par ligne; {monstre} et {heros} sont remplacés) <textarea id="ed-rep" rows="4" placeholder="Ex. : La pleine lune perce le brouillard… {monstre} hurle!"></textarea></label>
           <label>Quand le boss est presque vaincu <input id="ed-repboss" maxlength="160" placeholder="Ex. : Le comte siffle de rage!"></label>
+          <label>Phrase « À suivre… » de fin de période <input id="ed-suspense" maxlength="200" placeholder="Ex. : Au loin, la cloche sonne encore… Qui l'a fait sonner?"></label>
           <h4>Événements du chapitre</h4>
           <p class="hint">Un message à lire (et un effet) qui apparaît au début de la manche choisie. Les événements surprises au hasard se règlent dans Réglages.</p>
           <div id="ed-evts"></div>
@@ -1599,6 +1608,7 @@ async function ouvrirQuete(q) {
   });
   EQUIPE = choix.p ? choix.p.equipe : choix.code;
   await chargerFiche();
+  setTimeout(demarrerPeriode, 0);
   if (choix.p) { restaurerPartie(choix.p); toast(`Bon retour, équipe ${EQUIPE}!`); precedemment(); return; }
   if (!Object.keys(FICHE.heros || {}).length) await ouvrirFiches(true);
   demarrerQuete(q);
@@ -1946,7 +1956,7 @@ function renderTop() {
   document.getElementById("btn-auto").hidden = S.phase !== "mj";
   document.getElementById("btn-mj-end").hidden = S.phase !== "mj";
   document.getElementById("btn-auto").disabled = document.getElementById("btn-mj-end").disabled = S.busy;
-  majSouffleur();
+  majSouffleur(); majChrono();
 }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const de = n => (/^[aeiouyhàâéèêîôû]/i.test(n) ? "d'" : "de ") + esc(n);
@@ -2529,7 +2539,7 @@ function progres(h, fn) {
   FICHE.badges = FICHE.badges || {}; FICHE.titres = FICHE.titres || {};
   const eus = FICHE.badges[h.cls] = FICHE.badges[h.cls] || [];
   for (const b of BADGES) if (!eus.includes(b.id) && b.ok(s)) {
-    eus.push(b.id); FICHE.titres[h.cls] = h.titre = b.nom;
+    eus.push(b.id); FICHE.titres[h.cls] = h.titre = b.nom; PERIODE.badges.push([h.nom, b]);
     log(`${b.ic} <b>${esc(h.nom)}</b> gagne le badge « ${b.nom} »!`);
     toast(`${b.ic} ${h.nom} gagne le badge « ${b.nom} »!`, 4500); bruit("tresor"); etincelles(h, "#ffe08a", 22, 1.3);
   }
@@ -2641,9 +2651,92 @@ async function telecharger(nom, data, type) {
   catch (e) { return e && e.code === "declined" ? "refuse" : "erreur"; }
 }
 
+// ---------- narration des actions ----------
+const RECITS = {
+  archer: ["La flèche de {h} siffle et se plante dans {e}!", "{h} bande son arc… en plein dans le mille! {e} recule.", "Trois secondes de concentration… et {h} touche {e}!"],
+  mage: ["Un éclair bleu jaillit des mains de {h} et frappe {e}!", "{h} murmure une formule : {e} est secoué par la magie!", "Les étoiles de la robe de {h} brillent… BOUM! {e} est touché!"],
+  guerrier: ["{h} abat son arme de toutes ses forces sur {e}!", "CLANG! {h} frappe {e} sans hésiter!", "{h} pousse un cri de guerre et frappe {e}!"],
+  voleur: ["{h} se glisse dans l'ombre et frappe {e} par surprise!", "Plus rapide que l'éclair, {h} touche {e}!", "{e} n'a rien vu venir : {h} était déjà là!"],
+  vaincu: ["{e} s'effondre dans un dernier grognement!", "{e} disparaît dans un nuage de poussière!", "{e} vacille… et tombe! Hourra!"],
+  rate: ["{h} hésite une seconde de trop…", "Oups! {h} glisse sur une pierre…", "{h} rate son coup de justesse!"],
+  pare: ["{h} pare le coup au dernier moment!", "{h} esquive d'un bond agile!", "Le bouclier de {h} encaisse le choc!"],
+  touche: ["Aïe! {e} touche {h}!", "{h} n'a pas pu esquiver…", "{e} frappe {h} de plein fouet!"],
+};
+let recitT = null;
+function raconter(genre, h, e) {
+  const l = RECITS[genre]; if (!l) return;
+  const t = pick(l).replace(/\{h\}/g, h ? h.nom : "Le héros").replace(/\{e\}/g, e ? e.nom : "le piège");
+  const el = document.getElementById("recit"); el.textContent = t; el.hidden = false;
+  el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+  clearTimeout(recitT); recitT = setTimeout(() => el.hidden = true, 3400);
+}
+
+// ---------- voix des PNJ ----------
+const VOIX = { voix: null };
+function voixFr() {
+  if (!("speechSynthesis" in window)) return null;
+  const l = speechSynthesis.getVoices().filter(v => /^fr/i.test(v.lang));
+  return l.find(v => /fr-CA/i.test(v.lang)) || l.find(v => /fr-FR/i.test(v.lang)) || l[0] || null;
+}
+if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => { VOIX.voix = voixFr(); };
+const TON = { enfant: [1.5, 1.05], fille: [1.55, 1.05], fantome: [.55, .82], vieux: [.8, .88], reine: [1.2, .95], pretresse: [1.2, .95], herboriste: [1.15, 1], forgeronne: [1.1, 1],
+  elfe: [1.25, .95], roi: [.75, .9], garde: [.8, 1], chevalier: [.8, .95], mineur: [.7, 1], aubergiste: [.85, 1.05], barde: [1.1, 1.08], fermier: [.85, 1], chasseur: [.9, 1], alchimiste: [1, .95], marchand: [1, 1.08] };
+function dire(texte, look) {
+  if (!("speechSynthesis" in window) || PREF.voix === "non") return false;
+  speechSynthesis.cancel();
+  const v = VOIX.voix || (VOIX.voix = voixFr()); if (!v) return false;
+  const u = new SpeechSynthesisUtterance(String(texte).replace(/[«»“”]/g, ""));
+  u.voice = v; u.lang = v.lang; const [pitch, rate] = TON[look] || [1, 1]; u.pitch = pitch; u.rate = rate * .95; u.volume = PREF.muet ? 0 : Math.max(.3, PREF.vol);
+  speechSynthesis.speak(u); return true;
+}
+const taire = () => { if ("speechSynthesis" in window) speechSynthesis.cancel(); };
+
+// ---------- minuterie de la période ----------
+const PERIODE = { debut: 0, duree: 0, alerte: false, fin: false, rep0: 0, badges: [] };
+function demarrerPeriode() {
+  Object.assign(PERIODE, { debut: Date.now(), duree: Number(PREF.periode ?? 50) || 0, alerte: false, fin: false, rep0: S && S.rep ? S.rep.length : 0, badges: [] });
+  majChrono();
+}
+function majChrono() {
+  const el = document.getElementById("chrono");
+  if (!PERIODE.duree || !S || S.phase === "edit") { el.hidden = true; return; }
+  const reste = PERIODE.duree * 60000 - (Date.now() - PERIODE.debut), min = Math.ceil(reste / 60000);
+  el.hidden = false;
+  el.textContent = reste > 0 ? `⏱ ${min} min` : "⏱ Temps écoulé";
+  el.classList.toggle("bientot", reste <= 5 * 60000);
+  if (reste <= 5 * 60000 && reste > 0 && !PERIODE.alerte) { PERIODE.alerte = true; bruit("cloche"); toast("⏰ Il reste 5 minutes : c'est la dernière manche!", 5000); majSouffleur(); }
+  if (reste <= 0 && !PERIODE.fin) { PERIODE.fin = true; bruit("cloche"); toast("⏰ La période est terminée : finissez la manche, puis « À suivre… ».", 6000); majSouffleur(); }
+}
+setInterval(majChrono, 15000);
+document.getElementById("chrono").onclick = async () => {
+  if (!S || S.busy) return;
+  const v = await choisir("Minuterie de la période", PERIODE.fin ? "Le temps est écoulé." : `Il reste environ ${Math.max(0, Math.ceil((PERIODE.duree * 60000 - (Date.now() - PERIODE.debut)) / 60000))} minutes.`,
+    [{ txt: "Terminer maintenant : « À suivre… »", v: "fin", cls: "gold" }, { txt: "Recommencer la minuterie", v: "zero" }, { txt: "Fermer", v: "non" }]);
+  if (v === "fin") aSuivre(); else if (v === "zero") demarrerPeriode();
+};
+const SUSPENSES = ["Dans le silence, un bruit étrange se fait entendre… Que se cache-t-il plus loin? Vous le découvrirez la prochaine fois!",
+  "Les torches vacillent. Quelque part, quelqu'un observe l'équipe… La suite au prochain épisode!",
+  "Un vent glacé souffle soudain… L'aventure est loin d'être terminée!"];
+async function aSuivre() {
+  if (!S) return;
+  await sauvegarderPartie(true);
+  const boss = ennemisVivants().find(e => e.boss);
+  const suspense = S.carte.suspense ? S.carte.suspense : boss ? `Dans l'ombre, ${boss.nom} prépare sa revanche… Que se passera-t-il la prochaine fois?` : pick(SUSPENSES);
+  const rep = (S.rep || []).slice(PERIODE.rep0), bons = rep.filter(r => r.ok).length;
+  const badges = PERIODE.badges.map(([n, b]) => `${b.ic} ${esc(n)} : ${esc(b.nom)}`);
+  bruit("cloche");
+  ouvrir(`<p class="sub kicker">${esc(QUETE.nom)} · à lire à voix haute</p><h2>À suivre…</h2>
+    <div class="intro">${esc(suspense)}</div>
+    ${rep.length || badges.length ? `<p class="sub">${rep.length ? `Aujourd'hui, l'équipe ${esc(EQUIPE)} a donné ${bons} bonne${bons > 1 ? "s" : ""} réponse${bons > 1 ? "s" : ""} sur ${rep.length}.` : ""}${badges.length ? `<br>Badges gagnés : ${badges.join(" · ")}` : ""}</p>` : ""}
+    <p class="sub">La partie est sauvegardée. La prochaine fois, choisissez l'équipe ${esc(EQUIPE)} pour reprendre ici.</p>
+    <div class="row"><button class="btn gold" type="button" id="suite-ok">Fermer</button></div>`);
+  document.getElementById("suite-ok").onclick = fermer;
+}
+
 // ---------- souffleur du MJ et événements ----------
 const EFFETS = { rien: "Message seulement", monstre: "Un monstre surgit", vie: "Potion de vie trouvée", mana: "Potion de mana trouvée", soin: "+1 PV à tous les héros",
-  piege: "Piège : un héros doit se défendre", defi: "Défi de calcul (potion à gagner)", eclair: "Coup de tonnerre" };
+  piege: "Piège : un héros doit se défendre", defi: "Défi de calcul (potion à gagner)", eclair: "Coup de tonnerre", hasard: "Pile ou face : potion ou monstre",
+  dilemme: "Dilemme : la classe vote entre 2 choix" };
 const SURPRISES = [
   { titre: "Des renforts!", texte: "Un cri résonne au loin… {monstre} surgit des ombres et fonce vers vous!", effet: "monstre" },
   { titre: "Un trésor oublié", texte: "En marchant, {heros} heurte une petite bourse de cuir. À l'intérieur : une potion de vie!", effet: "vie" },
@@ -2652,6 +2745,12 @@ const SURPRISES = [
   { titre: "Le défi du sphinx", texte: "Une voix ancienne murmure : « Résolvez mon calcul, héros, et je vous offrirai un cadeau. »", effet: "defi" },
   { titre: "Un messager ailé", texte: "Un corbeau se pose devant vous, dépose un flacon bleu… puis s'envole en croassant.", effet: "mana" },
   { titre: "Le tonnerre gronde", texte: "Un éclair déchire le ciel! Les monstres sursautent… et vous aussi!", effet: "eclair" },
+  { titre: "Le coffre mystérieux", texte: "Un vieux coffre couvert de toiles d'araignée bloque le passage. Une inscription dit : « Qui m'ouvre trouvera… ou réveillera… »", effet: "dilemme",
+    a: { texte: "Ouvrir le coffre", effet: "hasard" }, b: { texte: "Le laisser tranquille", effet: "rien" } },
+  { titre: "L'étranger encapuchonné", texte: "Un voyageur s'approche : « Je peux soigner vos blessures… ou vous donner une potion bleue. Mais une seule chose! »", effet: "dilemme",
+    a: { texte: "Se faire soigner", effet: "soin" }, b: { texte: "Prendre la potion bleue", effet: "mana" } },
+  { titre: "La porte qui chuchote", texte: "Une porte de pierre ouvre deux yeux et chuchote : « Résolvez mon calcul… ou passez votre chemin. »", effet: "dilemme",
+    a: { texte: "Relever le défi", effet: "defi" }, b: { texte: "Passer son chemin", effet: "rien" } },
 ];
 const DIRE_MJ = [
   "« Les ombres s'agitent… {monstre} vous a repérés! »",
@@ -2690,18 +2789,18 @@ function majSouffleur() {
   const actif = S && S.phase !== "edit" && !S.fini && PREF.souffleur !== false;
   box.hidden = !actif || !!PREF.sfMin; btn.hidden = !actif || !PREF.sfMin;
   if (!actif) return;
-  let dire = "", faire = "";
+  let aDire = "", faire = "";
   const vivantsE = ennemisVivants();
   if (S.phase === "heros") {
     const h = heros(); if (!h) return;
     const n = h.actions, a = n > 1 ? "actions" : "action";
     if (n === S.nbActions) {
       const portee = ennemisAPortee(h)[0], proche = plusProche(h);
-      dire = `« ${h.nom}, c'est ton tour! Tu as ${n} ${a}. »`;
-      if (portee) dire += ` « ${portee.nom} est à ta portée : tu peux l'attaquer! »`;
-      else if (proche) dire += ` « ${proche.nom} est à ${dist(h, proche)} cases. »`;
-      if (h.pv === 1) dire += S.inv.vie ? " « Il te reste 1 PV : pense à la potion de vie! »" : " « Prudence, il te reste 1 PV! »";
-    } else dire = `« Encore ${n} ${a}, ${h.nom}! »`;
+      aDire = `« ${h.nom}, c'est ton tour! Tu as ${n} ${a}. »`;
+      if (portee) aDire += ` « ${portee.nom} est à ta portée : tu peux l'attaquer! »`;
+      else if (proche) aDire += ` « ${proche.nom} est à ${dist(h, proche)} cases. »`;
+      if (h.pv === 1) aDire += S.inv.vie ? " « Il te reste 1 PV : pense à la potion de vie! »" : " « Prudence, il te reste 1 PV! »";
+    } else aDire = `« Encore ${n} ${a}, ${h.nom}! »`;
     faire = "L'élève touche une case verte pour se déplacer, ou touche un monstre, un objet ou un mur pour agir. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
   } else if (S.phase === "mj") {
     const cle = "mj" + S.round;
@@ -2712,14 +2811,16 @@ function majSouffleur() {
       sfLigne = guillemets(pick(propres.length ? propres : DIRE_MJ)).replace(/\{monstre\}/g, m.nom).replace(/\{heros\}/g, h.nom);
     }
     const boss = vivantsE.find(e => e.boss && e.pv <= e.pvMax / 3);
-    if (!vivantsE.length) { dire = "« Tout est calme… pour l'instant. »"; faire = "Aucun monstre debout : touche « Fin du tour du MJ »."; }
-    else if (vivantsE.every(e => e.bouge)) { dire = "« Les monstres ont joué. Héros, préparez-vous! »"; faire = `Touche « Fin du tour du MJ » pour lancer la manche ${S.round + 1}.`; }
+    if (!vivantsE.length) { aDire = "« Tout est calme… pour l'instant. »"; faire = "Aucun monstre debout : touche « Fin du tour du MJ »."; }
+    else if (vivantsE.every(e => e.bouge)) { aDire = "« Les monstres ont joué. Héros, préparez-vous! »"; faire = `Touche « Fin du tour du MJ » pour lancer la manche ${S.round + 1}.`; }
     else {
-      dire = boss ? (S.carte.repliqueBoss ? guillemets(S.carte.repliqueBoss) : `« ${boss.nom} chancelle! Encore un effort, héros! »`) : sfLigne;
+      aDire = boss ? (S.carte.repliqueBoss ? guillemets(S.carte.repliqueBoss) : `« ${boss.nom} chancelle! Encore un effort, héros! »`) : sfLigne;
       faire = "1. Touche « Faire jouer les ennemis » (ou glisse chaque monstre selon sa vitesse). 2. Un élève attaqué fait une division pour se défendre. 3. Touche « Fin du tour du MJ ».";
     }
   }
-  document.getElementById("sf-dire").textContent = dire;
+  if (PERIODE.fin) faire = "⏰ Temps écoulé : terminez la manche. L'écran « À suivre… » apparaîtra à la fin du tour du MJ. " + faire;
+  else if (PERIODE.alerte) faire = "⏰ Dernière manche avant la fin de la période! " + faire;
+  document.getElementById("sf-dire").textContent = aDire;
   document.getElementById("sf-faire").textContent = faire;
   document.getElementById("sf-evt").hidden = S.phase !== "mj" || S.busy;
 }
@@ -2752,9 +2853,20 @@ async function jouerEvenement(ev) {
     document.getElementById("ev-ok").onclick = () => { fermer(); res(); };
   });
   log(`Événement : <b>${esc(ev.titre || "Événement")}</b>.`);
-  switch (ev.effet) {
-    case "monstre": { const c = caseLibrePres(h.x + (h.x < W / 2 ? 3 : -3), h.y) || caseLibrePres(h.x, h.y); if (c) { faireApparaitre(t, c.x, c.y); secousse(1); } break; }
-    case "vie": case "mana": S.inv[ev.effet]++; bruit("tresor"); etincelles(h, "#ffe08a", 14); toast(`+1 ${ITEMS[ev.effet].nom}`); break;
+  let effet = ev.effet;
+  if (effet === "dilemme") {
+    const a = ev.a || { texte: "Choix A", effet: "rien" }, b = ev.b || { texte: "Choix B", effet: "rien" };
+    const v = await choisir("Vote de la classe!", "Levez la main pour votre choix. Le MJ touche celui qui gagne.",
+      [{ txt: "✋ " + esc(a.texte || "Choix A"), v: "a", cls: "gold" }, { txt: "✋ " + esc(b.texte || "Choix B"), v: "b", cls: "blue" }]);
+    const c = v === "a" ? a : b;
+    log(`La classe a choisi : « ${esc(c.texte || "")} ».`);
+    effet = c.effet || "rien";
+  }
+  if (effet === "hasard") { effet = Math.random() < .5 ? "vie" : "monstre"; toast(effet === "vie" ? "Ouf! Une potion de vie!" : "Oh non! Un monstre en sort!", 3500); }
+  const tt = effet === "monstre" && !t ? monstreRenfort({}) : t;
+  switch (effet) {
+    case "monstre": { const c = caseLibrePres(h.x + (h.x < W / 2 ? 3 : -3), h.y) || caseLibrePres(h.x, h.y); if (c) { faireApparaitre(tt, c.x, c.y); secousse(1); bruit("grogne"); } break; }
+    case "vie": case "mana": S.inv[effet]++; bruit("tresor"); etincelles(h, "#ffe08a", 14); toast(`+1 ${ITEMS[effet].nom}`); break;
     case "soin": for (const v of vivs) if (v.pv < st(v).pv) { v.pv++; flotter(v.x, v.y, "+1", "#72d39b"); anim(v, "heal"); } bruit("soin"); break;
     case "piege": S.busy = false; await defendre(h, null, 1); break;
     case "defi": { S.busy = false; const ok = await epreuveMath("×", "Le défi de l'équipe"); if (ok) { S.inv.vie++; bruit("tresor"); toast("Défi réussi : +1 potion de vie!"); log("Défi réussi : +1 potion de vie."); } else log("Le défi est raté… dommage!"); break; }
@@ -2780,6 +2892,7 @@ function renderEvtsEditeur(force) {
   const html = evs.map((ev, i) => `<div class="evt" data-ev="${i}">
       <div class="dims"><label>À la manche <input type="number" min="1" max="60" data-evf="manche" value="${Number(ev.manche) || 1}"></label><label>Effet <select data-evf="effet">${opts(EFFETS, ev.effet || "rien")}</select></label></div>
       ${ev.effet === "monstre" ? `<label>Quel monstre? <select data-evf="monstre">${opts({ "": "Au hasard (monstres du chapitre)", ...types }, ev.monstre || "")}</select></label>` : ""}
+      ${ev.effet === "dilemme" ? ["a", "b"].map(c => `<div class="dims"><label>Choix ${c.toUpperCase()} <input data-evf="${c}.texte" maxlength="60" value="${esc((ev[c] || {}).texte || "")}" placeholder="${c === "a" ? "Ex. : Suivre le fantôme" : "Ex. : Fouiller la cave"}"></label><label>Ce qui arrive <select data-evf="${c}.effet">${opts(Object.fromEntries(Object.entries(EFFETS).filter(([k]) => k !== "dilemme")), (ev[c] || {}).effet || "rien")}</select></label></div>`).join("") : ""}
       <label>Titre <input data-evf="titre" maxlength="50" value="${esc(ev.titre || "")}" placeholder="Ex. : La cloche sonne!"></label>
       <label>Texte à lire à voix haute <textarea data-evf="texte" rows="3" placeholder="{heros} = un héros au hasard, {monstre} = le monstre qui surgit">${esc(ev.texte || "")}</textarea></label>
       <button class="btn" type="button" data-evdel>Retirer cet événement</button></div>`).join("") || `<p class="hint">Aucun événement prévu dans ce chapitre.</p>`;
@@ -2788,6 +2901,7 @@ function renderEvtsEditeur(force) {
 document.getElementById("ed-evts").addEventListener("input", e => {
   const f = e.target.dataset.evf, b = e.target.closest("[data-ev]"); if (!f || !b || !ED) return;
   const ev = ED.carte.evenements[Number(b.dataset.ev)];
+  if (f.includes(".")) { const [c, k] = f.split("."); ev[c] = ev[c] || { texte: "", effet: "rien" }; ev[c][k] = e.target.value; document.getElementById("ed-evts").dataset.h = ""; return; }
   ev[f] = f === "manche" ? Math.max(1, Number(e.target.value) || 1) : e.target.value;
   if (f === "effet") renderEvtsEditeur(true); else document.getElementById("ed-evts").dataset.h = "";
 });
@@ -2797,6 +2911,7 @@ document.getElementById("ed-evts").addEventListener("click", e => {
 });
 document.getElementById("ed-rep").oninput = e => { ED.carte.repliques = e.target.value; };
 document.getElementById("ed-repboss").oninput = e => { ED.carte.repliqueBoss = e.target.value; };
+document.getElementById("ed-suspense").oninput = e => { ED.carte.suspense = e.target.value; };
 document.getElementById("ed-evt-add").onclick = () => {
   const evs = ED.carte.evenements = ED.carte.evenements || [];
   evs.push({ manche: evs.length ? Number(evs[evs.length - 1].manche) + 2 : 3, effet: "rien", titre: "", texte: "" });
@@ -2930,7 +3045,7 @@ async function blesser(e, n) {
   if (e.pv <= 0) {
     bruit("mort"); etincelles(e, "#cfc6b8", 16, 1.4); secousse(e.boss ? 2 : 1);
     await anim(e, "die");
-    log(`<b>${e.nom}</b> est vaincu!`);
+    log(`<b>${e.nom}</b> est vaincu!`); raconter("vaincu", null, e);
     if (S.frappeur) progres(S.frappeur, s => { s.kills++; if (e.boss) s.boss++; });
     if (e.boss && S.objets.some(o => o.type === "coffreDore")) { log("Le boss s'effondre. Son coffre est maintenant accessible!"); toast("Le boss est vaincu! Ouvrez son coffre.", 4000); }
   }
@@ -2945,7 +3060,7 @@ async function defendre(h, e, deg) {
   const ok = await epreuveMath("÷", `${qui} attaque ${esc(h.nom)}! Défends-toi`, true);
   S.qui = null;
   if (ok) {
-    progres(h, s => s.def++);
+    progres(h, s => s.def++); raconter("pare", h, e);
     bruit("metal"); etincelles(h, "#9fe7ff", 12);
     await anim(h, "parry");
     if (e && e.pv > 0 && dist(h, e) <= 1) {
@@ -2958,7 +3073,7 @@ async function defendre(h, e, deg) {
     flotter(h.x, h.y, "−" + deg, "#ff8a80");
     bruit("aie"); etincelles(h, "#ff6b5e"); flashRouge(); secousse(1.2);
     await anim(h, "hit");
-    log(`${qui} touche ${esc(h.nom)} (−${deg} PV).`);
+    log(`${qui} touche ${esc(h.nom)} (−${deg} PV).`); raconter("touche", h, e);
     if (h.pv <= 0) { log(`${esc(h.nom)} est à terre!`); h.actions = 0; }
   }
   render();
@@ -2971,6 +3086,7 @@ async function faireAction(epreuve, succes, attaquant) {
   const ok = await epreuve();
   if (ok) await succes(h);
   else {
+    raconter("rate", h);
     // Épreuve ratée : l'ennemi visé (ou le plus proche) attaque, puis le tour s'arrête
     const proche = [attaquant, plusProche(h)].find(e => e && e.pv > 0 && dist(e, h) <= 1);
     await defendre(h, proche || null, proche ? proche.deg : 1);
@@ -3008,7 +3124,7 @@ async function attaquer(h, e) {
     let parts = { [e.id]: deg };
     const autres = ennemisAPortee(h);
     if (c.distrib && autres.length > 1) parts = await distribuer(deg, 1, [e, ...autres.filter(x => x !== e)], "Partage tes dégâts");
-    log(`${esc(h.nom)} réussit son attaque (−${deg} PV).`);
+    log(`${esc(h.nom)} réussit son attaque (−${deg} PV).`); raconter(h.cls, h, e);
     for (const [id, n] of Object.entries(parts)) if (n) { const cible = S.enemies.find(x => x.id === id); await frapper(h, cible); await blesser(cible, n); }
   }, e);
 }
@@ -3112,7 +3228,7 @@ function finTourMJ() {
   log(`— Manche ${S.round} —`);
   render(); toast(`Manche ${S.round} : au tour ${de(heros().nom)}!`);
   sauvegarderPartie(true);
-  evenementsManche();
+  if (PERIODE.fin && PERIODE.duree) aSuivre(); else evenementsManche();
 }
 // Les monstres qui n'ont pas encore bougé s'approchent du héros le plus proche et attaquent au contact
 async function ennemisAuto() {
@@ -3321,8 +3437,10 @@ function parler(p) {
     const draw = () => {
       ouvrir(`<div class="pnj-head"><div class="coin" style="--rim:#4f86c6;--cell:96px">${pnjVisage(p)}</div><h2>${esc(p.nom)}</h2></div>
         <p class="fr-q dialogue">${esc(lignes[i]).replace(/\n/g, "<br>")}</p>
-        <div class="row"><span class="sub">${i + 1} / ${lignes.length}</span><button class="btn gold" id="nx" type="button">${i < lignes.length - 1 ? "Suivant" : "Terminer"}</button></div>`);
-      document.getElementById("nx").onclick = () => { if (i < lignes.length - 1) { i++; draw(); } else { fermer(); resolve(); } };
+        <div class="row"><span class="sub">${i + 1} / ${lignes.length}</span>${PREF.voix !== "non" && voixFr() ? `<button class="btn" id="ecoute" type="button" aria-label="Écouter">🔊 Écouter</button>` : ""}<button class="btn gold" id="nx" type="button">${i < lignes.length - 1 ? "Suivant" : "Terminer"}</button></div>`);
+      const ec = document.getElementById("ecoute"); if (ec) ec.onclick = () => dire(lignes[i], p.look);
+      if ((PREF.voix || "auto") === "auto") dire(lignes[i], p.look);
+      document.getElementById("nx").onclick = () => { taire(); if (i < lignes.length - 1) { i++; draw(); } else { fermer(); resolve(); } };
     };
     draw();
   });
@@ -3583,7 +3701,7 @@ function renderEditeur() {
   document.getElementById("ed-ani").innerHTML = Object.entries(ANIMAUX).map(([k, n]) => `<button type="button" data-a="${k}" aria-pressed="${(ED.carte.animaux || []).includes(k)}">${n}</button>`).join(""); set("ed-nom", ED.carte.nom); set("ed-intro", ED.carte.intro || "");
   document.getElementById("ed-cols").value = W; document.getElementById("ed-rows").value = H;
   if (!document.getElementById("ed-evts").contains(document.activeElement)) renderEvtsEditeur();
-  set("ed-rep", ED.carte.repliques || ""); set("ed-repboss", ED.carte.repliqueBoss || "");
+  set("ed-rep", ED.carte.repliques || ""); set("ed-repboss", ED.carte.repliqueBoss || ""); set("ed-suspense", ED.carte.suspense || "");
   document.getElementById("ed-noimg").disabled = !(ED.carte.image || ED.carte.imageId);
   document.getElementById("ed-chaps").innerHTML = ED.quete.chapitres.map((c, i) => `<button class="chap ${i === ED.ch ? "on" : ""}" type="button" data-ch="${i}">${i + 1}. ${esc(c.nom)}</button>`).join("");
   document.getElementById("ed-ch-del").disabled = ED.quete.chapitres.length < 2;
@@ -4057,6 +4175,8 @@ document.getElementById("btn-reg").onclick = () => {
       <label>Actions par tour <select id="r-act">${opt(S.nbActions, [[2, "2 actions"], [3, "3 actions"]])}</select></label>
       <label>Additions et soustractions <select id="r-niv">${opt(S.niveau, [["facile", "2 chiffres"], ["5e", "3 chiffres"]])}</select></label>
       <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
+      <label>Durée de la période <select id="r-per">${opt(String(PREF.periode ?? 50), [["0", "Pas de minuterie"], ["30", "30 minutes"], ["45", "45 minutes"], ["50", "50 minutes"], ["60", "60 minutes"], ["75", "75 minutes"], ["90", "90 minutes"]])}</select></label>
+      <label>Voix des PNJ <select id="r-voix">${opt(PREF.voix || "auto", [["auto", "Lit les dialogues tout seul"], ["bouton", "Avec le bouton 🔊 seulement"], ["non", "Désactivée"]])}</select></label>
       <label>Souffleur du MJ <select id="r-souf">${opt(PREF.souffleur === false ? "0" : "1", [["1", "Affiché sur le plateau"], ["0", "Caché"]])}</select></label>
     </div>
     <div class="row"><button class="btn blue" type="button" id="r-edit">Créateur de quêtes</button><button class="btn" type="button" id="r-reset">Recommencer le chapitre</button><button class="btn" type="button" id="r-restart">Recommencer la quête</button></div>
@@ -4079,6 +4199,8 @@ document.getElementById("btn-reg").onclick = () => {
   };
   document.getElementById("r-niv").onchange = e => { S.niveau = e.target.value; };
   document.getElementById("r-evt").onchange = e => { PREF.evts = e.target.value; sauverPref(); S.dernierEvt = Date.now(); };
+  document.getElementById("r-per").onchange = e => { PREF.periode = Number(e.target.value); sauverPref(); demarrerPeriode(); toast(PREF.periode ? `Minuterie : ${PREF.periode} minutes à partir de maintenant.` : "Minuterie désactivée."); };
+  document.getElementById("r-voix").onchange = e => { PREF.voix = e.target.value; sauverPref(); if (e.target.value !== "non" && !voixFr()) toast("Aucune voix française n'est installée sur cet ordinateur."); };
   document.getElementById("r-souf").onchange = e => { PREF.souffleur = e.target.value === "1"; PREF.sfMin = false; sauverPref(); majSouffleur(); };
   document.getElementById("r-vol").oninput = e => { PREF.vol = e.target.value / 100; PREF.muet = false; sonVolumes(); sauverPref(); };
   document.getElementById("r-vol").onchange = () => bruit("pas");
