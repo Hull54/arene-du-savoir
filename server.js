@@ -1211,8 +1211,8 @@ const BOSSES = {
     A: { t: 'tourbillon', portee: 190, r: 195, dmg: 26, cd: 3 }, B: { t: 'chute', portee: 850, n: 3, r: 80, dmg: 20, delai: 1, cd: 2.2, obj: 'eclair' } },
   // Boss Prof : l'enseignant en personne ! Coup de poing (près), regard (rayon), voix (onde qui étourdit).
   // Ses boucliers sont des « interros surprises » : les mêmes questions pour toute la classe, notées pour chaque élève.
-  prof:      { nom: 'Le Prof', ico: '🧑‍🏫', pv: 120, speed: 85, r: 56, sbire: null, boucliers: [0.75, 0.5, 0.25],
-    A: { t: 'poing', portee: 170, r: 175, dmg: 18, recul: 220, stun: 0.3, cd: 2 }, B: { t: 'rayon', portee: 800, long: 850, l: 30, dmg: 22, delai: 0.9, cd: 3.4 },
+  prof:      { nom: 'Le Prof', ico: '🧑‍🏫', pv: 120, speed: 85, r: 34, sbire: null, boucliers: [0.75, 0.5, 0.25],
+    A: { t: 'poing', portee: 130, r: 135, dmg: 18, recul: 220, stun: 0.3, cd: 2 }, B: { t: 'rayon', portee: 800, long: 850, l: 30, dmg: 22, delai: 0.9, cd: 3.4 },
     C: { t: 'cri', portee: 300, r: 300, dmg: 10, stun: 1, cd: 6.5 },
     D: { t: 'sifflet', portee: 900, r: 650, stun: 1.1, delai: 0.8, cd: 11 }, E: { t: 'eventail', portee: 700, n: 7, ecart: 1.3, vit: 330, dmg: 9, cls: 'papier', cd: 5 },
     F: { t: 'retenue', portee: 700, dur: 12, cd: 14 }, G: { t: 'craie', portee: 1100, vit: 640, dmg: 14, cd: 4.5 } },

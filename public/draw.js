@@ -1910,7 +1910,7 @@ const SBIRE_DE = { gobelin: 'gobelin', dragon: 'citrouille', ombres: 'ombre', gi
 function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
   const key = 'boss' + k + f + flash + a + b;
   if (dynCache[key]) return dynCache[key];
-  const P = new Painter(60, k === 'prof' || k === 'prof2' ? 68 : 54);
+  const P = k.startsWith('prof') ? new Painter(36, 45) : new Painter(60, 54);
   const glow = new Set();
   const G = c => (glow.add(c), c);                              // couleurs lumineuses : pas d'ombrage automatique
   const F = c => flash ? shade(c, 1.55) : c;                    // flash blanc quand il est touché
@@ -2166,61 +2166,88 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
     P.rect(29, 11, 2, 3, F(sD)); P.px(28, 13, F(sDD)); P.px(31, 13, F(sDD));
     P.rect(26, 15, 8, 1 + mo, F('#2a0808')); P.rect(26, 15, 8, 1, G('#f4ecd8')); if (a) P.rect(27, 18, 6, 1, G('#e8e0d0'));
     if (f % 2 === 0 || a) { line(1, 14, 4, 18, G('#fff6a0')); line(4, 18, 1, 20, G('#fff6a0')); line(58, 14, 55, 18, G('#fff6a0')); line(55, 18, 58, 20, G('#fff6a0')); }
-  } else if (k === 'prof' || k === 'prof2') {
-    // Le Prof, façon lutteur chibi en gros pixels (grille 30 × 27, chaque case = 2 × 2) :
-    // grosse tête carrée, sourcils épais, barbe, épaules larges, gros poings, petites jambes.
-    // Casquette noire, chandail noir, jeans, Converse ; fâché : lunettes de soleil.
-    const fache = k === 'prof2';
-    const pal = {
-      o: '#2a1410', K: '#26242e', k: '#4a4858', S: '#f2b98e', s: '#d89670', h: '#ffd8b4', W: '#fbf6ee', E: '#1c1420',
-      B: '#5a2c14', R: '#9a4a22', r: '#6e3216', l: '#c0662e', p: '#ec8f7c', m: '#f6ecd8', M: '#4a0e0e'
-    };
-    const q = (x, y, w, h, c) => P.rect(x * 2, y * 2, w * 2, h * 2, c);
-    const grid = (rows, y0) => rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') q(i, y0 + j, 1, 1, F(pal[row[i]])); });
-    const tee = '#2c2c34', teeH = '#46464f', teeD = '#18181e';
-    const swing = a ? 0 : sw;
-    const poing = (x, y, w = 6, h = 5) => {   // gros poing nu : contour, peau ombrée, jointures
-      q(x + 1, y, w - 2, h, F(pal.o)); q(x, y + 1, w, h - 2, F(pal.o)); q(x + 1, y + 1, w - 2, h - 2, F(pal.S));
-      q(x + 1, y + h - 2, w - 2, 1, F(pal.s)); q(x + w - 2, y + 1, 1, h - 2, F(pal.s)); q(x + 1, y + 1, 2, 1, F(pal.h));
-      for (let i = x + 2; i < x + w - 1; i += 2) q(i, y + 2, 1, 1, F(pal.s));
-    };
-    // torse large : chandail noir tout simple
-    q(5, 14, 20, 12, F(pal.o)); q(3, 15, 24, 4, F(pal.o));
-    q(4, 15, 22, 3, F(tee)); q(6, 18, 18, 7, F(tee));
-    q(4, 15, 22, 1, F(teeH)); q(4, 15, 1, 3, F(teeH)); q(6, 24, 18, 1, F(teeD)); q(23, 16, 1, 8, F(teeD));
-    q(10, 15, 10, 1, F('#3a3a44'));                         // encolure
-    q(4, 17, 3, 1, F(teeD)); q(23, 17, 3, 1, F(teeD));      // bord des manches courtes
-    // jambes : jeans et Converse noires à bout blanc
-    for (const [x, l] of [[8, lA < 0 ? -1 : 0], [16, lB < 0 ? -1 : 0]]) {
-      q(x, 25, 6, 6 + l, F(pal.o)); q(x + 1, 25, 4, 5 + l, F('#3e64a0')); q(x + 1, 26, 1, 4 + l, F('#5a84c0')); q(x + 4, 25, 1, 5 + l, F('#2c4c80'));
-      q(x - 1, 30 + l, 8, 4, F(pal.o)); q(x, 30 + l, 6, 1, F('#2a2a34')); q(x + 2, 30 + l, 1, 1, F('#f4f0e6')); q(x, 31 + l, 6, 1, F('#f4f0e6')); q(x + 4, 31 + l, 2, 1, F('#ffffff')); q(x, 32 + l, 6, 1, F('#c8c0b0'));
+  } else if (k.startsWith('prof')) {
+    // Le Prof : un joueur 1,5 fois plus grand et costaud (36 × 45). Vues de face, de dos et de côté (tourné à droite).
+    // Grosse tête carrée, barbe, casquette noire à l'envers, chandail noir, jeans, Converse ; fâché : lunettes de soleil.
+    const [kk, dir] = k.split('|'), fache = kk === 'prof2';
+    const C = c => F(c), ink = F('#2a1410');
+    const S = '#f2b98e', sD = '#d89670', sH = '#ffd8b4', cap = '#26242e', capH = '#4a4858', br = '#5a2c14';
+    const bd = '#9a4a22', bdD = '#6e3216', bdH = '#c0662e', tee = '#2c2c34', teeH = '#46464f', teeD = '#18181e';
+    const jean = '#3e64a0', jeanD = '#2c4c80', jeanH = '#5a84c0';
+    const st = f === 1 ? 1 : f === 2 ? -1 : 0;           // pas de marche : +1 / -1
+    const r = (x, y, w, h, c) => P.rect(x, y, w, h, c);
+    const box = (x, y, w, h, c) => { r(x - 1, y, w + 2, h, ink); r(x, y - 1, w, h + 2, ink); r(x, y, w, h, C(c)); };
+    const fist = (x, y, w = 4, h = 4) => { box(x, y, w, h, S); r(x, y + h - 1, w, 1, C(sD)); r(x, y, 2, 1, C(sH)); if (w > 3) r(x + 1, y + 1, w - 2, 1, C(sD)); };
+    const shoe = (x, y, w = 6) => { r(x - 1, y - 1, w + 2, 5, ink); r(x, y, w, 1, C('#2a2a34')); r(x, y + 1, w, 1, C('#f4f0e6')); r(x, y + 2, w, 1, C('#c8c0b0')); };
+    const beardPix = (x, y) => C(((x * 3 + y * 7) % 11 === 0) ? bdD : (x + y) % 9 === 0 ? bdH : bd);
+    if (dir === 'side') {
+      // jambes (de profil, elles s'écartent en marchant)
+      for (const [dx, sgn] of [[0, -1], [1, 1]]) {
+        const o = st * sgn * 2, x = 15 + dx * 2 + o;
+        box(x, 31, 5, 9, dx ? jean : jeanD); r(x + 1, 32, 1, 6, C(dx ? jeanH : jean)); shoe(x, 40, 7);
+      }
+      // torse
+      box(12, 17, 13, 14, tee); r(12, 17, 13, 1, C(teeH)); r(12, 17, 1, 13, C(teeH)); r(23, 18, 2, 12, C(teeD));
+      box(12, 29, 13, 3, jean); r(12, 29, 13, 1, C('#4a3020')); r(20, 30, 2, 1, C(jeanD));
+      // tête de profil : casquette à l'envers (palette vers l'arrière), oreille, œil, nez, barbe
+      box(12, 4, 13, 13, S);
+      r(11, 3, 15, 5, ink); r(12, 3, 13, 4, C(cap)); r(14, 4, 5, 1, C(capH)); r(6, 6, 7, 2, ink); r(7, 6, 5, 1, C(capH));
+      r(15, 9, 2, 3, C(sD)); r(16, 10, 1, 1, C(sH));
+      for (let y = 12; y <= 18; y++) for (let x = 13; x <= 25; x++) if (y >= 13 || x <= 16) if (!(y >= 17 && x < 15 + (y - 16) * 2)) P.px(x, y, beardPix(x, y));
+      r(25, 12, 1, 5, ink); r(13, 18, 12, 1, ink);
+      if (fache) { r(18, 8, 8, 2, ink); r(21, 8, 3, 1, G('#7aa8d8')); }
+      else { r(19, 8, 4, 1, C(br)); r(21, 9, 2, 2, ink); r(22, 9, 1, 1, G('#fbf6ee')); }
+      r(24, 10, 2, 3, C(sD)); r(26, 11, 1, 2, ink);
+      r(20, 14, 6, 1, C(bdD));
+      if (a) { r(22, 15, 4, 2, C('#4a0e0e')); r(22, 15, 4, 1, G('#f6ecd8')); } else r(22, 16, 3, 1, ink);
+      // bras devant : il balance en marchant, il frappe vers l'avant en attaque
+      if (a) { box(17, 19, 4, 3, tee); r(21, 20, 7, 3, ink); r(21, 21, 7, 1, C(S)); fist(28, 18, 5, 5); for (let i = 0; i < 3; i++) P.px(34, 17 + i * 3, G('#fff6a0')); }
+      else { const o = -st * 2; box(16, 19, 5, 4, tee); box(17 + o * 0.5, 23, 3, 4, S); fist(16 + o, 27, 5, 4); }
+    } else {
+      const back = dir === 'up';
+      // jambes : jeans et Converse
+      for (const [x, l] of [[11, st > 0 ? -1 : 0], [19, st < 0 ? -1 : 0]]) {
+        box(x, 31, 6, 9 + l, jean); r(x + (back ? 4 : 1), 32, 1, 6 + l, C(jeanH)); r(x + (back ? 0 : 5), 31, 1, 8 + l, C(jeanD));
+        shoe(x, 40 + l, 6); if (!back) r(x + 4, 41 + l, 2, 1, C('#ffffff'));
+      }
+      // torse large, épaules rondes
+      box(9, 19, 18, 12, tee); box(7, 17, 22, 4, tee);
+      r(7, 17, 22, 1, C(teeH)); r(7, 17, 1, 4, C(teeH)); r(9, 30, 18, 1, C(teeD)); r(25, 21, 2, 9, C(teeD));
+      if (!back) r(14, 18, 8, 1, C('#3a3a44'));
+      // taille du pantalon : ceinture de jeans d'une jambe à l'autre
+      box(10, 29, 16, 3, jean); r(10, 29, 16, 1, C('#4a3020')); if (!back) { r(17, 29, 2, 1, G('#e8c050')); r(17, 30, 1, 2, C(jeanD)); } else { r(12, 30, 3, 1, C(jeanD)); r(21, 30, 3, 1, C(jeanD)); }
+      // bras nus et gros poings (balancent en marchant ; en attaque, le poing droit frappe vers l'avant)
+      const yg = 26 + (st > 0 ? 1 : 0), yd = 26 + (st < 0 ? 1 : 0);
+      box(6, 18, 3, 4, tee); box(6, 22, 3, yg - 22, S); fist(5, yg, 5, 4);
+      if (a && !back) { box(22, 22, 4, 3, S); fist(19, 23, 7, 6); for (let i = 0; i < 3; i++) P.px(18 + i * 4, 31, G('#fff6a0')); }
+      else if (a) { box(27, 10, 3, 9, S); fist(26, 5, 5, 5); }
+      else { box(27, 18, 3, 4, tee); box(27, 22, 3, yd - 22, S); fist(26, yd, 5, 4); }
+      // grosse tête carrée
+      box(11, 4, 14, 13, S); r(9, 9, 2, 4, ink); r(10, 9, 1, 3, C(sD)); r(25, 9, 2, 4, ink); r(25, 9, 1, 3, C(sD));
+      r(10, 2, 16, 6, ink); r(11, 2, 14, 5, C(cap)); r(11, 6, 14, 1, C(capH));
+      if (back) {
+        r(16, 4, 4, 2, C('#5a2c14')); r(16, 6, 4, 1, C(capH));                 // ouverture de la casquette
+        r(11, 7, 14, 6, C('#7a3a1a')); r(11, 13, 14, 1, C(sD));                // cheveux courts, nuque
+        for (let y = 10; y <= 17; y++) { P.px(11, y, beardPix(11, y)); P.px(24, y, beardPix(24, y)); }
+        r(12, 14, 12, 3, C(S)); r(12, 16, 12, 1, C(sD));
+      } else {
+        r(11, 3, 4, 1, C(capH));
+        if (fache) { r(11, 8, 14, 3, ink); r(12, 8, 3, 1, G('#7aa8d8')); r(20, 8, 3, 1, G('#7aa8d8')); r(17, 8, 2, 1, G('#c8a040')); }
+        else {
+          for (let i = 0; i < 4; i++) { P.px(12 + i, 8 + (i >> 1), C(br)); P.px(23 - i, 8 + (i >> 1), C(br)); }
+          r(13, 10, 3, 2, G('#fbf6ee')); r(20, 10, 3, 2, G('#fbf6ee')); r(14, 10, 2, 2, ink); r(20, 10, 2, 2, ink);
+          P.px(12, 12, C('#ec8f7c')); P.px(23, 12, C('#ec8f7c'));
+        }
+        r(17, 11, 2, 2, C(sD)); P.px(17, 11, C(sH));
+        // barbe pleine : favoris, joues, mâchoire carrée
+        for (let y = 9; y <= 18; y++) for (let x = 11; x <= 24; x++) {
+          const side = x <= 11 + Math.max(0, y - 11) * 0.4 || x >= 24 - Math.max(0, y - 11) * 0.4;
+          if (y >= 13 || (side && y >= 9 && (x === 11 || x === 24))) P.px(x, y, beardPix(x, y));
+        }
+        r(12, 18, 12, 1, ink); r(14, 13, 8, 1, C(bdD));
+        if (a) { r(15, 14, 6, 3, C('#4a0e0e')); r(15, 14, 6, 1, G('#f6ecd8')); } else r(15, 15, 6, 1, G('#f6ecd8'));
+      }
     }
-    // bras nus et gros poings (le droit frappe en attaque)
-    const yg = 21 + (swing > 0 ? 1 : 0), yd = 21 + (swing < 0 ? 1 : 0);
-    q(3, 18, 4, yg - 17, F(pal.o)); q(4, 18, 2, yg - 18, F(pal.S)); poing(1, yg);
-    if (a) { q(19, 16, 3, 3, F(pal.o)); q(19, 17, 2, 1, F(pal.S)); poing(20, 14, 8, 7); for (let i = 0; i < 3; i++) q(28, 13 + i * 3, 1, 1, G('#fff6a0')); }
-    else { q(23, 18, 4, yd - 17, F(pal.o)); q(24, 18, 2, yd - 18, F(pal.S)); poing(23, yd); }
-    // grosse tête carrée : casquette noire à l'envers, oreilles, sourcils, yeux, joues roses, barbe pleine
-    grid([
-      '.......oooooooooooooooo.......',
-      '......oKKKKKKKKKKKKKKKKo......',
-      '......oKKkkkKKKKKKKKKKKo......',
-      '......oKKKKKKKKKKKKKKKKo......',
-      '......okkkkkkkkkkkkkkkko......',
-      '......oSSSSSSSSSSSSSSSSo......',
-      '......oSBBBSSSSSSSSBBBSo......',
-      '.....osSSSSBBBSSBBBSSSSso.....',
-      '.....osSWWEESSSSSSEEWWSso.....',
-      '.....osSWWEESSssSSEEWWSso.....',
-      '.....ospSSSSSshhsSSSSSpso.....',
-      '.....oRlSSSRRRRRRRRSSSlRo.....',
-      '.....oRRRRRRmmmmmmRRRRRRo.....',
-      '.....oRRRRRRRRRRRRRRRRRRo.....',
-      '......orRRRRRRRRRRRRRRro......',
-      '.......oorrRRRRRRRRrroo.......'
-    ], 0);
-    if (fache) { q(7, 8, 16, 2, F(pal.E)); q(8, 8, 2, 1, G('#7aa8d8')); q(18, 8, 2, 1, G('#7aa8d8')); q(14, 8, 2, 1, F('#c8a040')); }
-    if (a) { q(12, 12, 6, 2, F(pal.M)); q(12, 12, 6, 1, F(pal.m)); }
   } else if (k === 'empereur') {
     const ar = '#585d68', [aH, am, aD, aDD] = T(ar), red = '#ff3a2a', mo = a ? 3 : 1;
     // cape rouge sombre derrière
@@ -2726,10 +2753,19 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     const fr = an & 2 ? Math.floor(now * 7) % 4 : 0, atk = an & 1 ? 1 : 0, br = Math.floor(now * 1.6) % 2;
     ctx.fillStyle = '#00000044'; ctx.beginPath(); ctx.ellipse(x, y + 40, 70, 16, 0, 0, 7); ctx.fill();
     if (phase === 2) for (let k = 0; k < 10; k++) { const t = (now * 0.8 + k / 10) % 1; sq(x + Math.sin(k * 2.7) * 70, y + 30 - t * 120, big ? 4 : 2, t < 0.5 ? '#ff5a3a' : '#a8201a'); }
-    const spr = bossSprite(an & 4 ? 0 : fr, fl && Math.floor(now * 20) % 2 ? 1 : 0, bk === 'prof' ? (phase === 2 || an & 8 ? 'prof2' : 'prof') : bk, atk, br);
-    ctx.save(); ctx.translate(Math.round(x), Math.round(y - 10 - (spr.height - 54) * bs / 2)); if (Math.cos(ang) < -0.2) ctx.scale(-1, 1);
+    const flc = fl && Math.floor(now * 20) % 2 ? 1 : 0;
+    if (bk === 'prof') {   // le Prof marche comme un joueur : face, dos, côté ; 1,5 fois la taille d'un joueur
+      const d = dirFromAngle(ang), S = heroScale;
+      const spr = bossSprite(an & 4 ? 0 : fr % 3, flc, (phase === 2 || an & 8 ? 'prof2|' : 'prof|') + (d === 'left' || d === 'right' ? 'side' : d), atk, 0);
+      ctx.save(); ctx.translate(Math.round(x), Math.round(y + 22 + 3 * S)); if (d === 'left') ctx.scale(-1, 1);
+      if (an & 4) { ctx.scale(1, 0.72); ctx.rotate(Math.sin(now * 3) * 0.05); }   // à genoux (question finale)
+      ctx.drawImage(spr, Math.round(-spr.width * S / 2), -spr.height * S, spr.width * S, spr.height * S); ctx.restore();
+    } else {
+    const spr = bossSprite(an & 4 ? 0 : fr, flc, bk, atk, br);
+    ctx.save(); ctx.translate(Math.round(x), Math.round(y - 10)); if (Math.cos(ang) < -0.2) ctx.scale(-1, 1);
     if (an & 4) { ctx.translate(0, spr.height * bs * 0.18); ctx.scale(1, 0.72); ctx.rotate(Math.sin(now * 3) * 0.05); }   // à genoux (question finale)
     ctx.drawImage(spr, Math.round(-spr.width * bs / 2), Math.round(-spr.height * bs / 2), spr.width * bs, spr.height * bs); ctx.restore();
+    }
     if (shield) {   // Bouclier du savoir : bulle bleue
       ctx.save(); ctx.globalAlpha = 0.22 + Math.sin(now * 5) * 0.08; ctx.fillStyle = '#9fd6ff'; ctx.beginPath(); ctx.arc(x, y - 6, big ? 200 : 92, 0, 7); ctx.fill();
       ctx.globalAlpha = 0.9; ctx.lineWidth = big ? 10 : 4; ctx.strokeStyle = '#dff2ff'; ctx.setLineDash([14, 8]); ctx.lineDashOffset = now * 30; ctx.beginPath(); ctx.arc(x, y - 6, big ? 200 : 92, 0, 7); ctx.stroke(); ctx.restore();
