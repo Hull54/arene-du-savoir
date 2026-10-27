@@ -631,7 +631,7 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 
 /* Indices pendant les questions */
 .indice-q { min-height: 0; margin: 6px 0; text-align: center; }
-.indice-q p { margin: 4px 0; font-size: 1.05rem; color: #ffe7a6; }
+.indice-q p { margin: 4px 0; padding: 6px 10px; font-size: 1.1rem; font-weight: 700; color: #123f75; background: #dcebfb; border: 2px solid #2f6db3; border-radius: 10px; }
 .indice-q .ind-btn { font-size: .95rem; padding: 6px 12px; animation: ind-appel 1.6s ease-in-out 2; }
 @keyframes ind-appel { 50% { box-shadow: 0 0 0 4px rgba(255,214,120,.45); } }
 .choices button.barre { opacity: .35; text-decoration: line-through; }
@@ -640,6 +640,20 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 .eq-cls button { display: inline-flex; align-items: center; gap: 6px; font-size: .95rem; }
 .eq-cls button img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
 .eq-cls button[aria-pressed="false"] img { filter: grayscale(1); opacity: .5; }
+
+/* Ardoise et clavier de lettres */
+.modal.large { width: min(940px, 100%); }
+.calc-zone { display: flex; gap: 16px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+.calc-zone .pad { flex: 0 1 300px; }
+.ardoise { flex: 1 1 380px; display: grid; gap: 8px; grid-template-rows: 1fr auto; }
+.ardoise canvas { width: 100%; height: 100%; min-height: 260px; background: #fffdf6; border: 3px solid var(--cerne); border-radius: 12px; touch-action: none; cursor: crosshair;
+  background-image: repeating-linear-gradient(#fffdf6 0 33px, #cfe0f0 33px 34px); }
+.ardoise .btn { justify-self: center; font-size: .95rem; padding: 6px 14px; }
+.clavier { display: grid; gap: 6px; margin-top: 6px; }
+.clavier > div { display: flex; gap: 5px; justify-content: center; }
+.clavier button { min-width: 44px; padding: 10px 0; font-size: 1.25rem; font-weight: 700; border-radius: 10px; background: var(--panel-2); border: 2px solid var(--cerne); color: var(--ink); font-family: var(--body); }
+.clavier button.large { min-width: 120px; font-size: 1rem; }
+@media (max-width: 640px) { .clavier button { min-width: 26px; padding: 8px 0; font-size: 1rem; } .clavier > div { gap: 3px; } }
 </style>
 
 <div class="app">
@@ -1674,6 +1688,7 @@ async function ouvrirQuete(q) {
       <p class="sub" id="eq-msg"></p>`);
     const inp = document.getElementById("code-eq");
     inp.oninput = () => { const c = codeEquipe(inp.value); if (inp.value !== c) inp.value = c; };
+    clavierLettres(inp, null, true);
     const cls = document.getElementById("eq-cls");
     cls.onclick = e => {
       const b = e.target.closest("[data-c]"); if (!b) return;
@@ -3126,7 +3141,7 @@ document.getElementById("ed-evt-add").onclick = () => {
 // ---------- fenêtres ----------
 const overlay = document.getElementById("overlay"), modal = document.getElementById("modal");
 let keyHandler = null;
-function ouvrir(html, danger) { modal.onclick = null; modal.innerHTML = html; modal.classList.toggle("danger", !!danger); overlay.hidden = false; fermerMenu(); boutonX(); }
+function ouvrir(html, danger) { modal.onclick = null; modal.innerHTML = html; modal.classList.toggle("danger", !!danger); modal.classList.remove("large"); overlay.hidden = false; fermerMenu(); boutonX(); }
 // Le X de fermeture : il appuie sur le bouton « Fermer / Annuler / Plus tard… » de la fenêtre.
 // Les fenêtres sans sortie (question, vote, défense) n'en ont pas : il faut y répondre.
 const SORTIE = /^(✖ )?(Fermer|Annuler|Plus tard|Non merci|Rester sur la carte|Voir la carte|Garder|Retour)/;
@@ -3208,8 +3223,10 @@ function epreuveMath(op, titre, danger) {
     const diceHtml = des ? `<div class="dice"><div class="die" id="d1">${D12}<b>?</b></div><span class="x">${op}</span><div class="die" id="d2">${D12}<b>?</b></div></div>` : "";
     ouvrir(`<h2>${titre}</h2><p class="sub">Épreuve : ${opNom}</p>${diceHtml}<div class="big" id="q">&nbsp;</div>
       <div class="ans" id="ans" aria-live="polite"></div><div class="indice-q" id="iq" aria-live="polite"></div>
+      <div class="calc-zone">${op === "+" || op === "−" ? `<div class="ardoise"><canvas id="ardoise" aria-label="Ardoise pour calculer"></canvas><button type="button" class="btn" id="ard-eff">Effacer l'ardoise</button></div>` : ""}
       <div class="pad" id="pad">${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => `<button type="button" data-k="${n}">${n}</button>`).join("")}
-      <button type="button" class="del" data-k="del">Effacer</button><button type="button" data-k="0">0</button><button type="button" class="ok" data-k="ok" aria-label="Valider">✓</button></div>`, danger);
+      <button type="button" class="del" data-k="del">Effacer</button><button type="button" data-k="0">0</button><button type="button" class="ok" data-k="ok" aria-label="Valider">✓</button></div></div>`, danger);
+    if (document.getElementById("ardoise")) { modal.classList.add("large"); ardoise(document.getElementById("ardoise"), document.getElementById("ard-eff")); }
     const pad = document.getElementById("pad"), ans = document.getElementById("ans"), qel = document.getElementById("q");
     let q;
     pad.style.visibility = "hidden";
@@ -3298,6 +3315,34 @@ function aideProgressive(box, indices, fini, action) {
     };
   };
   setTimeout(montrer, delai);
+}
+// Ardoise : on calcule au crayon du TBI (ou au doigt) pendant l'épreuve
+function ardoise(cv, eff) {
+  const ctx = cv.getContext("2d");
+  const taille = () => { const r = cv.getBoundingClientRect(), k = devicePixelRatio || 1; cv.width = r.width * k; cv.height = r.height * k; ctx.setTransform(k, 0, 0, k, 0, 0); ctx.lineCap = ctx.lineJoin = "round"; ctx.lineWidth = 4; ctx.strokeStyle = "#1b1b2a"; };
+  requestAnimationFrame(taille);
+  let trace = null;
+  const pt = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  cv.onpointerdown = e => { e.preventDefault(); cv.setPointerCapture(e.pointerId); trace = pt(e); ctx.beginPath(); ctx.arc(trace[0], trace[1], 1.5, 0, 7); ctx.fillStyle = ctx.strokeStyle; ctx.fill(); };
+  cv.onpointermove = e => { if (!trace) return; const p = pt(e); ctx.beginPath(); ctx.moveTo(...trace); ctx.lineTo(...p); ctx.stroke(); trace = p; };
+  cv.onpointerup = cv.onpointercancel = () => { trace = null; };
+  eff.onclick = () => ctx.clearRect(0, 0, cv.width, cv.height);
+}
+// Clavier de lettres à l'écran (TBI) pour écrire un mot de passe ou un code
+function clavierLettres(inp, apres, chiffres) {
+  const rangs = [...(chiffres ? ["1234567890"] : []), "AZERTYUIOP", "QSDFGHJKLM", chiffres ? "WXCVBN" : "WXCVBNÉÈÀÇ"];
+  const k = document.createElement("div"); k.className = "clavier";
+  k.innerHTML = rangs.map(r => `<div>${[...r].map(c => `<button type="button" data-l="${c}">${c}</button>`).join("")}</div>`).join("")
+    + `<div><button type="button" class="large" data-l="del">⌫ Effacer</button><button type="button" class="large" data-l=" ">Espace</button></div>`;
+  k.onclick = e => {
+    const b = e.target.closest("[data-l]"); if (!b) return;
+    const l = b.dataset.l;
+    inp.value = l === "del" ? inp.value.slice(0, -1) : inp.value + l;
+    inp.dispatchEvent(new Event("input")); if (apres) apres();
+  };
+  inp.after(k);
+  inp.setAttribute("inputmode", "none");
+  return k;
 }
 function choisir(titre, texte, boutons, danger) {
   return new Promise(resolve => {
@@ -3751,6 +3796,7 @@ function enigme(sec) {
       };
     } else {
       const inp = document.getElementById("rep");
+      clavierLettres(inp);
       const valider = () => { if (inp.value.trim()) fin(norm(inp.value) === norm(e.rep)); };
       document.getElementById("val").onclick = valider;
       inp.addEventListener("keydown", ev => { if (ev.key === "Enter") valider(); });
