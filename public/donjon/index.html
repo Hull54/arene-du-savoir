@@ -58,7 +58,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .board { position: relative; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 8px;
   box-shadow: 0 0 0 3px #0b0806, 0 0 0 5px var(--line), 0 24px 60px rgba(0,0,0,.65); cursor: default; }
 body.editing .board { cursor: crosshair; }
-.board canvas, .board .layer, .board svg.paths { position: absolute; inset: 0; width: 100%; height: 100%; }
+.board canvas, .board .layer, .board svg.paths, .board img.transfo { position: absolute; inset: 0; width: 100%; height: 100%; }
+.board img.transfo { pointer-events: none; }
 .board .layer, .board svg.paths { pointer-events: none; }
 .hl { position: absolute; left: 0; top: 0; width: var(--cell); height: var(--cell); box-sizing: border-box; }
 .hl.reach { background: var(--reach); box-shadow: inset 0 0 0 1px rgba(114,211,155,.45); }
@@ -574,7 +575,8 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .souffleur { pointer-events: none; opacity: .94; }
 .souffleur button { pointer-events: auto; }
 .souffleur .sf-min { position: absolute; top: 4px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--cerne); background: #f6ead0; font-weight: 700; line-height: 1; padding: 0; }
-.souffleur #sf-evt { justify-self: end; padding: 6px 12px; font-size: .9rem; }
+.souffleur .sf-btns { justify-self: end; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.souffleur .sf-btns .btn { padding: 6px 12px; font-size: .9rem; }
 .sf-ouvrir { position: absolute; top: 10px; left: 10px; z-index: 35; width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--cerne); background: var(--panel); font-size: 1.3rem; box-shadow: 0 3px 0 var(--cerne); padding: 0; }
 .ed-evts > label { margin-bottom: 8px; }
 .chrono { border: 2px solid var(--cerne); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 6px 12px; font-weight: 700; box-shadow: 0 3px 0 var(--cerne); font-variant-numeric: tabular-nums; }
@@ -683,7 +685,7 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
         <p class="sf-t">Souffleur du MJ</p>
         <div class="sf-l"><b>🎙️ À dire</b><span id="sf-dire"></span></div>
         <div class="sf-l"><b>👉 À faire</b><span id="sf-faire"></span></div>
-        <button class="btn" id="sf-evt" type="button" hidden>🎲 Événement surprise</button>
+        <div class="sf-btns"><button class="btn" id="sf-transfo" type="button" hidden title="Passe à la variante suivante de la carte">✨ Transformer le plateau</button><button class="btn" id="sf-evt" type="button" hidden>🎲 Événement surprise</button></div>
       </div>
       <button class="sf-ouvrir" id="sf-ouvrir" type="button" hidden title="Afficher le souffleur du MJ">🎙️</button>
       <div class="recit" id="recit" hidden></div>
@@ -744,6 +746,14 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
           <h4>Image de fond</h4>
           <div class="edbtns"><label class="btn" for="ed-file" style="text-align:center">Charger une image</label><button class="btn" type="button" id="ed-noimg">Retirer l'image</button></div>
           <input type="file" id="ed-file" accept="image/*,application/pdf" hidden>
+        </div>
+        <div id="ed-var-zone">
+          <h4>Variantes de la carte</h4>
+          <p class="hint">La même carte, changée (couleurs, nuit, glace fondue…). Ce n'est pas un nouveau chapitre : la variante apparaît quand une action la déclenche (secret, événement, boss vaincu, ou le bouton ✨ du souffleur).</p>
+          <div class="edbtns"><label class="btn" for="ed-var" style="text-align:center">Ajouter une variante</label><button class="btn" type="button" id="ed-var-voir">Voir la suivante</button><button class="btn" type="button" id="ed-var-del">Retirer les variantes</button></div>
+          <input type="file" id="ed-var" accept="image/*,application/pdf" hidden>
+          <p class="hint" id="ed-var-n"></p>
+          <label class="check"><input type="checkbox" id="ed-var-boss"> Quand le boss tombe, le plateau se transforme</label>
         </div>
         <div class="dims"><label>Colonnes <input type="number" id="ed-cols" min="6" max="40"></label><label>Lignes <input type="number" id="ed-rows" min="6" max="30"></label></div>
         <p class="hint">Ajuste les colonnes et les lignes pour que la grille tombe sur les cases de ton image. Peins ensuite les murs : personne ne peut y aller.</p>
@@ -1553,7 +1563,7 @@ const noms = {}, races = {};
 const clone = o => JSON.parse(JSON.stringify(o));
 // Complète un chapitre ancien ou importé avec les champs attendus
 function normaliser(ch) {
-  return Object.assign({ nom: "Chapitre", intro: "", image: null, imageId: null, ratio: null, evenements: [], enemies: [], objets: [], portes: {}, pnj: [], secrets: [], deco: [], sorties: [],
+  return Object.assign({ nom: "Chapitre", intro: "", image: null, imageId: null, ratio: null, variantes: [], evenements: [], enemies: [], objets: [], portes: {}, pnj: [], secrets: [], deco: [], sorties: [],
     heroes: { archer: [1, 1], mage: [2, 1], guerrier: [1, 2], voleur: [2, 2] } }, ch);
 }
 function construire(carte, phase, chapitre = 0) {
@@ -1577,7 +1587,7 @@ function construire(carte, phase, chapitre = 0) {
     secrets: carte.secrets.map((s, i) => ({ ...s, id: "s-" + i, trouve: false })),
     deco: carte.deco.map(([t, x, y], i) => ({ id: "d-" + i, type: t, x, y })),
     sorties: carte.sorties.map(([x, y], i) => ({ id: "x-" + i, x, y })),
-    nextId: carte.enemies.length,
+    nextId: carte.enemies.length, varIdx: phase === "edit" && ED && ED.varCh === chapitre && (carte.variantes || [])[ED.varVue - 1] ? ED.varVue : 0,
     rep: S && S.rep && S.repCle === QUETE.id + "|" + EQUIPE ? S.rep : [], repCle: QUETE.id + "|" + EQUIPE,
   };
   ents.innerHTML = ""; tokEls.clear();
@@ -1636,7 +1646,7 @@ function photoPartie() {
     objets: S.objets.map(o => ({ decouvert: o.decouvert, vide: o.vide })),
     portes: Object.fromEntries(Object.entries(S.portes).map(([k, p]) => [k, p.verrou])),
     secrets: S.secrets.map(s => s.trouve), deco: S.deco.map(d => [d.type, d.x, d.y]),
-    rep: S.rep || [], jauge: S.jauge || 0, fini: S.fini || null, vu: S.vu ? Array.from(S.vu).join("") : null, brumeOff: !!S.brumeOff,
+    rep: S.rep || [], jauge: S.jauge || 0, fini: S.fini || null, vu: S.vu ? Array.from(S.vu).join("") : null, brumeOff: !!S.brumeOff, varIdx: S.varIdx || 0,
   };
 }
 function restaurerPartie(p) {
@@ -1653,7 +1663,7 @@ function restaurerPartie(p) {
   for (const [k, v] of Object.entries(p.portes)) if (S.portes[k]) S.portes[k].verrou = v;
   p.secrets.forEach((t, i) => { if (S.secrets[i]) S.secrets[i].trouve = t; });
   S.deco = p.deco.map(([t, x, y], i) => ({ id: "d-" + i, type: t, x, y }));
-  S.rep = p.rep || []; S.jauge = p.jauge || 0; S.brumeOff = !!p.brumeOff; S.evFaits = p.evFaits || []; S.dernierEvt = Date.now();
+  S.rep = p.rep || []; S.jauge = p.jauge || 0; S.brumeOff = !!p.brumeOff; S.evFaits = p.evFaits || []; if (p.varIdx && (S.carte.variantes || [])[p.varIdx - 1]) { S.varIdx = p.varIdx; chargerImage(); } S.dernierEvt = Date.now();
   if (p.vu && p.vu.length === W * H) S.vu = Uint8Array.from(p.vu, c => c === "1" ? 1 : 0);
   for (const h of S.heroes) { noms[h.cls] = h.nom; races[h.cls] = h.race; }
   if (!S.heroes[S.actif] || S.heroes[S.actif].pv <= 0 || S.heroes[S.actif].joue) { const i = S.heroes.findIndex(h => h.pv > 0 && !h.joue); S.actif = i < 0 ? 0 : i; }
@@ -1807,7 +1817,29 @@ function chemin(reach, from, x, y) {
 const board = document.getElementById("board"), canvas = document.getElementById("terrain"), ctx = canvas.getContext("2d");
 const hlLayer = document.getElementById("hl"), ents = document.getElementById("ents"), paths = document.getElementById("paths");
 let CELL = 60, IMGFOND = null;
-const imgSrc = c => c.imageId ? "/_blob/" + c.imageId : c.image;
+const imgBase = c => c.imageId ? "/_blob/" + c.imageId : c.image;
+// Variante : la même carte, transformée par une action (0 = l'image d'origine)
+const imgSrc = c => (S && c === S.carte && S.varIdx && (c.variantes || [])[S.varIdx - 1] && srcJeton(c.variantes[S.varIdx - 1])) || imgBase(c);
+async function transformerPlateau(quoi) {
+  const v = (S && S.carte.variantes) || [];
+  if (!v.length) return;
+  const vieux = canvas.toDataURL ? (() => { try { return canvas.toDataURL("image/jpeg", .8); } catch { return null; } })() : null;
+  S.varIdx = ((S.varIdx || 0) + 1) % (v.length + 1);
+  const src = imgSrc(S.carte), im = new Image(), carte = S.carte;
+  await new Promise(res => { im.onload = im.onerror = res; im.src = src; });
+  if (S.carte !== carte) return;
+  if (im.naturalWidth) IMGFOND = im;
+  if (vieux && !RM.matches) {
+    const ov = document.createElement("img"); ov.src = vieux; ov.className = "transfo";
+    canvas.after(ov);
+    drawTerrain();
+    ov.animate([{ opacity: 1, filter: "brightness(1)" }, { opacity: .85, filter: "brightness(1.8)", offset: .3 }, { opacity: 0, filter: "brightness(1.2)" }], { duration: 1600, easing: "ease-in-out" }).onfinish = () => ov.remove();
+  } else drawTerrain();
+  bruit("soin"); secousse(.4);
+  log(quoi ? `Le décor change : <b>${esc(quoi)}</b>.` : "Le décor se transforme!");
+  toast("✨ Le plateau se transforme!", 3000);
+  majSouffleur();
+}
 function chargerImage() {
   IMGFOND = null;
   const src = imgSrc(S.carte);
@@ -2953,7 +2985,7 @@ async function aSuivre() {
 // ---------- souffleur du MJ et événements ----------
 const EFFETS = { rien: "Message seulement", monstre: "Un monstre surgit", vie: "Potion de vie trouvée", mana: "Potion de mana trouvée", soin: "+1 PV à tous les héros",
   piege: "Piège : un héros doit se défendre", defi: "Défi de calcul (potion à gagner)", eclair: "Coup de tonnerre", hasard: "Pile ou face : potion ou monstre",
-  dilemme: "Dilemme : la classe vote entre 2 choix" };
+  dilemme: "Dilemme : la classe vote entre 2 choix", transformer: "Le plateau se transforme (variante)" };
 const SURPRISES = [
   { titre: "Des renforts!", texte: "Un cri résonne au loin… {monstre} surgit des ombres et fonce vers vous!", effet: "monstre" },
   { titre: "Un trésor oublié", texte: "En marchant, {heros} heurte une petite bourse de cuir. À l'intérieur : une potion de vie!", effet: "vie" },
@@ -3043,9 +3075,11 @@ function majSouffleur() {
   document.getElementById("sf-dire").textContent = aDire;
   document.getElementById("sf-faire").textContent = faire;
   document.getElementById("sf-evt").hidden = S.phase !== "mj" || S.busy;
+  document.getElementById("sf-transfo").hidden = !(S.carte.variantes || []).length || S.busy;
 }
 document.getElementById("sf-min").onclick = () => { PREF.sfMin = true; sauverPref(); majSouffleur(); };
 document.getElementById("sf-ouvrir").onclick = () => { PREF.sfMin = false; sauverPref(); majSouffleur(); };
+document.getElementById("sf-transfo").onclick = () => { if (S && !S.busy) transformerPlateau(); };
 document.getElementById("sf-evt").onclick = () => { if (S && !S.busy) jouerEvenement(surprise()); };
 function surprise() {
   let l = SURPRISES.filter(x => x.titre !== S.derniereSurprise);
@@ -3091,6 +3125,7 @@ async function jouerEvenement(ev) {
     case "piege": S.busy = false; await defendre(h, null, 1); break;
     case "defi": { S.busy = false; const ok = await epreuveMath("×", "Le défi de l'équipe"); if (ok) { S.inv.vie++; bruit("tresor"); toast("Défi réussi : +1 potion de vie!"); log("Défi réussi : +1 potion de vie."); } else log("Le défi est raté… dommage!"); break; }
     case "eclair": secousse(1.5); break;
+    case "transformer": await transformerPlateau(); break;
   }
   S.busy = false; S.dernierEvt = Date.now(); verifierFin(); render();
 }
@@ -3381,6 +3416,7 @@ async function blesser(e, n) {
     await anim(e, "die");
     log(`<b>${e.nom}</b> est vaincu!`); raconter("vaincu", null, e);
     if (S.frappeur) progres(S.frappeur, s => { s.kills++; if (e.boss) s.boss++; });
+    if (e.boss && S.carte.transfoBoss && (S.carte.variantes || []).length) setTimeout(() => transformerPlateau("le boss est tombé"), 900);
     if (e.boss && S.objets.some(o => o.type === "coffreDore")) { log("Le boss s'effondre. Son coffre est maintenant accessible!"); toast("Le boss est vaincu! Ouvrez son coffre.", 4000); }
   }
   render();
@@ -3657,7 +3693,7 @@ const INDICES = {
 const INDICE_TITRES = { fouiller: "Quelque chose attire le regard…", creuser: "La terre semble fraîchement remuée…", bruler: "Des ronces sèches cachent quelque chose…", toucher: "Une marque étrange luit doucement…" };
 const DECLENCHEURS = { fouiller: "Fouiller", creuser: "Creuser", bruler: "Brûler", toucher: "Toucher", entrer: "Marcher sur la case" };
 const RECOMP = { rien: "Rien de plus", vie: "Potion de vie", mana: "Potion de mana", cle: "Clé de bronze", objet: "Objet spécial (à nommer)", sceau: "Brise un sceau de la porte scellée", levier: "Ouvre les grilles",
-  piege: "Piège : −1 PV au héros", piegeGroupe: "Piège : −1 PV à tout le groupe", monstre: "Un monstre surgit" };
+  piege: "Piège : −1 PV au héros", piegeGroupe: "Piège : −1 PV à tout le groupe", monstre: "Un monstre surgit", transformer: "Transforme le plateau (variante)" };
 const ECHECS = { rien: "Rien : on peut réessayer", piege: "−1 PV au héros", piegeGroupe: "−1 PV à tout le groupe" };
 const nomRecomp = sec => sec.recompense === "objet" ? (sec.objet || "Objet spécial") : sec.recompense === "monstre" ? `${(E[sec.monstre] || E.gobelin).nom} surgit!` : RECOMP[sec.recompense] || "";
 async function blesserHeros(list, n, quoi) {
@@ -3742,6 +3778,7 @@ async function donner(sec, h) {
   else if (r === "piegeGroupe") await blesserHeros(S.heroes, 1, "Un piège frappe tout le groupe");
   else if (r === "monstre") { const t = E[sec.monstre] ? sec.monstre : "gobelin", c = caseLibrePres(sec.x, sec.y); if (c) { faireApparaitre(t, c.x, c.y); log(`${E[t].nom} surgit!`); } }
   else if (r === "levier") { for (const p of Object.values(S.portes)) if (p.par === "levier") p.verrou = false; drawTerrain(); bruit("porte"); log("Clac! Les grilles s'ouvrent."); }
+  else if (r === "transformer") await transformerPlateau();
   else if (E[r]) { const c = caseLibrePres(sec.x, sec.y); if (c) { faireApparaitre(r, c.x, c.y); log(`${E[r].nom} surgit!`); } }
 }
 async function reveler(sec, h) {
@@ -4111,6 +4148,11 @@ function renderEditeur() {
   if (!document.getElementById("ed-evts").contains(document.activeElement)) renderEvtsEditeur();
   set("ed-rep", ED.carte.repliques || ""); set("ed-repboss", ED.carte.repliqueBoss || ""); set("ed-suspense", ED.carte.suspense || "");
   document.getElementById("ed-noimg").disabled = !(ED.carte.image || ED.carte.imageId);
+  const nv = (ED.carte.variantes || []).length, aImg = !!(ED.carte.image || ED.carte.imageId);
+  document.getElementById("ed-var-zone").hidden = !aImg;
+  document.getElementById("ed-var-n").textContent = nv ? `${nv} variante${nv > 1 ? "s" : ""}. Affichée dans l'éditeur : ${S.varIdx ? "variante " + S.varIdx : "image d'origine"}.` : "Aucune variante pour l'instant.";
+  document.getElementById("ed-var-voir").disabled = document.getElementById("ed-var-del").disabled = !nv;
+  document.getElementById("ed-var-boss").checked = !!ED.carte.transfoBoss;
   document.getElementById("ed-chaps").innerHTML = ED.quete.chapitres.map((c, i) => `<button class="chap ${i === ED.ch ? "on" : ""}" type="button" data-ch="${i}">${i + 1}. ${esc(c.nom)}</button>`).join("");
   document.getElementById("ed-ch-del").disabled = ED.quete.chapitres.length < 2;
 }
@@ -4320,7 +4362,28 @@ document.getElementById("ed-jeton").addEventListener("change", e => {
   im.onerror = () => msgEd("Cette image n'a pas pu être lue. Essaie un fichier PNG ou JPG.");
   im.src = url;
 });
-document.getElementById("ed-noimg").onclick = () => { ED.carte.image = null; ED.carte.imageId = null; ED.carte.ratio = null; rebatirEdition(); };
+// Variante : même cadrage que l'image d'origine, la grille ne bouge pas
+document.getElementById("ed-var").addEventListener("change", async e => {
+  let f = e.target.files[0]; e.target.value = "";
+  if (!f) return;
+  if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) { try { f = await pdfEnImage(f); } catch { msgEd("Ce PDF n'a pas pu être lu."); return; } }
+  const url = URL.createObjectURL(f), im = new Image();
+  im.onload = () => {
+    const k = Math.min(1, 2400 / Math.max(im.width, im.height));
+    const cv = document.createElement("canvas"); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+    cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+    ED.carte.variantes = [...(ED.carte.variantes || []), cv.toDataURL("image/jpeg", .85)];
+    const ecart = ED.carte.ratio && Math.abs(im.height / im.width - ED.carte.ratio) > .03;
+    ED.varCh = ED.ch; ED.varVue = ED.carte.variantes.length; rebatirSansResize();
+    msgEd(ecart ? "Variante ajoutée, mais elle n'a pas les mêmes proportions que l'image d'origine : elle sera étirée." : "Variante ajoutée. N'oublie pas d'enregistrer.");
+  };
+  im.onerror = () => msgEd("Cette image n'a pas pu être lue. Essaie un fichier PNG ou JPG.");
+  im.src = url;
+});
+document.getElementById("ed-var-voir").onclick = () => { const n = (ED.carte.variantes || []).length; ED.varCh = ED.ch; ED.varVue = n ? ((S.varIdx || 0) + 1) % (n + 1) : 0; rebatirSansResize(); };
+document.getElementById("ed-var-del").onclick = () => { ED.carte.variantes = []; ED.varVue = 0; rebatirSansResize(); };
+document.getElementById("ed-var-boss").onchange = e => { ED.carte.transfoBoss = e.target.checked; };
+document.getElementById("ed-noimg").onclick = () => { ED.carte.variantes = []; ED.carte.image = null; ED.carte.imageId = null; ED.carte.ratio = null; rebatirEdition(); };
 document.getElementById("ed-ch-add").onclick = () => { ED.quete.chapitres.push(carteVierge(ED.quete.chapitres.length + 1)); ED.ch = ED.quete.chapitres.length - 1; ED.sel = null; afficherForm(); rebatirEdition(); };
 const deplacerChapitre = d => {
   const a = ED.ch, b = a + d, l = ED.quete.chapitres;
@@ -4416,6 +4479,7 @@ const Stock = {
     const ranger = async d => { if (!this.assets || !d || !d.startsWith("data:")) return d; try { const b = dataUrlBlob(d); return "asset:" + (await this.assets.upload(b, { type: b.type })).id; } catch { return d; } };
     for (const k of Object.keys(q.jetons || {})) q.jetons[k] = await ranger(q.jetons[k]);
     for (const ch of q.chapitres) for (const p of ch.pnj || []) if (p.img) p.img = await ranger(p.img);
+    for (const ch of q.chapitres) if (ch.variantes) ch.variantes = await Promise.all(ch.variantes.map(ranger));
     if (this.db) {
       try { await this.db.doc("quetes/" + q.id).set(q); await IDB.del("quetes", q.id); await IDB.del("cartes", q.id); return { ou: "compte", q }; } catch {}
     }
@@ -4481,6 +4545,7 @@ const Stock = {
     for (const q of qs) {
       for (const k of Object.keys(q.jetons || {})) q.jetons[k] = await enData(q.jetons[k]);
       for (const ch of q.chapitres) for (const p of ch.pnj || []) if (p.img) p.img = await enData(p.img);
+      for (const ch of q.chapitres) if (ch.variantes) ch.variantes = (await Promise.all(ch.variantes.map(enData))).filter(Boolean);
     }
     const data = JSON.stringify({ format: "classe-et-donjon", version: 1, date: new Date().toISOString(), quetes: qs });
     const jour = new Date().toISOString().slice(0, 10);
