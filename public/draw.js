@@ -2201,8 +2201,8 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
       r(20, 14, 6, 1, C(bdD));
       if (a) { r(22, 15, 4, 2, C('#4a0e0e')); r(22, 15, 4, 1, G('#f6ecd8')); } else r(22, 16, 3, 1, ink);
       // bras devant : il balance en marchant, il frappe vers l'avant en attaque
-      if (a) { box(17, 19, 4, 3, tee); r(21, 20, 7, 3, ink); r(21, 21, 7, 1, C(S)); fist(28, 18, 5, 5); for (let i = 0; i < 3; i++) P.px(34, 17 + i * 3, G('#fff6a0')); }
-      else { const o = -st * 2; box(16, 19, 5, 4, tee); box(17 + o * 0.5, 23, 3, 4, S); fist(16 + o, 27, 5, 4); }
+      if (a) { box(17, 19, 4, 4, tee); r(21, 20, 7, 4, ink); r(21, 21, 7, 2, C(S)); fist(28, 18, 5, 5); for (let i = 0; i < 3; i++) P.px(34, 17 + i * 3, G('#fff6a0')); }
+      else { const o = -st * 2; box(16, 19, 6, 4, tee); box(17 + o / 2, 23, 4, 6, S); fist(16 + o, 29, 6, 4); }
     } else {
       const back = dir === 'up';
       // jambes : jeans et Converse
@@ -2217,11 +2217,11 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
       // taille du pantalon : ceinture de jeans d'une jambe à l'autre
       box(10, 29, 16, 3, jean); r(10, 29, 16, 1, C('#4a3020')); if (!back) { r(17, 29, 2, 1, G('#e8c050')); r(17, 30, 1, 2, C(jeanD)); } else { r(12, 30, 3, 1, C(jeanD)); r(21, 30, 3, 1, C(jeanD)); }
       // bras nus et gros poings (balancent en marchant ; en attaque, le poing droit frappe vers l'avant)
-      const yg = 26 + (st > 0 ? 1 : 0), yd = 26 + (st < 0 ? 1 : 0);
-      box(6, 18, 3, 4, tee); box(6, 22, 3, yg - 22, S); fist(5, yg, 5, 4);
+      const yg = 28 + (st > 0 ? 1 : 0), yd = 28 + (st < 0 ? 1 : 0);
+      box(5, 18, 4, 4, tee); box(5, 22, 4, yg - 22, S); r(5, 22, 1, yg - 22, C(sH)); fist(4, yg, 6, 4);
       if (a && !back) { box(22, 22, 4, 3, S); fist(19, 23, 7, 6); for (let i = 0; i < 3; i++) P.px(18 + i * 4, 31, G('#fff6a0')); }
-      else if (a) { box(27, 10, 3, 9, S); fist(26, 5, 5, 5); }
-      else { box(27, 18, 3, 4, tee); box(27, 22, 3, yd - 22, S); fist(26, yd, 5, 4); }
+      else if (a) { box(27, 10, 4, 9, S); fist(26, 5, 6, 5); }
+      else { box(27, 18, 4, 4, tee); box(27, 22, 4, yd - 22, S); r(30, 22, 1, yd - 22, C(sD)); fist(26, yd, 6, 4); }
       // grosse tête carrée
       box(11, 4, 14, 13, S); r(9, 9, 2, 4, ink); r(10, 9, 1, 3, C(sD)); r(25, 9, 2, 4, ink); r(25, 9, 1, 3, C(sD));
       r(10, 2, 16, 6, ink); r(11, 2, 14, 5, C(cap)); r(11, 6, 14, 1, C(capH));
