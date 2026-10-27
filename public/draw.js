@@ -54,7 +54,7 @@ Object.assign(REGLES, {
   survie: { ico: '🌊', titre: 'Survie coopérative', but: 'Toute la classe ensemble contre 8 vagues de monstres !', pts: ['On ne peut pas se blesser entre nous.', 'Chaque vague est plus forte que la précédente.', 'Entre deux vagues : une question éclair. Bonne réponse = bonus de force.', 'Si tout le monde tombe en même temps, les monstres gagnent.'] },
   zombie: { ico: '🧟', titre: 'Contagion', but: 'Humains : survivez ! Zombies : attrapez tout le monde !', pts: ['Un zombie qui te touche te pose une question : bonne réponse = tu résistes 3 secondes.', 'Mauvaise réponse : tu deviens un zombie à ton tour.', 'Les coups des humains repoussent et étourdissent les zombies.', 'Survivre rapporte des points. Les zombies vont un peu plus vite.'] },
   entrainement: { ico: '🎯', titre: 'Entraînement', but: 'Entraîne-toi contre les robots !', pts: ['Les élèves ne peuvent pas se blesser entre eux : seulement les robots.', 'Les robots frappent moins fort.', 'Les questions reviennent plus souvent sur les notions que tu rates.'] },
-  prof: { ico: '🧑‍🏫', titre: 'Boss Prof', but: 'Toute la classe contre le Prof, dans une classe géante !', pts: ['🥊 Gant de boxe, 👀 regard, 📢 voix, 📣 sifflet (esquive au bon moment !), 📄 devoirs, 🖍️ craie.', '🔒 Retenue : reste 2 s près d\'un camarade en cage et réponds pour le libérer.', '📝 Interros surprises : tout le monde répond aux mêmes questions. La majorité brise le bouclier, mais chacun est noté.', '⭐ 3 bonnes réponses de suite aux interros : tu deviens le chouchou (coups puissants).', '🏆 À la fin, le Prof tombe à genoux : la question finale décide !'] },
+  prof: { ico: '🧑‍🏫', titre: 'Boss Prof', but: 'Toute la classe contre le Prof, dans une classe géante !', pts: ['👊 Coup de poing, 👀 regard, 📢 voix, 📣 sifflet (esquive au bon moment !), 📄 devoirs, 🖍️ craie.', '🔒 Retenue : reste 2 s près d\'un camarade en cage et réponds pour le libérer.', '📝 Interros surprises : tout le monde répond aux mêmes questions. La majorité brise le bouclier, mais chacun est noté.', '⭐ 3 bonnes réponses de suite aux interros : tu deviens le chouchou (coups puissants).', '🏆 À la fin, le Prof tombe à genoux : la question finale décide !'] },
   controle: { ico: '📝', titre: 'Contrôle', but: 'Réponds à toutes les questions, à ton rythme.', pts: ['Pas de combat : ton héros reste à sa place.', 'Tout le monde a les mêmes questions.', 'Prends ton temps et relis-toi : ton bilan arrive à la fin.'] },
 });
 // Modes en équipes : noms et scores affichés en haut de l'écran
@@ -2168,54 +2168,56 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
     if (f % 2 === 0 || a) { line(1, 14, 4, 18, G('#fff6a0')); line(4, 18, 1, 20, G('#fff6a0')); line(58, 14, 55, 18, G('#fff6a0')); line(55, 18, 58, 20, G('#fff6a0')); }
   } else if (k === 'prof' || k === 'prof2') {
     // Le Prof, façon lutteur chibi en gros pixels (grille 30 × 27, chaque case = 2 × 2) :
-    // tête énorme, sourcils épais, barbe, épaules larges, gants de boxe collés aux flancs, petites jambes.
-    // Casquette noire, chemise de chasse à carreaux, jeans, Converse ; fâché : lunettes de soleil.
+    // grosse tête carrée, sourcils épais, barbe, épaules larges, gros poings, petites jambes.
+    // Casquette noire, chandail noir, jeans, Converse ; fâché : lunettes de soleil.
     const fache = k === 'prof2';
     const pal = {
-      o: '#3a1a10', K: '#26242e', k: '#4a4858', S: '#f2b98e', s: '#d89670', h: '#ffd8b4', W: '#fbf6ee', E: '#1c1420',
+      o: '#2a1410', K: '#26242e', k: '#4a4858', S: '#f2b98e', s: '#d89670', h: '#ffd8b4', W: '#fbf6ee', E: '#1c1420',
       B: '#5a2c14', R: '#9a4a22', r: '#6e3216', l: '#c0662e', p: '#ec8f7c', m: '#f6ecd8', M: '#4a0e0e'
     };
     const q = (x, y, w, h, c) => P.rect(x * 2, y * 2, w * 2, h * 2, c);
-    const grid = (rows, y0, col = ch => F(pal[ch])) => rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') q(i, y0 + j, 1, 1, col(row[i])); });
-    const swing = a ? 0 : sw, gl = (x, y, w = 7, h = 6) => {   // gant de boxe : contour, rouge ombré, reflet, poignet blanc
-      q(x + 1, y, w - 2, h, F(pal.o)); q(x, y + 1, w, h - 2, F(pal.o)); q(x + 1, y + 1, w - 2, h - 2, F('#ee3a2e')); q(x + 1, y + h - 2, w - 2, 1, F('#9a1c18')); q(x + w - 2, y + 1, 1, h - 2, F('#9a1c18'));
-      q(x + 1, y + 1, 2, 1, G('#ff8a70')); q(x + 2, y + 2, 1, 1, G('#ff8a70')); q(x + 1, y + 3, w - 3, 1, F('#b8221c'));
+    const grid = (rows, y0) => rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') q(i, y0 + j, 1, 1, F(pal[row[i]])); });
+    const tee = '#2c2c34', teeH = '#46464f', teeD = '#18181e';
+    const swing = a ? 0 : sw;
+    const poing = (x, y, w = 6, h = 5) => {   // gros poing nu : contour, peau ombrée, jointures
+      q(x + 1, y, w - 2, h, F(pal.o)); q(x, y + 1, w, h - 2, F(pal.o)); q(x + 1, y + 1, w - 2, h - 2, F(pal.S));
+      q(x + 1, y + h - 2, w - 2, 1, F(pal.s)); q(x + w - 2, y + 1, 1, h - 2, F(pal.s)); q(x + 1, y + 1, 2, 1, F(pal.h));
+      for (let i = x + 2; i < x + w - 1; i += 2) q(i, y + 2, 1, 1, F(pal.s));
     };
-    // torse large : chemise à carreaux (motif « buffalo »), boutons, ceinture
+    // torse large : chandail noir tout simple
     q(5, 14, 20, 8, F(pal.o)); q(3, 15, 24, 4, F(pal.o));
-    for (let y = 15; y < 21; y++) for (let x = y < 18 ? 4 : 6; x < (y < 18 ? 26 : 24); x++) {
-      const bx = (x >> 1) & 1, by = (y >> 1) & 1;
-      q(x, y, 1, 1, F(bx && by ? '#2a1418' : bx || by ? '#9a2220' : '#d23a32'));
-    }
-    q(14, 16, 2, 4, F('#6e1a18')); q(15, 17, 1, 1, F('#f0e6d0')); q(15, 19, 1, 1, F('#f0e6d0'));
-    q(6, 20, 18, 1, F('#5a3420')); q(14, 20, 2, 1, G('#e8c050'));
+    q(4, 15, 22, 3, F(tee)); q(6, 18, 18, 3, F(tee));
+    q(4, 15, 22, 1, F(teeH)); q(4, 15, 1, 3, F(teeH)); q(6, 20, 18, 1, F(teeD)); q(23, 16, 1, 4, F(teeD));
+    q(10, 15, 10, 1, F('#3a3a44'));                         // encolure
+    q(4, 17, 3, 1, F(teeD)); q(23, 17, 3, 1, F(teeD));      // bord des manches courtes
     // jambes : jeans et Converse noires à bout blanc
     for (const [x, l] of [[8, lA < 0 ? -1 : 0], [16, lB < 0 ? -1 : 0]]) {
       q(x, 21, 6, 3 + l, F(pal.o)); q(x + 1, 21, 4, 2 + l, F('#3e64a0')); q(x + 1, 21, 1, 2 + l, F('#5a84c0'));
       q(x - 1, 23 + l, 8, 4, F(pal.o)); q(x, 23 + l, 6, 1, F('#2a2a34')); q(x + 2, 23 + l, 1, 1, F('#f4f0e6')); q(x, 24 + l, 6, 1, F('#f4f0e6')); q(x + 4, 24 + l, 2, 1, F('#ffffff')); q(x, 25 + l, 6, 1, F('#c8c0b0'));
     }
-    // gants collés aux flancs (le droit frappe en attaque)
-    gl(1, 17 + (swing > 0 ? 1 : 0)); q(2, 16 + (swing > 0 ? 1 : 0), 5, 1, F(pal.m));
-    if (a) { gl(18, 13, 9, 7); q(17, 14, 1, 5, F(pal.m)); for (let i = 0; i < 3; i++) q(28, 13 + i * 2, 1, 1, G('#fff6a0')); }
-    else { gl(22, 17 + (swing < 0 ? 1 : 0)); q(23, 16 + (swing < 0 ? 1 : 0), 5, 1, F(pal.m)); }
-    // grosse tête : casquette noire à l'envers, oreilles, sourcils, yeux, joues roses, barbe pleine
+    // bras nus et gros poings (le droit frappe en attaque)
+    const yg = 19 + (swing > 0 ? 1 : 0), yd = 19 + (swing < 0 ? 1 : 0);
+    q(3, 18, 4, yg - 17, F(pal.o)); q(4, 18, 2, yg - 18, F(pal.S)); poing(1, yg);
+    if (a) { q(19, 15, 3, 3, F(pal.o)); q(19, 16, 2, 1, F(pal.S)); poing(20, 13, 8, 7); for (let i = 0; i < 3; i++) q(28, 13 + i * 3, 1, 1, G('#fff6a0')); }
+    else { q(23, 18, 4, yd - 17, F(pal.o)); q(24, 18, 2, yd - 18, F(pal.S)); poing(23, yd); }
+    // grosse tête carrée : casquette noire à l'envers, oreilles, sourcils, yeux, joues roses, barbe pleine
     grid([
-      '..........oooooooooo..........',
-      '........ooKKKKKKKKKKoo........',
-      '.......oKKkkkKKKKKKKKKo.......',
+      '.......oooooooooooooooo.......',
+      '......oKKKKKKKKKKKKKKKKo......',
+      '......oKKkkkKKKKKKKKKKKo......',
       '......oKKKKKKKKKKKKKKKKo......',
       '......okkkkkkkkkkkkkkkko......',
       '......oSSSSSSSSSSSSSSSSo......',
-      '.....oShSBBBSSSSSSBBBSSSo.....',
-      '....ooShSSSBBBSSBBBSSSSSoo....',
-      '....osSSWWEESSSSSSEEWWSSso....',
-      '....osSSWWEESSssSSEEWWSSso....',
-      '....osSppSSSSshhsSSSSppSso....',
-      '....oRlSSSRRRRRRRRRRSSSlRo....',
-      '....oRRRRRRRmmmmmmRRRRRRRo....',
+      '......oSBBBSSSSSSSSBBBSo......',
+      '.....osSSSSBBBSSBBBSSSSso.....',
+      '.....osSWWEESSSSSSEEWWSso.....',
+      '.....osSWWEESSssSSEEWWSso.....',
+      '.....ospSSSSSshhsSSSSSpso.....',
+      '.....oRlSSSRRRRRRRRSSSlRo.....',
+      '.....oRRRRRRmmmmmmRRRRRRo.....',
       '.....oRRRRRRRRRRRRRRRRRRo.....',
-      '......oorRRRRRRRRRRRRroo......',
-      '........oorrRRRRRRrroo........'
+      '......orRRRRRRRRRRRRRRro......',
+      '.......oorrRRRRRRRRrroo.......'
     ], 0);
     if (fache) { q(7, 8, 16, 2, F(pal.E)); q(8, 8, 2, 1, G('#7aa8d8')); q(18, 8, 2, 1, G('#7aa8d8')); q(14, 8, 2, 1, F('#c8a040')); }
     if (a) { q(12, 12, 6, 2, F(pal.M)); q(12, 12, 6, 1, F(pal.m)); }

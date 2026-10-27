@@ -1209,7 +1209,7 @@ const BOSSES = {
     A: { t: 'onde', portee: 220, r: 230, dmg: 24, stun: 1, cd: 4 }, B: { t: 'chute', portee: 800, n: 2, r: 100, dmg: 20, delai: 1.3, cd: 2.4, obj: 'rocher' } },
   empereur:  { nom: 'Empereur du Chaos', ico: '😈', mois: 'Juin', pv: 200, speed: 85, r: 60, sbire: 'chevalier', boucliers: [0.75, 0.5, 0.25],
     A: { t: 'tourbillon', portee: 190, r: 195, dmg: 26, cd: 3 }, B: { t: 'chute', portee: 850, n: 3, r: 80, dmg: 20, delai: 1, cd: 2.2, obj: 'eclair' } },
-  // Boss Prof : l'enseignant en personne ! Gant de boxe (près), regard (rayon), voix (onde qui étourdit).
+  // Boss Prof : l'enseignant en personne ! Coup de poing (près), regard (rayon), voix (onde qui étourdit).
   // Ses boucliers sont des « interros surprises » : les mêmes questions pour toute la classe, notées pour chaque élève.
   prof:      { nom: 'Le Prof', ico: '🧑‍🏫', pv: 120, speed: 85, r: 56, sbire: null, boucliers: [0.75, 0.5, 0.25],
     A: { t: 'poing', portee: 170, r: 175, dmg: 18, recul: 220, stun: 0.3, cd: 2 }, B: { t: 'rayon', portee: 800, long: 850, l: 30, dmg: 22, delai: 0.9, cd: 3.4 },
@@ -1376,7 +1376,7 @@ function bossAttack(a, best, aim) {
       boss.sifflet = a.delai;
       fx.push({ k: 'crit', x: bx, y: by - 100, txt: '📣', t: a.delai, d: a.delai });
       break;
-    case 'poing': {   // gant de boxe : coup devant lui qui repousse loin
+    case 'poing': {   // coup de poing : coup devant lui qui repousse loin
       const px = bx + Math.round(Math.cos(aim) * 70), py = by + Math.round(Math.sin(aim) * 70);
       fx.push({ k: 'slam', x: px, y: py, r: 90, t: 0.4, d: 0.4, b: 'prof' }, { k: 'crit', x: px, y: py - 40, txt: '🥊', t: 0.6, d: 0.6 });
       casserPupitres(px, py, 60);
