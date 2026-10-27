@@ -2167,80 +2167,58 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
     P.rect(26, 15, 8, 1 + mo, F('#2a0808')); P.rect(26, 15, 8, 1, G('#f4ecd8')); if (a) P.rect(27, 18, 6, 1, G('#e8e0d0'));
     if (f % 2 === 0 || a) { line(1, 14, 4, 18, G('#fff6a0')); line(4, 18, 1, 20, G('#fff6a0')); line(58, 14, 55, 18, G('#fff6a0')); line(55, 18, 58, 20, G('#fff6a0')); }
   } else if (k === 'prof' || k === 'prof2') {
-    // Le Prof, façon brute chibi : masse ronde et voûtée, tête enfoncée entre d'énormes trapèzes,
-    // bras qui pendent jusqu'aux genoux avec des poings géants, petites jambes. Barbe rousse, casquette,
-    // chemise de chasse à carreaux, jeans, Converse ; fâché : lunettes de soleil. Gant de boxe à droite.
-    const fache = k === 'prof2', cx = 30, ink = F('#2a1416');
-    const skin = '#eeb088', beard = '#c0582c', red = '#cc3a30', jean = '#3e64a0';
-    const [sH, sM, sD] = T(skin), [bH, bM, bD] = T(beard);
-    const RT = [F('#e8604c'), F(red), F('#962420'), F('#6e1a18')];          // rouge : reflet, moyen, ombre, ligne
-    const LT = [F('#a8302a'), F('#7e1e1c'), F('#561214')];                    // lignes du carreau selon l'éclairage
-    // ellipse à carreaux avec volume (lumière en haut à gauche) et contour intérieur foncé
-    const plaidBall = (ex, ey, rx, ry) => {
-      P.ellipse(ex, ey, rx + 1, ry + 1, ink);
-      for (let y = Math.ceil(ey - ry); y <= ey + ry; y++) for (let x = Math.ceil(ex - rx); x <= ex + rx; x++) {
-        const u = (x - ex) / rx, v = (y - ey) / ry; if (u * u + v * v > 1) continue;
-        const n = u * 0.55 + v * 0.75, t = n < -0.55 ? 0 : n > 0.5 ? 2 : 1;
-        const lv = (x + 64) % 6 === 0, lh = (y + 1) % 6 === 0;
-        P.px(x, y, lv && lh ? RT[3] : lv || lh ? LT[t] : RT[t]);
-      }
+    // Le Prof, façon lutteur chibi en gros pixels (grille 30 × 27, chaque case = 2 × 2) :
+    // tête énorme, sourcils épais, barbe, épaules larges, gants de boxe collés aux flancs, petites jambes.
+    // Casquette noire, chemise de chasse à carreaux, jeans, Converse ; fâché : lunettes de soleil.
+    const fache = k === 'prof2';
+    const pal = {
+      o: '#3a1a10', K: '#26242e', k: '#4a4858', S: '#f2b98e', s: '#d89670', h: '#ffd8b4', W: '#fbf6ee', E: '#1c1420',
+      B: '#5a2c14', R: '#9a4a22', r: '#6e3216', l: '#c0662e', p: '#ec8f7c', m: '#f6ecd8', M: '#4a0e0e'
     };
-    const skinBall = (ex, ey, rx, ry, c = skin) => { P.ellipse(ex, ey, rx + 1, ry + 1, ink); ball(ex, ey, rx, ry, c); };
-    // vu de trois quarts (tourné vers la droite, retourné par le jeu quand il va à gauche), voûté vers l'avant,
-    // jambes écartées et fléchies comme un lutteur prêt à charger
-    const swing = a ? 0 : sw;
-    for (const [x, l] of [[13, lA], [38, lB]]) {
-      P.rect(x - 5, 39, 11, 9 + l, ink); box(x - 4, 39, 9, 8 + l, jean); P.rect(x - 2, 41, 1, 4, F('#6a90c8'));
-      P.rect(x - 5, 46 + l, 15, 7, ink); box(x - 4, 47 + l, 13, 4, '#f4f0e6'); P.rect(x - 4, 51 + l, 13, 1, F('#c8c0b0'));
-      P.rect(x + 5, 47 + l, 4, 2, F('#ffffff')); P.rect(x - 2, 48 + l, 5, 1, ink);
+    const q = (x, y, w, h, c) => P.rect(x * 2, y * 2, w * 2, h * 2, c);
+    const grid = (rows, y0, col = ch => F(pal[ch])) => rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] !== '.') q(i, y0 + j, 1, 1, col(row[i])); });
+    const swing = a ? 0 : sw, gl = (x, y, w = 7, h = 6) => {   // gant de boxe : contour, rouge ombré, reflet, poignet blanc
+      q(x + 1, y, w - 2, h, F(pal.o)); q(x, y + 1, w, h - 2, F(pal.o)); q(x + 1, y + 1, w - 2, h - 2, F('#ee3a2e')); q(x + 1, y + h - 2, w - 2, 1, F('#9a1c18')); q(x + w - 2, y + 1, 1, h - 2, F('#9a1c18'));
+      q(x + 1, y + 1, 2, 1, G('#ff8a70')); q(x + 2, y + 2, 1, 1, G('#ff8a70')); q(x + 1, y + 3, w - 3, 1, F('#b8221c'));
+    };
+    // torse large : chemise à carreaux (motif « buffalo »), boutons, ceinture
+    q(5, 14, 20, 8, F(pal.o)); q(3, 15, 24, 4, F(pal.o));
+    for (let y = 15; y < 21; y++) for (let x = y < 18 ? 4 : 6; x < (y < 18 ? 26 : 24); x++) {
+      const bx = (x >> 1) & 1, by = (y >> 1) & 1;
+      q(x, y, 1, 1, F(bx && by ? '#2a1418' : bx || by ? '#9a2220' : '#d23a32'));
     }
-    // bras du fond, qui pend derrière
-    plaidBall(9, 28, 6, 8); P.rect(4, 35, 10, 3, ink); P.rect(5, 35, 8, 2, F('#e6d2b8'));
-    P.rect(4, 38, 10, 5, ink); box(5, 38, 8, 4, skin); skinBall(9, 44 - swing, 5, 4); P.rect(6, 43 - swing, 7, 1, F(sD));
-    // une grosse masse ronde et voûtée : le dos monte plus haut que la tête
-    plaidBall(27, 29, 22, 16);
-    P.rect(36, 30, 1, 13, RT[3]); for (let y = 32; y < 43; y += 4) P.px(37, y, F('#f0e6d0'));
-    for (let x = 12; x <= 44; x++) { const y = 41 + Math.round(((x - 28) / 16) ** 2 * 2); P.rect(x, y, 1, 3, ink); P.rect(x, y, 1, 2, x >= 39 && x <= 42 ? G('#e8c050') : F('#5a3420')); }
-    // grosse tête de chibi, enfoncée dans les épaules à l'avant
-    const hx = 42, hy = 16;
-    P.ellipse(hx, hy, 14, 12, ink); ball(hx, hy, 13, 11, skin);
-    P.rect(hx - 11, hy - 1, 3, 6, F(sD)); P.px(hx - 10, hy, F(sH));                     // oreille
-    // barbe pleine et courte : favori, joue, mâchoire, menton en avant
-    for (let y = hy - 4; y <= hy + 14; y++) for (let x = hx - 13; x <= hx + 14; x++) {
-      const u = (x - hx) / 13.5, v = (y - hy) / 12; const chin = y >= hy + 7 && x >= hx - 6 && x <= hx + 11 && y <= hy + 14 - Math.max(0, x - hx - 6);
-      if (u * u + v * v > 1 && !chin) continue;
-      if (!((x <= hx - 6 && x >= hx - 8) || y >= hy + 7 - Math.max(0, hx - 6 - x) * 1.5)) continue;
-      const n = (x - hx) / 12 * 0.4 + (y - hy - 6) / 8 * 0.6;
-      P.px(x, y, ((x * 3 + y * 7) % 13 === 0) ? F(bD) : n < -0.45 ? F(bH) : n > 0.5 ? F(bD) : F(bM));
+    q(14, 16, 2, 4, F('#6e1a18')); q(15, 17, 1, 1, F('#f0e6d0')); q(15, 19, 1, 1, F('#f0e6d0'));
+    q(6, 20, 18, 1, F('#5a3420')); q(14, 20, 2, 1, G('#e8c050'));
+    // jambes : jeans et Converse noires à bout blanc
+    for (const [x, l] of [[8, lA < 0 ? -1 : 0], [16, lB < 0 ? -1 : 0]]) {
+      q(x, 21, 6, 3 + l, F(pal.o)); q(x + 1, 21, 4, 2 + l, F('#3e64a0')); q(x + 1, 21, 1, 2 + l, F('#5a84c0'));
+      q(x - 1, 23 + l, 8, 4, F(pal.o)); q(x, 23 + l, 6, 1, F('#2a2a34')); q(x + 2, 23 + l, 1, 1, F('#f4f0e6')); q(x, 24 + l, 6, 1, F('#f4f0e6')); q(x + 4, 24 + l, 2, 1, F('#ffffff')); q(x, 25 + l, 6, 1, F('#c8c0b0'));
     }
-    // casquette noire à l'envers : la palette dépasse vers l'arrière
-    P.ellipse(hx - 1, hy - 9, 14, 5, ink); P.ellipse(hx - 1, hy - 9, 13, 4, F('#2c2a34')); P.rect(hx - 21, hy - 8, 9, 3, ink); P.rect(hx - 20, hy - 7, 8, 1, F('#3a3844'));
-    P.rect(hx - 8, hy - 12, 9, 1, F('#4a4858')); P.rect(hx - 13, hy - 5, 27, 1, ink);
-    // sourcils épais froncés, petits yeux (ou lunettes de soleil quand il est fâché)
-    if (fache) {
-      P.rect(hx - 6, hy - 3, 19, 5, ink); P.rect(hx - 5, hy - 3, 7, 4, F('#16141e')); P.rect(hx + 5, hy - 3, 7, 4, F('#16141e'));
-      P.rect(hx - 4, hy - 3, 3, 1, G('#7aa8d8')); P.rect(hx + 6, hy - 3, 3, 1, G('#7aa8d8')); P.rect(hx - 9, hy - 2, 3, 1, ink);
-    } else {
-      for (let i = 0; i < 7; i++) { P.rect(hx - 6 + i, hy - 4 + (i >> 1), 1, 2, F('#5a2a14')); P.rect(hx + 11 - i, hy - 4 + (i >> 1), 1, 2, F('#5a2a14')); }
-      P.rect(hx - 2, hy - 1, 3, 3, ink); P.rect(hx + 6, hy - 1, 3, 3, ink); P.px(hx - 2, hy - 1, G('#f8f4ec')); P.px(hx + 6, hy - 1, G('#f8f4ec'));
-    }
-    // gros nez qui dépasse, moustache, bouche
-    P.rect(hx + 2, hy + 1, 5, 5, F(sD)); P.rect(hx + 7, hy + 2, 3, 4, F(sD)); P.rect(hx + 2, hy + 1, 2, 2, F(sH)); P.px(hx + 10, hy + 5, ink);
-    P.rect(hx - 4, hy + 7, 16, 2, F(bD)); P.rect(hx - 3, hy + 7, 14, 1, F(bM));
-    if (a) { P.rect(hx, hy + 9, 10, 4, ink); P.rect(hx + 1, hy + 9, 8, 1, G('#f4ecd8')); P.rect(hx + 3, hy + 11, 4, 1, F('#c04040')); } else { P.rect(hx + 1, hy + 10, 9, 1, ink); P.px(hx + 10, hy + 9, ink); }
-    // bras de devant, énorme, qui pend jusqu'au sol ; poing ganté
-    if (a) {   // coup de poing : le bras se tend vers l'avant, gant en gros plan
-      plaidBall(27, 30, 8, 8); P.rect(33, 29, 4, 7, ink); P.rect(33, 30, 3, 5, F('#e6d2b8'));
-      P.rect(36, 30, 6, 6, ink); box(36, 31, 6, 4, skin);
-      P.rect(40, 28, 4, 10, ink); P.rect(41, 29, 2, 8, G('#f4f0e6'));
-      P.ellipse(50, 33, 9, 8, ink); ball(50, 33, 8, 7, '#e02c28'); P.rect(47, 27, 7, 1, F('#9a1a16'));
-      for (let i = 0; i < 4; i++) P.px(30 - i * 4, 22 + (i % 2) * 2, G('#fff6a0'));
-    } else {
-      plaidBall(26, 30, 8, 9); P.rect(19, 38, 15, 3, ink); P.rect(20, 38, 13, 2, F('#e6d2b8'));
-      P.rect(20, 40, 13, 4 + swing, ink); box(21, 40, 11, 3 + swing, skin);
-      P.rect(19, 42 + swing, 15, 3, ink); P.rect(20, 42 + swing, 13, 2, G('#f4f0e6'));
-      P.ellipse(27, 48 + swing, 9, 6, ink); ball(27, 48 + swing, 8, 5, '#e02c28'); P.rect(21, 51 + swing, 12, 1, F('#9a1a16')); P.rect(32, 45 + swing, 2, 3, F('#ff6a5a'));
-    }
+    // gants collés aux flancs (le droit frappe en attaque)
+    gl(1, 17 + (swing > 0 ? 1 : 0)); q(2, 16 + (swing > 0 ? 1 : 0), 5, 1, F(pal.m));
+    if (a) { gl(18, 13, 9, 7); q(17, 14, 1, 5, F(pal.m)); for (let i = 0; i < 3; i++) q(28, 13 + i * 2, 1, 1, G('#fff6a0')); }
+    else { gl(22, 17 + (swing < 0 ? 1 : 0)); q(23, 16 + (swing < 0 ? 1 : 0), 5, 1, F(pal.m)); }
+    // grosse tête : casquette noire à l'envers, oreilles, sourcils, yeux, joues roses, barbe pleine
+    grid([
+      '..........oooooooooo..........',
+      '........ooKKKKKKKKKKoo........',
+      '.......oKKkkkKKKKKKKKKo.......',
+      '......oKKKKKKKKKKKKKKKKo......',
+      '......okkkkkkkkkkkkkkkko......',
+      '......oSSSSSSSSSSSSSSSSo......',
+      '.....oShSBBBSSSSSSBBBSSSo.....',
+      '....ooShSSSBBBSSBBBSSSSSoo....',
+      '....osSSWWEESSSSSSEEWWSSso....',
+      '....osSSWWEESSssSSEEWWSSso....',
+      '....osSppSSSSshhsSSSSppSso....',
+      '....oRlSSSRRRRRRRRRRSSSlRo....',
+      '....oRRRRRRRmmmmmmRRRRRRRo....',
+      '.....oRRRRRRRRRRRRRRRRRRo.....',
+      '......oorRRRRRRRRRRRRroo......',
+      '........oorrRRRRRRrroo........'
+    ], 0);
+    if (fache) { q(7, 8, 16, 2, F(pal.E)); q(8, 8, 2, 1, G('#7aa8d8')); q(18, 8, 2, 1, G('#7aa8d8')); q(14, 8, 2, 1, F('#c8a040')); }
+    if (a) { q(12, 12, 6, 2, F(pal.M)); q(12, 12, 6, 1, F(pal.m)); }
   } else if (k === 'empereur') {
     const ar = '#585d68', [aH, am, aD, aDD] = T(ar), red = '#ff3a2a', mo = a ? 3 : 1;
     // cape rouge sombre derrière
