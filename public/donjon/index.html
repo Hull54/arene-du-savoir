@@ -4210,6 +4210,643 @@ const JANVIER = {
 };
 for (const c of JANVIER.chapitres) if (c.variantes) c.variantes = c.variantes.filter(Boolean);
 
+// Quête de février : Le pique-nique de la Saint-Valentin (cartes de l'enseignant)
+const FEV_1 = null, FEV_2 = null, FEV_3 = null, FEV_4 = null;
+const FEVRIER = {
+ "id": "fevrier-valentin",
+ "nom": "Le pique-nique de la Saint-Valentin",
+ "niveau": "facile",
+ "musique": "village",
+ "monstres": [
+  {
+   "id": "rat",
+   "nom": "Rat à foulard",
+   "look": "rat",
+   "pv": 3,
+   "deg": 1,
+   "pas": 4,
+   "boss": false
+  },
+  {
+   "id": "serpent",
+   "nom": "Couleuvre des prés",
+   "look": "serpent",
+   "pv": 4,
+   "deg": 1,
+   "pas": 3,
+   "boss": false
+  },
+  {
+   "id": "slime",
+   "nom": "Gelée des égouts",
+   "look": "slime",
+   "pv": 4,
+   "deg": 1,
+   "pas": 2,
+   "boss": false
+  },
+  {
+   "id": "bandit",
+   "nom": "Bandit",
+   "look": "bandit",
+   "pv": 5,
+   "deg": 1,
+   "pas": 3,
+   "boss": false
+  },
+  {
+   "id": "chef",
+   "nom": "Le chef des bandits",
+   "look": "bandit",
+   "pv": 18,
+   "deg": 2,
+   "pas": 4,
+   "boss": true
+  }
+ ],
+ "objets": {
+  "Ruban de Juliette": "Un ruban rose trouvé dans les ruines. Juliette est passée par ici.",
+  "Lettre du Collectionneur": "Une lettre cachetée d'une pièce d'or. Le Collectionneur veut toutes les pages du grimoire."
+ },
+ "fin": "Le chef des bandits s'enfuit dans les tuyaux en laissant tout derrière lui.\n\nVous détachez Juliette, et dans le coffre, la page dorée brille : une page du grimoire! Une de plus pour l'Académie.\n\nDe retour au pré, Théo serre Juliette dans ses bras. Le pique-nique a enfin lieu, avec des fraises et des gâteaux pour tout le monde.\n\nMais la lettre du Collectionneur vous inquiète. Qui est-il? Et combien de pages a-t-il déjà?",
+ "chapitres": [
+  {
+   "nom": "Le pré du pique-nique",
+   "image": FEV_1,
+   "imageId": null,
+   "ratio": 1.375,
+   "sol": "herbe",
+   "meteo": "aucune",
+   "ambiance": "village",
+   "animaux": [
+    "oiseaux",
+    "grillons"
+   ],
+   "musique": "village",
+   "grid": [
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "##..............",
+    "##...........###",
+    "##...........###"
+   ],
+   "portes": {},
+   "objets": [],
+   "deco": [],
+   "intro": "C'est la Saint-Valentin. Le soleil brille sur le grand pré fleuri, au sud du royaume.\n\nThéo, le barde, a préparé un pique-nique pour son amoureuse, Juliette. Une nappe à carreaux, des fraises, des petits gâteaux en forme de cœur…\n\nMais Juliette n'est jamais venue. Et Théo a très, très peur qu'il lui soit arrivé quelque chose.",
+   "heroes": {
+    "archer": [
+     7,
+     21
+    ],
+    "mage": [
+     8,
+     21
+    ],
+    "guerrier": [
+     7,
+     20
+    ],
+    "voleur": [
+     8,
+     20
+    ]
+   },
+   "enemies": [
+    [
+     "rat",
+     4,
+     6
+    ],
+    [
+     "rat",
+     13,
+     8
+    ],
+    [
+     "serpent",
+     11,
+     15
+    ]
+   ],
+   "pnj": [
+    {
+     "nom": "Théo, le barde",
+     "look": "barde",
+     "x": 10,
+     "y": 12,
+     "dialogue": "Vous êtes les héros de l'Académie? Oh, merci d'être venus!\n\nJuliette devait me rejoindre ici à midi. Elle m'avait dit qu'elle apporterait une surprise : une feuille dorée qu'elle avait trouvée dans la forêt, avec des mots magiques écrits dessus.\n\nJ'ai vu des rats bizarres traverser le pré ce matin. Ils portaient de petits foulards noirs… comme des voleurs.\n\nLeurs traces partent vers les vieilles ruines, au nord."
+    }
+   ],
+   "secrets": [
+    {
+     "x": 9,
+     "y": 11,
+     "action": "toucher",
+     "visible": true,
+     "texte": "Théo regarde sa montre de poche en soupirant : « Le pique-nique devait commencer à 11 h 45. J'attends depuis 2 h 30… »",
+     "enigme": {
+      "q": "Le pique-nique commence à 11 h 45. Théo attend depuis 2 h 30. Quelle heure est-il?",
+      "rep": "14 h 15",
+      "choix": "13 h 45, 14 h 15, 14 h 45"
+     },
+     "recompense": "vie"
+    },
+    {
+     "x": 5,
+     "y": 18,
+     "action": "fouiller",
+     "visible": true,
+     "texte": "Près des pierres du chemin, un panier renversé. Dedans : une potion de vie et un mouchoir brodé d'un « J ».",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "vie"
+    },
+    {
+     "x": 3,
+     "y": 4,
+     "action": "creuser",
+     "visible": false,
+     "texte": "Une petite trace de pattes mène à un trou. Au fond : une potion de mana volée!",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "mana"
+    }
+   ],
+   "sorties": [
+    [
+     8,
+     0
+    ]
+   ],
+   "repliques": "« Les fleurs dansent dans le vent. Des pétales roses s'envolent. »\n« Un rat couine et file entre les herbes! »\n« Théo joue un air triste sur son luth. »",
+   "evenements": [
+    {
+     "manche": 3,
+     "effet": "monstre",
+     "monstre": "rat",
+     "titre": "Des voleurs à foulard",
+     "texte": "Un rat avec un foulard noir surgit des fleurs et mord la cheville de {heros}!"
+    }
+   ]
+  },
+  {
+   "nom": "Les ruines du pré",
+   "image": FEV_2,
+   "imageId": null,
+   "ratio": 0.7273,
+   "sol": "herbe",
+   "meteo": "aucune",
+   "ambiance": "foret",
+   "animaux": [
+    "oiseaux"
+   ],
+   "musique": "mystere",
+   "grid": [
+    "......................",
+    ".###....##...########.",
+    ".#.#.....#...#.#....#.",
+    ".#.#.....#............",
+    ".#########..####....#.",
+    ".#...#.............##.",
+    ".#....................",
+    ".#...#................",
+    ".#...#................",
+    ".#####................",
+    "........##.###.##....#",
+    "..X.....#...#...#....#",
+    "........#...#........#",
+    ".......##...##.##....#",
+    "........#...#...######",
+    "........#..##........."
+   ],
+   "portes": {
+    "2,11": "cle"
+   },
+   "objets": [],
+   "deco": [],
+   "intro": "Les traces de pattes mènent à de vieilles ruines couvertes d'herbe. Autrefois, c'était un petit village. Aujourd'hui, il ne reste que des murets de pierre.\n\nAu milieu des ruines, une vieille grille de fer est posée sur un trou dans le sol. Elle est fermée par un gros cadenas.\n\nDe l'autre côté, on entend des couinements… et l'eau qui coule. Les égouts!",
+   "heroes": {
+    "archer": [
+     10,
+     0
+    ],
+    "mage": [
+     11,
+     0
+    ],
+    "guerrier": [
+     10,
+     1
+    ],
+    "voleur": [
+     11,
+     1
+    ]
+   },
+   "enemies": [
+    [
+     "rat",
+     6,
+     6
+    ],
+    [
+     "rat",
+     15,
+     7
+    ],
+    [
+     "bandit",
+     4,
+     12
+    ]
+   ],
+   "pnj": [],
+   "secrets": [
+    {
+     "x": 17,
+     "y": 6,
+     "action": "fouiller",
+     "visible": true,
+     "texte": "Sous une planche tombée, une petite clé rouillée avec une étiquette : « Grille ». Les rats l'ont perdue!",
+     "enigme": {
+      "q": "La grille a 6 rangées de 7 barreaux. Combien de barreaux en tout?",
+      "rep": "42",
+      "choix": "13, 42, 48"
+     },
+     "recompense": "cle"
+    },
+    {
+     "x": 3,
+     "y": 6,
+     "action": "fouiller",
+     "visible": true,
+     "texte": "Dans les débris de la vieille maison, une potion de vie couverte de poussière.",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "vie"
+    },
+    {
+     "x": 14,
+     "y": 12,
+     "action": "creuser",
+     "visible": false,
+     "texte": "Sous les planches pourries, une bourse oubliée. Une potion de mana!",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "mana"
+    },
+    {
+     "x": 10,
+     "y": 8,
+     "action": "fouiller",
+     "visible": true,
+     "texte": "Une ruban rose accroché à une ronce. Juliette est passée par ici!",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "objet",
+     "objet": "Ruban de Juliette"
+    }
+   ],
+   "sorties": [
+    [
+     2,
+     11
+    ]
+   ],
+   "repliques": "« Un muret s'effrite : quelques pierres roulent dans l'herbe. »\n« Une voix crie au loin, sous la terre : “Au secours!” »\n« Des yeux rouges brillent derrière la grille… puis disparaissent. »",
+   "evenements": [
+    {
+     "manche": 3,
+     "effet": "monstre",
+     "monstre": "rat",
+     "titre": "Ça grouille!",
+     "texte": "Trois petits rats sortent de la grille… le plus gros fonce vers {heros}!"
+    }
+   ]
+  },
+  {
+   "nom": "Les égouts du royaume",
+   "image": FEV_3,
+   "imageId": null,
+   "ratio": 0.7619,
+   "sol": "pierre",
+   "meteo": "aucune",
+   "ambiance": "crypte",
+   "animaux": [
+    "rats"
+   ],
+   "musique": "mystere",
+   "grid": [
+    "#####################",
+    "#####################",
+    "#.............##....#",
+    "#~~~~~~.......##....#",
+    "#~~~~~~...##..##..###",
+    "#.........##......###",
+    "#.........##........#",
+    "########..######....#",
+    "########..######....#",
+    "......##......##....#",
+    "......##......##.....",
+    "####..##..##..##.....",
+    "#.........##..##.....",
+    "#.........##..##..###",
+    "#.........##..##..###",
+    "#####################"
+   ],
+   "portes": {},
+   "objets": [],
+   "deco": [],
+   "brume": true,
+   "intro": "Plic… ploc… Vous descendez l'échelle rouillée. Ça sent… très mauvais!\n\nLes égouts du royaume sont un vrai labyrinthe de tuyaux. Une eau verte et gluante coule partout.\n\nSur les murs, quelqu'un a dessiné des flèches avec une craie rose. Juliette a laissé un chemin!",
+   "heroes": {
+    "archer": [
+     0,
+     9
+    ],
+    "mage": [
+     1,
+     9
+    ],
+    "guerrier": [
+     0,
+     10
+    ],
+    "voleur": [
+     1,
+     10
+    ]
+   },
+   "enemies": [
+    [
+     "slime",
+     9,
+     6
+    ],
+    [
+     "rat",
+     5,
+     13
+    ],
+    [
+     "serpent",
+     13,
+     12
+    ],
+    [
+     "rat",
+     16,
+     6
+    ]
+   ],
+   "pnj": [],
+   "secrets": [
+    {
+     "x": 8,
+     "y": 2,
+     "action": "toucher",
+     "visible": true,
+     "texte": "Sous la grille du plafond, un rayon de soleil éclaire une flèche rose et une question écrite à la craie :",
+     "enigme": {
+      "q": "Les égouts mesurent 1 250 m. Vous avez parcouru 780 m. Combien de mètres reste-t-il?",
+      "rep": "470",
+      "choix": "470, 530, 2 030"
+     },
+     "recompense": "vie"
+    },
+    {
+     "x": 18,
+     "y": 7,
+     "action": "fouiller",
+     "visible": true,
+     "texte": "Dans la petite salle, le sac d'un égoutier. Une potion de mana!",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "mana"
+    },
+    {
+     "x": 17,
+     "y": 2,
+     "action": "toucher",
+     "visible": true,
+     "texte": "Des œufs verts et gluants… Beurk! L'un d'eux éclate : une gelée en sort!",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "rien",
+     "monstre": "slime"
+    },
+    {
+     "x": 2,
+     "y": 13,
+     "action": "fouiller",
+     "visible": false,
+     "texte": "Sous la grille du coin, un sac de bandit. Une potion de vie!",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "vie"
+    }
+   ],
+   "sorties": [
+    [
+     20,
+     11
+    ]
+   ],
+   "repliques": "« PLOC! Une goutte froide tombe dans votre cou. »\n« L'eau verte fait des bulles : BLOUP, BLOUP. »\n« Un écho résonne : des rires de bandits, tout au bout du tunnel. »",
+   "evenements": [
+    {
+     "manche": 2,
+     "effet": "monstre",
+     "monstre": "slime",
+     "titre": "Ça bouge dans l'eau",
+     "texte": "Une gelée verte sort du tuyau et glisse vers {heros}!"
+    }
+   ]
+  },
+  {
+   "nom": "Le repaire des bandits",
+   "image": FEV_4,
+   "imageId": null,
+   "ratio": 0.7273,
+   "sol": "pierre",
+   "meteo": "aucune",
+   "ambiance": "crypte",
+   "animaux": [
+    "rats"
+   ],
+   "musique": "aventure",
+   "grid": [
+    "######################",
+    "#.........############",
+    "#.............########",
+    "#.........##.........#",
+    "####......##.##......#",
+    "####..~~~............#",
+    "####.~~~~~...........#",
+    "####.~~~~~...........#",
+    "####.~~~~~...........#",
+    "####..~~~....##......#",
+    "####......##.#########",
+    "#.........##..########",
+    "#.........##..########",
+    "#.........############",
+    "######################",
+    "######################"
+   ],
+   "portes": {},
+   "objets": [
+    [
+     "coffreDore",
+     16,
+     5
+    ]
+   ],
+   "deco": [],
+   "intro": "Le tunnel débouche sur une grande salle éclairée par des lanternes. Des cabanes de planches, des caisses volées partout… C'est le repaire des bandits!\n\nAu fond, Juliette est assise sur une caisse, les mains attachées. Devant elle, un homme en capuche noire compte des pièces d'or.\n\n« Le Collectionneur paiera cher pour cette page dorée », ricane-t-il. « Personne ne nous trouvera ici! »",
+   "heroes": {
+    "archer": [
+     2,
+     12
+    ],
+    "mage": [
+     3,
+     12
+    ],
+    "guerrier": [
+     4,
+     12
+    ],
+    "voleur": [
+     5,
+     12
+    ]
+   },
+   "enemies": [
+    [
+     "chef",
+     12,
+     7
+    ],
+    [
+     "bandit",
+     16,
+     7
+    ],
+    [
+     "rat",
+     4,
+     3
+    ]
+   ],
+   "pnj": [
+    {
+     "nom": "Juliette",
+     "look": "fille",
+     "x": 19,
+     "y": 6,
+     "dialogue": "Vous êtes venus! Théo vous envoie?\n\nJ'ai trouvé une page dorée dans la forêt, avec des mots qui brillaient. Je voulais l'offrir à Théo… mais ces bandits m'ont suivie.\n\nIls travaillent pour quelqu'un qu'ils appellent le Collectionneur. Il veut toutes les pages du grimoire!\n\nLa page est dans le coffre, derrière leur chef. Faites attention à lui, il est rapide comme un rat."
+    }
+   ],
+   "secrets": [
+    {
+     "x": 13,
+     "y": 3,
+     "action": "fouiller",
+     "visible": true,
+     "texte": "Sur la table du chef, une lettre cachetée d'un sceau en forme de pièce d'or : « Apportez-moi la page. Vous serez bien payés. — Le Collectionneur »",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "objet",
+     "objet": "Lettre du Collectionneur"
+    },
+    {
+     "x": 4,
+     "y": 2,
+     "action": "fouiller",
+     "visible": true,
+     "texte": "Dans une caisse volée, une potion de vie!",
+     "enigme": {
+      "q": "",
+      "rep": "",
+      "choix": ""
+     },
+     "recompense": "vie"
+    },
+    {
+     "x": 17,
+     "y": 4,
+     "action": "toucher",
+     "visible": true,
+     "texte": "Le cadenas du coffre a des chiffres. Il faut trouver le bon nombre :",
+     "enigme": {
+      "q": "Juliette a écrit 3 poèmes de 125 mots. Combien de mots en tout?",
+      "rep": "375",
+      "choix": "128, 375, 3125"
+     },
+     "recompense": "mana"
+    }
+   ],
+   "sorties": [],
+   "repliques": "« Le chef des bandits fait tournoyer sa dague : “Vous ne l'aurez pas!” »\n« Un rat grimpe sur une caisse et vous montre les dents. »\n« Juliette crie : “Attention, derrière vous!” »",
+   "repliqueBoss": "« Le chef recule en trébuchant sur une caisse. Ses pièces d'or roulent partout! »",
+   "evenements": [
+    {
+     "manche": 3,
+     "effet": "monstre",
+     "monstre": "bandit",
+     "titre": "Des renforts",
+     "texte": "Un bandit sort d'une cabane en criant et fonce vers {heros}!"
+    }
+   ]
+  }
+ ]
+};
+
 // Quête de démonstration en deux chapitres.
 // Grille : # mur, . sol, o ombre, ~ eau, d porte ouverte, X porte cadenassée
 const DEMO = {
@@ -4276,7 +4913,7 @@ const DEMO = {
   ],
 };
 
-const INTEGREES = [DEMO, RENTREE, OCTOBRE, HALLOWEEN, NOVEMBRE, DECEMBRE, JANVIER];
+const INTEGREES = [DEMO, RENTREE, OCTOBRE, HALLOWEEN, NOVEMBRE, DECEMBRE, JANVIER, FEVRIER];
 DEMO.musique = DEMO.musique || "mystere";
 Object.assign(DEMO.chapitres[0], { meteo: "brouillard", ambiance: "vent", sol: "pierre", animaux: ["corbeaux"] }, DEMO.chapitres[0]);
 if (DEMO.chapitres[1]) Object.assign(DEMO.chapitres[1], { brume: true, ambiance: "crypte", sol: "pierre", animaux: ["chauves", "rats"] }, DEMO.chapitres[1]);
@@ -7615,7 +8252,7 @@ const MONDE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 100
 <pattern id="vag" width="60" height="34" patternUnits="userSpaceOnUse"><path d="M6 20 q8 -8 16 0 q8 8 16 0" fill="none" stroke="#5f8580" stroke-width="2" opacity=".35"/></pattern>
 </defs><rect width="1600" height="1000" fill="#8fb1aa"/><rect width="1600" height="1000" fill="url(#vag)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="none" stroke="#a9c5bd" stroke-width="70" opacity="0.5" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="none" stroke="#b8d0c6" stroke-width="44" opacity="0.6" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="none" stroke="#cddccf" stroke-width="22" opacity="0.7" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="#e9d8a8" stroke="#5a4127" stroke-width="4" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="#000" filter="url(#pap)" opacity=".9"/><ellipse cx="520" cy="700" rx="170" ry="110" fill="#8c8a6a" opacity=".35" filter="url(#rough)"/><ellipse cx="1130" cy="720" rx="130" ry="80" fill="#7f9a78" opacity=".35" filter="url(#rough)"/><path d="M1095 685 l6 -10 M1100 685 l0 -12 M1105 685 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1160 677 l6 -10 M1165 677 l0 -12 M1170 677 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1137 707 l6 -10 M1142 707 l0 -12 M1147 707 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1042 721 l6 -10 M1047 721 l0 -12 M1052 721 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1037 713 l6 -10 M1042 713 l0 -12 M1047 713 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1044 679 l6 -10 M1049 679 l0 -12 M1054 679 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1115 753 l6 -10 M1120 753 l0 -12 M1125 753 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1055 692 l6 -10 M1060 692 l0 -12 M1065 692 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1155 765 l6 -10 M1160 765 l0 -12 M1165 765 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1145 710 l6 -10 M1150 710 l0 -12 M1155 710 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1225 675 l6 -10 M1230 675 l0 -12 M1235 675 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1202 699 l6 -10 M1207 699 l0 -12 M1212 699 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1059 682 l6 -10 M1064 682 l0 -12 M1069 682 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1092 752 l6 -10 M1097 752 l0 -12 M1102 752 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1066 728 l6 -10 M1071 728 l0 -12 M1076 728 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1158 707 l6 -10 M1163 707 l0 -12 M1168 707 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1140 676 l6 -10 M1145 676 l0 -12 M1150 676 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1042 691 l6 -10 M1047 691 l0 -12 M1052 691 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1166 713 l6 -10 M1171 713 l0 -12 M1176 713 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1093 729 l6 -10 M1098 729 l0 -12 M1103 729 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1121 700 l6 -10 M1126 700 l0 -12 M1131 700 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1189 740 l6 -10 M1194 740 l0 -12 M1199 740 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1079 727 l6 -10 M1084 727 l0 -12 M1089 727 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1135 758 l6 -10 M1140 758 l0 -12 M1145 758 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1176 699 l6 -10 M1181 699 l0 -12 M1186 699 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1226 682 l6 -10 M1231 682 l0 -12 M1236 682 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1114 746 l6 -10 M1119 746 l0 -12 M1124 746 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1060 719 l6 -10 M1065 719 l0 -12 M1070 719 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1038 737 l6 -10 M1043 737 l0 -12 M1048 737 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1183 727 l6 -10 M1188 727 l0 -12 M1193 727 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1205 701 l6 -10 M1210 701 l0 -12 M1215 701 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1169 729 l6 -10 M1174 729 l0 -12 M1179 729 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1146 716 l6 -10 M1151 716 l0 -12 M1156 716 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1198 764 l6 -10 M1203 764 l0 -12 M1208 764 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1125 736 l6 -10 M1130 736 l0 -12 M1135 736 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1042 740 l6 -10 M1047 740 l0 -12 M1052 740 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1159 769 l6 -10 M1164 769 l0 -12 M1169 769 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1194 698 l6 -10 M1199 698 l0 -12 M1204 698 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1107 737 l6 -10 M1112 737 l0 -12 M1117 737 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1035 716 l6 -10 M1040 716 l0 -12 M1045 716 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M905 300 C 880 380, 960 420, 940 480 S 1000 560, 1040 560" fill="none" stroke="#6f9ea1" stroke-width="7" stroke-linecap="round"/><path d="M1080 600 C 1060 680, 980 720, 960 800 S 900 860, 880 900" fill="none" stroke="#6f9ea1" stroke-width="8" stroke-linecap="round"/><path d="M1000 560 q40 -40 90 -10 q40 30 10 60 q-40 30 -80 10 q-40 -20 -20 -60z" fill="#8fb6b4" stroke="#4f6f70" stroke-width="3"/><path d="M840 610 C 760 650, 640 690, 560 700" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M840 600 C 880 520, 930 420, 975 330" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M860 610 C 960 640, 1080 700, 1120 720" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M860 600 C 980 520, 1120 460, 1215 430" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M867 207 L908 156 L948 207Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M908 156 L948 207 L918 207 Z" fill="#a88d62" opacity=".8"/><path d="M897 171 L908 156 L917 169" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M720 220 L778 148 L835 220Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M778 148 L835 220 L792 220 Z" fill="#a88d62" opacity=".8"/><path d="M763 168 L778 148 L790 166" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M928 222 L993 141 L1057 222Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M993 141 L1057 222 L1009 222 Z" fill="#a88d62" opacity=".8"/><path d="M977 163 L993 141 L1007 161" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M607 243 L668 167 L728 243Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M668 167 L728 243 L683 243 Z" fill="#a88d62" opacity=".8"/><path d="M652 188 L668 167 L681 186" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M540 244 L600 169 L660 244Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M600 169 L660 244 L615 244 Z" fill="#a88d62" opacity=".8"/><path d="M585 190 L600 169 L613 187" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M885 246 L937 181 L989 246Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M937 181 L989 246 L950 246 Z" fill="#a88d62" opacity=".8"/><path d="M924 199 L937 181 L949 197" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1047 249 L1090 195 L1134 249Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1090 195 L1134 249 L1101 249 Z" fill="#a88d62" opacity=".8"/><path d="M1080 210 L1090 195 L1100 209" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M677 279 L738 203 L799 279Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M738 203 L799 279 L753 279 Z" fill="#a88d62" opacity=".8"/><path d="M723 224 L738 203 L752 222" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1123 290 L1171 230 L1219 290Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1171 230 L1219 290 L1183 290 Z" fill="#a88d62" opacity=".8"/><path d="M1159 246 L1171 230 L1182 245" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M828 294 L890 217 L951 294Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M890 217 L951 294 L905 294 Z" fill="#a88d62" opacity=".8"/><path d="M875 239 L890 217 L903 236" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M730 295 L796 212 L863 295Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M796 212 L863 295 L813 295 Z" fill="#a88d62" opacity=".8"/><path d="M780 235 L796 212 L811 233" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1048 298 L1098 236 L1148 298Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1098 236 L1148 298 L1110 298 Z" fill="#a88d62" opacity=".8"/><path d="M1085 253 L1098 236 L1109 251" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M562 300 L612 237 L662 300Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M612 237 L662 300 L624 300 Z" fill="#a88d62" opacity=".8"/><path d="M599 255 L612 237 L623 253" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M497 301 L563 219 L628 301Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M563 219 L628 301 L579 301 Z" fill="#a88d62" opacity=".8"/><path d="M546 242 L563 219 L577 239" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M852 336 L912 262 L971 336Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M912 262 L971 336 L926 336 Z" fill="#a88d62" opacity=".8"/><path d="M897 283 L912 262 L925 281" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1127 338 L1170 284 L1213 338Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1170 284 L1213 338 L1181 338 Z" fill="#a88d62" opacity=".8"/><path d="M1159 299 L1170 284 L1180 298" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M768 339 L810 287 L852 339Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M810 287 L852 339 L821 339 Z" fill="#a88d62" opacity=".8"/><path d="M800 301 L810 287 L819 300" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M624 341 L667 288 L710 341Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M667 288 L710 341 L678 341 Z" fill="#a88d62" opacity=".8"/><path d="M656 303 L667 288 L676 301" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M895 345 L959 264 L1024 345Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M959 264 L1024 345 L976 345 Z" fill="#a88d62" opacity=".8"/><path d="M943 287 L959 264 L974 284" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M536 349 L598 272 L659 349Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M598 272 L659 349 L613 349 Z" fill="#a88d62" opacity=".8"/><path d="M582 294 L598 272 L611 291" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1042 354 L1084 301 L1127 354Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1084 301 L1127 354 L1095 354 Z" fill="#a88d62" opacity=".8"/><path d="M1074 316 L1084 301 L1094 314" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M413 414 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="413" cy="396" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="409" cy="392" r="5" fill="#fff" opacity=".18"/><path d="M387 422 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="387" cy="404" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="383" cy="400" r="5" fill="#fff" opacity=".18"/><path d="M357 426 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="357" cy="408" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="353" cy="404" r="5" fill="#fff" opacity=".18"/><path d="M486 430 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="486" cy="412" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="482" cy="408" r="5" fill="#fff" opacity=".18"/><path d="M444 439 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="444" cy="421" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="440" cy="417" r="5" fill="#fff" opacity=".18"/><path d="M407 439 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="407" cy="421" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="403" cy="417" r="5" fill="#fff" opacity=".18"/><path d="M514 448 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="514" cy="430" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="510" cy="426" r="5" fill="#fff" opacity=".18"/><path d="M431 454 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="431" cy="436" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="427" cy="432" r="5" fill="#fff" opacity=".18"/><path d="M484 461 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="484" cy="443" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="480" cy="439" r="5" fill="#fff" opacity=".18"/><path d="M372 463 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="372" cy="445" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="368" cy="441" r="5" fill="#fff" opacity=".18"/><path d="M454 467 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="454" cy="449" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="450" cy="445" r="5" fill="#fff" opacity=".18"/><path d="M415 468 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="415" cy="450" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="411" cy="446" r="5" fill="#fff" opacity=".18"/><path d="M549 469 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="549" cy="451" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="545" cy="447" r="5" fill="#fff" opacity=".18"/><path d="M508 469 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="508" cy="451" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="504" cy="447" r="5" fill="#fff" opacity=".18"/><path d="M474 487 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="474" cy="469" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="470" cy="465" r="5" fill="#fff" opacity=".18"/><path d="M551 505 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="551" cy="487" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="547" cy="483" r="5" fill="#fff" opacity=".18"/><path d="M484 510 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="484" cy="492" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="480" cy="488" r="5" fill="#fff" opacity=".18"/><path d="M532 510 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="532" cy="492" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="528" cy="488" r="5" fill="#fff" opacity=".18"/><path d="M411 519 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="411" cy="501" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="407" cy="497" r="5" fill="#fff" opacity=".18"/><path d="M439 525 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="439" cy="507" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="435" cy="503" r="5" fill="#fff" opacity=".18"/><path d="M472 526 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="472" cy="508" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="468" cy="504" r="5" fill="#fff" opacity=".18"/><path d="M326 526 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="326" cy="508" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="322" cy="504" r="5" fill="#fff" opacity=".18"/><path d="M363 533 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="363" cy="515" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="359" cy="511" r="5" fill="#fff" opacity=".18"/><path d="M547 536 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="547" cy="518" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="543" cy="514" r="5" fill="#fff" opacity=".18"/><path d="M418 538 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="418" cy="520" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="414" cy="516" r="5" fill="#fff" opacity=".18"/><path d="M521 538 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="521" cy="520" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="517" cy="516" r="5" fill="#fff" opacity=".18"/><path d="M383 547 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="383" cy="529" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="379" cy="525" r="5" fill="#fff" opacity=".18"/><path d="M466 548 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="466" cy="530" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="462" cy="526" r="5" fill="#fff" opacity=".18"/><path d="M440 555 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="440" cy="537" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="436" cy="533" r="5" fill="#fff" opacity=".18"/><path d="M491 555 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="491" cy="537" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="487" cy="533" r="5" fill="#fff" opacity=".18"/><path d="M554 564 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="554" cy="546" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="550" cy="542" r="5" fill="#fff" opacity=".18"/><path d="M523 565 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="523" cy="547" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="519" cy="543" r="5" fill="#fff" opacity=".18"/><path d="M379 569 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="379" cy="551" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="375" cy="547" r="5" fill="#fff" opacity=".18"/><path d="M423 570 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="423" cy="552" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="419" cy="548" r="5" fill="#fff" opacity=".18"/><path d="M477 582 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="477" cy="564" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="473" cy="560" r="5" fill="#fff" opacity=".18"/><path d="M534 592 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="534" cy="574" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="530" cy="570" r="5" fill="#fff" opacity=".18"/><path d="M503 611 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="503" cy="593" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="499" cy="589" r="5" fill="#fff" opacity=".18"/><path d="M426 628 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="426" cy="610" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="422" cy="606" r="5" fill="#fff" opacity=".18"/><path d="M1231 500 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1231" cy="482" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1227" cy="478" r="5" fill="#fff" opacity=".18"/><path d="M1185 505 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1185" cy="487" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1181" cy="483" r="5" fill="#fff" opacity=".18"/><path d="M1208 508 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1208" cy="490" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1204" cy="486" r="5" fill="#fff" opacity=".18"/><path d="M1222 527 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1222" cy="509" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1218" cy="505" r="5" fill="#fff" opacity=".18"/><path d="M1266 535 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1266" cy="517" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1262" cy="513" r="5" fill="#fff" opacity=".18"/><path d="M1194 537 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1194" cy="519" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1190" cy="515" r="5" fill="#fff" opacity=".18"/><path d="M1244 554 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1244" cy="536" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1240" cy="532" r="5" fill="#fff" opacity=".18"/><path d="M1183 555 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1183" cy="537" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1179" cy="533" r="5" fill="#fff" opacity=".18"/><path d="M1215 572 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1215" cy="554" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1211" cy="550" r="5" fill="#fff" opacity=".18"/><path d="M1206 604 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1206" cy="586" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1202" cy="582" r="5" fill="#fff" opacity=".18"/><path d="M1243 618 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1243" cy="600" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1239" cy="596" r="5" fill="#fff" opacity=".18"/><path d="M1184 618 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1184" cy="600" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1180" cy="596" r="5" fill="#fff" opacity=".18"/><path d="M1200 633 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1200" cy="615" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1196" cy="611" r="5" fill="#fff" opacity=".18"/><path d="M554 646 v-26 M554 632 l-9 -8 M554 628 l8 -9 M550 624 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M521 647 v-26 M521 633 l-9 -8 M521 629 l8 -9 M517 625 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M470 655 v-26 M470 641 l-9 -8 M470 637 l8 -9 M466 633 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M596 656 v-26 M596 642 l-9 -8 M596 638 l8 -9 M592 634 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M510 670 v-26 M510 656 l-9 -8 M510 652 l8 -9 M506 648 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M619 673 v-26 M619 659 l-9 -8 M619 655 l8 -9 M615 651 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M533 673 v-26 M533 659 l-9 -8 M533 655 l8 -9 M529 651 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M460 678 v-26 M460 664 l-9 -8 M460 660 l8 -9 M456 656 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M597 683 v-26 M597 669 l-9 -8 M597 665 l8 -9 M593 661 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M506 692 v-26 M506 678 l-9 -8 M506 674 l8 -9 M502 670 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M563 694 v-26 M563 680 l-9 -8 M563 676 l8 -9 M559 672 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M470 696 v-26 M470 682 l-9 -8 M470 678 l8 -9 M466 674 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M614 704 v-26 M614 690 l-9 -8 M614 686 l8 -9 M610 682 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M667 709 v-26 M667 695 l-9 -8 M667 691 l8 -9 M663 687 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M443 713 v-26 M443 699 l-9 -8 M443 695 l8 -9 M439 691 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M533 722 v-26 M533 708 l-9 -8 M533 704 l8 -9 M529 700 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M471 729 v-26 M471 715 l-9 -8 M471 711 l8 -9 M467 707 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M658 730 v-26 M658 716 l-9 -8 M658 712 l8 -9 M654 708 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M602 731 v-26 M602 717 l-9 -8 M602 713 l8 -9 M598 709 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M630 755 v-26 M630 741 l-9 -8 M630 737 l8 -9 M626 733 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M576 761 v-26 M576 747 l-9 -8 M576 743 l8 -9 M572 739 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M599 765 v-26 M599 751 l-9 -8 M599 747 l8 -9 M595 743 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M816 600 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M813 585 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M846 610 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M843 595 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M790 614 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M787 599 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M826 630 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M823 615 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M856 586 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M853 571 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M471 705 v-40 h68 v40z" fill="#5d5466" stroke="#1f1828" stroke-width="2.5"/><path d="M465 667 l40 -30 l40 30z" fill="#3a2f45" stroke="#1f1828" stroke-width="2.5"/><path d="M523 653 v-26 h10 v34" fill="#3a2f45" stroke="#1f1828" stroke-width="2"/><rect x="481" y="675" width="10" height="12" fill="#ffcf5a"/><rect x="517" y="675" width="10" height="12" fill="#ffcf5a"/><path d="M499 705 v-16 h12 v16" fill="#1f1828"/><path d="M950 330 v-30 q30 -34 60 0 v30z" fill="#9a9a9a" stroke="#2a2a2a" stroke-width="2.5"/><path d="M968 330 v-22 q12 -14 24 0 v22z" fill="#2a2a2a"/><path d="M980 274 v-16 M973 264 h14" stroke="#2a2a2a" stroke-width="3"/><path d="M1203 430 v-50 h24 v50z" fill="#cfc4ae" stroke="#3b2a1a" stroke-width="2"/><path d="M1199 382 l16 -28 l16 28z" fill="#3f5f9e" stroke="#3b2a1a" stroke-width="2"/><text x="900" y="175" font-size="30" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Monts du Crâne</text><text x="420" y="410" font-size="28" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Bois des Murmures</text><text x="860" y="665" font-size="26" text-anchor="middle" font-style="normal" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Valclair</text><text x="510" y="790" font-size="24" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Domaine Blackwood</text><text x="1140" y="800" font-size="24" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Marais brumeux</text><text x="1215" y="470" font-size="20" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Tour du Mage</text><text x="1260" y="660" font-size="22" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Forêt d’Ambre</text><text x="1050" y="520" font-size="20" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Lac Miroir</text><text x="300" y="880" font-size="30" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Mer des Brumes</text><text x="1380" y="170" font-size="26" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Mer du Nord</text><g transform="translate(1420,840)"><circle r="58" fill="none" stroke="#3b2a1a" stroke-width="2"/><circle r="46" fill="none" stroke="#3b2a1a" stroke-width="1"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(0)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(45)"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(90)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(135)"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(180)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(225)"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(270)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(315)"/><text y="-78" font-size="26" text-anchor="middle" fill="#3b2a1a">N</text></g><g transform="translate(60,46)"><path d="M0 0 h560 l-16 40 l16 40 h-560 l16 -40z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="3"/><text x="280" y="53" font-size="34" text-anchor="middle" fill="#7a2a24" font-weight="700">Royaume de Classe et Donjon</text></g><rect width="1600" height="1000" fill="url(#mv)"/><rect x="8" y="8" width="1584" height="984" fill="none" stroke="#3b2a1a" stroke-width="6"/><rect x="20" y="20" width="1560" height="960" fill="none" stroke="#3b2a1a" stroke-width="2"/></svg>`;
 // ---------- le monde : chaque lieu ouvre une quête ----------
-const LIEUX_DEFAUT = { demo: [0.613, 0.335], "halloween-vladislav": [0.316, 0.705], "rentree-academie": [0.52, 0.56], "octobre-ferme": [0.42, 0.62], "novembre-lugubre": [0.2, 0.8], "decembre-noel": [0.7, 0.2], "janvier-yeti": [0.45, 0.12] };
+const LIEUX_DEFAUT = { demo: [0.613, 0.335], "halloween-vladislav": [0.316, 0.705], "rentree-academie": [0.52, 0.56], "octobre-ferme": [0.42, 0.62], "novembre-lugubre": [0.2, 0.8], "decembre-noel": [0.7, 0.2], "janvier-yeti": [0.45, 0.12], "fevrier-valentin": [0.62, 0.82] };
 const PLACES_LIBRES = [[0.76, 0.43], [0.71, 0.75], [0.26, 0.42], [0.54, 0.6], [0.79, 0.62], [0.4, 0.56], [0.66, 0.5], [0.44, 0.3], [0.33, 0.57], [0.6, 0.78], [0.84, 0.5], [0.5, 0.45]];
 let MONDE = { image: null, lieux: {} }, mondeEdit = false, cheminNeuf = false;
 const quetesDuMonde = () => [DEMO, ...INTEGREES.filter(q => q !== DEMO), ...QUETES.filter(q => !INTEGREES.some(i => i.id === q.id))].filter(q => !(MONDE.caches || []).includes(q.id));
