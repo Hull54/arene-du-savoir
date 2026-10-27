@@ -1910,7 +1910,7 @@ const SBIRE_DE = { gobelin: 'gobelin', dragon: 'citrouille', ombres: 'ombre', gi
 function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
   const key = 'boss' + k + f + flash + a + b;
   if (dynCache[key]) return dynCache[key];
-  const P = new Painter(60, 54);
+  const P = new Painter(60, k === 'prof' || k === 'prof2' ? 68 : 54);
   const glow = new Set();
   const G = c => (glow.add(c), c);                              // couleurs lumineuses : pas d'ombrage automatique
   const F = c => flash ? shade(c, 1.55) : c;                    // flash blanc quand il est touché
@@ -2185,20 +2185,20 @@ function bossSprite(f, flash, k = 'gluant', a = 0, b = 0) {
       for (let i = x + 2; i < x + w - 1; i += 2) q(i, y + 2, 1, 1, F(pal.s));
     };
     // torse large : chandail noir tout simple
-    q(5, 14, 20, 8, F(pal.o)); q(3, 15, 24, 4, F(pal.o));
-    q(4, 15, 22, 3, F(tee)); q(6, 18, 18, 3, F(tee));
-    q(4, 15, 22, 1, F(teeH)); q(4, 15, 1, 3, F(teeH)); q(6, 20, 18, 1, F(teeD)); q(23, 16, 1, 4, F(teeD));
+    q(5, 14, 20, 12, F(pal.o)); q(3, 15, 24, 4, F(pal.o));
+    q(4, 15, 22, 3, F(tee)); q(6, 18, 18, 7, F(tee));
+    q(4, 15, 22, 1, F(teeH)); q(4, 15, 1, 3, F(teeH)); q(6, 24, 18, 1, F(teeD)); q(23, 16, 1, 8, F(teeD));
     q(10, 15, 10, 1, F('#3a3a44'));                         // encolure
     q(4, 17, 3, 1, F(teeD)); q(23, 17, 3, 1, F(teeD));      // bord des manches courtes
     // jambes : jeans et Converse noires à bout blanc
     for (const [x, l] of [[8, lA < 0 ? -1 : 0], [16, lB < 0 ? -1 : 0]]) {
-      q(x, 21, 6, 3 + l, F(pal.o)); q(x + 1, 21, 4, 2 + l, F('#3e64a0')); q(x + 1, 21, 1, 2 + l, F('#5a84c0'));
-      q(x - 1, 23 + l, 8, 4, F(pal.o)); q(x, 23 + l, 6, 1, F('#2a2a34')); q(x + 2, 23 + l, 1, 1, F('#f4f0e6')); q(x, 24 + l, 6, 1, F('#f4f0e6')); q(x + 4, 24 + l, 2, 1, F('#ffffff')); q(x, 25 + l, 6, 1, F('#c8c0b0'));
+      q(x, 25, 6, 6 + l, F(pal.o)); q(x + 1, 25, 4, 5 + l, F('#3e64a0')); q(x + 1, 26, 1, 4 + l, F('#5a84c0')); q(x + 4, 25, 1, 5 + l, F('#2c4c80'));
+      q(x - 1, 30 + l, 8, 4, F(pal.o)); q(x, 30 + l, 6, 1, F('#2a2a34')); q(x + 2, 30 + l, 1, 1, F('#f4f0e6')); q(x, 31 + l, 6, 1, F('#f4f0e6')); q(x + 4, 31 + l, 2, 1, F('#ffffff')); q(x, 32 + l, 6, 1, F('#c8c0b0'));
     }
     // bras nus et gros poings (le droit frappe en attaque)
-    const yg = 19 + (swing > 0 ? 1 : 0), yd = 19 + (swing < 0 ? 1 : 0);
+    const yg = 21 + (swing > 0 ? 1 : 0), yd = 21 + (swing < 0 ? 1 : 0);
     q(3, 18, 4, yg - 17, F(pal.o)); q(4, 18, 2, yg - 18, F(pal.S)); poing(1, yg);
-    if (a) { q(19, 15, 3, 3, F(pal.o)); q(19, 16, 2, 1, F(pal.S)); poing(20, 13, 8, 7); for (let i = 0; i < 3; i++) q(28, 13 + i * 3, 1, 1, G('#fff6a0')); }
+    if (a) { q(19, 16, 3, 3, F(pal.o)); q(19, 17, 2, 1, F(pal.S)); poing(20, 14, 8, 7); for (let i = 0; i < 3; i++) q(28, 13 + i * 3, 1, 1, G('#fff6a0')); }
     else { q(23, 18, 4, yd - 17, F(pal.o)); q(24, 18, 2, yd - 18, F(pal.S)); poing(23, yd); }
     // grosse tête carrée : casquette noire à l'envers, oreilles, sourcils, yeux, joues roses, barbe pleine
     grid([
@@ -2727,7 +2727,7 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     ctx.fillStyle = '#00000044'; ctx.beginPath(); ctx.ellipse(x, y + 40, 70, 16, 0, 0, 7); ctx.fill();
     if (phase === 2) for (let k = 0; k < 10; k++) { const t = (now * 0.8 + k / 10) % 1; sq(x + Math.sin(k * 2.7) * 70, y + 30 - t * 120, big ? 4 : 2, t < 0.5 ? '#ff5a3a' : '#a8201a'); }
     const spr = bossSprite(an & 4 ? 0 : fr, fl && Math.floor(now * 20) % 2 ? 1 : 0, bk === 'prof' ? (phase === 2 || an & 8 ? 'prof2' : 'prof') : bk, atk, br);
-    ctx.save(); ctx.translate(Math.round(x), Math.round(y - 10)); if (Math.cos(ang) < -0.2) ctx.scale(-1, 1);
+    ctx.save(); ctx.translate(Math.round(x), Math.round(y - 10 - (spr.height - 54) * bs / 2)); if (Math.cos(ang) < -0.2) ctx.scale(-1, 1);
     if (an & 4) { ctx.translate(0, spr.height * bs * 0.18); ctx.scale(1, 0.72); ctx.rotate(Math.sin(now * 3) * 0.05); }   // à genoux (question finale)
     ctx.drawImage(spr, Math.round(-spr.width * bs / 2), Math.round(-spr.height * bs / 2), spr.width * bs, spr.height * bs); ctx.restore();
     if (shield) {   // Bouclier du savoir : bulle bleue
