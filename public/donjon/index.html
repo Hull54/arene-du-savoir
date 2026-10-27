@@ -635,6 +635,11 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 .indice-q .ind-btn { font-size: .95rem; padding: 6px 12px; animation: ind-appel 1.6s ease-in-out 2; }
 @keyframes ind-appel { 50% { box-shadow: 0 0 0 4px rgba(255,214,120,.45); } }
 .choices button.barre { opacity: .35; text-decoration: line-through; }
+
+.eq-cls { justify-content: center; margin: 6px 0 4px; }
+.eq-cls button { display: inline-flex; align-items: center; gap: 6px; font-size: .95rem; }
+.eq-cls button img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.eq-cls button[aria-pressed="false"] img { filter: grayscale(1); opacity: .5; }
 </style>
 
 <div class="app">
@@ -1543,14 +1548,15 @@ function construire(carte, phase, chapitre = 0) {
   carte = { ...carte, enemies: carte.enemies.filter(([t]) => E[t]) };
   W = carte.grid[0].length; H = carte.grid.length;
   const niveau = S ? S.niveau : "5e", nbActions = S ? S.nbActions : (PREF.nbActions || 3);
+  const classes = phase === "edit" ? Object.keys(C) : classesEquipe(), pvM = b => pvMonstre(b, classes.length);
   S = {
     carte, chapitre, grid: carte.grid.map(r => r.split("")), round: 1, evFaits: [], dernierEvt: Date.now(), debut: true, phase, actif: 0, mode: null, busy: false, niveau, nbActions, fini: null,
     inv: { vie: 0, mana: 0, cle: 0 }, log: [],
-    heroes: Object.keys(C).map(c => ({ id: "h-" + c, cls: c, race: races[c] || RACE_DEFAUT[c], nom: noms[c] || C[c].nom,
+    heroes: classes.map(c => ({ id: "h-" + c, cls: c, race: races[c] || RACE_DEFAUT[c], nom: noms[c] || C[c].nom,
       x: carte.heroes[c][0], y: carte.heroes[c][1], actions: nbActions, joue: false, force: false }))
       .map(h => Object.assign(h, phase === "edit" ? {} : habitFiche(h.cls)))
       .map(h => Object.assign(h, { pv: st(h).pv, mana: st(h).mana })),
-    enemies: carte.enemies.map(([t, x, y], i) => ({ id: "e-" + i, type: t, nom: E[t].nom, x, y, pv: E[t].pv, pvMax: E[t].pv, deg: E[t].deg, poison: false, boss: !!E[t].boss, bouge: false, face: [0, 1] })),
+    enemies: carte.enemies.map(([t, x, y], i) => ({ id: "e-" + i, type: t, nom: E[t].nom, x, y, pv: pvM(E[t].pv), pvMax: pvM(E[t].pv), deg: E[t].deg, poison: false, boss: !!E[t].boss, bouge: false, face: [0, 1] })),
     objets: carte.objets.map(([t, x, y], i) => ({ id: "o-" + i, type: t, x, y, decouvert: t === "coffreDore", vide: false })),
     portes: Object.fromEntries(Object.entries(carte.portes).map(([k, par]) => [k, { verrou: true, par }])),
     pnj: carte.pnj.map((p, i) => ({ ...p, id: "p-" + i })),
@@ -1625,7 +1631,9 @@ function restaurerPartie(p) {
   Object.assign(S, { round: p.round, actif: p.actif, debut: p.debut, nbActions: p.nbActions || S.nbActions, niveau: p.niveau || S.niveau, inv: p.inv, log: p.log || [], groupeDebut: p.groupeDebut });
   S.grid = p.grid.map(r => r.split(""));
   for (const ph of p.heroes) { const h = S.heroes.find(x => x.cls === ph.cls); if (h) Object.assign(h, ph); }
-  S.enemies = p.enemies.filter(pe => E[pe.type]).map(pe => { const d = E[pe.type]; return { ...pe, nom: d.nom, pvMax: d.pv, deg: d.deg, boss: !!d.boss, bouge: false }; });
+  // une partie à 2 ou 3 héros reste à 2 ou 3 héros
+  if (p.heroes.length >= 2) S.heroes = S.heroes.filter(h => p.heroes.some(ph => ph.cls === h.cls));
+  S.enemies = p.enemies.filter(pe => E[pe.type]).map(pe => { const d = E[pe.type]; return { ...pe, nom: d.nom, pvMax: pvMonstre(d.pv, S.heroes.length), deg: d.deg, boss: !!d.boss, bouge: false }; });
   S.nextId = S.enemies.length + 100;
   p.objets.forEach((po, i) => { if (S.objets[i]) Object.assign(S.objets[i], po); });
   for (const [k, v] of Object.entries(p.portes)) if (S.portes[k]) S.portes[k].verrou = v;
@@ -1660,15 +1668,27 @@ async function ouvrirQuete(q) {
         : `<p class="sub">Aucune équipe n'a encore commencé cette quête.</p>`}
       <p class="sub" style="margin-top:14px">Nouvelle équipe : choisis un code (ex. : DRAGONS, EQUIPE3).</p>
       <input id="code-eq" class="field" maxlength="12" autocomplete="off" placeholder="Code d'équipe">
+      <p class="sub" style="margin-top:10px">Héros de la nouvelle équipe (2 à 4 joueurs) : <b id="eq-n">4 héros</b></p>
+      <div class="chips eq-cls" id="eq-cls">${Object.keys(C).map(c => `<button type="button" data-c="${c}" aria-pressed="true"><img src="${imgHeros(c)}" alt=""> ${esc(C[c].nom)}</button>`).join("")}</div>
       <div class="row"><button class="btn" type="button" id="eq-annuler">Retour à la carte</button><button class="btn gold" type="button" id="eq-go">Commencer la quête</button></div>
       <p class="sub" id="eq-msg"></p>`);
     const inp = document.getElementById("code-eq");
     inp.oninput = () => { const c = codeEquipe(inp.value); if (inp.value !== c) inp.value = c; };
+    const cls = document.getElementById("eq-cls");
+    cls.onclick = e => {
+      const b = e.target.closest("[data-c]"); if (!b) return;
+      const on = cls.querySelectorAll('[aria-pressed="true"]').length;
+      if (b.getAttribute("aria-pressed") === "true" && on <= 2) { toast("Il faut au moins 2 héros."); return; }
+      b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      cls.dataset.touche = "1";
+      document.getElementById("eq-n").textContent = cls.querySelectorAll('[aria-pressed="true"]').length + " héros";
+    };
     const go = () => {
       const c = codeEquipe(inp.value);
       if (!c) { document.getElementById("eq-msg").textContent = "Écris un code d'équipe."; inp.focus(); return; }
       const p = parties.find(x => x.equipe === c);
-      fermer(); resolve(p ? { p } : { code: c });
+      const classes = [...cls.querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.c);
+      fermer(); resolve(p ? { p } : { code: c, classes: cls.dataset.touche ? classes : null });
     };
     document.getElementById("eq-go").onclick = go;
     document.getElementById("eq-annuler").onclick = () => { fermer(); resolve(null); };
@@ -1691,6 +1711,10 @@ async function ouvrirQuete(q) {
   await chargerFiche();
   setTimeout(demarrerPeriode, 0);
   if (choix.p) { restaurerPartie(choix.p); toast(`Bon retour, équipe ${EQUIPE}!`); precedemment(); return; }
+  if (choix.classes) {
+    FICHE.classes = choix.classes.length < 4 ? choix.classes : undefined;
+    await Stock.sauverEquipe(FICHE);
+  }
   if (!Object.keys(FICHE.heros || {}).length) await ouvrirFiches(true);
   demarrerQuete(q);
 }
@@ -2621,6 +2645,13 @@ const visibleBrume = (x, y) => !brumeActive() || !S.vu || !!S.vu[y * W + x];
 // ---------- bilan de l'enseignant : chaque réponse est notée ----------
 // ---------- fiches des héros (un élève par héros) et badges ----------
 let FICHE = null;
+// Équipe de 2, 3 ou 4 héros : les classes choisies à la création de l'équipe
+function classesEquipe() {
+  const c = (FICHE && FICHE.id === EQUIPE && FICHE.classes || []).filter(k => C[k]);
+  return c.length >= 2 ? Object.keys(C).filter(k => c.includes(k)) : Object.keys(C);
+}
+// Moins de héros, des monstres un peu moins coriaces
+const pvMonstre = (pv, n) => n >= 4 ? pv : Math.max(1, Math.ceil(pv * (n === 3 ? .8 : .6)));
 const GENRES = { f: "Fille", g: "Garçon" };
 const COULEURS = ["#7c9a3f", "#3a9e98", "#9aa3ad", "#c9b437", "#b34a3c", "#7a52b3", "#d4782a", "#3f6fd1"];
 const BADGES = [
@@ -2708,7 +2739,7 @@ function ouvrirFiches(nouvelle) {
       <div class="fiches" id="fiches"></div>
       <div class="row"><button class="btn" type="button" id="fi-non">${nouvelle ? "Plus tard" : "Annuler"}</button><button class="btn gold" type="button" id="fi-ok">Enregistrer les fiches</button></div>`);
     modal.classList.add("large");
-    const dessiner = () => { document.getElementById("fiches").innerHTML = Object.keys(C).map(carte).join(""); };
+    const dessiner = () => { document.getElementById("fiches").innerHTML = classesEquipe().map(carte).join(""); };
     dessiner();
     const fin = v => { modal.oninput = null; modal.classList.remove("large"); fermer(); resolve(v); };
     modal.oninput = e => { const i = e.target.closest("input[data-k]"), c = e.target.closest("[data-c]"); if (i && c) brouillon[c.dataset.c][i.dataset.k] = i.value; };
@@ -3651,7 +3682,7 @@ function caseLibrePres(x, y) {
 }
 function faireApparaitre(t, x, y) {
   const d = E[t];
-  const e = { id: "e-" + S.nextId++, type: t, nom: d.nom, x, y, pv: d.pv, pvMax: d.pv, deg: d.deg, poison: false, boss: !!d.boss, bouge: true, face: [0, 1] };
+  const e = { id: "e-" + S.nextId++, type: t, nom: d.nom, x, y, pv: pvMonstre(d.pv, S.heroes.length), pvMax: pvMonstre(d.pv, S.heroes.length), deg: d.deg, poison: false, boss: !!d.boss, bouge: true, face: [0, 1] };
   S.enemies.push(e); render(); anim(e, "open");
   return e;
 }
