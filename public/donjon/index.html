@@ -628,6 +628,13 @@ html.rm .tok.indice::before { animation: none; opacity: .7; }
 .ind-dalle { animation: ind-dalle 3s ease-in-out infinite; }
 @keyframes ind-dalle { 0%, 100% { opacity: .3; } 50% { opacity: .75; } }
 html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-rune, html.rm .ind-dalle, html.rm .tok.indice .spark i { animation: none; opacity: .8; }
+
+/* Indices pendant les questions */
+.indice-q { min-height: 0; margin: 6px 0; text-align: center; }
+.indice-q p { margin: 4px 0; font-size: 1.05rem; color: #ffe7a6; }
+.indice-q .ind-btn { font-size: .95rem; padding: 6px 12px; animation: ind-appel 1.6s ease-in-out 2; }
+@keyframes ind-appel { 50% { box-shadow: 0 0 0 4px rgba(255,214,120,.45); } }
+.choices button.barre { opacity: .35; text-decoration: line-through; }
 </style>
 
 <div class="app">
@@ -681,6 +688,7 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
         <label>Nom de la quête <input id="ed-qnom" maxlength="60"></label>
         <label>Conclusion (lue à la victoire) <textarea id="ed-fin" rows="3" placeholder="La situation finale de ton récit."></textarea></label>
         <label>Trame sonore de la quête <select id="ed-qmus"></select></label>
+        <label>Calculs + et − au départ <select id="ed-qniv"></select></label>
         <div>
           <h4>Chapitres (une carte par semaine)</h4>
           <div class="chaps" id="ed-chaps"></div>
@@ -1585,6 +1593,7 @@ function demarrerChapitre(index, g) {
 }
 function demarrerQuete(q) {
   QUETE = q;
+  if (S && q.niveau && NIVEAUX[q.niveau]) S.niveau = q.niveau;
   try { localStorage.setItem("donjon-quete", q.id); } catch {}
   demarrerChapitre(0, null);
 }
@@ -3112,35 +3121,78 @@ async function lancer(el, final) {
 }
 const d12 = () => 1 + Math.floor(Math.random() * 12);
 const rnd2 = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const NIVEAUX = { des: "Dés de 1 à 12", facile: "2 chiffres", "5e": "3 chiffres" };
 function genCalcul(op) {
   const dur = S.niveau === "5e";
-  if (op === "+") { const a = dur ? rnd2(105, 589) : rnd2(12, 68), b = dur ? rnd2(104, 399) : rnd2(11, 29); return { txt: `${a} + ${b}`, rep: a + b }; }
-  if (op === "÷") { const b = rnd2(2, 12), q = rnd2(2, 12); return { txt: `${b * q} ÷ ${b}`, rep: q }; }
+  if (op === "+") { const a = dur ? rnd2(105, 589) : rnd2(12, 68), b = dur ? rnd2(104, 399) : rnd2(11, 29); return { txt: `${a} + ${b}`, rep: a + b, a, b, op }; }
+  if (op === "÷") { const b = rnd2(2, 12), q = rnd2(2, 12); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
   const a = dur ? rnd2(320, 999) : rnd2(35, 99), b = dur ? rnd2(104, a - 100) : rnd2(11, a - 10);
-  return { txt: `${a} − ${b}`, rep: a - b };
+  return { txt: `${a} − ${b}`, rep: a - b, a, b, op: "−" };
+}
+// Indices qui apparaissent si la question prend du temps : d'abord une méthode, puis un premier pas
+const DIZ = n => Math.floor(n / 10) * 10, CEN = n => Math.floor(n / 100) * 100;
+function indicesCalcul(q) {
+  const { a, b, op } = q;
+  if (op === "×") {
+    // on part de l'astuce la plus facile des deux nombres
+    const FACILE = [1, 10, 2, 5, 11, 4, 3, 9, 6, 8, 12, 7];
+    const [g, p] = FACILE.indexOf(b) <= FACILE.indexOf(a) ? [a, b] : [b, a];
+    const m = {
+      1: [`Multiplier par 1 ne change rien.`, `${g} × 1 = ${g}`],
+      2: [`× 2, c'est le double.`, `${g} + ${g} = ?`],
+      3: [`× 3, c'est le double, plus une fois de plus.`, `${g} + ${g} = ${2 * g}, puis ${2 * g} + ${g} = ?`],
+      4: [`× 4, c'est le double du double.`, `${g} × 2 = ${2 * g}, puis le double de ${2 * g} = ?`],
+      5: [`× 5, c'est la moitié de × 10.`, `${g} × 10 = ${10 * g}, la moitié de ${10 * g} = ?`],
+      6: [`× 6, c'est × 5, plus une fois de plus.`, `${g} × 5 = ${5 * g}, puis ${5 * g} + ${g} = ?`],
+      7: [`× 7, c'est × 5, plus × 2.`, `${g} × 5 = ${5 * g} et ${g} × 2 = ${2 * g}. Additionne-les!`],
+      8: [`× 8, c'est le double de × 4.`, `${g} × 4 = ${4 * g}, puis le double de ${4 * g} = ?`],
+      9: [`× 9, c'est × 10, moins une fois.`, `${g} × 10 = ${10 * g}, puis ${10 * g} − ${g} = ?`],
+      10: [`× 10 : on ajoute un zéro.`, `${g} × 10 = ${g}0`],
+      11: [`× 11, c'est × 10, plus une fois de plus.`, `${g} × 10 = ${10 * g}, puis ${10 * g} + ${g} = ?`],
+      12: [`× 12, c'est × 10, plus × 2.`, `${g} × 10 = ${10 * g} et ${g} × 2 = ${2 * g}. Additionne-les!`],
+    }[p];
+    // le plus petit facteur sert de stratégie ; on l'exprime avec l'autre nombre
+    return m ? [`Calcule ${g} × ${p}. Astuce : ${m[0]}`, m[1]] : [`Compte par bonds de ${p}.`, ""];
+  }
+  if (op === "÷") return [`Cherche dans la table de ${b} : ${b} × ? = ${a}`, `Compte par bonds de ${b} : ${b}, ${2 * b}, ${3 * b}… jusqu'à ${a}. Combien de bonds?`];
+  if (op === "+") {
+    if (a <= 12 && b <= 12) { const [g, p] = a >= b ? [a, b] : [b, a]; const c = 10 - g;
+      return g < 10 && p > c ? [`Fais 10 d'abord : ${g} + ${c} = 10.`, `Il reste ${p - c} à ajouter : 10 + ${p - c} = ?`] : [`Pars du plus grand nombre (${g}) et avance de ${p}.`, `${g}… ${Array.from({ length: Math.min(p, 3) }, (_, i) => g + i + 1).join(", ")}…`]; }
+    if (a >= 100) return [`Additionne les centaines, puis les dizaines, puis les unités.`, `${CEN(a)} + ${CEN(b)} = ${CEN(a) + CEN(b)} · ${DIZ(a % 100)} + ${DIZ(b % 100)} = ${DIZ(a % 100) + DIZ(b % 100)} · ${a % 10} + ${b % 10} = ${a % 10 + b % 10}. Additionne les trois!`];
+    return [`Additionne les dizaines, puis les unités.`, `${DIZ(a)} + ${DIZ(b)} = ${DIZ(a) + DIZ(b)} et ${a % 10} + ${b % 10} = ${a % 10 + b % 10}. Additionne les deux!`];
+  }
+  if (op === "−") {
+    if (a <= 12) return [`Pars de ${b} et compte jusqu'à ${a}. Combien de bonds?`, `${b}… ${Array.from({ length: Math.min(a - b, 3) }, (_, i) => b + i + 1).join(", ")}…`];
+    if (b >= 100) return [`Enlève d'abord les centaines, puis les dizaines, puis les unités.`, `${a} − ${CEN(b)} = ${a - CEN(b)}, puis − ${DIZ(b % 100)} = ${a - CEN(b) - DIZ(b % 100)}, puis − ${b % 10} = ?`];
+    return [`Enlève d'abord les dizaines, puis les unités.`, `${a} − ${DIZ(b)} = ${a - DIZ(b)}, puis ${a - DIZ(b)} − ${b % 10} = ?`];
+  }
+  return [];
 }
 
 // Épreuve de calcul avec clavier à l'écran. op : "+", "−", "×" (deux dés de 12) ou "÷"
 function epreuveMath(op, titre, danger) {
   return new Promise(async resolve => {
     const opNom = { "+": "Addition", "−": "Soustraction", "×": "Multiplication", "÷": "Division" }[op];
-    const diceHtml = op === "×" ? `<div class="dice"><div class="die" id="d1">${D12}<b>?</b></div><span class="x">×</span><div class="die" id="d2">${D12}<b>?</b></div></div>` : "";
+    const des = op === "×" || ((op === "+" || op === "−") && S.niveau === "des");
+    const diceHtml = des ? `<div class="dice"><div class="die" id="d1">${D12}<b>?</b></div><span class="x">${op}</span><div class="die" id="d2">${D12}<b>?</b></div></div>` : "";
     ouvrir(`<h2>${titre}</h2><p class="sub">Épreuve : ${opNom}</p>${diceHtml}<div class="big" id="q">&nbsp;</div>
-      <div class="ans" id="ans" aria-live="polite"></div>
+      <div class="ans" id="ans" aria-live="polite"></div><div class="indice-q" id="iq" aria-live="polite"></div>
       <div class="pad" id="pad">${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => `<button type="button" data-k="${n}">${n}</button>`).join("")}
       <button type="button" class="del" data-k="del">Effacer</button><button type="button" data-k="0">0</button><button type="button" class="ok" data-k="ok" aria-label="Valider">✓</button></div>`, danger);
     const pad = document.getElementById("pad"), ans = document.getElementById("ans"), qel = document.getElementById("q");
     let q;
     pad.style.visibility = "hidden";
-    if (op === "×") {
-      const a = d12(), b = d12();
+    if (des) {
+      let a = d12(), b = d12();
+      if (op === "−" && b > a) [a, b] = [b, a];
       try { await Promise.all([lancer(document.getElementById("d1"), a), lancer(document.getElementById("d2"), b)]); }
       catch { document.querySelectorAll(".die b").forEach((el, i) => el.textContent = i ? b : a); }
-      q = { txt: `${a} × ${b}`, rep: a * b };
+      q = { txt: `${a} ${op} ${b}`, rep: op === "×" ? a * b : op === "+" ? a + b : a - b, a, b, op };
     } else q = genCalcul(op);
     qel.textContent = q.txt + " = ?";
     pad.style.visibility = "visible";
     let val = "", fini = false;
+    aideProgressive(document.getElementById("iq"), indicesCalcul(q), () => fini);
     const presse = k => {
       if (fini) return;
       if (k === "del") val = val.slice(0, -1);
@@ -3179,6 +3231,11 @@ function epreuveFr(titre) {
     ouvrir(`<h2>${titre}</h2><p class="sub">Question de français</p><p class="fr-q">${q}</p>
       <div class="choices" id="ch">${ordre.map(([c, i]) => `<button type="button" data-i="${i}">${c}</button>`).join("")}</div><div id="suite"></div>`);
     const ch = document.getElementById("ch");
+    ch.insertAdjacentHTML("afterend", `<div class="indice-q" id="iq"></div>`);
+    aideProgressive(document.getElementById("iq"), ["Une mauvaise réponse en moins!"], () => ch.dataset.done, () => {
+      const faux = [...ch.querySelectorAll("button")].filter(x => Number(x.dataset.i) !== r && !x.disabled);
+      if (faux.length > 1) { const f = pick(faux); f.disabled = true; f.classList.add("barre"); }
+    });
     ch.onclick = e => {
       const b = e.target.closest("button"); if (!b || ch.dataset.done) return;
       ch.dataset.done = 1;
@@ -3193,6 +3250,23 @@ function epreuveFr(titre) {
 // Pouvoir de classe : question de français ou de maths, au hasard
 function epreuvePouvoir(titre) {
   return Math.random() < .5 ? epreuveFr(titre) : epreuveMath(pick(["+", "−", "×", "÷"]), titre);
+}
+// Après un moment sans réponse, un bouton 💡 propose un indice ; un 2e indice suit plus tard
+function aideProgressive(box, indices, fini, action) {
+  const delai = (PREF.indices ?? 30) * 1000;
+  if (!box || !delai || !indices || !indices.length) return;
+  let n = 0;
+  const montrer = () => {
+    if (fini() || !box.isConnected || n >= indices.length) return;
+    box.innerHTML = `<button type="button" class="btn ind-btn">💡 ${n ? "Encore un indice?" : "Besoin d'un indice?"}</button>`;
+    box.querySelector("button").onclick = () => {
+      if (action && n === 0) action();
+      box.innerHTML = indices.slice(0, n + 1).filter(Boolean).map(t => `<p>💡 ${esc(t)}</p>`).join("");
+      n++; try { bruit("coche"); } catch {}
+      if (n < indices.length && indices[n]) setTimeout(() => { if (!fini() && box.isConnected) box.insertAdjacentHTML("beforeend", `<button type="button" class="btn ind-btn">💡 Encore un indice?</button>`), box.querySelector("button").onclick = () => { box.innerHTML = indices.filter(Boolean).map(t => `<p>💡 ${esc(t)}</p>`).join(""); n = indices.length; }; }, delai / 2);
+    };
+  };
+  setTimeout(montrer, delai);
 }
 function choisir(titre, texte, boutons, danger) {
   return new Promise(resolve => {
@@ -3952,7 +4026,7 @@ function renderEditeur() {
   document.getElementById("ed-mons").innerHTML = mons.length ? mons.map(m => `<button class="tool${ED.sel && ED.sel.ref === m ? " on" : ""}" type="button" data-mon="${esc(m.id)}">✎ ${esc(m.nom || "Monstre")} · ${m.pv} PV</button>`).join("") : "";
   document.querySelectorAll("#editor [data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === ED.outil));
   const set = (id, v) => { const el = document.getElementById(id); if (document.activeElement !== el) el.value = v; };
-  set("ed-qnom", ED.quete.nom); set("ed-fin", ED.quete.fin || ""); set("ed-qmus", ED.quete.musique || "mystere");
+  set("ed-qnom", ED.quete.nom); set("ed-fin", ED.quete.fin || ""); set("ed-qmus", ED.quete.musique || "mystere"); set("ed-qniv", ED.quete.niveau || "");
   document.getElementById("ed-brume").checked = !!ED.carte.brume; document.getElementById("ed-froid").checked = !!ED.carte.froid;
   set("ed-mus", ED.carte.musique || "quete"); set("ed-met", ED.carte.meteo || "aucune"); set("ed-amb", ED.carte.ambiance || "auto"); set("ed-sol", ED.carte.sol || "pierre");
   document.getElementById("ed-ani").innerHTML = Object.entries(ANIMAUX).map(([k, n]) => `<button type="button" data-a="${k}" aria-pressed="${(ED.carte.animaux || []).includes(k)}">${n}</button>`).join(""); set("ed-nom", ED.carte.nom); set("ed-intro", ED.carte.intro || "");
@@ -4095,6 +4169,8 @@ document.getElementById("ed-intro").addEventListener("input", e => { ED.carte.in
 {
   const opts = o => Object.entries(o).map(([k, n]) => `<option value="${k}">${n}</option>`).join("");
   document.getElementById("ed-qmus").innerHTML = opts(TRAMES);
+  document.getElementById("ed-qniv").innerHTML = opts({ "": "Selon les réglages", ...NIVEAUX });
+  document.getElementById("ed-qniv").addEventListener("change", e => { ED.quete.niveau = e.target.value || undefined; });
   document.getElementById("ed-mus").innerHTML = opts({ quete: "Celle de la quête", ...TRAMES });
   document.getElementById("ed-met").innerHTML = opts(METEOS);
   document.getElementById("ed-amb").innerHTML = opts(AMBIANCES);
@@ -4439,7 +4515,8 @@ document.getElementById("btn-reg").onclick = () => {
   ouvrir(`<h2>Réglages</h2><p class="sub">Équipe en jeu : <b>${esc(EQUIPE)}</b></p>
     <div class="reg">
       <label>Actions par tour <select id="r-act">${opt(S.nbActions, [[2, "2 actions"], [3, "3 actions"]])}</select></label>
-      <label>Additions et soustractions <select id="r-niv">${opt(S.niveau, [["facile", "2 chiffres"], ["5e", "3 chiffres"]])}</select></label>
+      <label>Additions et soustractions <select id="r-niv">${opt(S.niveau, Object.entries(NIVEAUX))}</select></label>
+      <label>Indices pendant les questions <select id="r-ind">${opt(String(PREF.indices ?? 30), [["20", "Après 20 secondes"], ["30", "Après 30 secondes"], ["45", "Après 45 secondes"], ["0", "Jamais"]])}</select></label>
       <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
       <label>Durée de la période <select id="r-per">${opt(String(PREF.periode ?? 50), [["0", "Pas de minuterie"], ["30", "30 minutes"], ["45", "45 minutes"], ["50", "50 minutes"], ["60", "60 minutes"], ["75", "75 minutes"], ["90", "90 minutes"]])}</select></label>
       <label>Voix des PNJ <select id="r-voix">${opt(PREF.voix || "auto", [["auto", "Lit les dialogues tout seul"], ["bouton", "Avec le bouton 🔊 seulement"], ["non", "Désactivée"]])}</select></label>
@@ -4465,6 +4542,7 @@ document.getElementById("btn-reg").onclick = () => {
     render();
   };
   document.getElementById("r-niv").onchange = e => { S.niveau = e.target.value; };
+  document.getElementById("r-ind").onchange = e => { PREF.indices = Number(e.target.value); sauverPref(); };
   document.getElementById("r-evt").onchange = e => { PREF.evts = e.target.value; sauverPref(); S.dernierEvt = Date.now(); };
   document.getElementById("r-per").onchange = e => { PREF.periode = Number(e.target.value); sauverPref(); demarrerPeriode(); toast(PREF.periode ? `Minuterie : ${PREF.periode} minutes à partir de maintenant.` : "Minuterie désactivée."); };
   document.getElementById("r-voix").onchange = e => { PREF.voix = e.target.value; sauverPref(); if (e.target.value !== "non" && !voixFr()) toast("Aucune voix française n'est installée sur cet ordinateur."); };
