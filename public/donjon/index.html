@@ -308,6 +308,38 @@ html, body, button, .board, .modal { touch-action: manipulation; }
 .m-fond img { object-fit: cover; }
 .m-fond svg text { font-family: var(--display); }
 .m-pins { position: absolute; inset: 0; }
+/* campagne : chemin en pointillés, quêtes finies, zones transformées */
+.m-chemin { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.m-chemin .ch-ombre { fill: none; stroke: rgba(20,12,4,.55); stroke-linecap: round; }
+.m-chemin .ch-trait { fill: none; stroke: #f3d27a; stroke-linecap: round; }
+.m-effets { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.m-eff { position: absolute; width: calc(var(--mw, 900px) * var(--t, .24)); aspect-ratio: 1; translate: -50% -60%; border-radius: 50%; transition: opacity 2.5s ease; }
+.m-eff.nuit { background: radial-gradient(circle, rgba(14,18,64,.72) 0%, rgba(20,24,80,.55) 40%, rgba(20,24,80,0) 70%); mix-blend-mode: multiply; }
+.m-eff.nuit::after { content: ""; position: absolute; inset: 18%; border-radius: 50%; opacity: .9; animation: scintille 3.2s ease-in-out infinite;
+  background: radial-gradient(1.6px 1.6px at 20% 30%, #fff, transparent), radial-gradient(1.4px 1.4px at 70% 22%, #fff, transparent), radial-gradient(1.8px 1.8px at 45% 60%, #fffbe0, transparent),
+    radial-gradient(1.3px 1.3px at 80% 70%, #fff, transparent), radial-gradient(1.5px 1.5px at 30% 78%, #fff, transparent), radial-gradient(1.2px 1.2px at 58% 40%, #fff, transparent); mix-blend-mode: screen; }
+.m-eff.brume { background: radial-gradient(circle, rgba(225,230,236,.75) 0%, rgba(225,230,236,.45) 45%, rgba(225,230,236,0) 70%); filter: blur(6px); }
+.m-eff.neige { background: radial-gradient(circle, rgba(245,250,255,.8) 0%, rgba(225,238,255,.5) 45%, rgba(225,238,255,0) 70%); mix-blend-mode: screen; }
+.m-eff.lumiere { background: radial-gradient(circle, rgba(255,226,130,.7) 0%, rgba(255,210,110,.35) 45%, rgba(255,210,110,0) 70%); mix-blend-mode: screen; animation: scintille 4s ease-in-out infinite; }
+.m-eff.feu { background: radial-gradient(circle, rgba(255,110,40,.6) 0%, rgba(200,60,20,.35) 45%, rgba(200,60,20,0) 70%); mix-blend-mode: screen; animation: scintille 2.2s ease-in-out infinite; }
+.m-eff.ombre { background: radial-gradient(circle, rgba(40,10,50,.7) 0%, rgba(40,10,50,.45) 45%, rgba(40,10,50,0) 70%); mix-blend-mode: multiply; }
+@keyframes scintille { 50% { opacity: .55; } }
+html.rm .m-eff, html.rm .m-eff::after { animation: none; }
+.pin.finie .pin-coin { animation: none; filter: saturate(.55) brightness(.85); box-shadow: 0 0 0 2px #120d09, 0 0 0 4px #8a7a5a, 0 4px 8px rgba(0,0,0,.6); }
+.pin .pin-ok { position: absolute; top: -4px; right: -8px; width: max(16px, calc(var(--mw, 900px) * .018)); aspect-ratio: 1; border-radius: 50%; background: #3f8f5a; color: #fff; border: 2px solid #fff4e0;
+  display: grid; place-items: center; font-size: max(10px, calc(var(--mw, 900px) * .011)); font-weight: 700; line-height: 1; z-index: 1; }
+.pin.suivante .pin-coin { animation: pinpulse 1.6s ease-in-out infinite; }
+.pin.apparait { animation: pinpop .7s cubic-bezier(.3,1.6,.5,1) both; }
+@keyframes pinpop { from { scale: 0; opacity: 0; } }
+.camp-liste { display: grid; gap: 6px; margin: 10px 0; max-height: 52vh; overflow: auto; text-align: left; }
+.camp-l { display: grid; grid-template-columns: 30px 1fr auto auto auto; gap: 8px; align-items: center; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.camp-l b { font-family: var(--display); }
+.camp-l.finie { opacity: .8; }
+.camp-l .n { font-weight: 700; color: var(--gold); text-align: center; }
+.camp-l select { max-width: 150px; }
+.camp-l .mini { padding: 4px 8px; min-width: 0; }
+.modal label.check { display: flex; gap: 8px; align-items: center; text-align: left; }
+.modal label.check input { width: auto; }
 .pin { position: absolute; translate: -50% -100%; display: flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; touch-action: none; }
 .pin { flex-direction: column; gap: 0; }
 .pin-coin { width: max(26px, calc(var(--mw, 900px) * .036)); aspect-ratio: 1; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 0 0 2px #120d09, 0 0 0 4px var(--gold), 0 6px 12px rgba(0,0,0,.6); animation: pinpulse 2.4s ease-in-out infinite; }
@@ -787,8 +819,8 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 </div>
 <div class="monde" id="monde" hidden>
   <div class="monde-top"><div class="brand">Le Royaume d'Hull<small>Classe et Donjon · touche un lieu pour partir à l'aventure</small></div><span class="spacer"></span>
-    <div class="tools"><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn blue" type="button" id="m-modif">Modifier une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
-  <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-pins" id="m-pins"></div></div></div>
+    <div class="tools"><button class="btn" type="button" id="m-camp">Campagne</button><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn blue" type="button" id="m-modif">Modifier une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
+  <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-effets" id="m-effets"></div><svg class="m-chemin" id="m-chemin" aria-hidden="true"></svg><div class="m-pins" id="m-pins"></div></div></div>
   <input type="file" id="m-file" accept="image/*,video/mp4,video/webm,application/pdf" hidden>
 </div>
 <div class="overlay" id="overlay" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
@@ -4356,7 +4388,7 @@ function verifierFin() {
   if (dernierChapitre() && !ennemisVivants().length && !S.objets.some(o => o.type === "coffreDore" && !o.vide)) { S.fini = "victoire"; montrerFin(true); }
 }
 function montrerFin(v) {
-  if (v && !S.queteComptee) { S.queteComptee = true; for (const h of S.heroes) progres(h, s => s.quetes++); }
+  if (v && !S.queteComptee) { S.queteComptee = true; for (const h of S.heroes) progres(h, s => s.quetes++); if (!campagne().finies.includes(QUETE.id)) marquerFinie(QUETE.id); }
   bruit(v ? "victoire" : "defaite");
   setTimeout(() => {
     const rep = S.rep || [], m = compte(rep, r => r.t === "maths"), f = compte(rep, r => r.t !== "maths");
@@ -5213,7 +5245,7 @@ const Stock = {
     return (await IDB.all("reglages")).find(x => x.id === "monde") || null;
   },
   async sauverMonde(m) {
-    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, video: !!(m.image && m.video), caches: m.caches || [] };
+    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, video: !!(m.image && m.video), caches: m.caches || [], campagne: m.campagne || null };
     if (d.image && d.image.startsWith("data:") && this.assets) { try { const b = dataUrlBlob(d.image); d.image = "asset:" + (await this.assets.upload(b, { type: b.type })).id; m.image = d.image; } catch {} }
     if (this.db) { try { await this.db.doc("reglages/monde").set(d); return true; } catch {} }
     return !!(await IDB.put("reglages", d));
@@ -5414,7 +5446,7 @@ const MONDE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 100
 // ---------- le monde : chaque lieu ouvre une quête ----------
 const LIEUX_DEFAUT = { demo: [0.613, 0.335], "halloween-vladislav": [0.316, 0.705], "rentree-academie": [0.52, 0.56] };
 const PLACES_LIBRES = [[0.76, 0.43], [0.71, 0.75], [0.26, 0.42], [0.54, 0.6], [0.79, 0.62], [0.4, 0.56], [0.66, 0.5], [0.44, 0.3], [0.33, 0.57], [0.6, 0.78], [0.84, 0.5], [0.5, 0.45]];
-let MONDE = { image: null, lieux: {} }, mondeEdit = false;
+let MONDE = { image: null, lieux: {} }, mondeEdit = false, cheminNeuf = false;
 const quetesDuMonde = () => [DEMO, ...INTEGREES.filter(q => q !== DEMO), ...QUETES.filter(q => !INTEGREES.some(i => i.id === q.id))].filter(q => !(MONDE.caches || []).includes(q.id));
 function lieuDe(q, pris) {
   if (MONDE.lieux[q.id]) return MONDE.lieux[q.id];
@@ -5422,6 +5454,95 @@ function lieuDe(q, pris) {
   const libre = PLACES_LIBRES.find(p => !pris.some(o => Math.hypot(o[0] - p[0], o[1] - p[1]) < 0.06));
   return libre || [0.5 + (pris.length % 5) * 0.04 - 0.08, 0.5];
 }
+// ---------- campagne : la carte se dévoile quête par quête ----------
+const EFFETS_ZONE = { rien: "Rien ne change", nuit: "La zone tombe dans la nuit", brume: "Un brouillard la recouvre", neige: "La neige la recouvre", lumiere: "Une lumière dorée (zone libérée)", feu: "Des braises rougeoient", ombre: "Une ombre maléfique" };
+const TAILLES_ZONE = { ".16": "Petite", ".24": "Moyenne", ".34": "Grande" };
+function campagne() {
+  const c = MONDE.campagne = MONDE.campagne || {};
+  for (const [k, v] of Object.entries({ actif: false, ordre: [], finies: [], effets: {}, tailles: {}, vu: 0 })) if (c[k] === undefined) c[k] = v;
+  return c;
+}
+function quetesCampagne() {
+  const c = campagne(), qs = quetesDuMonde();
+  // ordre choisi par le MJ, sinon : la Rentrée d'abord, la démo à la fin
+  const rang = (q, i) => c.ordre.includes(q.id) ? c.ordre.indexOf(q.id) - 1e4 : q.id === "rentree-academie" ? -1 : q.id === "demo" ? 1e4 : i;
+  return qs.map((q, i) => [q, rang(q, i)]).sort((a, b) => a[1] - b[1]).map(([q]) => q);
+}
+async function marquerFinie(id, fini = true) {
+  const c = campagne();
+  c.finies = c.finies.filter(x => x !== id);
+  if (fini) c.finies.push(id);
+  else c.vu = Math.min(c.vu, c.finies.length);
+  await Stock.sauverMonde(MONDE);
+}
+// Les épingles visibles en campagne : les quêtes finies, puis la prochaine à faire
+function etapesCampagne() {
+  const c = campagne(), ordre = quetesCampagne();
+  const finies = ordre.filter(q => c.finies.includes(q.id)), prochaine = ordre.find(q => !c.finies.includes(q.id));
+  return { finies, prochaine };
+}
+function dessinerChemin(animer) {
+  const svg = document.getElementById("m-chemin"), carte = document.getElementById("m-carte");
+  svg.innerHTML = "";
+  if (!campagne().actif || mondeEdit) return;
+  const pts = [...document.querySelectorAll("#m-pins .pin.finie, #m-pins .pin.suivante")]
+    .sort((a, b) => Number(a.dataset.rang) - Number(b.dataset.rang))
+    .map(p => [parseFloat(p.style.left) / 100 * carte.clientWidth, parseFloat(p.style.top) / 100 * carte.clientHeight]);
+  if (pts.length < 2) return;
+  const w = Math.max(2.5, carte.clientWidth * .0035);
+  svg.setAttribute("viewBox", `0 0 ${carte.clientWidth} ${carte.clientHeight}`);
+  // une légère courbe entre deux lieux, comme un sentier
+  const seg = ([x1, y1], [x2, y2], i) => { const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1, k = (i % 2 ? -.18 : .18); return `M${x1} ${y1} Q${mx - dy * k} ${my + dx * k} ${x2} ${y2}`; };
+  const html = [];
+  for (let i = 1; i < pts.length; i++) {
+    const d = seg(pts[i - 1], pts[i], i), dernier = i === pts.length - 1;
+    html.push(`<path class="ch-ombre" d="${d}" stroke-width="${w * 2.2}" stroke-dasharray="${w * .1} ${w * 3}"${dernier && animer ? ` mask="url(#ch-m)"` : ""}/>`);
+    html.push(`<path class="ch-trait" d="${d}" stroke-width="${w}" stroke-dasharray="${w * .1} ${w * 3}"${dernier && animer ? ` mask="url(#ch-m)"` : ""}/>`);
+    if (dernier && animer) html.unshift(`<defs><mask id="ch-m" maskUnits="userSpaceOnUse"><path id="ch-mp" d="${d}" fill="none" stroke="#fff" stroke-width="${w * 4}" stroke-linecap="round"/></mask></defs>`);
+  }
+  svg.innerHTML = html.join("");
+  const mp = document.getElementById("ch-mp");
+  if (mp) {
+    const L = mp.getTotalLength(); mp.style.strokeDasharray = L; mp.style.strokeDashoffset = L;
+    if (RM.matches) mp.style.strokeDashoffset = 0;
+    else mp.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: 2200, delay: 900, easing: "ease-in-out", fill: "forwards" });
+  }
+}
+async function ouvrirCampagne() {
+  const c = campagne();
+  const rendre = () => {
+    const qs = quetesCampagne();
+    const opt = (o, v) => Object.entries(o).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("");
+    ouvrir(`<h2>Campagne de l'année</h2>
+      <p class="sub">En mode campagne, la carte montre seulement les quêtes finies et la prochaine à faire. Un sentier en pointillés les relie, et une zone peut changer quand sa quête est finie. Une quête gagnée est cochée toute seule.</p>
+      <label class="check"><input type="checkbox" id="camp-on"${c.actif ? " checked" : ""}> Mode campagne : montrer seulement les quêtes à faire</label>
+      <div class="camp-liste">${qs.map((q, i) => `<div class="camp-l${c.finies.includes(q.id) ? " finie" : ""}">
+        <span class="n">${i + 1}</span><b>${esc(q.nom.replace(" (démo)", ""))}</b>
+        <label class="check" title="Quête terminée"><input type="checkbox" data-fin="${esc(q.id)}"${c.finies.includes(q.id) ? " checked" : ""}> Finie</label>
+        <span><select data-eff="${esc(q.id)}" aria-label="Ce qui change sur la carte">${opt(EFFETS_ZONE, c.effets[q.id] || "rien")}</select>
+          <select data-tz="${esc(q.id)}" aria-label="Taille de la zone"${(c.effets[q.id] || "rien") === "rien" ? " hidden" : ""}>${opt(TAILLES_ZONE, c.tailles[q.id] || ".24")}</select></span>
+        <span><button class="btn mini" type="button" data-up="${i}" aria-label="Monter"${i ? "" : " disabled"}>↑</button><button class="btn mini" type="button" data-down="${i}" aria-label="Descendre"${i < qs.length - 1 ? "" : " disabled"}>↓</button></span>
+      </div>`).join("")}</div>
+      <div class="row"><button class="btn" type="button" id="camp-zero">Recommencer l'année</button><button class="btn gold" type="button" id="camp-ok">Fermer</button></div>`);
+    modal.classList.add("large");
+    const sauver = async () => { await Stock.sauverMonde(MONDE); afficherMonde(); };
+    document.getElementById("camp-on").onchange = e => { c.actif = e.target.checked; sauver(); };
+    modal.querySelectorAll("[data-fin]").forEach(b => b.onchange = async () => { await marquerFinie(b.dataset.fin, b.checked); c.vu = c.finies.length; await sauver(); rendre(); });
+    modal.querySelectorAll("[data-eff]").forEach(b => b.onchange = async () => { c.effets[b.dataset.eff] = b.value; await sauver(); rendre(); });
+    modal.querySelectorAll("[data-tz]").forEach(b => b.onchange = async () => { c.tailles[b.dataset.tz] = b.value; await sauver(); });
+    const bouger = async (i, d) => { const ids = qs.map(q => q.id); [ids[i], ids[i + d]] = [ids[i + d], ids[i]]; c.ordre = ids; await sauver(); rendre(); };
+    modal.querySelectorAll("[data-up]").forEach(b => b.onclick = () => bouger(Number(b.dataset.up), -1));
+    modal.querySelectorAll("[data-down]").forEach(b => b.onclick = () => bouger(Number(b.dataset.down), 1));
+    document.getElementById("camp-zero").onclick = async () => {
+      const v = await choisir("Recommencer l'année?", "Toutes les quêtes redeviennent « à faire » sur la carte. Les parties sauvegardées ne sont pas effacées.", [{ txt: "Oui, recommencer", v: "oui", cls: "gold" }, { txt: "Annuler", v: "non" }]);
+      if (v === "oui") { c.finies = []; c.vu = 0; await sauver(); }
+      rendre();
+    };
+    document.getElementById("camp-ok").onclick = fermer;
+  };
+  rendre();
+}
+document.getElementById("m-camp").onclick = ouvrirCampagne;
 async function afficherMonde() {
   fermerMenu();
   const m = document.getElementById("monde"); m.hidden = false;
@@ -5430,17 +5551,28 @@ async function afficherMonde() {
   const fond = carte.querySelector(".m-fond");
   if (src && MONDE.video) { if (fond.dataset.src !== src) { fond.dataset.src = src; videoEnBoucle(fond, src); } }
   else { delete fond.dataset.src; fond.innerHTML = src ? `<img src="${src}" alt="Carte du monde">` : MONDE_SVG; const im = fond.querySelector("img"); if (im) im.onload = ajusterMonde; }
-  const pris = [], pins = [];
+  const pris = [], pins = [], c = campagne(), enCamp = c.actif && !mondeEdit;
+  const { finies, prochaine } = etapesCampagne(), nouveau = enCamp && c.finies.length > (c.vu || 0);
+  const effets = [];
   for (const q of quetesDuMonde()) {
     const [x, y] = lieuDe(q, pris); pris.push([x, y]);
+    const fin = c.finies.includes(q.id), rang = finies.indexOf(q);
+    if (fin && c.effets[q.id] && c.effets[q.id] !== "rien") effets.push(`<div class="m-eff ${c.effets[q.id]}${nouveau && q.id === c.finies[c.finies.length - 1] ? " neuf" : ""}" style="left:${x * 100}%;top:${y * 100}%;--t:${c.tailles[q.id] || .24}"></div>`);
+    if (enCamp && !fin && q !== prochaine) continue;
+    const etat = !enCamp ? "" : fin ? ` finie" data-rang="${rang}` : ` suivante${nouveau ? " apparait" : ""}" data-rang="${finies.length}`;
     const equipes = (await Stock.parties(q.id)).length;
     const boss = (q.monstres || []).find(mo => mo.boss);
-    pins.push(`<button class="pin${mondeEdit ? " edit" : ""}" type="button" data-q="${esc(q.id)}" title="${esc(q.nom)}" aria-label="${esc(q.nom)}" style="left:${x * 100}%;top:${y * 100}%">
+    pins.push(`<button class="pin${mondeEdit ? " edit" : ""}${etat}" type="button" data-q="${esc(q.id)}" title="${esc(q.nom)}" aria-label="${esc(q.nom)}" style="left:${x * 100}%;top:${y * 100}%">
       ${mondeEdit ? `<span class="pin-del" data-del="${esc(q.id)}" role="button" aria-label="Retirer ${esc(q.nom)}">🗑</span>` : ""}
-      <span class="pin-coin">${boss ? imgMon(boss.look) || MONSVG[boss.look] || SVG[boss.look] || SVG.roi : q.id === "demo" ? imgMon("roi") : SVG.coffreDore}</span>
+      ${fin && c.actif ? `<span class="pin-ok" aria-label="Quête terminée">✓</span>` : ""}<span class="pin-coin">${boss ? imgMon(boss.look) || MONSVG[boss.look] || SVG[boss.look] || SVG.roi : q.id === "demo" ? imgMon("roi") : SVG.coffreDore}</span>
       <span class="pin-nom">${esc(q.nom.replace(" (démo)", ""))}<small>${q.chapitres.length} chapitre${q.chapitres.length > 1 ? "s" : ""}${equipes ? ` · ${equipes} équipe${equipes > 1 ? "s" : ""}` : ""}</small></span></button>`);
   }
   document.getElementById("m-pins").innerHTML = pins.join("");
+  document.getElementById("m-effets").innerHTML = effets.join("");
+  for (const e of document.querySelectorAll(".m-eff.neuf")) { e.style.opacity = 0; setTimeout(() => e.style.opacity = "", 600); }
+  for (const p of document.querySelectorAll(".pin.apparait")) p.style.animationDelay = RM.matches ? "0s" : "3s";
+  if (nouveau) { c.vu = c.finies.length; Stock.sauverMonde(MONDE); cheminNeuf = true; setTimeout(() => cheminNeuf = false, 3000); }
+  requestAnimationFrame(() => dessinerChemin(nouveau));
   document.getElementById("m-edit").textContent = mondeEdit ? "Terminer" : "Modifier les lieux";
   const nc = (MONDE.caches || []).length, rc = document.getElementById("m-caches");
   rc.hidden = !mondeEdit || !nc; rc.textContent = `Réafficher les quêtes retirées (${nc})`;
@@ -5453,6 +5585,7 @@ function ajusterMonde() {
   const ratio = fond && fond.videoWidth ? fond.videoHeight / fond.videoWidth : fond && fond.naturalWidth ? fond.naturalHeight / fond.naturalWidth : 1000 / 1600;
   const w = Math.min(wrap.clientWidth, wrap.clientHeight / ratio);
   carte.style.width = w + "px"; carte.style.height = w * ratio + "px"; carte.style.setProperty("--mw", w + "px");
+  dessinerChemin(cheminNeuf);
 }
 // Une vidéo courte (ex. 5 s de Canva) tourne en boucle : deux lecteurs se relaient en fondu pour cacher le raccord
 function videoEnBoucle(fond, src) {
@@ -5592,6 +5725,7 @@ new ResizeObserver(() => resize()).observe(wrap);
   await Stock.init();
   await remplirQuetes();
   MONDE = Object.assign({ image: null, lieux: {} }, await Stock.chargerMonde());
+  if (MONDE.campagne) MONDE.campagne = clone(MONDE.campagne); // une lecture du compte est figée
   let id = null; try { id = localStorage.getItem("donjon-quete"); } catch {}
   QUETE = [...INTEGREES, ...QUETES].find(x => x.id === id) || DEMO;
   document.getElementById("quete-sel").value = QUETE.id;
