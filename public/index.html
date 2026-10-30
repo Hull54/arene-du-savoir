@@ -546,6 +546,8 @@ function connect(name, cls, code = '', solo = false) {
     else if (m.t === 'fin') showFin(m);
     else if (m.t === 'route') ROUTE = m.pts;
     else if (m.t === 'debut') { $('fin').style.display = 'none'; document.querySelector('.wcontent').appendChild($('lookPanel')); }
+    else if (m.t === 'ailleurs') { ws.onclose = null; alert('Tu viens de te connecter sur un autre appareil : ton héros continue là-bas.'); location.reload(); }
+    else if (m.t === 'inactif') { ws.onclose = null; alert('Tu as été déconnecté parce que tu ne jouais plus. Reviens quand tu veux !'); location.reload(); }
     else if (m.t === 'kicked') { ws.onclose = null; alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
   };
   // coupure (Wi-Fi, serveur redémarré) : on réessaie toutes les 2 s pendant une minute, sans rien perdre

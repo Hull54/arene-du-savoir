@@ -2195,10 +2195,13 @@ setCarte(CARTES[0]);
 const stepT = setInterval(step, solo ? TICK * 2 : TICK);   // une partie à la maison coûte deux fois moins au serveur
 
 // ---------- Messages ----------
+const ACTIF = new Set(['atk', 'dash', 'pow', 'super', 'pet', 'ans', 'msg', 'achat', 'look']);
 function onMessage(conn, msg) {
   let m;
   try { m = JSON.parse(msg); } catch { return; }
   const p = conn.player;
+  // dernier geste de l'élève (bouger, attaquer, répondre…) : sert à fermer les connexions oubliées
+  if (p && (ACTIF.has(m.t) || m.t === 'in' && (m.u || m.d || m.l || m.r || m.jx || m.jy))) p.actif = Date.now();
   switch (m.t) {
     case 'join':
       if (p) return;
@@ -2208,9 +2211,21 @@ function onMessage(conn, msg) {
       // serveur réveillé qui a oublié les codes : on reprend la fiche gardée par l'appareil de l'élève
       if (code && !rec && m.fiche && String(m.fiche.code).toUpperCase() === code && FORMAT_CODE.test(code)) { rec = ficheCode(m.fiche); CODES.set(code, rec); }
       if (code && !rec) { send(conn, { t: 'codeFaux' }); return; }
+      // le même élève (même code, ou même prénom sans code) déjà dans l'arène : l'ancien appareil est déconnecté
+      // et le nouveau reprend sa place, au lieu d'avoir deux héros (« Léa » et « Léa 2 »)
+      const base = String(rec ? rec.nom : m.name || '').trim().slice(0, 16).toLowerCase();
+      const double = !solo && [...players.values()].find(q => !q.bot && (rec ? q.code === rec.code : !q.code && q.name.toLowerCase() === base));
+      if (double) {
+        cancelChest(double); players.delete(double.id);
+        if (double.conn) { send(double.conn, { t: 'ailleurs' }); double.conn.player = null; const s = double.conn.socket; setTimeout(() => s.destroy(), 500); }
+      }
       conn.player = createPlayer(rec ? rec.nom : m.name, m.cls, false, String(m.look || ''));
-      conn.player.conn = conn;
+      conn.player.conn = conn; conn.player.actif = Date.now();
       if (rec) conn.player.code = rec.code;
+      if (double) {
+        for (const k of ['kills', 'deaths', 'good', 'bad', 'streak', 'dmgBoss', 'obj', 'gear', 'team', 'gele']) if (double[k] !== undefined) conn.player[k] = double[k];
+        if (double.cls === conn.player.cls) Object.assign(conn.player, { x: double.x, y: double.y, hp: double.hp, alive: double.alive });
+      }
       const ancien = partis.get(conn.player.name);
       if (ancien && Date.now() - ancien.t < 120000 && ancien.cls === conn.player.cls) {   // retour après une coupure
         const { t, cls, team, ...garde } = ancien;
@@ -2481,6 +2496,15 @@ if (process.env.RENDER_EXTERNAL_URL) setInterval(() => {
 // toutes les 5 s : on ferme les connexions d'élèves muettes depuis 20 s (l'appareil envoie un signe de vie)
 setInterval(() => {
   for (const m of MONDES) for (const c of m.conns) if (c.player && c.role !== 'prof' && Date.now() - c.vu > 20000) c.socket.destroy();
+  // arène de la classe : un élève qui ne joue plus est déconnecté (appareil oublié ouvert, à la maison le soir…).
+  // Projecteur de l'enseignant ouvert : après 20 min sans jouer. Projecteur fermé : après 3 min.
+  const prof = [...classe.conns].some(c => c.role === 'prof');
+  for (const c of classe.conns) {
+    const q = c.player;
+    if (!q || q.bot || q.gele > 0 || c.oublie) continue;
+    const inactif = Date.now() - (q.actif || 0);
+    if (inactif > (prof ? 20 : 3) * 60000) { c.oublie = true; c.send(JSON.stringify({ t: 'inactif' })); setTimeout(() => c.socket.destroy(), 500); }
+  }
 }, 5000);
 
 server.listen(PORT, () => {
