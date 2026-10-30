@@ -659,7 +659,22 @@ function frame() {
   if (cv.width !== r.width * dpr) { cv.width = r.width * dpr; cv.height = r.height * dpr; }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.fillStyle = '#141b26'; ctx.fillRect(0, 0, r.width, r.height);
-  if (!map || !world) return;
+  if (!map || !world) {   // pas encore de données du serveur : on le dit au lieu d'un écran noir
+    ctx.font = '22px "Lexend", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#9fb0c8';
+    ctx.fillText(ws.readyState === 1 ? '⏳ En attente de la partie…' : '📶 Connexion au serveur… (F5 si ça dure)', r.width / 2, r.height / 2); ctx.textAlign = 'left';
+    return;
+  }
+  try { dessinerProjecteur(r, dpr); }
+  catch (e) {   // une erreur de dessin ne doit pas laisser le projecteur noir sans explication
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.font = '18px "Lexend", sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#ff8a7a';
+    ctx.fillText('⚠️ Problème d\'affichage : ' + e.message + ' (F5 pour recharger)', r.width / 2, r.height / 2); ctx.textAlign = 'left';
+    if (!erreursVues.has(e.message)) { erreursVues.add(e.message); console.error(e); send({ t: 'errClient', msg: String(e.stack || e).slice(0, 600) }); }
+  }
+}
+const erreursVues = new Set();
+// les canevas peuvent être effacés par le navigateur (veille, carte graphique) : on reconstruit les images en cache
+cv.addEventListener('contextrestored', () => { mapLayer = null; for (const c of [dynCache, heroCache]) for (const k in c) delete c[k]; });
+function dessinerProjecteur(r, dpr) {
   for (const p of world.p) {
     const d = disp.get(p.id);
     if (!d || Math.hypot(d.x - p.x, d.y - p.y) > 150) disp.set(p.id, { x: p.x, y: p.y });

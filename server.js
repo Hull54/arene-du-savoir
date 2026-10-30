@@ -2272,6 +2272,9 @@ function onMessage(conn, msg) {
       for (const q of players.values()) if (q !== p && q.conn && (coop() || (teamMode() && q.team === p.team))) send(q.conn, { t: 'msg', de: p.name, txt: MSGS[m.i] });
       break;
     }
+    case 'errClient':   // erreur d'affichage chez l'enseignant : on la garde dans le journal du serveur
+      if (conn.role === 'prof' && typeof m.msg === 'string') console.log('[erreur projecteur]', m.msg.slice(0, 600));
+      break;
     case 'prof':
       if (solo) return;
       conn.role = 'prof';
