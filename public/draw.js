@@ -1244,6 +1244,44 @@ function buildMapLayers(map) {
     }
     vt[y * AW + x] = t;
   }
+  // 1b) formes arrondies, toujours en pixels nets :
+  //   - sols : chaque pixel prend le sol le plus présent autour de lui (disque de 7 px) : coins ronds, escaliers lissés en courbes
+  //   - murs : seulement leurs coins sont un peu arrondis (ils doivent garder la forme de leurs collisions)
+  const RIGIDE = 'q';   // tapis de casse-tête : il garde ses carrés
+  const DISQUE = [];
+  for (let j = -7; j <= 7; j += 2) for (let i = -7; i <= 7; i += 2) if (i * i + j * j <= 50) DISQUE.push([i, j]);
+  const vt0 = vt.slice(), ids = new Map(), vi = new Int16Array(AW * AH), cnt = new Float32Array(128);
+  for (let k = 0; k < vt0.length; k++) { const t = vt0[k]; if (!ids.has(t)) ids.set(t, WALLS_T.includes(t) || RIGIDE.includes(t) ? -1 : ids.size + 1); vi[k] = ids.get(t); }
+  const deId = [...ids.entries()].reduce((o, [t, i]) => (o[i] = t, o), []);
+  for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {
+    const k = y * AW + x, t = vi[k];
+    if (t < 0) continue;
+    if (x >= 7 && y >= 7 && x < AW - 7 && y < AH - 7 && vi[k - 7] === t && vi[k + 7] === t && vi[k - 7 * AW] === t && vi[k + 7 * AW] === t
+      && vi[k - 5 * AW - 5] === t && vi[k - 5 * AW + 5] === t && vi[k + 5 * AW - 5] === t && vi[k + 5 * AW + 5] === t) continue;   // en plein milieu d'un sol : rien à lisser
+    let best = t, bn = 0;
+    for (const [i, j] of DISQUE) {
+      const xx = x + i, yy = y + j; if (xx < 0 || yy < 0 || xx >= AW || yy >= AH) continue;
+      const u = vi[yy * AW + xx]; if (u < 0) continue;
+      const n = (cnt[u] += u === t ? 1.5 : 1);
+      if (n > bn) { bn = n; best = u; }
+    }
+    for (const [i, j] of DISQUE) { const xx = x + i, yy = y + j; if (xx >= 0 && yy >= 0 && xx < AW && yy < AH) { const u = vi[yy * AW + xx]; if (u >= 0) cnt[u] = 0; } }
+    if (best !== t) vt[k] = deId[best];
+  }
+  for (let ty = 0; ty < map.rows; ty++) for (let tx = 0; tx < map.cols; tx++) {
+    const t = map.tiles[ty][tx];
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const a = tile(tx + dx, ty), b = tile(tx, ty + dy);
+      if (a !== b || a === t || tile(tx + dx, ty + dy) !== a || !(WALLS_T.includes(a) || WALLS_T.includes(t))) continue;
+      const r = 8, x0 = tx * TS + (dx < 0 ? 0 : TS - r), y0 = ty * TS + (dy < 0 ? 0 : TS - r);
+      const cx = tx * TS + (dx < 0 ? r : TS - r), cy = ty * TS + (dy < 0 ? r : TS - r);
+      for (let y = y0; y < y0 + r; y++) for (let x = x0; x < x0 + r; x++) {
+        const k = y * AW + x;
+        if (WALLS_T.includes(t) && Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > r) vt[k] = a;
+        else if (!WALLS_T.includes(t) && vt0[k] === t && Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > r) vt[k] = a;
+      }
+    }
+  }
   const V = (x, y) => (x < 0 || y < 0 || x >= AW || y >= AH ? vt[Math.max(0, Math.min(AH - 1, y)) * AW + Math.max(0, Math.min(AW - 1, x))] : vt[y * AW + x]);
   const isW = t => t === '~';
   // distance au rivage pour chaque pixel d'eau (deux passes, rapide) : sert à foncer l'eau profonde
@@ -1703,14 +1741,7 @@ function buildMapLayers(map) {
   const sg = sc.getContext('2d');
   sg.drawImage(top, 0, 0); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = 'rgba(16,12,24,0.34)'; sg.fillRect(0, 0, AW, AH);
   g.drawImage(sc, 4, 6);
-  // 2) quadrillage discret sur les sols praticables (1 case = 1 tuile)
-  const floorT = t => !WALLS_T.includes(t) && !WATER_T.includes(t);
-  g.fillStyle = map.theme === 'hiver' ? 'rgba(60,80,110,0.14)' : 'rgba(20,14,8,0.16)';
-  for (let j = 0; j < map.rows; j++) for (let i = 0; i < map.cols; i++) {
-    if (!floorT(tile(i, j))) continue;
-    if (i > 0 && floorT(tile(i - 1, j))) for (let y = 0; y < TS; y += 2) g.fillRect(i * TS, j * TS + y, 1, 1);
-    if (j > 0 && floorT(tile(i, j - 1))) for (let x = 0; x < TS; x += 2) g.fillRect(i * TS + x, j * TS, 1, 1);
-  }
+  // 2) (plus de quadrillage sur les sols : il rendait les cartes trop « carrées »)
   // 2b) décor de saison (selon le mois réel) : citrouilles, feuilles, cadeaux, bonshommes de neige, fleurs…
   decorSaison(g, map, herbe, TS, hsh);
   // 3) couleurs plus sobres : moins saturées, plus chaudes, avec des taches de lumière et des bords assombris
