@@ -169,6 +169,11 @@
       <table id="stats"></table>
       <button class="sec" id="export" style="margin-top:8px">📥 Exporter les résultats (Excel)</button>
       <button class="sec" id="bilans" style="margin-top:8px">🖨️ Bilans à imprimer (un par élève)</button>
+      <details style="margin-top:8px"><summary>📊 Google Sheet des bilans</summary>
+        <p style="font-size:13px;margin:6px 0">Colle l'URL /exec de ton script. Les totaux de chaque élève par type de question y sont envoyés tout seuls, pendant la séance.</p>
+        <input id="sheetUrl" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;box-sizing:border-box">
+        <div id="sheetEtat" style="font-size:12px;margin-top:4px;opacity:.8"></div>
+      </details>
     </div>
   </aside>
 </div>
@@ -212,7 +217,7 @@ ws.onmessage = e => {
   else if (m.t === 'fin') { showFin(m); send({ t: 'bilans', silent: true }); }   // l'historique des séances se met à jour à chaque fin de manche
   else if (m.t === 'debut') $('fin').style.display = 'none';
   else if (m.t === 'route') ROUTE = m.pts;
-  else if (m.t === 'bilans') { sauverHisto(m.memoire); if (!m.silent) bilans(m); }
+  else if (m.t === 'bilans') { sauverHisto(m.memoire); envoyerSheet(); if (!m.silent) bilans(m); }
 };
 // ----- Contrôle et dictée -----
 try { const r = JSON.parse(localStorage.getItem('arene-ctl') || 'null'); if (r) { $('ctlN').value = String(r.n); $('ctlCorr').checked = !!r.correction; } } catch {}
@@ -577,6 +582,34 @@ $('bilans').onclick = () => {
 };
 // Historique des séances (dans ce navigateur) : pour comparer les progrès d'une séance à l'autre
 function lireHisto() { try { const h = JSON.parse(localStorage.getItem('arene-historique') || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } }
+// ----- Envoi des totaux de la journée au Google Sheet de l'enseignant (même script que Classe et Donjon) -----
+let sheetUrl = ''; try { sheetUrl = String(localStorage.getItem('arene-sheet') || ''); } catch {}
+let sheetDernier = '';
+$('sheetUrl').value = sheetUrl;
+$('sheetEtat').textContent = sheetUrl ? 'Lien enregistré.' : '';
+$('sheetUrl').onchange = () => {
+  const u = $('sheetUrl').value.trim();
+  if (u && !/^https:\/\/script\.google(usercontent)?\.com\/.+\/exec/.test(u)) { $('sheetEtat').textContent = '⚠️ L\'adresse doit commencer par https://script.google.com/ et finir par /exec'; return; }
+  sheetUrl = u; sheetDernier = '';
+  try { localStorage.setItem('arene-sheet', u); } catch {}
+  $('sheetEtat').textContent = u ? 'Lien enregistré : envoi à la prochaine mise à jour des bilans.' : 'Envoi désactivé.';
+  if (u) send({ t: 'bilans', silent: true });
+};
+function envoyerSheet() {
+  if (!sheetUrl) return;
+  const d = jour(), e = lireHisto().find(x => x.d === d);
+  if (!e) return;
+  const lignes = [];
+  for (const [eleve, notions] of Object.entries(e.mem)) for (const [type, s] of Object.entries(notions)) {
+    if (!(s.ok + s.ko)) continue;
+    lignes.push({ cle: `arene|${d}|${eleve}|${type}`, date: d, source: `Séance du ${d}`, eleve, type, bonnes: s.ok, total: s.ok + s.ko });
+  }
+  const corps = JSON.stringify({ jeu: 'Arène', lignes });
+  if (!lignes.length || corps === sheetDernier) return;   // rien de neuf depuis le dernier envoi
+  fetch(sheetUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: corps })
+    .then(() => { sheetDernier = corps; $('sheetEtat').textContent = `✅ Envoyé à ${new Date().toLocaleTimeString('fr-CA', { hour: '2-digit', minute: '2-digit' })} (${lignes.length} lignes)`; })
+    .catch(() => { $('sheetEtat').textContent = '⚠️ Envoi impossible pour le moment, nouvel essai dans 2 minutes.'; });
+}
 function sauverHisto(mem) {
   const h = lireHisto(), d = jour();
   let e = h.find(x => x.d === d); if (!e) { e = { d, mem: {} }; h.push(e); }
