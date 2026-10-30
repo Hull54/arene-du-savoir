@@ -291,6 +291,7 @@ const BADGE_ICO = { serie5: '🔥', serie10: '🌋', studieux: '📚', sansFaute
 const MOTS = ['LOUP', 'OURS', 'RENARD', 'HIBOU', 'LYNX', 'CERF', 'AIGLE', 'CASTOR', 'ORIGNAL', 'HARFANG', 'BISON', 'DRAGON', 'GRIFFON', 'LICORNE', 'GOLEM', 'PHENIX', 'TORTUE', 'COMETE'];
 let codes = [];
 try { codes = JSON.parse(localStorage.getItem('arene-codes') || '[]'); } catch {}
+if (!Array.isArray(codes)) codes = [];   // réglage abîmé dans le navigateur : on repart à neuf plutôt que de bloquer la page
 const sauverCodes = (envoi = true) => { try { localStorage.setItem('arene-codes', JSON.stringify(codes)); } catch {} if (envoi) send({ t: 'codes', list: codes, remplace: true }); renderCodes(); };
 // résumé de la pratique à la maison d'un élève (sur sa fiche)
 function maisonTxt(r) {
@@ -324,9 +325,11 @@ setTimeout(renderCodes, 0);   // après la définition de esc()
 // ----- Mes questions : gardées dans ce navigateur, envoyées au jeu à chaque connexion -----
 let perso = [];
 try { perso = JSON.parse(localStorage.getItem('arene-perso') || '[]'); } catch {}
+if (!Array.isArray(perso)) perso = [];
 // notions cochées : gardées dans ce navigateur et renvoyées au jeu à chaque ouverture (le serveur gratuit oublie tout en s'endormant)
 let notionsOn = null;
 try { notionsOn = JSON.parse(localStorage.getItem('arene-notions') || 'null'); } catch {}
+if (!Array.isArray(notionsOn)) notionsOn = null;
 function cocher(liste, s, on) {
   const set = new Set(liste.filter(x => x.on).map(x => x.s));
   on ? set.add(s) : set.delete(s);
@@ -370,6 +373,7 @@ renderPerso();
 const NIV = { f: '🙂 Facile', n: 'Normal', d: '🔥 Défi' };
 let niv = {}, ouvertOn = false;
 try { niv = JSON.parse(localStorage.getItem('arene-niveaux') || '{}'); ouvertOn = localStorage.getItem('arene-ouvert') === '1'; } catch {}
+if (!niv || typeof niv !== 'object' || Array.isArray(niv)) niv = {};
 const envoyerNiv = v => { try { localStorage.setItem('arene-niveaux', JSON.stringify(niv)); localStorage.setItem('arene-ouvert', ouvertOn ? '1' : '0'); } catch {} send({ t: 'niveaux', v, ouvert: ouvertOn }); };
 $('ouvert').onchange = e => { ouvertOn = e.target.checked; envoyerNiv({}); };
 $('reset').onclick = () => confirm('Commencer une nouvelle manche ? Les scores seront remis à zéro.') && send({ t: 'reset' });
@@ -571,7 +575,7 @@ $('bilans').onclick = () => {
 };
 // Historique des séances (dans ce navigateur) : pour comparer les progrès d'une séance à l'autre
 const jour = () => new Date().toLocaleDateString('fr-CA');
-function lireHisto() { try { return JSON.parse(localStorage.getItem('arene-historique') || '[]'); } catch { return []; } }
+function lireHisto() { try { const h = JSON.parse(localStorage.getItem('arene-historique') || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } }
 function sauverHisto(mem) {
   const h = lireHisto(), d = jour();
   let e = h.find(x => x.d === d); if (!e) { e = { d, mem: {} }; h.push(e); }
