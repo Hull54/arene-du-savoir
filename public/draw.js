@@ -763,14 +763,78 @@ function spriteFor(o, TH = THEMES.village) {
     P.disc(w - 24, 10, 3, '#d8302a'); P.px(w - 24, 6, '#5a3a20'); P.px(w - 23, 6, '#4fa060');
     P.rect(w - 12, 6, 6, 7, '#f4f0e6'); P.rect(w - 6, 8, 2, 3, '#f4f0e6'); P.rect(w - 11, 7, 4, 1, '#5a361e');
     P.rect(30, 9, 18, 4, '#3f6fb5'); P.rect(30, 9, 18, 1, '#6a94d8');
-  } else if (kind === 'grandpupitre') {   // pupitre géant avec sa chaise bleue, un cahier et un crayon
-    P = new Painter(w + 2, h + 34); ax = 1; ay = 14;
-    P.rect(1, 2, w, 14, '#d8ab70'); P.rect(1, 2, w, 2, '#ecc890'); P.rect(1, 15, w, 2, '#a87a48');
-    P.rect(4, 17, 3, h, '#8a8f99'); P.rect(w - 5, 17, 3, h, '#8a8f99'); P.rect(1, 16, w, h - 2, '#5a4a3a');   // casier sous le pupitre
-    P.rect(6, 4, 14, 9, '#f8f4ec'); P.rect(6, 4, 2, 9, '#e0405a'); for (let y = 6; y < 12; y += 2) P.rect(9, y, 10, 1, '#9fc6e0');
-    P.rect(24, 8, 14, 2, '#ffd84a'); P.rect(38, 8, 3, 2, '#e8c89a'); P.px(41, 8, '#3a3846'); P.rect(22, 8, 2, 2, '#ff8aa8');
-    const cx = Math.floor(w / 2) - 8;                                                     // chaise
-    P.rect(cx, h + 16, 16, 8, '#3f6fb5'); P.rect(cx, h + 16, 16, 2, '#6a94d8'); P.rect(cx + 1, h + 24, 2, 8, '#55525f'); P.rect(cx + 13, h + 24, 2, 8, '#55525f');
+  } else if (kind === 'grandpupitre') {   // table grise de la classe (dessus stratifié, pattes de métal), Chromebooks, chaises bleues
+    P = new Painter(w + 2, h + 30); ax = 1; ay = 14;
+    const chaise = (cx, y, dos) => {   // chaise bleue en plastique vue de haut : siège, dossier, pattes chromées
+      P.rect(cx, y, 12, 9, '#2f5fb8'); P.rect(cx, y, 12, 2, '#5a86d8'); P.rect(cx + 1, y + 8, 10, 1, '#1f4290');
+      if (dos) { P.rect(cx - 1, y - 3, 14, 4, '#2a54a6'); P.rect(cx - 1, y - 3, 14, 1, '#5a86d8'); }
+      P.rect(cx + 1, y + 9, 1, 3, '#a8aeb8'); P.rect(cx + 10, y + 9, 1, 3, '#a8aeb8');
+    };
+    for (let cx = 6; cx + 12 < w; cx += 22) chaise(cx, 2, true);                      // chaises de l'autre côté
+    P.rect(1, 10, w, h + 2, '#6f757e'); P.rect(1, 10, w, 2, '#b4bac2'); P.rect(1, 12, w, h - 2, '#858b94');   // dessus gris
+    P.rect(1, h + 10, w, 2, '#4a4f57'); P.rect(2, h + 12, 2, 6, '#a8aeb8'); P.rect(w - 3, h + 12, 2, 6, '#a8aeb8');
+    for (let i = 0; i < 3; i++) P.px(5 + i * 17, 14 + (i % 2) * 5, '#9aa0a8');                // reflets du stratifié
+    const pc = (x, y) => { P.rect(x, y, 14, 7, '#2e3440'); P.rect(x + 1, y + 1, 12, 5, (x + y) % 3 ? '#4a7ac8' : '#e8b84a'); P.rect(x + 1, y + 1, 12, 1, '#9fc0f0'); P.rect(x - 1, y + 7, 16, 4, '#c8ccd2'); P.rect(x, y + 8, 14, 2, '#9aa0a8'); };
+    pc(6, 11); if (w > 40) pc(w - 22, 13);
+    P.rect(Math.floor(w / 2) - 4, 16, 8, 5, '#f8f4ec'); P.rect(Math.floor(w / 2) - 3, 17, 6, 1, '#9fc6e0'); P.rect(Math.floor(w / 2) + 5, 19, 6, 1, '#e0405a');   // feuille et crayon
+    for (let cx = 12; cx + 12 < w; cx += 24) chaise(cx, h + 14, false);               // chaises devant
+  } else if (kind === 'bacs') {   // étagère de bois sous le tableau : cases avec des bacs de couleur et des piles de feuilles
+    P = new Painter(w + 2, h + 18); ax = 1; ay = 16;
+    P.rect(1, 2, w, h + 15, '#c89a62'); P.rect(1, 2, w, 2, '#e4bc84'); P.rect(1, h + 15, w, 2, '#8a6236');
+    const cols = ['#e04a8a', '#3fbf5a', '#3a7ae0', '#ffd84a', '#ff8a3a', '#8e4ce0'];
+    for (let x = 3, k = 0; x + 10 < w; x += 12, k++) {
+      P.rect(x, 6, 10, h + 7, '#5a3a20');                                                     // case
+      P.rect(x + 1, 10, 8, h + 2, cols[k % cols.length]); P.rect(x + 1, 10, 8, 1, '#ffffff66');
+      if (k % 2 === 0) { P.rect(x + 2, 3, 6, 7, '#f8f4ec'); P.rect(x + 3, 2, 5, 2, '#ffffff'); P.px(x + 4, 4, cols[(k + 2) % 6]); }   // feuilles qui dépassent
+    }
+  } else if (kind === 'crochets') {   // crochets à manteaux : manteaux, sac bleu, tuque
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 20;
+    P.rect(1, 3, w, 3, '#8a6a44'); P.rect(1, 3, w, 1, '#b08a5c');
+    const habits = ['#2a3a6a', '#7a2a2a', '#3a5a8a', '#4a4a52', '#2f6a4a'];
+    for (let x = 3, k = 0; x + 8 < w; x += 11, k++) {
+      P.rect(x + 3, 4, 2, 3, '#c8c8d0');
+      const c = habits[k % habits.length]; P.rect(x, 7, 9, h + 11, c); P.rect(x, 7, 9, 2, shade(c, 1.3)); P.rect(x + 4, 9, 1, h + 8, shade(c, 0.7));
+    }
+    P.disc(Math.floor(w / 2), h + 12, 6, '#2f5fb8'); P.disc(Math.floor(w / 2) - 2, h + 10, 2, '#5a86d8');   // le gros sac bleu
+  } else if (kind === 'comptoir') {   // long comptoir aux portes orange : gourdes, évier, cafetière, distributeur de papier
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 18;
+    P.rect(1, 10, w, h + 11, '#e08a1e'); P.rect(1, 6, w, 6, '#6e655c'); P.rect(1, 6, w, 1, '#948a80'); P.rect(1, 11, w, 1, '#4a433c');
+    for (let x = 2; x < w - 10; x += 16) { P.rect(x, 13, 15, h + 7, '#f09a2a'); P.rect(x, 13, 15, 1, '#ffb850'); P.rect(x + 14, 13, 1, h + 7, '#b86a10'); P.rect(x + 6, 15, 3, 1, '#5a3a20'); }
+    const gourdes = ['#e04a5a', '#3a7ae0', '#3fbf5a', '#f4f0e6', '#8e4ce0', '#ffd84a', '#2a2a34', '#ff8aa8', '#3fc8c8'];
+    for (let x = 6, k = 0; x < w * 0.45; x += 4, k++) { const hh = 5 + (k * 7) % 4, c = gourdes[k % gourdes.length]; P.rect(x, 8 - hh, 3, hh, c); P.rect(x, 8 - hh, 3, 1, shade(c, 1.4)); P.px(x + 1, 7 - hh, '#2a2a34'); }
+    for (let x = Math.floor(w * 0.45), k = 0; k < 6; x += 6, k++) { P.rect(x, 3, 5, 5, '#e03a3a'); P.rect(x, 3, 5, 1, '#ff7a6a'); }   // gobelets rouges
+    const ev = Math.floor(w * 0.62); P.rect(ev, 6, 22, 5, '#b8bec6'); P.rect(ev + 2, 7, 18, 3, '#7a8088'); P.rect(ev + 10, 2, 2, 5, '#d8dee6');   // évier
+    const cf = Math.floor(w * 0.8); P.rect(cf, 0, 12, 9, '#c8ccd2'); P.rect(cf + 1, 1, 10, 3, '#3a3f48'); P.rect(cf + 3, 5, 6, 3, '#2a2a34');   // cafetière
+    P.rect(w - 12, 0, 8, 8, '#2a2a34'); P.rect(w - 11, 6, 6, 3, '#f4f0e6');   // distributeur de papier
+  } else if (kind === 'tabouret') {   // tabouret orange en métal
+    P = new Painter(w + 4, h + 12); ax = 2; ay = 9;
+    P.ellipse(Math.floor((w + 4) / 2), 5, Math.floor(w / 2) + 1, 4, '#e8641e'); P.ellipse(Math.floor((w + 4) / 2) - 1, 4, Math.floor(w / 2) - 1, 2, '#ff8a3a');
+    P.rect(2, 9, 2, h + 2, '#c84a12'); P.rect(w, 9, 2, h + 2, '#c84a12'); P.rect(2, h + 6, w, 1, '#a83a0e');
+  } else if (kind === 'serre') {   // étagère blanche en métal avec des semis sous les lampes de croissance
+    P = new Painter(w + 2, h + 30); ax = 1; ay = 28;
+    P.rect(1, 0, 2, h + 29, '#e8ecf0'); P.rect(w - 2, 0, 2, h + 29, '#e8ecf0');
+    for (const y of [0, 10, 20]) {
+      P.rect(1, y, w, 2, '#f8fbff'); P.rect(3, y + 2, w - 4, 1, '#fffbe0');                     // lampe
+      P.rect(3, y + 8, w - 4, 2, '#d8dde4');
+      for (let x = 5; x < w - 4; x += 5) { P.rect(x, y + 6, 4, 2, '#7a4a2a'); P.rect(x + 1, y + 4, 2, 2, '#4fbf4a'); P.px(x + (x % 2), y + 3, '#7ce06a'); }
+    }
+    P.rect(3, h + 22, w - 4, 6, '#2a2a34');
+  } else if (kind === 'banc') {   // banc sous les fenêtres, avec ses coussins bleu marine
+    P = new Painter(w + 6, h + 8); ax = 3; ay = 6;
+    P.rect(2, 4, w + 2, h + 2, '#9aa0a8'); P.rect(2, 4, w + 2, 1, '#c8ccd2');
+    for (let y = 6; y < h + 2; y += 18) { P.rect(3, y, w, 15, '#2a3550'); P.rect(3, y, w, 2, '#4a5a80'); P.rect(4, y + 7, w - 2, 1, '#1e273e'); }
+  } else if (kind === 'bureauprof') {   // le bureau du Prof : écran Dell, haut-parleurs, ballon de volley, agrafeuse, tuque rouge
+    P = new Painter(w + 2, h + 26); ax = 1; ay = 22;
+    P.rect(1, 12, w, h + 12, '#a8763e'); P.rect(1, 12, w, 2, '#c8965a'); P.rect(1, h + 22, w, 2, '#6e4a24');
+    P.rect(4, h + 14, w - 8, 8, '#8a5e30');
+    const m = Math.floor(w * 0.55); P.rect(m, 0, 30, 18, '#1e2128'); P.rect(m + 2, 2, 26, 13, '#f4f6f8'); P.rect(m + 4, 4, 22, 2, '#2a3140');
+    for (let i = 0; i < 4; i++) P.rect(m + 4 + i * 6, 7, 5, 6, ['#3a4250', '#e04a5a', '#3fbf5a', '#e8a33a'][i]);   // le tableau des équipes à l'écran
+    P.rect(m + 13, 18, 4, 3, '#2a2a34'); P.rect(m + 4, 23, 22, 3, '#2a2a34');                                 // pied et clavier
+    P.rect(m - 10, 4, 8, 14, '#e8d8b8'); P.rect(m - 9, 9, 6, 6, '#2a2a34'); P.disc(m - 6, 12, 2, '#55525f');  // haut-parleur
+    P.disc(m - 22, 14, 6, '#f8f8f8'); P.rect(m - 26, 12, 8, 2, '#d83a3a'); P.rect(m - 24, 16, 6, 2, '#3a5ab8');   // ballon de volley
+    P.rect(8, 16, 18, 12, '#f8f4ec'); P.rect(10, 18, 14, 1, '#9fc6e0'); P.rect(10, 21, 12, 1, '#9fc6e0'); P.rect(14, 14, 16, 10, '#ffffff');   // copies à corriger
+    P.rect(30, 22, 10, 3, '#2a2a34'); P.rect(30, 22, 10, 1, '#55525f');                                      // agrafeuse
+    P.ellipse(m - 34, 18, 6, 4, '#d0502a'); P.rect(m - 39, 19, 10, 2, '#a83a1e');                              // tuque rouge
   } else if (kind === 'crayon') {   // crayon géant couché
     P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
     P.rect(8, 2, w - 18, h + 4, '#ffd84a'); P.rect(8, 2, w - 18, 2, '#fff0a0'); P.rect(8, h + 3, w - 18, 2, '#e8b83a');
@@ -957,6 +1021,69 @@ function peindreEcole(g, map, tile, TS) {
     g.drawImage(P.outline().canvas(), i * TS, j * TS);
   }
   for (const d of map.decos || []) if (d.kind === 'bus') g.drawImage(busSprite(d), Math.round(d.x / PX), Math.round(d.y / PX));
+}
+// Classe du Prof : tout ce qui est accroché au mur du tableau, et une guirlande de lumières
+function peindreClasse(g, map) {
+  const ecrire = (P, txt, x, y, c) => { for (const l of txt) { if (l !== ' ') lettrePix(P, l, x, y, 1, c); x += 4; } };
+  for (const d of map.decos || []) {
+    const x = Math.round(d.x / PX), y = Math.round(d.y / PX), w = Math.round(d.w / PX), h = Math.round(d.h / PX), P = new Painter(w, h);
+    if (d.kind === 'tableauvert') {   // double tableau vert, cadre de bois, écriture à la craie, rebord avec craies et brosse
+      P.rect(0, 0, w, h - 3, '#a8763e');
+      const mx = Math.floor(w / 2);
+      for (const [x0, x1] of [[2, mx - 1], [mx + 1, w - 2]]) {
+        P.rect(x0, 2, x1 - x0, h - 7, '#2f5d3a');
+        for (let k = 0; k < 40; k++) P.px(x0 + ((k * 37) % (x1 - x0)), 3 + ((k * 13) % (h - 9)), '#3a6b46');   // traces d'effaçage
+      }
+      const cr = '#eef2e6';
+      ecrire(P, 'URGENT', 6, 5, '#ffd0d0'); P.rect(6, 11, 23, 1, '#ffd0d0');
+      ecrire(P, 'JE DOIS', 6, 14, cr); for (let k = 0; k < 3; k++) P.rect(8, 21 + k * 3, 20 + (k * 7) % 14, 1, '#c9d6c4');
+      ecrire(P, 'JE PEUX', 60, 5, cr); for (let k = 0; k < 4; k++) P.rect(62, 12 + k * 4, 26 + (k * 11) % 18, 1, '#c9d6c4');
+      ecrire(P, 'DEVOIRS', mx + 8, 5, '#ffe9a8'); P.rect(mx + 8, 11, 27, 1, '#ffe9a8');
+      for (let k = 0; k < 4; k++) { P.rect(mx + 10, 14 + k * 4, 2, 1, cr); P.rect(mx + 14, 14 + k * 4, 30 + (k * 9) % 20, 1, '#c9d6c4'); }
+      for (let k = 0; k < 5; k++) P.rect(mx + 80 + (k % 2) * 4, 8 + k * 4, 34 - (k * 5) % 12, 1, '#c9d6c4');
+      P.rect(mx + 140, 6, 1, 18, '#c9d6c4'); P.rect(mx + 128, 14, 26, 1, '#c9d6c4');   // un petit tableau tracé à la craie
+      P.rect(0, h - 4, w, 3, '#8a5a2b'); P.rect(0, h - 4, w, 1, '#c08a52');                // rebord
+      P.rect(30, h - 5, 5, 1, '#ffffff'); P.rect(40, h - 5, 4, 1, '#ffe066'); P.rect(mx + 60, h - 6, 9, 2, '#3a3a46');
+    } else if (d.kind === 'affiches') {   // lettres de l'alphabet sur cartons rouges et blancs, au-dessus du tableau
+      const n = Math.floor(w / 13);
+      for (let k = 0; k < n; k++) {
+        const bx = k * 13 + 1, rouge = k % 2 === 0;
+        P.rect(bx, 0, 11, h, rouge ? '#d8404a' : '#f4f0e6');
+        lettrePix(P, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[k % 26], bx + 4, 2, 1, rouge ? '#ffffff' : '#d8404a');
+      }
+    } else if (d.kind === 'pochettes') {   // tableau à pochettes noir avec des fiches de couleur
+      P.rect(0, 0, w, h, '#26242e');
+      for (let r = 0; r < 6; r++) for (let k = 0; k < 4; k++) {
+        const c = ['#f4f0e6', '#ffd84a', '#7fd0ff', '#ff9ab0', '#9fe08a'][(r * 3 + k) % 5];
+        if ((r + k) % 3 !== 2) P.rect(3 + k * 11, 3 + r * 6, 8, 3, c);
+        P.rect(2, 6 + r * 6, w - 4, 1, '#3c3a46');
+      }
+    } else if (d.kind === 'horloge') {
+      P.disc(Math.floor(w / 2), Math.floor(h / 2), Math.floor(Math.min(w, h) / 2) - 1, '#f4f0e6');
+      P.rect(Math.floor(w / 2), 3, 1, Math.floor(h / 2) - 3, '#1b1424'); P.rect(Math.floor(w / 2), Math.floor(h / 2), 4, 1, '#1b1424');
+      P.px(Math.floor(w / 2) - 3, Math.floor(h / 2) + 2, '#d8404a');
+    } else if (d.kind === 'porte') {   // porte gris foncé, petite fenêtre, cadre orange
+      P.rect(0, 0, w, h, '#e08a2a'); P.rect(3, 3, w - 6, h - 3, '#4a4a52'); P.rect(4, 4, 1, h - 4, '#5c5c66');
+      P.rect(Math.floor(w / 2) - 3, 9, 7, 12, '#9fd6ff'); P.rect(Math.floor(w / 2) - 3, 9, 2, 12, '#d8f0ff');
+      P.rect(w - 9, Math.floor(h / 2) + 2, 4, 2, '#c8ccd4');
+    } else if (d.kind === 'ecrantv') {   // grand écran noir sur pied
+      P.rect(0, 0, w, h - 4, '#1b1b22'); P.rect(2, 2, w - 4, h - 8, '#2a3a5a');
+      P.rect(4, 4, w - 8, 10, '#3a5a8a'); P.rect(6, 6, 20, 2, '#ffffff'); P.rect(6, 10, 34, 1, '#a8c8f0');
+      P.rect(Math.floor(w / 2) - 2, h - 4, 4, 4, '#3a3a46');
+    } else if (d.kind === 'calculatrice') {   // affiche de la calculatrice géante
+      P.rect(0, 0, w, h, '#3a3a46'); P.rect(2, 2, w - 4, 7, '#b8d8a8'); P.rect(w - 10, 4, 6, 3, '#3a4a3a');
+      for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) P.rect(3 + k * 6, 12 + r * 5, 4, 3, k === 3 ? '#e08a2a' : '#d8d8de');
+    } else continue;
+    g.drawImage(P.outline().canvas(), x, y);
+  }
+  // guirlande de lumières de couleur tout le long du mur du tableau
+  const W = map.cols * 16 - 16, cols = ['#ff5a6a', '#ffd84a', '#6ad0ff', '#8ae07a', '#ff9a3a'];
+  g.fillStyle = '#2a2a2a';
+  for (let x = 16; x < W; x++) g.fillRect(x, 4 + Math.round(Math.sin(x / 24 * Math.PI) ** 2 * 4), 1, 1);
+  for (let x = 22, k = 0; x < W; x += 12, k++) {
+    const yy = 5 + Math.round(Math.sin(x / 24 * Math.PI) ** 2 * 4);
+    g.fillStyle = 'rgba(255,240,180,0.35)'; g.fillRect(x - 1, yy - 1, 4, 5); g.fillStyle = cols[k % 5]; g.fillRect(x, yy, 2, 3);
+  }
 }
 // autobus scolaire vu de haut (sans toit) : murs jaunes avec fenêtres, allée, bancs verts, porte avant et sortie de secours
 function busSprite(d) {
@@ -1347,9 +1474,14 @@ function buildMapLayers(map) {
           if (h < 0.03) c = lg[1];
         }
         if (edge) c = OUT;
+      } else if (t === 'b' && map.id === 'classe' && ty <= 2 && tx > 0 && tx < map.cols - 1) {
+        // ----- classe du Prof : mur du tableau en panneaux beiges -----
+        c = (x % 48 === 0 || x % 48 === 47) ? '#b8ab8e' : ly % 16 === 15 && ty < 2 ? '#cbbf9f' : '#dcd0b2';
+        if (ty === 0 && ly < 3) c = ly === 2 ? '#a89a7c' : '#efe6cc';
+        if (ty === 2 && ly >= 12) c = ly === TS - 1 ? OUT : ly === 12 ? '#efe6cc' : '#8a7c62';   // plinthe
       } else {
         const P = {
-          b: ['#b0603a', '#7e3a20', '#8a4428', '#5e2a16', '#cf7a4a'],
+          b: map.id === 'classe' ? ['#2a95a2', '#1a6a75', '#22808c', '#135560', '#4fb3bd'] : ['#b0603a', '#7e3a20', '#8a4428', '#5e2a16', '#cf7a4a'],
           '#': ['#a3abb5', '#7d858f', '#7a828d', '#5c636d', '#c3cad3'],
           k: ['#5e5a72', '#48445a', '#454157', '#332f43', '#76728a'],
           x: ['#9b6b3a', '#7a4b25', '#8b5a2b', '#5e3a1a', '#b8844c'],
@@ -1523,6 +1655,10 @@ function buildMapLayers(map) {
       else if (t === 'a') {   // asphalte de la cour : gris chaud, petits graviers
         c = noise(x / 14, y / 14, 31) > 0.6 ? '#6c6a72' : '#76747c'; if (h < 0.05) c = '#5e5c64'; else if (h > 0.985) c = '#8e8c94';
       }
+      else if (t === 'l' && map.id === 'classe') {   // vinyle gris pâle moucheté de la classe
+        c = h < 0.06 ? '#a9a9a6' : h > 0.93 ? '#e4e4e0' : h > 0.85 ? '#d3d3cf' : '#c9c9c4';
+        if (x % 32 === 0 || y % 32 === 0) c = '#bdbdb8';
+      }
       else if (t === 'l') {   // linoléum en damier : corridor et cafétéria
         const cx = Math.floor(x / 8), cy = Math.floor(y / 8);
         c = (cx + cy) % 2 ? '#e8e0cc' : (map.theme === 'ecole' && (cx * 3 + cy * 5) % 7 === 0 ? '#7fb2d8' : '#cfc4aa');
@@ -1580,6 +1716,7 @@ function buildMapLayers(map) {
   function dy0(y, cl) { return y - cl.py < -3; }
   g.putImageData(img, 0, 0);
   if (map.theme === 'ecole') peindreEcole(g, map, tile, TS);
+  if (map.id === 'classe') peindreClasse(g, map);
   if (map.theme === 'caverne') peindreChampignons(g, map, tile, TS);
 
   const top = document.createElement('canvas'); top.width = AW; top.height = AH;

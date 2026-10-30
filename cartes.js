@@ -451,7 +451,7 @@ function ecole() {
   for (const [x0, y0] of [[2, 2], [13, 2]]) { A.obj('tableau', x0 + 3, y0, 4, 0.5); for (let i = 0; i < 3; i++) A.obj('pupitre', x0 + 1.3 + i * 3, y0 + 2.2, 1.2, 0.7); }
   for (const [x0, y0] of [[2, 11], [13, 11]]) { for (let i = 0; i < 3; i++) A.obj('pupitre', x0 + 1.3 + i * 3, y0 + 1.6, 1.2, 0.7); }
   for (const [x, y] of [[25, 2.4], [32, 4.6]]) A.obj('tablecaf', x, y, 3, 0.8);
-  A.obj('sofa', 32, 11.2, 3, 0.8); A.obj('shelf', 29.4, 11, 1.4, 0.9);
+  A.obj('sofa', 32, 11.2, 3, 0.8); A.obj('shelf', 29.1, 12.9, 1.4, 0.9);   // dans le coin, pas devant la porte
   A.obj('panier', 38.4, 7.4, 0.6, 1.2); A.obj('panier', 49, 7.4, 0.6, 1.2);
   A.obj('panier', 14, 23.5, 0.6, 1.2); A.obj('panier', 39.4, 23.5, 0.6, 1.2);
   A.obj('balancoire', 3, 18, 4, 1); A.obj('glissade', 9, 17.6, 1.4, 2);
@@ -481,25 +481,34 @@ function ecole() {
 // La classe vue en très grand : le tableau et le bureau du Prof au nord, des rangées de pupitres pour se cacher,
 // un coin lecture, une table de sciences et les casiers du fond.
 function classe() {
+  // La vraie classe de 5e année : murs de blocs turquoise, grand tableau vert, tables grises et chaises bleues,
+  // comptoir orange au fond, plantes sous les lampes, bureau du Prof avec son écran et son ballon de volley.
   const A = atelier('classe', 5151, 'l');
   A.border('b', 1);
   A.fill(1, 1, 50, 2, 'b');                                                  // mur du tableau
-  for (const x of [8, 20, 32]) A.obj('tableau', x, 2.2, 10, 0.6);
-  A.obj('bureau', 23, 6, 6, 1.6);                                            // bureau du Prof
-  A.setHeal(45, 30.5, 'fontaine');
-  // rangées de pupitres géants (on est minuscule à côté !)
-  for (const y of [10.5, 16.5, 22.5]) for (const x of [5.5, 12.5, 19.5, 29, 36, 43]) A.obj('grandpupitre', x, y, 3.4, 1.4);
-  // fournitures géantes qui traînent par terre
-  A.obj('crayon', 24.5, 14, 5, 0.8); A.obj('gomme', 26.5, 20.3, 2, 1.2); A.obj('regle', 15, 28.5, 7, 0.6); A.obj('sac', 33, 27.5, 2, 1.6); A.obj('sac', 47.5, 15, 2, 1.6);
-  // coin lecture (tapis-puzzle, sofa, bibliothèque) et table de sciences
-  A.fill(3, 25, 9, 8, 'q'); A.obj('sofa', 4, 25.3, 3, 0.8); A.obj('shelf', 8.5, 25, 1.4, 0.9);
-  A.obj('tablecaf', 41, 8, 5, 0.9); A.obj('globe', 47, 7.5, 1.6, 1); A.obj('telescope', 37.5, 7, 1, 0.8);
-  // casiers du fond : on s'y cache
-  for (const x of [16, 22, 28, 34]) A.bush(x, 34.8, 0.85, 'casier');
-  for (const y of [8, 14, 20]) A.bush(1.9, y, 0.85, 'casier');
-  for (const [x, y] of [[3, 4], [48, 4], [26, 24], [6, 30], [44, 26]]) A.chest(x, y);
-  for (const [x, y] of [[10, 9], [40, 12], [14, 30], [38, 31], [26, 16], [26, 27]]) A.spot(x, y);
-  return fin(A, 'classe', 'Salle de classe géante', 'ecole', 'La classe en très grand : tableau, bureau du Prof, pupitres pour se cacher, coin lecture et casiers');
+  // sur le mur du fond : pochettes, double tableau vert, affiches, horloge, porte, grand écran, calculatrice géante
+  A.deco('pochettes', 7.2, 0.4, 3, 2.3); A.deco('tableauvert', 12, 0.7, 24, 2.1); A.deco('affiches', 14, 0.15, 20, 0.6);
+  A.deco('horloge', 37.3, 0.5, 0.9, 0.9); A.deco('porte', 39.5, 0.2, 2.6, 2.8); A.deco('ecrantv', 43.2, 0.5, 4.2, 2.3); A.deco('calculatrice', 48.2, 0.6, 1.6, 2.1);
+  // sous le tableau : étagères à bacs de couleur et piles de feuilles
+  for (const x of [13, 20.5, 28]) A.obj('bacs', x, 3.8, 6, 0.9);
+  A.obj('crochets', 46.5, 3, 4, 0.8);                                         // manteaux et sacs près de la porte
+  // îlots de tables grises (deux tables collées, chaises bleues autour) : on se cache derrière, le Prof les brise
+  for (const y of [9, 15.5, 22]) for (const x of [4, 13, 32.5, 41.5]) { A.obj('grandpupitre', x, y, 3.8, 1.3); A.obj('grandpupitre', x + 3.8, y, 3.8, 1.3); }
+  for (const y of [12.5, 19]) A.obj('grandpupitre', 22.5, y, 3.8, 1.3), A.obj('grandpupitre', 26.3, y, 3.8, 1.3);
+  // fond de la classe : long comptoir orange (gourdes, évier, cafetière), tabourets orange, étagère de plantes sous les lampes
+  A.obj('comptoir', 8, 33.1, 22, 1.6); for (const x of [10, 13, 16.5, 22, 25.5]) A.obj('tabouret', x, 31.3, 0.7, 0.6);
+  A.obj('serre', 2.2, 29.5, 3.2, 1.2); A.obj('serre', 32, 33.1, 3.2, 1.2);
+  A.obj('banc', 1.15, 12, 1, 6.5);                                           // banc à coussins sous les fenêtres
+  A.obj('bureauprof', 41, 28.5, 6.5, 1.8);                                   // le bureau du Prof (écran, haut-parleurs, ballon)
+  A.obj('globe', 48.3, 28.8, 1.2, 0.8);
+  A.obj('sofa', 13.5, 25.6, 3, 0.8); A.obj('shelf', 17.2, 25.5, 1.4, 0.9);   // petit coin lecture
+  A.setHeal(20, 30.6, 'fontaine');
+  // cachettes : sacs à dos et manteaux
+  A.bush(37, 33.6, 0.85, 'casier'); A.bush(49, 34.2, 0.85, 'casier');
+  for (const y of [22, 26]) A.bush(2.4, y, 0.85, 'casier');
+  for (const [x, y] of [[3, 5], [49, 8], [26, 25.5], [6, 27], [36, 30]]) A.chest(x, y);
+  for (const [x, y] of [[10, 6], [40, 12], [14, 28], [38, 26], [26, 9], [26, 28]]) A.spot(x, y);
+  return fin(A, 'classe', 'Salle de classe du Prof', 'ecole', 'La classe du Prof : grand tableau vert, tables grises et chaises bleues, comptoir orange, plantes et le bureau du Prof');
 }
 
 // ---------- Caverne ----------
