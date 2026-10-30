@@ -34,6 +34,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 .top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .brand { font-family: var(--display); font-size: 1.9rem; font-weight: 700; color: var(--gold); letter-spacing: .02em; line-height: 1; }
+.compte-hud { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; padding: 3px 12px; border-radius: 999px; background: #5a1f1a; border: 1px solid #e0705f; color: #ffe3dc; font-family: var(--body); font-size: .9rem; font-weight: 700; }
+.compte-hud.urgent { animation: urgence 1s ease-in-out infinite; }
+@keyframes urgence { 50% { background: #a3281c; box-shadow: 0 0 14px #ff6b4a; } }
+@media (prefers-reduced-motion: reduce) { .compte-hud.urgent { animation: none; background: #a3281c; } }
+.diff-row button { font-size: 1rem; padding: 8px 14px; }
 .brand small { display: block; font-family: var(--body); font-size: .72rem; font-weight: 400; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; margin-top: 4px; }
 .turn { display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); min-width: 0; }
 .turn img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
@@ -87,6 +92,17 @@ body.editing .board { cursor: crosshair; }
 .tok.hero.active .coin { animation: halo 1.8s ease-in-out infinite; }
 @keyframes halo { 50% { box-shadow: 0 0 0 2px #120d09, 0 0 0 calc(var(--cell)*.06) #ffd27a, 0 0 calc(var(--cell)*.55) var(--gold); } }
 .tok.hero.ko .coin { filter: grayscale(1) brightness(.5); }
+.tok.hero .race-deco { position: absolute; inset: -14%; filter: drop-shadow(0 1px 1.5px rgba(0,0,0,.55)); opacity: .92; pointer-events: none; z-index: 0; }
+.tok.hero .race-deco svg { width: 100%; height: 100%; overflow: visible; display: block; }
+.tok.hero .coin { position: relative; z-index: 1; }
+.tok.hero.active .race-deco { scale: 1.16; }
+.tok.hero.r-geant .coin { scale: 1.1; }
+.tok.hero.r-geant.active .coin { scale: 1.24; }
+.tok.hero.ko .race-deco { filter: grayscale(1) brightness(.5); }
+.tok.hero .race-deco.r-oiseau svg { animation: battre 2.4s ease-in-out infinite; transform-origin: 50% 40%; }
+@keyframes battre { 50% { transform: scaleX(1.08) translateY(-2%); } }
+@media (prefers-reduced-motion: reduce) { .tok.hero .race-deco.r-oiseau svg { animation: none; } }
+.tok.hero .insigne { position: absolute; left: 4%; bottom: 6%; z-index: 3; width: calc(var(--cell)*.3); height: calc(var(--cell)*.3); display: grid; place-items: center; border-radius: 50%; background: #1b140e; border: 1.5px solid #c9a86a; font-size: calc(var(--cell)*.17); line-height: 1; pointer-events: none; }
 .tok.hero.done .coin { filter: saturate(.45) brightness(.8); }
 .tok .bar { position: absolute; left: 14%; right: 14%; bottom: 2%; height: calc(var(--cell)*.1); border-radius: 99px; background: #0d0907; box-shadow: 0 0 0 1px #000; overflow: hidden; }
 .tok .bar i { display: block; height: 100%; background: var(--hp); transition: width .4s; }
@@ -313,6 +329,13 @@ html, body, button, .board, .modal { touch-action: manipulation; }
 .m-chemin .ch-ombre { fill: none; stroke: rgba(20,12,4,.55); stroke-linecap: round; }
 .m-chemin .ch-trait { fill: none; stroke: #f3d27a; stroke-linecap: round; }
 .m-effets { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.m-noir { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.m-noir .voile { transition: opacity 1.5s ease; }
+#m-vue { min-width: 150px; }
+.pin.attente .pin-coin { animation: none; filter: grayscale(.8) brightness(.7); }
+.pin.attente .pin-nom small::after { content: " · en attente des autres équipes"; }
+.pin-drapeaux { position: absolute; left: 50%; bottom: 100%; translate: -50% -2px; display: flex; gap: 2px; pointer-events: none; }
+.pin-drapeaux i { font-style: normal; font-size: max(9px, calc(var(--mw, 900px) * .010)); font-weight: 700; padding: 1px 5px; border-radius: 6px 6px 6px 0; background: var(--c, #3f8f5a); color: #fff; border: 1px solid #fff4e0; white-space: nowrap; }
 .m-eff { position: absolute; width: calc(var(--mw, 900px) * var(--t, .24)); aspect-ratio: 1; translate: -50% -60%; border-radius: 50%; transition: opacity 2.5s ease; }
 .m-eff.nuit { background: radial-gradient(circle, rgba(14,18,64,.72) 0%, rgba(20,24,80,.55) 40%, rgba(20,24,80,0) 70%); mix-blend-mode: multiply; }
 .m-eff.nuit::after { content: ""; position: absolute; inset: 18%; border-radius: 50%; opacity: .9; animation: scintille 3.2s ease-in-out infinite;
@@ -395,6 +418,14 @@ body.editing #vignette { opacity: 0 !important; }
 .editor .dims > label { min-width: 0; }
 .editor select { width: 100%; min-width: 0; box-sizing: border-box; text-overflow: ellipsis; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pnj-choix { flex-direction: column; align-items: stretch; margin-top: 10px; }
+.pnj-choix button { text-align: left; }
+.pnj-choix .pnj-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; background: #2d4a2c; color: #e9f7e2; font-size: .75rem; text-transform: capitalize; }
+#ed-form code { font-size: .78rem; background: rgba(0,0,0,.08); padding: 1px 4px; border-radius: 4px; }
+.inv .sac { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.inv .sac:last-child { border-bottom: 0; }
+.inv .sac-nom { font-weight: 700; font-size: .85rem; min-width: 64px; color: var(--muted); }
+.inv .sac.actif .sac-nom { color: var(--gold, #f4c95d); }
 .chips button { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; font-family: var(--body); font-size: .85rem; cursor: pointer; }
 .chips button[aria-pressed="true"] { background: #2d4a2c; color: #e9f7e2; border-color: #6fae6a; }
 .reg input[type=range] { width: 100%; accent-color: var(--gold); }
@@ -596,6 +627,15 @@ body { background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.06), tra
 .badge { background: #efe2c4; border: 2px solid var(--cerne); }
 .badge.eu { background: #fff2c9; border-color: var(--cerne); box-shadow: 0 0 0 2px var(--gold); }
 .bst small, .fiche-stats { color: var(--muted); }
+.attrs { margin: 8px 0; padding: 8px; border-radius: 10px; background: rgba(0,0,0,.06); }
+.attr-tete { margin: 0 0 6px; font-weight: 700; }
+.attr-tete b { color: #b5651d; }
+.attrs { display: grid; grid-template-columns: 1fr; gap: 1px; }
+.attr-tete { grid-column: 1 / -1; font-size: .9rem; }
+.attr { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 3px; font-size: .78rem; padding: 1px 0; }
+.attr > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.attr > b { min-width: 1.1em; text-align: center; }
+.attr .btn.mini { padding: 0 6px; min-width: 22px; min-height: 22px; font-size: .85rem; line-height: 1; }
 /* souffleur du MJ */
 .souffleur { position: absolute; top: 10px; left: 10px; z-index: 35; width: min(430px, 46%); box-sizing: border-box; padding: 8px 12px 10px; display: grid; gap: 6px;
   background: var(--panel); color: var(--ink); border: 3px solid var(--cerne); border-radius: 10px; box-shadow: 0 4px 0 rgba(0,0,0,.35); font-size: .95rem; line-height: 1.3; }
@@ -694,7 +734,7 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 
 <div class="app">
   <header class="top">
-    <div class="brand">Classe et Donjon<small>Manche <span id="round">1</span> · <span id="carte-nom"></span></small></div>
+    <div class="brand">Classe et Donjon<small>Manche <span id="round">1</span> · <span id="carte-nom"></span></small><span class="compte-hud" id="compte-hud" hidden></span></div>
     <div class="turn" id="turn"></div>
     <button class="chrono" id="chrono" type="button" hidden title="Minuterie de la période"></button>
     <button class="jauge" id="jauge" type="button" hidden title="Jauge d'équipe : chaque bonne réponse la remplit"></button>
@@ -736,7 +776,7 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
     </div>
     <aside class="side">
       <div class="heroes" id="heroes"></div>
-      <div class="box" id="inv-box"><h3>Inventaire du groupe</h3><div class="inv" id="inv"></div></div>
+      <div class="box" id="inv-box"><h3>Inventaire</h3><div class="inv" id="inv"></div></div>
       <div class="box log" id="log-box"><h3>Journal de l'aventure</h3><ol id="log"></ol></div>
       <div class="box editor" id="editor" hidden>
         <h3>Créateur de quêtes</h3>
@@ -756,6 +796,12 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
         </div>
         <label>Nom du chapitre <input id="ed-nom" maxlength="50"></label>
         <label>Introduction (lue au début du chapitre) <textarea id="ed-intro" rows="5" placeholder="Colle ici le texte de ton document de quête."></textarea></label>
+        <div class="ed-son">
+          <h4>Compte à rebours</h4>
+          <div class="dims"><label>Manches (0 = aucun) <input id="ed-cpt" type="number" min="0" max="40" value="0"></label><label>Texte affiché <input id="ed-cpt-t" maxlength="50" placeholder="Noël sera perdu dans"></label></div>
+          <label>Si le temps est écoulé <input id="ed-cpt-e" maxlength="200" placeholder="Le traîneau est parti sans vous…"></label>
+          <p class="hint">Le chapitre doit être réussi avant la fin. En facile, l'équipe a 3 manches de plus; en expert, 2 de moins.</p>
+        </div>
         <div class="ed-son">
           <h4>Sons et ambiance du chapitre</h4>
           <div class="dims"><label>Musique <select id="ed-mus"></select></label><label>Météo <select id="ed-met"></select></label></div>
@@ -821,8 +867,8 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 </div>
 <div class="monde" id="monde" hidden>
   <div class="monde-top"><div class="brand">Le Royaume d'Hull<small>Classe et Donjon · touche un lieu pour partir à l'aventure</small></div><span class="spacer"></span>
-    <div class="tools"><button class="btn" type="button" id="m-camp">Campagne</button><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn blue" type="button" id="m-modif">Modifier une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
-  <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-effets" id="m-effets"></div><svg class="m-chemin" id="m-chemin" aria-hidden="true"></svg><div class="m-pins" id="m-pins"></div></div></div>
+    <div class="tools"><select class="btn" id="m-vue" aria-label="Carte affichée" hidden></select><button class="btn" type="button" id="m-camp">Campagne</button><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn blue" type="button" id="m-modif">Modifier une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
+  <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-effets" id="m-effets"></div><svg class="m-noir" id="m-noir" aria-hidden="true"></svg><svg class="m-chemin" id="m-chemin" aria-hidden="true"></svg><div class="m-pins" id="m-pins"></div></div></div>
   <input type="file" id="m-file" accept="image/*,video/mp4,video/webm,application/pdf" hidden>
 </div>
 <div class="overlay" id="overlay" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
@@ -3516,6 +3562,11 @@ const DECEMBRE = {
    ],
    "deco": [],
    "intro": "Au bout du village, le grand lac est complètement gelé. Les lanternes de Noël des cabanes se sont éteintes une à une.\n\nAu milieu de la glace, sur un trône de givre, une femme vêtue de blanc vous regarde approcher. Elle tient une page dorée entre ses doigts de glace.\n\n« Noël est annulé, petits héros. Pour toujours! »",
+   "compte": {
+    "tours": 12,
+    "texte": "Noël sera perdu dans",
+    "echec": "La dernière lanterne s'éteint… La Reine des glaces a gelé Noël pour toujours. Réessayez vite pour sauver Noël!"
+   },
    "heroes": {
     "archer": [
      6,
@@ -6910,7 +6961,7 @@ const DEMO = {
       enemies: [["gobelin", 2, 2], ["gobelin", 10, 2]],
       objets: [["tonneau", 12, 7]],
       portes: {},
-      pnj: [{ nom: "Gardien Aldric", look: "vieux", x: 8, y: 7, dialogue: "Enfin, des héros! Je me cache ici depuis trois jours.\n\nDes gobelins rôdent dans les salles du haut. Le passage vers le bas de la crypte est tout au fond, à droite.\n\nUn conseil : le sol près du bassin est meuble. J'ai vu un gobelin y enterrer quelque chose…\n\nEt méfiez-vous des runes sur le mur. Elles posent des questions!" }],
+      pnj: [{ nom: "Gardien Aldric", look: "vieux", x: 8, y: 7, dialogue: "Enfin, des héros! Je me cache ici depuis trois jours.\n\nDes gobelins rôdent dans les salles du haut. Le passage vers le bas de la crypte est tout au fond, à droite.\n\nUn conseil : le sol près du bassin est meuble. J'ai vu un gobelin y enterrer quelque chose…\n\nEt méfiez-vous des runes sur le mur. Elles posent des questions!\n> Pouvez-vous nous aider? | Prenez cette potion. Elle m'a sauvé plus d'une fois. | vie\n> [voleur] Vous cachez quelque chose, vieil homme… | Hé hé… rien ne t'échappe. Voici ma potion de mana secrète. | mana\n> ?Venez avec nous, nous allons vous protéger! | D'accord… mais restez devant moi! | suivre" }],
       secrets: [
         { x: 4, y: 3, action: "creuser", visible: false, texte: "Sous la terre meuble, vous trouvez une petite bourse de cuir avec un flacon bleu.", enigme: { q: "", rep: "", choix: "" }, recompense: "mana" },
         { x: 6, y: 1, action: "bruler", visible: true, texte: "La toile d'araignée s'enflamme d'un coup. Derrière, une potion de vie était suspendue!", enigme: { q: "", rep: "", choix: "" }, recompense: "vie" },
@@ -6953,6 +7004,14 @@ const DEMO = {
 };
 
 const INTEGREES = [DEMO, RENTREE, OCTOBRE, HALLOWEEN, NOVEMBRE, DECEMBRE, JANVIER, FEVRIER, MARS, AVRIL, MAI, JUIN];
+const estFournie = id => INTEGREES.some(i => i.id === id);
+const originale = id => INTEGREES.find(i => i.id === id);
+// Les images des quêtes fournies ne sont pas recopiées : on garde une référence « int: »
+const IMGREF = new Map(), REFIMG = new Map();
+INTEGREES.forEach(q => q.chapitres.forEach((c, i) => [c.image, ...(c.variantes || [])].forEach((d, v) => {
+  if (typeof d === "string" && d.startsWith("data:") && !IMGREF.has(d)) { const r = `int:${q.id}:${i}:${v}`; IMGREF.set(d, r); REFIMG.set(r, d); }
+})));
+const versRef = d => IMGREF.get(d) || d, depuisRef = d => (typeof d === "string" && REFIMG.get(d)) || d;
 DEMO.musique = DEMO.musique || "mystere";
 Object.assign(DEMO.chapitres[0], { meteo: "brouillard", ambiance: "vent", sol: "pierre", animaux: ["corbeaux"] }, DEMO.chapitres[0]);
 if (DEMO.chapitres[1]) Object.assign(DEMO.chapitres[1], { brume: true, ambiance: "crypte", sol: "pierre", animaux: ["chauves", "rats"] }, DEMO.chapitres[1]);
@@ -6975,11 +7034,41 @@ const RACES = {
   elfe: { nom: "Elfe", bonus: "+1 déplacement, voit plus loin", dep: 1, vue: 1 },
   nain: { nom: "Nain", bonus: "+2 PV", pv: 2 },
   orc: { nom: "Orc", bonus: "+1 dégât", deg: 1 },
+  rat: { nom: "Homme-rat", bonus: "+1 déplacement, fouineur : un objet de plus dans les coffres", dep: 1 },
+  oiseau: { nom: "Homme-oiseau", bonus: "+2 déplacements : il vole", dep: 2 },
+  felin: { nom: "Félin", bonus: "voit dans le noir, retombe sur ses pattes : évite les pièges", vue: 2 },
+  lezard: { nom: "Homme-lézard", bonus: "+1 PV, ses coups empoisonnent", pv: 1 },
+  geant: { nom: "Demi-géant", bonus: "+3 PV, mais −1 déplacement", pv: 3, dep: -1 },
 };
+// Détails dessinés autour du jeton selon la race (ailes, oreilles, queue…) et petit insigne de classe
+// Petits détails peints autour du jeton selon la race (oreilles, ailes, queue, barbe…), discrets et dans les tons des portraits
+const RACE_DEFS = `<defs><linearGradient id="rg-peau" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9c39a"/><stop offset="1" stop-color="#a8754c"/></linearGradient><linearGradient id="rg-os" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f1e6cc"/><stop offset="1" stop-color="#b9a47c"/></linearGradient><linearGradient id="rg-plume" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4efe2"/><stop offset="1" stop-color="#a99d86"/></linearGradient><linearGradient id="rg-fourrure" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6a062"/><stop offset="1" stop-color="#7d5130"/></linearGradient><linearGradient id="rg-rat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a49488"/><stop offset="1" stop-color="#5f534b"/></linearGradient><linearGradient id="rg-ecaille" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8fbf6a"/><stop offset="1" stop-color="#3f6a35"/></linearGradient><linearGradient id="rg-orc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9db07a"/><stop offset="1" stop-color="#55693f"/></linearGradient><linearGradient id="rg-barbe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8743a"/><stop offset="1" stop-color="#6e3f1c"/></linearGradient><linearGradient id="rg-cape" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9c3b2e"/><stop offset="1" stop-color="#5a1e17"/></linearGradient></defs>`;
+const RACE_DECO = {
+  humain: `<svg viewBox="0 0 100 100"><path d="M24 74 Q18 88 26 98 Q34 90 36 82Z M76 74 Q82 88 74 98 Q66 90 64 82Z" fill="url(#rg-cape)" stroke="#2e1a12" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  elfe: `<svg viewBox="0 0 100 100"><path d="M22 47 Q10 38 6 26 Q16 32 25 38Z M78 47 Q90 38 94 26 Q84 32 75 38Z" fill="url(#rg-peau)" stroke="#3b2618" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  nain: `<svg viewBox="0 0 100 100"><path d="M42 82 Q44 96 50 102 Q56 96 58 82Z" fill="url(#rg-barbe)" stroke="#3a2210" stroke-width="1.5"/><rect x="46.5" y="92" width="7" height="4" rx="1.5" fill="#c9b37a" stroke="#4a3a1e" stroke-width="1"/></svg>`,
+  orc: `<svg viewBox="0 0 100 100"><path d="M22 46 Q12 40 9 30 Q18 33 25 40Z M78 46 Q88 40 91 30 Q82 33 75 40Z" fill="url(#rg-orc)" stroke="#26301a" stroke-width="1.5" stroke-linejoin="round"/><circle cx="12" cy="36" r="3" fill="none" stroke="#c9b37a" stroke-width="1.5"/></svg>`,
+  rat: `<svg viewBox="0 0 100 100"><g stroke="#2b221c" stroke-width="1.5"><ellipse cx="26" cy="20" rx="9" ry="10" fill="url(#rg-rat)"/><ellipse cx="74" cy="20" rx="9" ry="10" fill="url(#rg-rat)"/></g><ellipse cx="26" cy="21" rx="4.5" ry="5.5" fill="#d79a92" opacity=".8"/><ellipse cx="74" cy="21" rx="4.5" ry="5.5" fill="#d79a92" opacity=".8"/><path d="M78 80 Q92 86 94 98" fill="none" stroke="#c98d86" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+  oiseau: `<svg viewBox="0 0 100 100"><g fill="url(#rg-plume)" stroke="#4a4030" stroke-width="1.5" stroke-linejoin="round"><path d="M20 56 Q8 52 4 38 Q9 40 12 37 Q7 31 9 23 Q15 30 20 30 Q19 23 23 18 Q26 32 30 38Z"/><path d="M80 56 Q92 52 96 38 Q91 40 88 37 Q93 31 91 23 Q85 30 80 30 Q81 23 77 18 Q74 32 70 38Z"/></g></svg>`,
+  felin: `<svg viewBox="0 0 100 100"><path d="M21 33 Q20 18 24 8 Q34 14 40 22Z M79 33 Q80 18 76 8 Q66 14 60 22Z" fill="url(#rg-fourrure)" stroke="#2f1d0e" stroke-width="1.5" stroke-linejoin="round"/><path d="M25 26 L26 15 L33 21Z M75 26 L74 15 L67 21Z" fill="#e3ab98" opacity=".75"/></svg>`,
+  lezard: `<svg viewBox="0 0 100 100"><path d="M26 82 Q14 90 8 100 Q20 97 34 88Z" fill="url(#rg-ecaille)" stroke="#1f3417" stroke-width="1.5" stroke-linejoin="round"/><path d="M40 17 L43 9 L47 16 L50 7 L53 16 L57 9 L60 17" fill="url(#rg-ecaille)" stroke="#1f3417" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+  geant: `<svg viewBox="0 0 100 100"><path d="M28 22 Q20 14 22 5 Q28 12 35 16Z M72 22 Q80 14 78 5 Q72 12 65 16Z" fill="url(#rg-os)" stroke="#3a2f20" stroke-width="1.5" stroke-linejoin="round"/></svg>`,
+};
+document.body.insertAdjacentHTML("beforeend", `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${RACE_DEFS}</svg>`);
+const CLS_INSIGNE = { archer: "🏹", mage: "🔮", guerrier: "⚔️", voleur: "🗡️" };
 const RACE_DEFAUT = { archer: "elfe", mage: "humain", guerrier: "nain", voleur: "orc" };
+// Attributs gagnés en montant de niveau (1 point par quête réussie), gardés dans la fiche de l'équipe
+const ATTRIBUTS = {
+  vie: { ic: "❤️", nom: "Vie", desc: "+1 PV" },
+  mana: { ic: "💧", nom: "Mana", desc: "+1 mana" },
+  vitesse: { ic: "👟", nom: "Vitesse", desc: "+1 déplacement" },
+  attaque: { ic: "⚔️", nom: "Attaque", desc: "+1 dégât" },
+  ruse: { ic: "🦊", nom: "Ruse", desc: "Observe 1 case plus loin, +1 aux lancers d'objets" },
+  parade: { ic: "🛡️", nom: "Parade", desc: "1 coup paré sans question par chapitre" },
+};
 function st(h) {
-  const c = C[h.cls], r = RACES[h.race] || {};
-  return { pv: c.pv + (r.pv || 0), mana: c.mana + (r.mana || 0), dep: c.dep + (r.dep || 0), deg: c.deg + (r.deg || 0) };
+  const c = C[h.cls], r = RACES[h.race] || {}, a = h.attr || {};
+  return { pv: c.pv + (r.pv || 0) + (a.vie || 0), mana: c.mana + (r.mana || 0) + (a.mana || 0), dep: c.dep + (r.dep || 0) + (a.vitesse || 0), deg: c.deg + (r.deg || 0) + (a.attaque || 0) };
 }
 // Les monstres se déplacent selon leur vitesse (pas) au tour du MJ
 const E = {
@@ -7058,20 +7147,41 @@ const imgMon = k => MONIMG[k] ? `<img class="mon" src="${MONIMG[k]}" alt="">` : 
 const svgMonstreBase = t => imgMon(lookDe(t)) || (E_BASE.includes(t) ? SVG[t] : null) || MONSVG[E[t] && E[t].look] || SVG[E[t] && E[t].look] || SVG.gobelin;
 // Objets spéciaux inventés : clé « sp:nom » dans l'inventaire
 const itemInfo = k => ITEMS[k] || { nom: k.slice(3), desc: (QUETE.objets && QUETE.objets[k.slice(3)]) || "Objet spécial : le maître du jeu décide de son effet." };
-const aObjet = nom => Object.entries(S.inv).some(([k, n]) => n > 0 && k.startsWith("sp:") && norm(k.slice(3)) === norm(nom));
+// Chaque héros a son sac (h.sac) ; seules les clés restent au groupe (S.inv.cle)
+const sacDe = h => h ? (h.sac ||= {}) : S.inv;
+const receveur = h => (h && h.pv > 0 ? h : null) || (S.phase === "heros" && heros() && heros().pv > 0 ? heros() : null) || vivants()[0] || S.heroes[0];
+function ajouterObjet(h, k, n = 1) {
+  if (k === "cle") { S.inv.cle = (S.inv.cle || 0) + n; return null; }
+  const qui = receveur(h), sac = sacDe(qui); sac[k] = (sac[k] || 0) + n; return qui;
+}
+function retirerObjet(h, k) {
+  const sac = k === "cle" ? S.inv : sacDe(h);
+  if (!sac[k]) return false;
+  sac[k]--; if (!sac[k]) delete sac[k]; return true;
+}
+// Les anciennes sauvegardes gardaient tout dans l'inventaire du groupe : on le verse dans le sac du premier héros
+function migrerInventaire() {
+  for (const [k, n] of Object.entries(S.inv)) if (k !== "cle" && n > 0) { ajouterObjet(S.heroes.find(h => h.pv > 0) || S.heroes[0], k, n); delete S.inv[k]; }
+  S.inv.cle = S.inv.cle || 0;
+}
+const aObjet = (nom, h = S.phase === "heros" ? heros() : null) => Object.entries(h ? sacDe(h) : {}).some(([k, n]) => n > 0 && k.startsWith("sp:") && norm(k.slice(3)) === norm(nom));
 const OBJ = {
   tonneau: { nom: "Tonneau", contenu: "vie", texte: "Une potion de vie flotte au fond du tonneau." },
   bibliotheque: { nom: "Bibliothèque", contenu: "mana", texte: "Un flacon bleu est caché derrière un vieux grimoire." },
   coffre: { nom: "Coffre", contenu: "cle", texte: "Le coffre contient une clé de bronze." },
-  sac: { nom: "Sac abandonné", contenu: "vie", texte: "Un aventurier a laissé une potion de vie." },
+  sac: { nom: "Sac abandonné", contenu: "hasard", texte: "Un aventurier a laissé son sac. Il reste quelque chose au fond." },
   levier: { nom: "Levier rouillé", contenu: "levier", texte: "Ce levier semble relié à une grille." },
   coffreDore: { nom: "Coffre au trésor", contenu: "tresor", texte: "Le trésor de la quête. Le boss le garde." },
 };
 const ITEMS = {
   vie: { nom: "Potion de vie", desc: "+1 PV au héros actif" },
   mana: { nom: "Potion de mana", desc: "+1 mana au héros actif" },
-  cle: { nom: "Clé de bronze", desc: "Ouvre une porte cadenassée" },
+  cle: { nom: "Clé de bronze", desc: "Ouvre une porte cadenassée (gardée par le groupe)" },
+  force: { nom: "Potion de force", desc: "Le prochain coup du héros fait le double de dégâts" },
+  rapidite: { nom: "Potion de rapidité", desc: "+1 action pendant ce tour" },
+  bouclier: { nom: "Parchemin de protection", desc: "Le prochain coup reçu est paré, sans question" },
 };
+const BUTIN = ["vie", "vie", "mana", "force", "rapidite", "bouclier"];
 
 const FR = [
   ["Le chevalier ___ une épée.", ["a", "à"], 0],
@@ -7112,12 +7222,12 @@ const TERM = {
 };
 function questionVerbe() {
   const grp = Math.random() < .5 ? 1 : 2, inf = pick(grp === 1 ? V1 : V2);
-  const temps = Math.random() < .5 ? "present" : "imparfait", [suj, p] = pick(PERS);
-  const conj = (t, q) => inf.slice(0, -2) + TERM[grp][t][q];
+  const temps = DIFF === "expert" && Math.random() < .4 ? "futur" : Math.random() < .5 ? "present" : "imparfait", [suj, p] = pick(PERS);
+  const conj = (t, q) => t === "futur" ? inf + ["ai", "as", "a", "ons", "ez", "ont"][q] : inf.slice(0, -2) + TERM[grp][t][q];
   const bon = conj(temps, p);
   const leurres = [...new Set([conj(temps === "present" ? "imparfait" : "present", p), ...[0, 1, 2, 3, 4, 5].map(q => conj(temps, q))])].filter(x => x !== bon);
   const sujet = suj === "Je" && /^[aeéiou]/.test(bon) ? "J'" : suj + " ";
-  return [`Conjugue « ${inf} » ${temps === "present" ? "au présent" : "à l'imparfait"} : ${sujet}___`, [bon, ...leurres.sort(() => Math.random() - .5).slice(0, 2)], 0];
+  return [`Conjugue « ${inf} » ${{ present: "au présent", imparfait: "à l'imparfait", futur: "au futur simple" }[temps]} : ${sujet}___`, [bon, ...leurres.sort(() => Math.random() - .5).slice(0, 2)], 0];
 }
 const pick = a => a[Math.floor(Math.random() * a.length)];
 
@@ -7136,14 +7246,14 @@ function construire(carte, phase, chapitre = 0) {
   carte = { ...carte, enemies: carte.enemies.filter(([t]) => E[t]) };
   W = carte.grid[0].length; H = carte.grid.length;
   const niveau = S ? S.niveau : "5e", nbActions = S ? S.nbActions : (PREF.nbActions || 3);
-  const classes = phase === "edit" ? Object.keys(C) : classesEquipe(), pvM = b => pvMonstre(b, classes.length);
+  const classes = phase === "edit" ? Object.keys(C) : classesEquipe(), pvM = b => Math.max(1, Math.round(pvMonstre(b, classes.length) * (phase === "edit" ? 1 : DIFFS[DIFF].pv * facteurNiveau(classes.map(c => ({ niveau: ficheActive() ? niveauDe(c) : 1 }))))));
   S = {
     carte, chapitre, grid: carte.grid.map(r => r.split("")), round: 1, evFaits: [], dernierEvt: Date.now(), debut: true, phase, actif: 0, mode: null, busy: false, niveau, nbActions, fini: null,
-    inv: { vie: 0, mana: 0, cle: 0 }, log: [],
+    inv: { cle: 0 }, log: [],
     heroes: classes.map(c => ({ id: "h-" + c, cls: c, race: races[c] || RACE_DEFAUT[c], nom: noms[c] || C[c].nom,
       x: carte.heroes[c][0], y: carte.heroes[c][1], actions: nbActions, joue: false, force: false }))
       .map(h => Object.assign(h, phase === "edit" ? {} : habitFiche(h.cls)))
-      .map(h => Object.assign(h, { pv: st(h).pv, mana: st(h).mana })),
+      .map(h => Object.assign(h, { pv: st(h).pv, mana: st(h).mana, parades: (h.attr || {}).parade || 0 })),
     enemies: carte.enemies.map(([t, x, y], i) => ({ id: "e-" + i, type: t, nom: E[t].nom, x, y, pv: pvM(E[t].pv), pvMax: pvM(E[t].pv), deg: E[t].deg, poison: false, boss: !!E[t].boss, bouge: false, face: [0, 1] })),
     objets: carte.objets.map(([t, x, y], i) => ({ id: "o-" + i, type: t, x, y, decouvert: t === "coffreDore", vide: false })),
     portes: Object.fromEntries(Object.entries(carte.portes).map(([k, par]) => [k, { verrou: true, par }])),
@@ -7151,6 +7261,7 @@ function construire(carte, phase, chapitre = 0) {
     secrets: carte.secrets.map((s, i) => ({ ...s, id: "s-" + i, trouve: false })),
     deco: carte.deco.map(([t, x, y], i) => ({ id: "d-" + i, type: t, x, y })),
     sorties: carte.sorties.map(([x, y], i) => ({ id: "x-" + i, x, y })),
+    compte: phase !== "edit" && carte.compte && carte.compte.tours > 0 ? Math.max(3, carte.compte.tours + DIFFS[DIFF].tours) : 0,
     nextId: carte.enemies.length, varIdx: phase === "edit" && ED && ED.varCh === chapitre && (carte.variantes || [])[ED.varVue - 1] ? ED.varVue : 0,
     rep: S && S.rep && S.repCle === QUETE.id + "|" + EQUIPE ? S.rep : [], repCle: QUETE.id + "|" + EQUIPE,
   };
@@ -7162,17 +7273,17 @@ const dernierChapitre = () => S.chapitre >= QUETE.chapitres.length - 1;
 
 // Ce que le groupe garde d'un chapitre à l'autre
 function groupe() {
-  return { heroes: S.heroes.map(h => ({ cls: h.cls, race: h.race, nom: h.nom, pv: h.pv, mana: h.mana, force: h.force })), inv: { ...S.inv } };
+  return { heroes: S.heroes.map(h => ({ cls: h.cls, race: h.race, nom: h.nom, pv: h.pv, mana: h.mana, force: h.force, bouclier: h.bouclier, sac: { ...(h.sac || {}) } })), inv: { ...S.inv } };
 }
 function appliquerGroupe(g, relever) {
   if (!g) return;
   for (const gh of g.heroes) {
     const h = S.heroes.find(x => x.cls === gh.cls); if (!h) continue;
-    Object.assign(h, { race: gh.race, nom: gh.nom, force: gh.force });
+    Object.assign(h, { race: gh.race, nom: gh.nom, force: gh.force, bouclier: gh.bouclier, sac: { ...(gh.sac || {}) } });
     h.pv = Math.min(st(h).pv, relever && gh.pv <= 0 ? 1 : gh.pv); h.mana = Math.min(st(h).mana, gh.mana + (relever ? 1 : 0));
     if (h.pv <= 0) { h.joue = true; h.actions = 0; }
   }
-  S.inv = { vie: 0, mana: 0, cle: 0, ...g.inv };
+  S.inv = { cle: 0, ...g.inv }; migrerInventaire();
   S.debut = false;
   const premier = S.heroes.findIndex(h => h.pv > 0); S.actif = premier < 0 ? 0 : premier;
 }
@@ -7187,9 +7298,9 @@ function demarrerChapitre(index, g) {
 }
 function demarrerQuete(q) {
   QUETE = q;
-  if (S && q.niveau && NIVEAUX[q.niveau]) S.niveau = q.niveau;
   try { localStorage.setItem("donjon-quete", q.id); } catch {}
   demarrerChapitre(0, null);
+  S.niveau = niveauDiff(q.niveau && NIVEAUX[q.niveau] ? q.niveau : NIV_BASE || S.niveau || "5e");
 }
 function montrerIntro() {
   const c = S.carte;
@@ -7203,20 +7314,23 @@ function montrerIntro() {
 // Photo de la partie en cours, pour la reprendre la semaine suivante
 function photoPartie() {
   return {
-    quete: QUETE.id, equipe: EQUIPE, evFaits: S.evFaits || [], chapitre: S.chapitre, round: S.round, actif: S.actif, debut: S.debut, nbActions: S.nbActions, niveau: S.niveau, date: new Date().toISOString(),
+    quete: QUETE.id, equipe: EQUIPE, evFaits: S.evFaits || [], chapitre: S.chapitre, round: S.round, actif: S.actif, debut: S.debut, nbActions: S.nbActions, niveau: S.niveau, diff: DIFF, compte: S.compte || 0, date: new Date().toISOString(),
     grid: S.grid.map(r => r.join("")), inv: S.inv, log: S.log.slice(0, 40), groupeDebut: S.groupeDebut || null,
-    heroes: S.heroes.map(h => ({ cls: h.cls, race: h.race, nom: h.nom, x: h.x, y: h.y, pv: h.pv, mana: h.mana, force: h.force, joue: h.joue, actions: h.actions })),
+    heroes: S.heroes.map(h => ({ cls: h.cls, race: h.race, nom: h.nom, x: h.x, y: h.y, pv: h.pv, mana: h.mana, force: h.force, bouclier: h.bouclier, sac: h.sac || {}, joue: h.joue, actions: h.actions })),
     enemies: S.enemies.map(e => ({ id: e.id, type: e.type, x: e.x, y: e.y, pv: e.pv, poison: e.poison, face: e.face })),
     objets: S.objets.map(o => ({ decouvert: o.decouvert, vide: o.vide })),
     portes: Object.fromEntries(Object.entries(S.portes).map(([k, p]) => [k, p.verrou])),
-    secrets: S.secrets.map(s => s.trouve), deco: S.deco.map(d => [d.type, d.x, d.y]),
+    secrets: S.secrets.map(s => s.trouve), pnj: S.pnj.map(p => ({ id: p.id, x: p.x, y: p.y, bouge: p.bouge || "", dits: p.dits || [] })), deco: S.deco.map(d => [d.type, d.x, d.y]),
     rep: S.rep || [], jauge: S.jauge || 0, fini: S.fini || null, vu: S.vu ? Array.from(S.vu).join("") : null, brumeOff: !!S.brumeOff, varIdx: S.varIdx || 0,
   };
 }
 function restaurerPartie(p) {
   p = clone(p); // une sauvegarde lue du compte est figée : on travaille sur une copie
+  DIFF = DIFFS[p.diff] ? p.diff : "normal";
   construire(QUETE.chapitres[p.chapitre], "heros", p.chapitre);
   Object.assign(S, { round: p.round, actif: p.actif, debut: p.debut, nbActions: p.nbActions || S.nbActions, niveau: p.niveau || S.niveau, inv: p.inv, log: p.log || [], groupeDebut: p.groupeDebut });
+  if (p.compte) S.compte = p.compte;
+  migrerInventaire();
   S.grid = p.grid.map(r => r.split(""));
   for (const ph of p.heroes) { const h = S.heroes.find(x => x.cls === ph.cls); if (h) Object.assign(h, ph); }
   // une partie à 2 ou 3 héros reste à 2 ou 3 héros
@@ -7226,6 +7340,7 @@ function restaurerPartie(p) {
   p.objets.forEach((po, i) => { if (S.objets[i]) Object.assign(S.objets[i], po); });
   for (const [k, v] of Object.entries(p.portes)) if (S.portes[k]) S.portes[k].verrou = v;
   p.secrets.forEach((t, i) => { if (S.secrets[i]) S.secrets[i].trouve = t; });
+  if (p.pnj) S.pnj = S.pnj.filter(x => p.pnj.some(q => q.id === x.id)).map(x => { const q = p.pnj.find(q => q.id === x.id); return { ...x, x: q.x, y: q.y, bouge: q.bouge || x.bouge, dits: q.dits || [] }; });
   S.deco = p.deco.map(([t, x, y], i) => ({ id: "d-" + i, type: t, x, y }));
   S.rep = p.rep || []; S.jauge = p.jauge || 0; S.brumeOff = !!p.brumeOff; S.evFaits = p.evFaits || []; if (p.varIdx && (S.carte.variantes || [])[p.varIdx - 1]) { S.varIdx = p.varIdx; chargerImage(); } S.dernierEvt = Date.now();
   if (p.vu && p.vu.length === W * H) S.vu = Uint8Array.from(p.vu, c => c === "1" ? 1 : 0);
@@ -7255,11 +7370,20 @@ async function ouvrirQuete(q) {
       ${parties.length ? `<div class="equipes">${parties.map((p, i) => `<div class="eq-ligne"><button type="button" class="equipe" data-i="${i}"><b>${esc(p.equipe)}</b><span>Chapitre ${p.chapitre + 1} · manche ${p.round} · ${quand(p)}</span></button><button type="button" class="btn eq-del" data-del="${i}" title="Supprimer la partie de cette équipe" aria-label="Supprimer la partie de l'équipe ${esc(p.equipe)}">🗑</button></div>`).join("")}</div>`
         : `<p class="sub">Aucune équipe n'a encore commencé cette quête.</p>`}
       <p class="sub" style="margin-top:14px">Nouvelle équipe : choisis un code (ex. : DRAGONS, EQUIPE3).</p>
-      <input id="code-eq" class="field" maxlength="12" autocomplete="off" placeholder="Code d'équipe">
+      <input id="code-eq" class="field" maxlength="12" autocomplete="off" placeholder="Code d'équipe" value="${VUE && VUE !== "MJ" ? esc(VUE) : ""}">
       <p class="sub" style="margin-top:10px">Héros de la nouvelle équipe (2 à 4 joueurs) : <b id="eq-n">4 héros</b></p>
       <div class="chips eq-cls" id="eq-cls">${Object.keys(C).map(c => `<button type="button" data-c="${c}" aria-pressed="true"><img src="${imgHeros(c)}" alt=""> ${esc(C[c].nom)}</button>`).join("")}</div>
+      <p class="sub" style="margin-top:10px">Difficulté : <span id="eq-dd">${esc(DIFFS[DIFF].desc)}</span></p>
+      <div class="chips diff-row" id="eq-diff">${Object.entries(DIFFS).map(([k, d]) => `<button type="button" data-d="${k}" aria-pressed="${k === DIFF}">${d.ico} ${d.nom}</button>`).join("")}</div>
       <div class="row"><button class="btn" type="button" id="eq-annuler">Retour à la carte</button><button class="btn gold" type="button" id="eq-go">Commencer la quête</button></div>
       <p class="sub" id="eq-msg"></p>`);
+    let diff = DIFF;
+    document.getElementById("eq-diff").onclick = e => {
+      const b = e.target.closest("[data-d]"); if (!b) return;
+      diff = b.dataset.d;
+      document.querySelectorAll("#eq-diff [data-d]").forEach(x => x.setAttribute("aria-pressed", x === b));
+      document.getElementById("eq-dd").textContent = DIFFS[diff].desc;
+    };
     const inp = document.getElementById("code-eq");
     inp.oninput = () => { const c = codeEquipe(inp.value); if (inp.value !== c) inp.value = c; };
     clavierLettres(inp, null, true);
@@ -7277,7 +7401,7 @@ async function ouvrirQuete(q) {
       if (!c) { document.getElementById("eq-msg").textContent = "Écris un code d'équipe."; inp.focus(); return; }
       const p = parties.find(x => x.equipe === c);
       const classes = [...cls.querySelectorAll('[aria-pressed="true"]')].map(b => b.dataset.c);
-      fermer(); resolve(p ? { p } : { code: c, classes: cls.dataset.touche ? classes : null });
+      fermer(); resolve(p ? { p } : { code: c, diff, classes: cls.dataset.touche ? classes : null });
     };
     document.getElementById("eq-go").onclick = go;
     document.getElementById("eq-annuler").onclick = () => { fermer(); resolve(null); };
@@ -7297,6 +7421,7 @@ async function ouvrirQuete(q) {
   });
   if (!choix) { QUETE = ancienne || q; if (S && S.phase !== "edit") document.getElementById("quete-sel").value = QUETE.id; afficherMonde(); return; }
   EQUIPE = choix.p ? choix.p.equipe : choix.code;
+  if (choix.diff) DIFF = choix.diff;
   await chargerFiche();
   setTimeout(demarrerPeriode, 0);
   if (choix.p) { restaurerPartie(choix.p); toast(`Bon retour, équipe ${EQUIPE}!`); precedemment(); return; }
@@ -7312,8 +7437,15 @@ async function ouvrirQuete(q) {
 const key = (x, y) => x + "," + y;
 const tile = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? "#" : S.grid[y][x];
 const porte = (x, y) => S.portes[key(x, y)];
+// Obstacles posés par le MJ : on les escalade (muret), on les pousse (caisse), on saute par-dessus (trou)
+const OBSTACLES = { muret: { nom: "Muret", verbe: "🧗 Escalader", op: "+", texte: "Un muret de pierres. On peut l'escalader pour passer de l'autre côté." }, caisse: { nom: "Caisse", verbe: "📦 Pousser", op: "×", texte: "Une lourde caisse. On peut la pousser d'une case." }, trou: { nom: "Trou", verbe: "🦘 Sauter par-dessus", op: "−", texte: "Un trou sombre. Un bon saut et on passe de l'autre côté!" } };
+const obstacleAt = (x, y) => S && S.deco && S.phase !== "edit" ? S.deco.find(d => OBSTACLES[d.type] && d.x === x && d.y === y) : null;
+const piegeAt = (x, y) => S && S.deco ? S.deco.find(d => (d.type === "piege" || d.type === "piegeVu") && d.x === x && d.y === y) : null;
+const toileAt = (x, y) => S && S.deco && S.phase !== "edit" ? S.deco.find(d => d.type === "toile" && d.x === x && d.y === y) : null;
 function praticable(x, y) {
   const t = tile(x, y);
+  if (toileAt(x, y) || obstacleAt(x, y)) return false;
+  if (S && S.phase !== "edit" && S.deco.some(d => d.type === "piegeVu" && d.x === x && d.y === y)) return false; // un piège repéré, on le contourne
   if (t === "." || t === "d" || t === "o") return true;
   if (t === "X") return !(porte(x, y) && porte(x, y).verrou);
   return false;
@@ -7539,6 +7671,11 @@ const DECO = {
   toile: `<svg viewBox="0 0 100 100"><g stroke="#e8e4da" stroke-width="2" fill="none" opacity=".85"><path d="M50 50 L4 4 M50 50 L96 4 M50 50 L4 96 M50 50 L96 96 M50 50 L50 0 M50 50 L0 50 M50 50 L100 50 M50 50 L50 100"/><circle cx="50" cy="50" r="12"/><circle cx="50" cy="50" r="24"/><circle cx="50" cy="50" r="38"/></g></svg>`,
   rune: `<svg viewBox="0 0 100 100" class="glow"><g stroke="#8fe3ff" stroke-width="5" fill="none" stroke-linecap="round"><path d="M30 24 V76 M30 24 L52 44 L30 58"/><path d="M62 24 L74 50 L62 76 M62 50 H80"/></g></svg>`,
   sortie: `<svg viewBox="0 0 100 100"><rect x="8" y="8" width="84" height="84" rx="10" fill="#0d0907" opacity=".55"/><g fill="#c9b48a"><rect x="18" y="70" width="64" height="10"/><rect x="26" y="56" width="56" height="10"/><rect x="34" y="42" width="48" height="10"/><rect x="42" y="28" width="40" height="10"/></g><path d="M22 30 L34 22 L34 27 L44 27 L44 33 L34 33 L34 38Z" fill="#72d39b"/></svg>`,
+  muret: `<svg viewBox="0 0 100 100"><g stroke="#2a241c" stroke-width="3"><rect x="6" y="36" width="30" height="20" rx="3" fill="#8f8676"/><rect x="38" y="36" width="56" height="20" rx="3" fill="#a39a88"/><rect x="6" y="58" width="50" height="20" rx="3" fill="#a39a88"/><rect x="58" y="58" width="36" height="20" rx="3" fill="#8f8676"/></g><path d="M8 34 q10 -8 20 0 M60 34 q8 -6 16 0" stroke="#5f8a3a" stroke-width="4" fill="none"/></svg>`,
+  caisse: `<svg viewBox="0 0 100 100"><rect x="14" y="14" width="72" height="72" rx="5" fill="#b07a3e" stroke="#3b2510" stroke-width="4"/><path d="M14 14 L86 86 M86 14 L14 86" stroke="#7a4f22" stroke-width="7"/><rect x="14" y="14" width="72" height="72" rx="5" fill="none" stroke="#3b2510" stroke-width="4"/><path d="M14 30 H86 M14 70 H86" stroke="#3b2510" stroke-width="3"/></svg>`,
+  trou: `<svg viewBox="0 0 100 100"><path d="M10 50 Q14 18 50 14 Q88 16 90 50 Q86 84 50 88 Q14 84 10 50Z" fill="#120d0a" stroke="#4a3a2a" stroke-width="5"/><path d="M24 44 Q50 30 76 44" stroke="#2c221a" stroke-width="5" fill="none"/></svg>`,
+  piege: `<svg viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="#ff6b5e" stroke-width="4" stroke-dasharray="8 6"/><text x="50" y="62" text-anchor="middle" font-size="34" fill="#ff6b5e">!</text></svg>`,
+  piegeVu: `<svg viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="#3a1d16" opacity=".55"/><g fill="#d9d4c8" stroke="#2a1a14" stroke-width="2.5"><path d="M20 78 L28 48 L36 78Z"/><path d="M42 78 L50 40 L58 78Z"/><path d="M64 78 L72 48 L80 78Z"/></g><circle cx="50" cy="24" r="9" fill="#ff6b5e"/><text x="50" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">!</text></svg>`
 };
 
 // ---------- rendu ----------
@@ -7556,7 +7693,7 @@ function render() {
   const actif = S.phase === "heros" ? heros() : null;
   for (const el of tokEls.values()) el._seen = false;
   const pose = (el, x, y) => { place(el, x, y); el._seen = true; };
-  for (const d of S.deco) pose(tok(d.id, "deco " + d.type, DECO[d.type]), d.x, d.y);
+  for (const d of S.deco) if (d.type !== "piege" || S.phase === "edit") pose(tok(d.id, "deco " + d.type, DECO[d.type]), d.x, d.y);
   for (const x of S.sorties) pose(tok(x.id, "deco sortie", DECO.sortie), x.x, x.y);
   for (const sc of S.secrets) {
     if (S.phase === "edit") {
@@ -7585,8 +7722,8 @@ function render() {
   }
   for (const h of S.heroes) {
     const c = C[h.cls];
-    const el = tok(h.id, "hero" + (h === actif ? " active" : actif && h.pv > 0 ? " attend" : "") + (h.pv <= 0 ? " ko" : "") + (h.joue && h.pv > 0 && S.phase === "heros" ? " done" : ""),
-      `<div class="coin" style="--rim:${h.couleur || c.rim}"><img src="${imgHeros(h.cls)}" alt="${c.nom}"></div>${h === actif && h.pv > 0 && !S.fini ? `<div class="nametag tour">${esc(h.nom)}</div>` : ""}
+    const el = tok(h.id, "hero r-" + h.race + (h === actif ? " active" : actif && h.pv > 0 ? " attend" : "") + (h.pv <= 0 ? " ko" : "") + (h.joue && h.pv > 0 && S.phase === "heros" ? " done" : ""),
+      `${RACE_DECO[h.race] ? `<div class="race-deco r-${h.race}">${RACE_DECO[h.race]}</div>` : ""}<div class="coin" style="--rim:${h.couleur || c.rim}"><img src="${imgHeros(h.cls)}" alt="${c.nom}"></div><div class="insigne" aria-hidden="true">${CLS_INSIGNE[h.cls] || ""}</div>${h === actif && h.pv > 0 && !S.fini ? `<div class="nametag tour">${esc(h.nom)}</div>` : ""}
        <div class="bar"><i style="width:${Math.max(0, h.pv) / st(h).pv * 100}%"></i></div>${S.phase === "edit" ? "" : fxAttente(h)}`);
     place(el, h.x, h.y); el._seen = true;
   }
@@ -7640,29 +7777,34 @@ function renderSide() {
     const c = C[h.cls], s = st(h);
     const hearts = Array.from({ length: s.pv }, (_, k) => ICON.coeur(k < h.pv)).join("");
     const fioles = Array.from({ length: s.mana }, (_, k) => ICON.fiole(k < h.mana)).join("");
-    const chips = [h.pv <= 0 ? '<span class="chip ko">À terre</span>' : "", h.force ? '<span class="chip">Force brute</span>' : "",
+    const chips = [h.pv <= 0 ? '<span class="chip ko">À terre</span>' : "", h.force ? '<span class="chip">Force brute</span>' : "", h.bouclier ? '<span class="chip">Protégé</span>' : "",
       S.phase === "heros" && h.joue && h.pv > 0 ? '<span class="chip">✓ A joué</span>' : ""].join("");
     const peut = h === actif && h.actions > 0 && !S.busy && !S.fini;
-    const pw = h === actif ? `<div class="powers">${c.p.map((p, j) =>
-      `<button class="pw" type="button" data-pw="${j}" ${peut && h.mana >= p.cout ? "" : "disabled"}><b>${p.nom}</b><span>${p.cout ? p.cout + " mana" : "Sans mana"} · ${p.desc}</span></button>`).join("")}</div>` : "";
+    const pw = "";
     return `<div class="hcard ${h === actif ? "active" : ""} ${h.pv <= 0 ? "ko" : ""}">
       <button class="por" type="button" data-sel="${i}" style="--rim:${h.couleur || c.rim}" aria-label="Choisir ${esc(h.nom)}"><img src="${imgHeros(h.cls)}" alt=""></button>
-      <div class="row1"><input id="nom-${h.cls}" value="${esc(h.nom)}" data-nom="${h.cls}" aria-label="Nom du héros" maxlength="18" ${h.portrait ? "readonly" : ""}><span class="cls">${c.nom}${c.portee > 1 ? " · portée " + c.portee : " · corps à corps"}</span><button class="fiche-b" type="button" data-fiche="${h.cls}" title="Fiche du héros" aria-label="Fiche de ${esc(h.nom)}">📜</button></div>
+      <div class="row1"><input id="nom-${h.cls}" value="${esc(h.nom)}" data-nom="${h.cls}" aria-label="Nom du héros" maxlength="18" ${h.portrait ? "readonly" : ""}><span class="cls">${h.niveau > 1 ? `Niv. ${h.niveau} · ` : ""}${c.nom}${c.portee > 1 ? " · portée " + c.portee : " · corps à corps"}</span><button class="fiche-b" type="button" data-fiche="${h.cls}" title="Fiche du héros" aria-label="Fiche de ${esc(h.nom)}">📜</button></div>
       <div class="race"><select id="race-${h.cls}" data-race="${h.cls}" aria-label="Race" ${S.debut && !h.portrait ? "" : "disabled"}>${Object.entries(RACES).map(([k, r]) => `<option value="${k}" ${k === h.race ? "selected" : ""}>${r.nom} (${r.bonus})</option>`).join("")}</select>${h.titre ? `<span class="titre">🏅 ${esc(h.titre)}</span>` : ""}</div>
       <div class="stats" style="grid-column:2"><span class="icons" title="Points de vie">${hearts}</span><span class="icons" title="Mana">${fioles}</span>
         <span class="dmg" title="Dégâts">−${s.deg} PV${c.distrib ? " à partager" : ""}</span>${chips}</div>
       ${pw}</div>`;
   }).join("");
   const inv = document.getElementById("inv");
-  const items = Object.entries(S.inv).filter(([, n]) => n > 0);
-  inv.innerHTML = items.length ? items.map(([k, n]) =>
-    `<button class="item${k.startsWith("sp:") ? " special" : ""}" type="button" data-item="${esc(k)}" title="${esc(itemInfo(k).desc)}">${k === "vie" ? ICON.coeur(true) : k === "mana" ? ICON.fiole(true) : k === "cle" ? ICON.cle : ICON.etoile}${esc(itemInfo(k).nom)}<b>×${n}</b></button>`).join("")
-    : '<p class="empty">Rien pour l\'instant. Fouillez les objets marqués d\'un « ? ».</p>';
+  const ico = k => k === "vie" ? ICON.coeur(true) : k === "mana" ? ICON.fiole(true) : k === "cle" ? ICON.cle : k === "force" ? "💪" : k === "rapidite" ? "⚡" : k === "bouclier" ? "🛡️" : ICON.etoile;
+  const bouton = (k, n, cls) => `<button class="item${k.startsWith("sp:") ? " special" : ""}" type="button" data-item="${esc(k)}" data-h="${cls || ""}" title="${esc(itemInfo(k).desc)}">${ico(k)}${esc(itemInfo(k).nom)}<b>×${n}</b></button>`;
+  const enMain = S.phase === "heros" ? heros() : null;
+  const lignes = S.heroes.map(h => [h, Object.entries(sacDe(h)).filter(([, n]) => n > 0)]).filter(([, l]) => l.length);
+  inv.innerHTML = lignes.map(([h, l]) => `<div class="sac${h === enMain ? " actif" : ""}"><span class="sac-nom">${esc(h.nom)}</span>${l.map(([k, n]) => bouton(k, n, h.cls)).join("")}</div>`).join("")
+    + (S.inv.cle ? `<div class="sac"><span class="sac-nom">Groupe</span>${bouton("cle", S.inv.cle)}</div>` : "")
+    || '<p class="empty">Rien pour l\'instant. Fouillez les objets marqués d\'un « ? ».</p>';
   document.getElementById("log").innerHTML = S.log.slice(0, 30).map(t => `<li>${t}</li>`).join("");
 }
 function renderTop() {
   document.getElementById("round").textContent = S.round;
-  document.getElementById("carte-nom").textContent = `${S.phase === "edit" && ED ? ED.quete.nom : QUETE.nom} · ${S.carte.nom} (${S.chapitre + 1}/${S.phase === "edit" && ED ? ED.quete.chapitres.length : QUETE.chapitres.length})${S.phase === "edit" ? "" : S.essai ? " · essai" : " · équipe " + EQUIPE}`;
+  document.getElementById("carte-nom").textContent = `${S.phase === "edit" && ED ? ED.quete.nom : QUETE.nom} · ${S.carte.nom} (${S.chapitre + 1}/${S.phase === "edit" && ED ? ED.quete.chapitres.length : QUETE.chapitres.length})${S.phase === "edit" ? "" : S.essai ? " · essai" : " · équipe " + EQUIPE + " · " + DIFFS[DIFF].ico + " " + DIFFS[DIFF].nom}`;
+  const ch = document.getElementById("compte-hud");
+  ch.hidden = !(S.compte > 0 && S.phase !== "edit");
+  if (!ch.hidden) { ch.textContent = `⏳ ${S.carte.compte.texte || "Il reste"} ${S.compte} manche${S.compte > 1 ? "s" : ""}`; ch.classList.toggle("urgent", S.compte <= 3); }
   const t = document.getElementById("turn");
   if (S.phase === "edit") t.innerHTML = `<span class="mj-badge ed">✎</span><b>Créateur de quêtes</b>`;
   else if (S.phase === "heros") {
@@ -8295,7 +8437,8 @@ function statsDe(cls) {
 function habitFiche(cls) {
   if (!ficheActive()) return {};
   const f = (FICHE.heros || {})[cls], titre = (FICHE.titres || {})[cls] || "";
-  return f ? { nom: f.nom || C[cls].nom, race: f.race || RACE_DEFAUT[cls], portrait: portraitDe(cls, f), couleur: f.couleur || null, titre } : { titre };
+  const niv = { niveau: niveauDe(cls), attr: { ...((FICHE.attr || {})[cls] || {}) } };
+  return f ? { nom: f.nom || C[cls].nom, race: f.race || RACE_DEFAUT[cls], portrait: portraitDe(cls, f), couleur: f.couleur || null, titre, ...niv } : { titre, ...niv };
 }
 function appliquerFiches() {
   if (!S || !ficheActive()) return;
@@ -8312,6 +8455,10 @@ async function chargerFiche() {
 let ficheMinuteur = null;
 const ficheModifiee = () => { clearTimeout(ficheMinuteur); ficheMinuteur = setTimeout(() => ficheActive() && Stock.sauverEquipe(FICHE), 1500); };
 // Compte une réussite pour le héros (l'élève) et décerne les badges atteints
+const niveauDe = cls => 1 + ((FICHE && FICHE.stats && FICHE.stats[cls] && FICHE.stats[cls].quetes) || 0);
+const pointsLibres = cls => niveauDe(cls) - 1 - Object.values((FICHE.attr || {})[cls] || {}).reduce((a, b) => a + b, 0);
+// Les monstres suivent le niveau moyen de l'équipe : +12 % de PV par niveau au-dessus de 1
+const facteurNiveau = heroes => { const n = heroes.length ? heroes.reduce((a, h) => a + (h.niveau || 1), 0) / heroes.length : 1; return Math.min(2, 1 + .12 * (n - 1)); };
 function progres(h, fn) {
   if (!S || S.essai || S.phase === "edit" || !h || !ficheActive()) return;
   const s = statsDe(h.cls); fn(s);
@@ -8328,6 +8475,7 @@ function ouvrirFiches(nouvelle) {
   return new Promise(resolve => {
     if (!ficheActive()) FICHE = ficheVide(EQUIPE);
     const brouillon = clone(FICHE.heros || {});
+    const attrAvant = clone(FICHE.attr || {});
     for (const c of Object.keys(C)) {
       const h = S && S.phase !== "edit" ? S.heroes.find(x => x.cls === c) : null;
       brouillon[c] = Object.assign({ nom: (h && h.nom) || noms[c] || C[c].nom, race: races[c] || RACE_DEFAUT[c], genre: "g", couleur: C[c].rim, devise: "" }, brouillon[c]);
@@ -8343,6 +8491,8 @@ function ouvrirFiches(nouvelle) {
         <div class="pastilles" role="group" aria-label="Couleur">${COULEURS.map(col => `<button type="button" data-k="couleur" data-v="${col}" style="background:${col}" aria-pressed="${f.couleur === col}" aria-label="Couleur ${col}"></button>`).join("")}</div>
         <input class="field" data-k="devise" value="${esc(f.devise)}" maxlength="50" placeholder="Ta devise (facultatif)" aria-label="Devise">
         <div class="badges">${BADGES.map(b => `<button type="button" class="badge${eus.includes(b.id) ? " eu" : ""}${titre === b.nom ? " titre" : ""}" data-badge="${b.id}" title="${esc(b.nom)} : ${esc(b.desc)}${eus.includes(b.id) ? " (gagné)" : ""}">${b.ic}</button>`).join("")}</div>
+        <div class="attrs"><p class="attr-tete" title="Vie +1 PV · Mana +1 · Vitesse +1 déplacement · Attaque +1 dégât · Ruse : observe plus loin, +1 aux lancers · Parade : 1 coup paré sans question par chapitre">Niveau ${niveauDe(c)}${pointsLibres(c) > 0 ? ` · <b>${pointsLibres(c)} point${pointsLibres(c) > 1 ? "s" : ""} à placer</b>` : ""}</p>
+          ${Object.entries(ATTRIBUTS).map(([k, a]) => { const v = ((FICHE.attr || {})[c] || {})[k] || 0; return `<div class="attr" title="${esc(a.desc)}"><span>${a.ic} ${a.nom}</span><b>${v}</b><button type="button" class="btn mini" data-attr="${k}" data-pm="-1" ${v ? "" : "disabled"} aria-label="Retirer un point">−</button><button type="button" class="btn mini" data-attr="${k}" data-pm="1" ${pointsLibres(c) > 0 ? "" : "disabled"} aria-label="Ajouter un point">+</button></div>`; }).join("")}</div>
         <p class="fiche-stats">${eus.length} badge${eus.length > 1 ? "s" : ""} · ${s.maths} en maths · ${s.fr} en français · ${s.kills} monstre${s.kills > 1 ? "s" : ""}</p>
         <p class="fiche-aide" hidden></p>
       </div>`;
@@ -8362,6 +8512,13 @@ function ouvrirFiches(nouvelle) {
         if (!eus.includes(b.id)) { const a = c.querySelector(".fiche-aide"); a.hidden = false; a.textContent = `${b.ic} ${b.nom} : ${b.desc}.`; return; }
         FICHE.titres = FICHE.titres || {}; FICHE.titres[c.dataset.c] = FICHE.titres[c.dataset.c] === b.nom ? "" : b.nom; dessiner(); return;
       }
+      const at = e.target.closest("button[data-attr]");
+      if (at && c) {
+        FICHE.attr = FICHE.attr || {}; const a = FICHE.attr[c.dataset.c] = FICHE.attr[c.dataset.c] || {}, k = at.dataset.attr, pm = Number(at.dataset.pm);
+        if (pm > 0 && pointsLibres(c.dataset.c) <= 0) return;
+        a[k] = Math.max(0, (a[k] || 0) + pm); if (!a[k]) delete a[k];
+        bruit("coche"); dessiner(); return;
+      }
       const t = e.target.closest("button[data-k]");
       if (t && c) { brouillon[c.dataset.c][t.dataset.k] = t.dataset.v; dessiner(); return; }
       if (e.target.id === "fi-ok") {
@@ -8373,7 +8530,7 @@ function ouvrirFiches(nouvelle) {
         bruit("tresor"); toast(`Fiches de l'équipe ${EQUIPE} enregistrées.`);
         fin(true);
       }
-      if (e.target.id === "fi-non") fin(false);
+      if (e.target.id === "fi-non") { FICHE.attr = attrAvant; fin(false); }
     };
   });
 }
@@ -8491,8 +8648,14 @@ document.getElementById("jauge").onclick = async () => {
   if (!S || S.busy || S.fini) return;
   if ((S.jauge || 0) < JAUGE_MAX) return toast(`Jauge d'équipe : ${S.jauge || 0} sur ${JAUGE_MAX}. Chaque bonne réponse de la classe la remplit!`, 3500);
   const v = await choisir("⚡ Super-pouvoir d'équipe!", "Grâce à toutes vos bonnes réponses, l'équipe déchaîne sa puissance. La classe vote :",
-    [{ txt: "💚 Vague de guérison (+2 PV à tous)", v: "soin", cls: "gold" }, { txt: "☄️ Pluie d'étoiles (−2 PV aux monstres proches)", v: "etoiles", cls: "blue" }, { txt: "🔷 Source de mana (+2 mana à tous)", v: "mana" }, { txt: "Plus tard", v: "non" }]);
+    [{ txt: "💚 Vague de guérison (+2 PV à tous)", v: "soin", cls: "gold" }, { txt: "☄️ Pluie d'étoiles (−2 PV à tous les monstres en vue)", v: "etoiles", cls: "blue" }, { txt: "💥 Étoile filante (−6 PV à un seul monstre)", v: "etoile", cls: "blue" }, { txt: "🔷 Source de mana (+2 mana à tous)", v: "mana" }, { txt: "Plus tard", v: "non" }]);
   if (v === "non") return;
+  let cible = null;
+  if (v === "etoile") {
+    const es = ennemisVivants(); if (!es.length) return toast("Aucun monstre à frapper.");
+    const i = await choisir("💥 Étoile filante", "Quel monstre reçoit l'étoile filante?", [...es.map((e, i) => ({ txt: `${esc(e.nom)} (${e.pv} PV)`, v: i, cls: e.boss ? "gold" : "" })), { txt: "Annuler", v: -1 }]);
+    if (i < 0) return; cible = es[i];
+  }
   S.jauge = 0; S.busy = true; render();
   bruit("magie"); secousse(1);
   const vivs = vivants();
@@ -8500,7 +8663,8 @@ document.getElementById("jauge").onclick = async () => {
   await sleep(700);
   if (v === "soin") { for (const h of vivs) { const g = Math.min(2, st(h).pv - h.pv); if (g > 0) { h.pv += g; flotter(h.x, h.y, "+" + g, "#72d39b"); anim(h, "heal"); } } bruit("soin"); }
   if (v === "mana") { for (const h of vivs) { const g = Math.min(2, st(h).mana - h.mana); if (g > 0) { h.mana += g; flotter(h.x, h.y, "+" + g, "#7fb7ff"); anim(h, "heal"); } } bruit("soin"); }
-  if (v === "etoiles") for (const e of ennemisVivants().filter(e => vivs.some(h => dist(h, e) <= 5))) { await projectile(vivs[0], e, "#ffe08a"); await blesser(e, 2); }
+  if (v === "etoiles") for (const e of ennemisVivants().filter(e => vivs.some(h => dist(h, e) <= 6))) { await projectile(vivs[0], e, "#ffe08a"); await blesser(e, 2); }
+  if (v === "etoile" && cible) { await projectile(vivs[0], cible, "#ffe08a"); secousse(1.5); await blesser(cible, 6); }
   log(`<b>Super-pouvoir d'équipe!</b>`); toast("⚡ Bravo l'équipe!", 3000);
   S.busy = false; verifierFin(); render(); for (const h of vivs) valide(h);
 };
@@ -8581,7 +8745,7 @@ function precedemment() {
   const net = t => String(t).replace(/<[^>]+>/g, "").trim();
   const blesses = S.heroes.filter(h => h.pv > 0 && h.pv < st(h).pv).map(h => `${h.nom} est blessé (${h.pv} PV sur ${st(h).pv})`);
   const ko = S.heroes.filter(h => h.pv <= 0).map(h => `${h.nom} est à terre`);
-  const sac = Object.entries(S.inv).filter(([, n]) => n > 0).map(([k, n]) => (n > 1 ? n + " × " : "") + itemInfo(k).nom);
+  const sac = [S.inv, ...S.heroes.map(sacDe)].flatMap(o => Object.entries(o)).filter(([, n]) => n > 0).map(([k, n]) => (n > 1 ? n + " × " : "") + itemInfo(k).nom);
   const restants = ennemisVivants(), boss = restants.find(e => e.boss);
   const trouves = S.secrets.filter(x => x.trouve).length;
   const souvenirs = S.log.map(net).filter(t => t && !t.startsWith("—") && !t.startsWith("Partie reprise") && !t.startsWith("Chapitre ")).slice(0, 3).reverse();
@@ -8618,12 +8782,12 @@ function majSouffleur() {
       aDire = `« ${h.nom}, c'est ton tour! Tu as ${n} ${a}. »`;
       if (portee) aDire += ` « ${portee.nom} est à ta portée : tu peux l'attaquer! »`;
       else if (proche) aDire += ` « ${proche.nom} est à ${dist(h, proche)} cases. »`;
-      if (h.pv === 1) aDire += S.inv.vie ? " « Il te reste 1 PV : pense à la potion de vie! »" : " « Prudence, il te reste 1 PV! »";
+      if (h.pv === 1) aDire += sacDe(h).vie ? " « Il te reste 1 PV : pense à la potion de vie! »" : " « Prudence, il te reste 1 PV! »";
     } else aDire = `« Encore ${n} ${a}, ${h.nom}! »`;
-    faire = "L'élève touche une case verte, puis le ✓ pour confirmer son déplacement, ou touche un monstre, un objet ou un mur pour agir. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
+    faire = "L'élève touche une case verte, puis le ✓ pour confirmer son déplacement, ou touche un monstre, un objet ou un mur pour agir. ✨ Pour ses pouvoirs, il touche son propre héros. Chaque action demande une bonne réponse. Ensuite : « Terminer le tour ».";
     const cible = ennemisAPortee(h).find(e => allieCombo(h, e));
     if (cible && n > 0) faire += ` 🤝 Combo possible sur ${cible.nom} : un coéquipier le touche déjà (+1 dégât).`;
-    else if (!S.entraide) faire += " 🤝 Si une réponse est ratée, un coéquipier peut venir aider (une fois par manche).";
+    else if (!S.entraide) faire += " 🤝 Si une réponse est ratée, un coéquipier juste à côté peut venir aider (une fois par manche).";
   } else if (S.phase === "mj") {
     const cle = "mj" + S.round;
     if (sfCle !== cle) {
@@ -8690,10 +8854,10 @@ async function jouerEvenement(ev) {
   const tt = effet === "monstre" && !t ? monstreRenfort({}) : t;
   switch (effet) {
     case "monstre": { const c = caseLibrePres(h.x + (h.x < W / 2 ? 3 : -3), h.y) || caseLibrePres(h.x, h.y); if (c) { faireApparaitre(tt, c.x, c.y); secousse(1); bruit("grogne"); } break; }
-    case "vie": case "mana": S.inv[effet]++; bruit("tresor"); etincelles(h, "#ffe08a", 14); toast(`+1 ${ITEMS[effet].nom}`); break;
+    case "vie": case "mana": ajouterObjet(h, effet); bruit("tresor"); etincelles(h, "#ffe08a", 14); toast(`+1 ${ITEMS[effet].nom}`); break;
     case "soin": for (const v of vivs) if (v.pv < st(v).pv) { v.pv++; flotter(v.x, v.y, "+1", "#72d39b"); anim(v, "heal"); } bruit("soin"); break;
     case "piege": S.busy = false; await defendre(h, null, 1); break;
-    case "defi": { S.busy = false; const ok = await epreuveMath("×", "Le défi de l'équipe"); if (ok) { S.inv.vie++; bruit("tresor"); toast("Défi réussi : +1 potion de vie!"); log("Défi réussi : +1 potion de vie."); } else log("Le défi est raté… dommage!"); break; }
+    case "defi": { S.busy = false; const ok = await epreuveMath("×", "Le défi de l'équipe"); if (ok) { ajouterObjet(h, "vie"); bruit("tresor"); toast("Défi réussi : +1 potion de vie!"); log("Défi réussi : +1 potion de vie."); } else log("Le défi est raté… dommage!"); break; }
     case "eclair": secousse(1.5); break;
     case "transformer": await transformerPlateau(); break;
   }
@@ -8772,9 +8936,23 @@ async function lancer(el, final) {
 }
 const d12 = () => 1 + Math.floor(Math.random() * 12);
 const rnd2 = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
-const NIVEAUX = { des: "Dés de 1 à 12", facile: "2 chiffres", "5e": "3 chiffres" };
+const NIVEAUX = { des: "Dés de 1 à 12", facile: "2 chiffres", "5e": "3 chiffres", expert: "4 chiffres" };
+// Difficulté choisie par l'équipe : décale le niveau de calcul, la force des monstres et le temps des comptes à rebours
+const DIFFS = {
+  facile: { nom: "Facile", ico: "🟢", pv: .75, tours: 3, desc: "Calculs avec les dés, une mauvaise réponse en moins en français, monstres plus faibles, plus de temps." },
+  normal: { nom: "Normal", ico: "🟡", pv: 1, tours: 0, desc: "Le niveau prévu pour la quête." },
+  expert: { nom: "Expert", ico: "🔴", pv: 1.3, tours: -2, desc: "Calcul mental plus gros (×, ÷ à 2 chiffres), futur simple, monstres plus coriaces, moins de temps." },
+};
+let DIFF = "normal", NIV_BASE = null;
+const ECHELLE = ["des", "facile", "5e", "expert"];
+const niveauDiff = base => ECHELLE[Math.max(0, Math.min(3, ECHELLE.indexOf(base) + (DIFF === "facile" ? -1 : DIFF === "expert" ? 1 : 0)))];
 function genCalcul(op) {
-  const dur = S.niveau === "5e";
+  const dur = S.niveau === "5e", exp = S.niveau === "expert";
+  if (op === "×") { const a = rnd2(13, 49), b = rnd2(3, 9); return { txt: `${a} × ${b}`, rep: a * b, a, b, op }; }
+  if (exp && op === "+") { const a = rnd2(1205, 6899), b = rnd2(305, 2999); return { txt: `${a} + ${b}`, rep: a + b, a, b, op }; }
+  if (exp && op !== "÷") { const a = rnd2(2100, 9999), b = rnd2(305, a - 1000); return { txt: `${a} − ${b}`, rep: a - b, a, b, op: "−" }; }
+  if (op === "÷" && DIFF === "expert") { const b = rnd2(3, 9), q = rnd2(12, 60); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
+  if (op === "÷" && DIFF === "facile") { const b = rnd2(2, 5), q = rnd2(1, 10); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
   if (op === "+") { const a = dur ? rnd2(105, 589) : rnd2(12, 68), b = dur ? rnd2(104, 399) : rnd2(11, 29); return { txt: `${a} + ${b}`, rep: a + b, a, b, op }; }
   if (op === "÷") { const b = rnd2(2, 12), q = rnd2(2, 12); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
   const a = dur ? rnd2(320, 999) : rnd2(35, 99), b = dur ? rnd2(104, a - 100) : rnd2(11, a - 10);
@@ -8784,6 +8962,8 @@ function genCalcul(op) {
 const DIZ = n => Math.floor(n / 10) * 10, CEN = n => Math.floor(n / 100) * 100;
 function indicesCalcul(q) {
   const { a, b, op } = q;
+  if (op === "×" && a > 12) return [`Décompose ${a} : ${DIZ(a)} et ${a % 10}.`, `${DIZ(a)} × ${b} = ${DIZ(a) * b} et ${a % 10} × ${b} = ${(a % 10) * b}. Additionne-les!`];
+  if (op === "÷" && a > 12 * b) return [`Combien de fois ${b} × 10 = ${b * 10} entre dans ${a}?`, `${b} × ${Math.floor(a / b / 10) * 10} = ${b * Math.floor(a / b / 10) * 10}. Il reste ${a - b * Math.floor(a / b / 10) * 10} à diviser par ${b}.`];
   if (op === "×") {
     // on part de l'astuce la plus facile des deux nombres
     const FACILE = [1, 10, 2, 5, 11, 4, 3, 9, 6, 8, 12, 7];
@@ -8824,7 +9004,7 @@ function indicesCalcul(q) {
 function epreuveMath(op, titre, danger) {
   return new Promise(async resolve => {
     const opNom = { "+": "Addition", "−": "Soustraction", "×": "Multiplication", "÷": "Division" }[op];
-    const des = op === "×" || ((op === "+" || op === "−") && S.niveau === "des");
+    const des = (op === "×" && DIFF !== "expert") || ((op === "+" || op === "−") && S.niveau === "des");
     const diceHtml = des ? `<div class="dice"><div class="die" id="d1">${D12}<b>?</b></div><span class="x">${op}</span><div class="die" id="d2">${D12}<b>?</b></div></div>` : "";
     ouvrir(`<h2>${titre}</h2><p class="sub">Épreuve : ${opNom}</p>${diceHtml}<div class="big" id="q">&nbsp;</div>
       <div class="ans" id="ans" aria-live="polite"></div><div class="indice-q" id="iq" aria-live="polite"></div>
@@ -8836,7 +9016,7 @@ function epreuveMath(op, titre, danger) {
     let q;
     pad.style.visibility = "hidden";
     if (des) {
-      let a = d12(), b = d12();
+      let a = d12(), b = op === "×" && DIFF === "facile" ? rnd2(1, 6) : d12();
       if (op === "−" && b > a) [a, b] = [b, a];
       try { await Promise.all([lancer(document.getElementById("d1"), a), lancer(document.getElementById("d2"), b)]); }
       catch { document.querySelectorAll(".die b").forEach((el, i) => el.textContent = i ? b : a); }
@@ -8879,8 +9059,10 @@ function epreuveMath(op, titre, danger) {
 }
 function epreuveFr(titre) {
   return new Promise(resolve => {
-    const [q, choix, r] = Math.random() < .3 ? questionVerbe() : pick(FR);
-    const ordre = choix.map((c, i) => [c, i]).sort(() => Math.random() - .5);
+    const [q, choix, r] = Math.random() < (DIFF === "expert" ? .6 : .3) ? questionVerbe() : pick(FR);
+    let ordre = choix.map((c, i) => [c, i]).sort(() => Math.random() - .5);
+    // en facile, une mauvaise réponse est déjà retirée
+    if (DIFF === "facile" && ordre.length > 2) { const f = ordre.findIndex(([, i]) => i !== r); ordre.splice(f, 1); }
     ouvrir(`<h2>${titre}</h2><p class="sub">Question de français</p><p class="fr-q">${q}</p>
       <div class="choices" id="ch">${ordre.map(([c, i]) => `<button type="button" data-i="${i}">${c}</button>`).join("")}</div><div id="suite"></div>`);
     const ch = document.getElementById("ch");
@@ -8998,7 +9180,7 @@ async function defendre(h, e, deg) {
   if (e) { e.face = dirVers(e, h); render(); bruit("grogne"); bruit("epee", { delai: .15 }); await anim(e, "lunge", h); }
   const qui = e ? e.nom : "Un piège";
   S.qui = h;
-  const ok = await epreuveMath("÷", `${qui} attaque ${esc(h.nom)}! Défends-toi`, true);
+  const ok = h.parades > 0 ? (h.parades--, log(`${esc(h.nom)} pare le coup par réflexe (parade)!`), toast(`🛡️ Parade de ${h.nom}!`), true) : !e && h.race === "felin" ? (log(`${esc(h.nom)} retombe sur ses pattes et évite le piège!`), toast(`🐈 ${h.nom} évite le piège!`), true) : h.bouclier ? (h.bouclier = false, log(`Le parchemin de protection de ${esc(h.nom)} s'illumine!`), toast(`🛡️ Le parchemin protège ${h.nom}!`), true) : await epreuveMath("÷", `${qui} attaque ${esc(h.nom)}! Défends-toi`, true);
   S.qui = null;
   if (ok) {
     progres(h, s => s.def++); raconter("pare", h, e);
@@ -9026,7 +9208,8 @@ async function faireAction(epreuve, succes, attaquant) {
   h.actions--; S.busy = true; S.debut = false; render();
   let ok = await epreuve();
   if (!ok && !S.entraide && S.phase === "heros" && h.pv > 0) {
-    const amis = vivants().filter(v => v !== h);
+    const amis = vivants().filter(v => v !== h && dist(v, h) <= 1);
+    if (!amis.length && vivants().length > 1) toast("Aucun coéquipier n'est à côté pour aider. Restez groupés!", 3500);
     if (amis.length) {
       const v = await choisir("🤝 Entraide!", `Un coéquipier peut venir au secours ${de(h.nom)} et répondre à une nouvelle question. Une seule fois par manche!`,
         [...amis.map((a, i) => ({ txt: "🤝 " + esc(a.nom), v: i, cls: "gold" })), { txt: "Non merci", v: -1 }]);
@@ -9052,9 +9235,41 @@ async function faireAction(epreuve, succes, attaquant) {
   if (S.phase === "heros" && !S.fini && (h.actions <= 0 || h.pv <= 0)) { await sleep(500); await finTourHeros(); }
 }
 
+// Passer un objet : à côté, on le donne; plus loin (6 cases max), on le lance et il faut 2 × la distance au d12
+async function passerObjet(h) {
+  const sac = Object.entries(sacDe(h)).filter(([, n]) => n > 0);
+  if (!sac.length || h.actions <= 0) return;
+  const k = await choisir("Quel objet?", `Le sac de ${esc(h.nom)}`, [...sac.map(([k, n]) => ({ txt: `${esc(itemInfo(k).nom)} ×${n}`, v: k })), { txt: "Annuler", v: "" }]);
+  if (!k) return;
+  const amis = vivants().filter(v => v !== h && dist(v, h) <= 6);
+  if (!amis.length) return toast("Aucun coéquipier à 6 cases ou moins.");
+  const id = await choisir("À qui?", "À côté, on le donne. Plus loin, on le lance : il faut faire au moins 2 × la distance au d12.",
+    [...amis.map(v => ({ txt: `${esc(v.nom)} <small>(${dist(v, h) <= 1 ? "à côté" : `${dist(v, h)} cases : ${2 * dist(v, h)} ou plus`})</small>`, v: v.id })), { txt: "Annuler", v: "" }]);
+  const v = amis.find(a => a.id === id); if (!v) return;
+  const d = dist(v, h), nom = itemInfo(k).nom;
+  h.actions--; S.debut = false;
+  if (d <= 1) {
+    retirerObjet(h, k); ajouterObjet(v, k);
+    await anim(h, "lunge", v); bruit("coche");
+    log(`${esc(h.nom)} donne ${esc(nom)} à ${esc(v.nom)}.`); toast(`${v.nom} reçoit : ${nom}`);
+  } else {
+    ouvrir(`<h2>${esc(h.nom)} lance : ${esc(nom)}</h2><p class="sub">${esc(v.nom)} est à ${d} cases : il faut ${2 * d} ou plus pour l'attraper.</p>
+      <div class="dice"><div class="die" id="dd">${D12}<b>?</b></div></div><p class="verdict" id="vv">&nbsp;</p><div class="row"><button class="btn gold" id="cont" type="button" disabled>Continuer</button></div>`);
+    const r = Math.min(12, d12() + ((h.attr || {}).ruse || 0));
+    try { await lancer(document.getElementById("dd"), r); } catch { document.querySelector("#dd b").textContent = r; }
+    const ok = r >= 2 * d, fragile = !k.startsWith("sp:");
+    const vv = document.getElementById("vv");
+    if (ok) { retirerObjet(h, k); ajouterObjet(v, k); vv.className = "verdict ok"; vv.textContent = `${r} : attrapé! ${v.nom} reçoit ${nom}.`; bruit("ok"); log(`${esc(h.nom)} lance ${esc(nom)} à ${esc(v.nom)}, qui l'attrape!`); }
+    else if (fragile) { retirerObjet(h, k); vv.className = "verdict bad"; vv.textContent = `${r} : raté! La fiole se brise par terre…`; bruit("echec"); log(`${esc(h.nom)} rate son lancer : ${esc(nom)} se brise.`); }
+    else { vv.className = "verdict bad"; vv.textContent = `${r} : raté! ${h.nom} rattrape l'objet de justesse et le garde.`; bruit("echec"); log(`${esc(h.nom)} rate son lancer et garde ${esc(nom)}.`); }
+    await new Promise(res => { const c = document.getElementById("cont"); c.disabled = false; c.onclick = () => { fermer(); res(); }; });
+  }
+  render();
+  if (h.actions <= 0) setTimeout(finTourHeros, 700);
+}
 async function donnerPotion(h, v) {
-  if (!S.inv.vie || h.actions <= 0) return;
-  S.inv.vie--; h.actions--; S.debut = false;
+  if (!sacDe(h).vie || h.actions <= 0) return;
+  retirerObjet(h, "vie"); h.actions--; S.debut = false;
   const releve = v.pv <= 0;
   v.pv = Math.min(st(v).pv, Math.max(0, v.pv) + 1);
   if (releve) v.joue = true; // il se relève, mais rejouera à la prochaine manche
@@ -9095,7 +9310,8 @@ async function attaquer(h, e) {
     if (c.distrib && autres.length > 1) parts = await distribuer(deg, 1, [e, ...autres.filter(x => x !== e)], "Partage tes dégâts");
     log(`${esc(h.nom)} réussit son attaque (−${deg} PV).`);
     if (allie) raconter("combo", { nom: `${h.nom} et ${allie.nom}` }, e); else raconter(h.cls, h, e);
-    for (const [id, n] of Object.entries(parts)) if (n) { const cible = S.enemies.find(x => x.id === id); await frapper(h, cible); await blesser(cible, n); }
+    for (const [id, n] of Object.entries(parts)) if (n) { const cible = S.enemies.find(x => x.id === id); await frapper(h, cible); await blesser(cible, n);
+      if (h.race === "lezard" && cible.pv > 0 && !cible.poison) { cible.poison = true; log(`Le venin de ${esc(h.nom)} empoisonne ${cible.nom}!`); } }
   }, e);
 }
 
@@ -9113,8 +9329,9 @@ async function interagir(h, o) {
     o.vide = true;
     bruit("tresor"); etincelles(o, "#ffe08a", 14);
     await anim(o, "open");
-    const ct = OBJ[o.type].contenu;
-    if (ITEMS[ct]) { S.inv[ct]++; log(`Le groupe obtient : <b>${ITEMS[ct].nom}</b>.`); toast(`+1 ${ITEMS[ct].nom}`); }
+    const ct = OBJ[o.type].contenu === "hasard" ? pick(BUTIN) : OBJ[o.type].contenu;
+    if (ITEMS[ct]) { const qui = ajouterObjet(h, ct); log(`${qui ? esc(qui.nom) : "Le groupe"} obtient : <b>${ITEMS[ct].nom}</b>.`); toast(`+1 ${ITEMS[ct].nom}${qui ? " pour " + qui.nom : ""}`);
+      if (h.race === "rat" && ct !== "cle") { const bonus = pick(BUTIN); ajouterObjet(h, bonus); log(`Fouineur! ${esc(h.nom)} déniche aussi : <b>${ITEMS[bonus].nom}</b>.`); setTimeout(() => toast(`🐀 Fouineur : +1 ${ITEMS[bonus].nom}`), 1600); } }
     else if (ct === "levier") {
       for (const p of Object.values(S.portes)) if (p.par === "levier") p.verrou = false;
       drawTerrain(); bruit("porte"); log("Clac! Les grilles s'ouvrent."); toast("Les grilles s'ouvrent…", 3500);
@@ -9193,10 +9410,17 @@ async function finTourHeros() {
 }
 function finTourMJ() {
   if (S.busy || S.fini) return;
-  S.round++; S.phase = "heros"; mjReach = null; mjSel = null; mjAttente = null; S.attente = null; S.entraide = false;
+  S.round++;
+  if (S.compte) {
+    S.compte--;
+    if (S.compte <= 0) { S.horsTemps = true; S.fini = "defaite"; render(); return montrerFin(false); }
+    if (S.compte <= 3) { toast(`⏳ Plus que ${S.compte} manche${S.compte > 1 ? "s" : ""}!`, 3500); try { bruit("coche"); } catch {} }
+  }
+  S.phase = "heros"; mjReach = null; mjSel = null; mjAttente = null; S.attente = null; S.entraide = false;
   for (const h of S.heroes) { h.joue = h.pv <= 0; h.actions = h.pv > 0 ? S.nbActions : 0; }
   S.actif = S.heroes.findIndex(h => h.pv > 0);
   log(`— Manche ${S.round} —`);
+  if (S.pnj.some(p => p.bouge === "erre" || p.bouge === "suit")) bougerPnj();
   render(); toast(`Manche ${S.round} : au tour ${de(heros().nom)}!`); if (heros()) anim(heros(), "eveil");
   sauvegarderPartie(true);
   if (PERIODE.fin && PERIODE.duree) aSuivre(); else evenementsManche();
@@ -9234,16 +9458,18 @@ function verifierFin() {
   if (dernierChapitre() && !ennemisVivants().length && !S.objets.some(o => o.type === "coffreDore" && !o.vide)) { S.fini = "victoire"; montrerFin(true); }
 }
 function montrerFin(v) {
-  if (v && !S.queteComptee) { S.queteComptee = true; for (const h of S.heroes) progres(h, s => s.quetes++); if (!campagne().finies.includes(QUETE.id)) marquerFinie(QUETE.id); }
+  if (v && !S.queteComptee) { S.queteComptee = true; for (const h of S.heroes) progres(h, s => s.quetes++); if (ficheActive()) setTimeout(() => toast("⬆️ Niveau supérieur! Chaque héros a 1 point d'attribut à placer dans les fiches (📜).", 6000), 1500); if (!finiesDe(EQUIPE).includes(QUETE.id)) marquerFinie(QUETE.id, true, EQUIPE); if (campagne().actif) VUE = EQUIPE; }
   bruit(v ? "victoire" : "defaite");
   setTimeout(() => {
     const rep = S.rep || [], m = compte(rep, r => r.t === "maths"), f = compte(rep, r => r.t !== "maths");
     if (rep.length && !overlay.hidden) modal.insertAdjacentHTML("beforeend", `<p class="sub">Bilan de l'équipe ${esc(EQUIPE)} : maths ${m.ok}/${m.n} · français et énigmes ${f.ok}/${f.n}</p>`);
   }, 0);
-  ouvrir(v ? `<h2>Victoire!</h2>${QUETE.fin ? `<div class="intro">${esc(QUETE.fin).replace(/\n/g, "<br>")}</div>` : ""}<p class="fr-q">Les héros ont triomphé : « ${esc(QUETE.nom)} » est terminée!</p><p class="sub">Le maître du jeu remet les récompenses aux héros.</p><div class="row"><button class="btn gold" type="button" id="again">Nouvelle aventure</button><button class="btn" type="button" id="stay">Voir la carte</button></div>`
-    : `<h2>Les héros sont tombés…</h2><p class="fr-q">Le donjon a eu raison de l'équipe cette fois-ci.</p><div class="row"><button class="btn gold" type="button" id="again">Réessayer</button><button class="btn" type="button" id="stay">Voir la carte</button></div>`);
+  ouvrir(v ? `<h2>Victoire!</h2>${QUETE.fin ? `<div class="intro">${esc(QUETE.fin).replace(/\n/g, "<br>")}</div>` : ""}<p class="fr-q">Les héros ont triomphé : « ${esc(QUETE.nom)} » est terminée!</p><p class="sub">Le maître du jeu remet les récompenses aux héros.</p><div class="row"><button class="btn gold" type="button" id="monde-fin">💾 Sauvegarder et retourner à la carte</button><button class="btn" type="button" id="again">Rejouer</button><button class="btn" type="button" id="stay">Voir le plateau</button></div>`
+    : (S.horsTemps ? `<h2>Trop tard…</h2><p class="fr-q">${esc((S.carte.compte && S.carte.compte.echec) || "Le temps est écoulé! La mission a échoué.")}</p>` : `<h2>Les héros sont tombés…</h2><p class="fr-q">Le donjon a eu raison de l'équipe cette fois-ci.</p>`) + `<div class="row"><button class="btn gold" type="button" id="again">Réessayer</button><button class="btn" type="button" id="stay">Voir le plateau</button></div>`);
   document.getElementById("again").onclick = () => { fermer(); demarrerQuete(QUETE); };
   document.getElementById("stay").onclick = fermer;
+  const mf = document.getElementById("monde-fin");
+  if (mf) mf.onclick = async () => { mf.disabled = true; await sauvegarderPartie(true); fermer(); afficherMonde(); };
 }
 
 // ---------- quête : exploration, secrets, énigmes, PNJ, sorties ----------
@@ -9263,7 +9489,7 @@ const INDICES = {
 };
 const INDICE_TITRES = { fouiller: "Quelque chose attire le regard…", creuser: "La terre semble fraîchement remuée…", bruler: "Des ronces sèches cachent quelque chose…", toucher: "Une marque étrange luit doucement…" };
 const DECLENCHEURS = { fouiller: "Fouiller", creuser: "Creuser", bruler: "Brûler", toucher: "Toucher", entrer: "Marcher sur la case" };
-const RECOMP = { rien: "Rien de plus", vie: "Potion de vie", mana: "Potion de mana", cle: "Clé de bronze", objet: "Objet spécial (à nommer)", sceau: "Brise un sceau de la porte scellée", levier: "Ouvre les grilles",
+const RECOMP = { rien: "Rien de plus", vie: "Potion de vie", mana: "Potion de mana", force: "Potion de force", rapidite: "Potion de rapidité", bouclier: "Parchemin de protection", cle: "Clé de bronze", objet: "Objet spécial (à nommer)", sceau: "Brise un sceau de la porte scellée", levier: "Ouvre les grilles",
   piege: "Piège : −1 PV au héros", piegeGroupe: "Piège : −1 PV à tout le groupe", monstre: "Un monstre surgit", transformer: "Transforme le plateau (variante)" };
 const ECHECS = { rien: "Rien : on peut réessayer", piege: "−1 PV au héros", piegeGroupe: "−1 PV à tout le groupe" };
 const nomRecomp = sec => sec.recompense === "objet" ? (sec.objet || "Objet spécial") : sec.recompense === "monstre" ? `${(E[sec.monstre] || E.gobelin).nom} surgit!` : RECOMP[sec.recompense] || "";
@@ -9283,10 +9509,10 @@ function verifierSceaux() {
 const secretIci = (x, y, action) => S.secrets.find(s => s.x === x && s.y === y && !s.trouve && (!action || s.action === action));
 const pnjAt = (x, y) => S.pnj.find(p => p.x === x && p.y === y);
 
-function menuExplorer(h, x, y, debut = []) {
+function menuExplorer(h, x, y, debut = [], titre) {
   const ind = S.secrets.find(s => s.x === x && s.y === y && !s.trouve && !s.cache && s.action !== "entrer");
   const ok = h.actions > 0;
-  menu(x, y, ind ? INDICE_TITRES[ind.action] || "Quelque chose attire le regard…" : "Explorer cet endroit", "Que fait l'équipe?", [
+  menu(x, y, ind ? INDICE_TITRES[ind.action] || "Quelque chose attire le regard…" : titre || "Explorer cet endroit", "Que fait l'équipe?", [
     ...debut,
     ...Object.entries(EXPLO).map(([k, a]) => ({ txt: a.nom, op: a.op, off: !ok, fn: () => explorer(h, x, y, k) })),
     { txt: "Autre idée…", op: "?", off: !ok, fn: () => autreIdee(h, x, y) },
@@ -9342,9 +9568,10 @@ async function donner(sec, h) {
   const r = sec.recompense || "rien";
   if (ITEMS[r] || r === "objet") { bruit("tresor"); if (h) etincelles(h, "#ffe08a", 12); }
   if (r === "monstre" || E[r]) bruit("grogne");
-  if (ITEMS[r]) { S.inv[r]++; toast(`+1 ${ITEMS[r].nom}`); }
-  else if (r === "objet") { const k = "sp:" + (sec.objet || "Objet spécial").trim(); S.inv[k] = (S.inv[k] || 0) + 1; toast(`Nouvel objet : ${k.slice(3)}`); log(`Le groupe obtient : <b>${esc(k.slice(3))}</b>.`); }
+  if (ITEMS[r]) { const qui = ajouterObjet(h, r); toast(`+1 ${ITEMS[r].nom}${qui ? " pour " + qui.nom : ""}`); }
+  else if (r === "objet") { const k = "sp:" + (sec.objet || "Objet spécial").trim(), qui = ajouterObjet(h, k); toast(`Nouvel objet : ${k.slice(3)}`); log(`${qui ? esc(qui.nom) : "Le groupe"} obtient : <b>${esc(k.slice(3))}</b>.`); }
   else if (r === "sceau") verifierSceaux();
+  else if (r === "piege" && h && h.race === "felin") { toast(`🐈 ${h.nom} retombe sur ses pattes : le piège le rate!`); log(`${esc(h.nom)} évite le piège.`); }
   else if (r === "piege" && h) await blesserHeros([h], 1, "Un piège blesse " + esc(h.nom));
   else if (r === "piegeGroupe") await blesserHeros(S.heroes, 1, "Un piège frappe tout le groupe");
   else if (r === "monstre") { const t = E[sec.monstre] ? sec.monstre : "gobelin", c = caseLibrePres(sec.x, sec.y); if (c) { faireApparaitre(t, c.x, c.y); log(`${E[t].nom} surgit!`); } }
@@ -9412,24 +9639,96 @@ function enigme(sec) {
     }
   });
 }
-function parler(p) {
-  const lignes = (p.dialogue || "…").split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+// Choix de dialogue écrits dans le texte du PNJ, une ligne par choix :
+// « > [voleur] ?Texte du choix | Réponse du PNJ | effet »  ([…] = réservé à une race ou une classe, ? = question de français)
+const EFFETS_PNJ = "vie, mana, force, rapidite, bouclier, cle, objet:Nom, suivre, partir, monstre:type";
+function choixPnj(p) {
+  return (p.dialogue || "").split("\n").filter(l => /^\s*>/.test(l)).map((l, i) => {
+    let t = l.replace(/^\s*>\s*/, ""), tag = null, test = false;
+    const m = t.match(/^\[([^\]]+)\]\s*/); if (m) { tag = m[1].trim(); t = t.slice(m[0].length); }
+    if (t.startsWith("?")) { test = true; t = t.slice(1).trim(); }
+    const [txt, rep = "", effet = "rien"] = t.split("|").map(x => x.trim());
+    return { i, tag, test, txt, rep, effet: effet || "rien" };
+  });
+}
+const tagOk = (tag, h) => !tag || (h ? [h] : vivants()).some(x => [x.cls, x.race, C[x.cls].nom, (RACES[x.race] || {}).nom].some(v => v && norm(v) === norm(tag)));
+async function effetPnj(p, effet, h) {
+  for (const e of effet.split("+").map(x => x.trim()).filter(Boolean)) {
+    const [k, arg] = e.split(":").map(x => x.trim());
+    if (ITEMS[k]) { const qui = ajouterObjet(h, k); bruit("tresor"); toast(`+1 ${ITEMS[k].nom}${qui ? " pour " + qui.nom : ""}`); log(`${esc(p.nom)} donne : <b>${ITEMS[k].nom}</b>.`); }
+    else if (k === "objet" && arg) { ajouterObjet(h, "sp:" + arg); bruit("tresor"); toast(`Nouvel objet : ${arg}`); log(`${esc(p.nom)} donne : <b>${esc(arg)}</b>.`); }
+    else if (k === "suivre") { p.bouge = "suit"; toast(`${p.nom} vous suit!`); log(`${esc(p.nom)} se joint au groupe.`); }
+    else if (k === "erre") p.bouge = "erre";
+    else if (k === "partir") { S.pnj = S.pnj.filter(x => x !== p); log(`${esc(p.nom)} s'en va.`); render(); }
+    else if (k === "monstre") { const t = E[arg] ? arg : monstreRenfort({}); const c = caseLibrePres(p.x, p.y); if (c) { S.pnj = S.pnj.filter(x => x !== p); faireApparaitre(t, c.x, c.y); bruit("grogne"); secousse(1); log(`${esc(p.nom)} était un piège!`); } }
+  }
+  render();
+}
+function parler(p, h = S.phase === "heros" ? heros() : null) {
+  const lignes = (p.dialogue || "…").split("\n").filter(l => !/^\s*>/.test(l)).join("\n").split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  if (!lignes.length) lignes.push("…");
+  const choix = choixPnj(p);
+  p.dits ||= [];
   let i = 0;
   return new Promise(resolve => {
+    const fin = () => { taire(); fermer(); resolve(); };
+    const tete = `<div class="pnj-head"><div class="coin" style="--rim:#4f86c6;--cell:96px">${pnjVisage(p)}</div><h2>${esc(p.nom)}</h2></div>`;
     const draw = () => {
-      ouvrir(`<div class="pnj-head"><div class="coin" style="--rim:#4f86c6;--cell:96px">${pnjVisage(p)}</div><h2>${esc(p.nom)}</h2></div>
-        <p class="fr-q dialogue">${esc(lignes[i]).replace(/\n/g, "<br>")}</p>
-        <div class="row"><span class="sub">${i + 1} / ${lignes.length}</span>${PREF.voix !== "non" && voixFr() ? `<button class="btn" id="ecoute" type="button" aria-label="Écouter">🔊 Écouter</button>` : ""}<button class="btn gold" id="nx" type="button">${i < lignes.length - 1 ? "Suivant" : "Terminer"}</button></div>`);
+      const dernier = i === lignes.length - 1 && choix.length;
+      const ch = dernier ? `<div class="choices pnj-choix">${choix.map(c => { const lock = !tagOk(c.tag, h), fait = c.effet !== "rien" && p.dits.includes(c.i), rate = p.rate && p.rate[c.i] === S.round;
+        return `<button type="button" data-c="${c.i}"${lock || fait || rate ? " disabled" : ""}>${c.tag ? `<small class="pnj-tag">${esc(c.tag)}</small> ` : ""}${c.test ? "🎲 " : ""}${esc(c.txt)}${lock ? " <small>(réservé)</small>" : fait ? " <small>(déjà fait)</small>" : rate ? " <small>(à la prochaine manche)</small>" : ""}</button>`; }).join("")}<button type="button" data-c="bye">Au revoir</button></div>` : "";
+      ouvrir(`${tete}<p class="fr-q dialogue">${esc(lignes[i]).replace(/\n/g, "<br>")}</p>${ch}
+        <div class="row"><span class="sub">${i + 1} / ${lignes.length}</span>${PREF.voix !== "non" && voixFr() ? `<button class="btn" id="ecoute" type="button" aria-label="Écouter">🔊 Écouter</button>` : ""}${dernier ? "" : `<button class="btn gold" id="nx" type="button">${i < lignes.length - 1 ? "Suite" : "Fermer"}</button>`}</div>`);
       const ec = document.getElementById("ecoute"); if (ec) ec.onclick = () => dire(lignes[i], p.look);
       if ((PREF.voix || "auto") === "auto") dire(lignes[i], p.look);
-      const sx = document.createElement("button"); sx.type = "button"; sx.hidden = true; sx.dataset.fermer = 1; sx.onclick = () => { taire(); fermer(); resolve(); }; modal.appendChild(sx); boutonX();
-      document.getElementById("nx").onclick = () => { taire(); if (i < lignes.length - 1) { i++; draw(); } else { fermer(); resolve(); } };
+      const sx = document.createElement("button"); sx.type = "button"; sx.hidden = true; sx.dataset.fermer = 1; sx.onclick = fin; modal.appendChild(sx); boutonX();
+      const nx = document.getElementById("nx");
+      if (nx) nx.onclick = () => { taire(); if (i < lignes.length - 1) { i++; draw(); } else fin(); };
+      const box = modal.querySelector(".pnj-choix");
+      if (box) box.onclick = async e => {
+        const b = e.target.closest("[data-c]"); if (!b || b.disabled) return;
+        if (b.dataset.c === "bye") return fin();
+        const c = choix.find(x => x.i === Number(b.dataset.c));
+        taire();
+        if (c.test) {
+          const ok = await epreuveFr(`${esc(p.nom)} : « ${esc(c.txt)} »`);
+          if (!ok) { (p.rate ||= {})[c.i] = S.round; ouvrir(`${tete}<p class="fr-q dialogue">${esc(p.nom)} ne semble pas convaincu… Réessayez à la prochaine manche.</p><div class="row"><button class="btn gold" id="nx" type="button">Fermer</button></div>`); document.getElementById("nx").onclick = fin; return; }
+        }
+        if (c.effet !== "rien") p.dits.push(c.i);
+        log(`${h ? esc(h.nom) : "Le groupe"} : « ${esc(c.txt)} »`);
+        ouvrir(`${tete}<p class="fr-q dialogue">${esc(c.rep || "…").replace(/\n/g, "<br>")}</p><div class="row"><button class="btn gold" id="nx" type="button">Continuer</button></div>`);
+        if ((PREF.voix || "auto") === "auto" && c.rep) dire(c.rep, p.look);
+        document.getElementById("nx").onclick = async () => { fin(); await effetPnj(p, c.effet, h); };
+      };
     };
     draw();
   });
 }
+// Au début de chaque manche, les PNJ qui errent font quelques pas; ceux qui suivent rejoignent le héros le plus proche
+async function bougerPnj() {
+  for (const p of S.pnj) {
+    if (p.bouge !== "erre" && p.bouge !== "suit") continue;
+    const reach = atteignables(p, p.bouge === "suit" ? 4 : 2, p);
+    let best = null;
+    if (p.bouge === "suit") {
+      const cibles = vivants(); if (!cibles.length || cibles.some(h => dist(h, p) <= 1)) continue;
+      for (const n of reach.values()) { const d = Math.min(...cibles.map(h => dist(n, h))); if (!best || d < best.dd || (d === best.dd && n.d < best.d)) best = { ...n, dd: d }; }
+    } else { const l = [...reach.values()]; best = l.length && Math.random() < .7 ? pick(l) : null; }
+    if (!best) continue;
+    const pts = chemin(reach, p, best.x, best.y);
+    if (pts && pts.length > 1) await marcher(p, pts);
+  }
+  render();
+}
 // Déclencheurs à l'arrivée sur une case : secret « entrer » ou sortie vers le chapitre suivant
 async function arrivee(h) {
+  const pg = piegeAt(h.x, h.y);
+  if (pg) {
+    S.deco = S.deco.filter(d => d !== pg); render();
+    log(`Clic! ${esc(h.nom)} marche sur un piège!`); toast("💥 Un piège!", 2500); secousse(.6);
+    S.busy = true; await defendre(h, null, 1); S.busy = false; render();
+    if (h.pv <= 0) { verifierFin(); return; }
+  }
   const sec = secretIci(h.x, h.y, "entrer");
   if (sec) { S.busy = true; await reveler(sec, h); S.busy = false; render(); }
   if (S.sorties.some(s => s.x === h.x && s.y === h.y)) {
@@ -9542,12 +9841,14 @@ function clicCase(x, y) {
     if (att && att.x === x && att.y === y) return deplacer(h, x, y);
     S.attente = { x, y }; renderHL(); drawPath(chemin(reachCache, h, x, y)); bruit("pas", { sol: solIci(x, y) }); return;
   }
-  if (hh === h) return menuExplorer(h, x, y);
+  if (hh === h) return menuExplorer(h, x, y, [...C[h.cls].p.map((p, j) => ({ txt: `✨ ${p.nom} <small>(${p.cout ? p.cout + " mana" : "sans mana"} · ${p.desc})</small>`, off: !(h.actions > 0 && h.mana >= p.cout), fn: () => lancerPouvoir(j) })),
+    { txt: `👁️ Observer les alentours <small>(1 action · question de français · trouve pièges et secrets)</small>`, off: !(h.actions > 0), fn: () => observer(h) },
+    { txt: `🎒 Donner ou lancer un objet <small>(1 action · d12 si le coéquipier est loin)</small>`, off: !(h.actions > 0 && Object.keys(sacDe(h)).length && vivants().length > 1), fn: () => passerObjet(h) }], "Pouvoirs et actions");
   if (hh && hh !== h && dist(h, hh) <= 1 && hh.pv < st(hh).pv && (hh.pv <= 0 || hh.joue || h.actions < S.nbActions)) {
     // Soigner un coéquipier : il faut une potion de vie dans l'inventaire, et ça coûte 1 action
-    const peut = S.inv.vie > 0 && h.actions > 0;
+    const peut = sacDe(h).vie > 0 && h.actions > 0;
     return menu(x, y, esc(hh.nom), hh.pv <= 0 ? `${esc(hh.nom)} est à terre.` : `${hh.pv} PV sur ${st(hh).pv}.`, [
-      { txt: !S.inv.vie ? "Il faut une potion de vie" : hh.pv <= 0 ? "Relever avec une potion de vie" : "Donner une potion de vie", off: !peut, fn: () => donnerPotion(h, hh) },
+      { txt: !sacDe(h).vie ? `${esc(h.nom)} n'a pas de potion de vie` : hh.pv <= 0 ? "Relever avec une potion de vie" : "Donner une potion de vie", off: !peut, fn: () => donnerPotion(h, hh) },
     ]);
   }
   if (hh && hh !== h) {
@@ -9585,7 +9886,76 @@ function clicCase(x, y) {
       p.par === "cle" ? [{ txt: S.inv.cle ? (near ? "Ouvrir avec la clé" : "Approche-toi de la porte") : "Il faut une clé", op: "+", off: !S.inv.cle || !near, fn: () => ouvrirPorte(h, key(x, y)) }] : []);
     return;
   }
+  const tl = toileAt(x, y);
+  if (tl && !secretIci(x, y, "bruler")) {
+    const near = dist(h, { x, y }) <= 1 && h.actions > 0, torche = aObjet("Torche"), mage = h.cls === "mage";
+    const torcheMur = S.deco.find(d => d.type === "torche" && dist(h, d) <= 1);
+    const b = [];
+    if (mage) b.push({ txt: near ? "🔥 Boule de feu (1 mana)" : "Approche-toi de la toile", op: "÷", off: !near || h.mana < 1, fn: () => brulerToile(h, tl, true) });
+    if (torche || torcheMur) b.push({ txt: near ? "🔥 Brûler avec une torche" : "Approche-toi de la toile", op: "÷", off: !near, fn: () => brulerToile(h, tl, false) });
+    return menu(x, y, "Toile d'araignée", b.length ? "Elle bloque le passage. Le feu en viendra à bout!" : "Elle bloque le passage. Il faudrait une torche… ou la magie du mage.", b);
+  }
+  const ob = obstacleAt(x, y);
+  if (ob) {
+    const O = OBSTACLES[ob.type], near = dist(h, ob) <= 1 && h.actions > 0;
+    const c = { x: ob.x + Math.sign(ob.x - h.x), y: ob.y + Math.sign(ob.y - h.y) };
+    const libre = praticable(c.x, c.y) && !heroAt(c.x, c.y) && !enemyAt(c.x, c.y) && !objAt(c.x, c.y) && !pnjAt(c.x, c.y);
+    const facile = (ob.type === "caisse" && h.race === "geant") || (ob.type !== "caisse" && h.race === "oiseau");
+    const txt = !near ? "Approche-toi d'abord" : !libre ? "L'autre côté est bloqué" : facile ? (ob.type === "caisse" ? "💪 Pousser sans effort (demi-géant)" : "🪽 Voler par-dessus (homme-oiseau)") : O.verbe;
+    return menu(x, y, O.nom, O.texte, [{ txt, op: facile ? undefined : O.op, off: !near || !libre, fn: () => franchir(h, ob, c, facile) }]);
+  }
+  const pg = S.deco.find(d => d.type === "piegeVu" && d.x === x && d.y === y);
+  if (pg) {
+    const near = dist(h, pg) <= 1 && h.actions > 0, voleur = h.cls === "voleur";
+    return menu(x, y, "Piège", "Des pics cachés sous les dalles. Mieux vaut ne pas marcher dessus!", [{ txt: near ? (voleur ? "🔧 Désamorcer (voleur : sans question)" : "🔧 Désamorcer") : "Approche-toi du piège", op: voleur ? undefined : "−", off: !near, fn: () => desamorcer(h, pg, voleur) }]);
+  }
+  const tm = S.deco.find(d => d.type === "torche" && d.x === x && d.y === y);
+  if (tm && dist(h, tm) <= 1 && !aObjet("Torche")) return menu(x, y, "Torche murale", "Elle brûle encore. Elle pourrait servir…", [
+    { txt: "Prendre la torche", off: h.actions <= 0, fn: () => { h.actions--; ajouterObjet(h, "sp:Torche"); S.deco = S.deco.filter(d => d !== tm); toast("Nouvel objet : Torche"); log(`${esc(h.nom)} prend une torche.`); bruit("tresor"); render(); } }]);
   if (dist(h, { x, y }) <= 1) menuExplorer(h, x, y);
+}
+async function franchir(h, ob, c, facile) {
+  const O = OBSTACLES[ob.type];
+  await faireAction(() => facile ? Promise.resolve(true) : epreuveMath(O.op, `${esc(h.nom)} : ${O.verbe.replace(/^\S+ /, "").toLowerCase()}`), async () => {
+    if (ob.type === "caisse") {
+      const [ox, oy] = [ob.x, ob.y];
+      ob.x = c.x; ob.y = c.y; bruit("porte"); render();
+      await marcher(h, [[h.x, h.y], [ox, oy]]);
+      log(`${esc(h.nom)} pousse la caisse.`);
+    } else {
+      await anim(h, "hop");
+      await marcher(h, [[h.x, h.y], [ob.x, ob.y], [c.x, c.y]]);
+      log(`${esc(h.nom)} ${ob.type === "muret" ? "escalade le muret" : "saute par-dessus le trou"}${facile ? " en volant" : ""}.`);
+    }
+    await arrivee(h);
+    render(); valide(h);
+  });
+}
+async function desamorcer(h, pg, voleur) {
+  await faireAction(() => voleur ? Promise.resolve(true) : epreuveMath("−", `${esc(h.nom)} désamorce le piège`), async () => {
+    S.deco = S.deco.filter(d => d !== pg); bruit("coche"); etincelles(pg, "#9fe7ff", 12);
+    log(`${esc(h.nom)} désamorce le piège.`); toast("Le piège est désamorcé!"); render();
+  });
+}
+// Observer : une question de français; réussie, elle révèle les pièges et les secrets proches
+async function observer(h) {
+  await faireAction(() => epreuveFr(`${esc(h.nom)} observe les alentours`), async () => {
+    const R = 3 + ((RACES[h.race] || {}).vue ? 1 : 0) + ((h.attr || {}).ruse || 0);
+    let n = 0;
+    for (const d of S.deco) if (d.type === "piege" && dist(h, d) <= R) { d.type = "piegeVu"; n++; }
+    for (const sc of S.secrets) if (!sc.trouve && !sc.visible && !sc.cache && dist(h, sc) <= R) { sc.visible = true; n++; }
+    etincelles(h, "#ffe08a", 10); bruit(n ? "tresor" : "coche");
+    log(n ? `${esc(h.nom)} remarque ${n} chose${n > 1 ? "s" : ""} d'étrange autour.` : `${esc(h.nom)} observe : rien de suspect autour.`);
+    toast(n ? `👁️ ${n} découverte${n > 1 ? "s" : ""} : regardez bien la carte!` : "👁️ Rien de suspect par ici.", 3500);
+    render();
+  });
+}
+async function brulerToile(h, tl, magie) {
+  await faireAction(() => magie ? epreuvePouvoir(`${esc(h.nom)} : boule de feu`) : epreuveMath("÷", `${esc(h.nom)} approche sa torche`), async () => {
+    if (magie) h.mana -= 1;
+    await projectile(h, tl, "#ff9a3c"); etincelles(tl, "#ff9a3c", 18); bruit("magie");
+    S.deco = S.deco.filter(d => d !== tl); log(`La toile d'araignée part en fumée!`); toast("La toile brûle : le passage est libre!"); render();
+  });
 }
 
 // ---------- glisser-déposer ----------
@@ -9657,7 +10027,7 @@ const OUTILS = {
   heros: Object.keys(C).map(c => ["h:" + c, C[c].nom]),
   monstres: E_BASE.map(t => ["e:" + t, E[t].nom]),
   objets: Object.keys(OBJ).map(t => ["o:" + t, OBJ[t].nom]),
-  quete: [["pnj", "PNJ"], ["secret", "Secret"], ["sortie", "Sortie"], ["torche", "Torche"], ["toile", "Toile d'araignée"], ["rune", "Runes"], ["select", "Modifier"], ["gomme", "Gomme"]],
+  quete: [["pnj", "PNJ"], ["secret", "Secret"], ["sortie", "Sortie"], ["torche", "Torche"], ["toile", "Toile d'araignée"], ["rune", "Runes"], ["muret", "Muret (escalader)"], ["caisse", "Caisse (pousser)"], ["trou", "Trou (sauter)"], ["piege", "Piège caché"], ["select", "Modifier"], ["gomme", "Gomme"]],
 };
 let ED = null;
 for (const [g, list] of Object.entries(OUTILS)) document.querySelector(`[data-group="${g}"]`).innerHTML = list.map(([k, n]) => `<button class="tool" type="button" data-tool="${k}">${n}</button>`).join("");
@@ -9686,7 +10056,6 @@ const carteVierge = n => normaliser({ nom: `Chapitre ${n}`, intro: "", grid: Arr
 function ouvrirEditeur(src = QUETE) {
   const retour = S && S.phase !== "edit" ? { quete: QUETE, partie: photoPartie() } : (ED && ED.retour);
   const q = clone(src);
-  if (INTEGREES.some(i => i.id === q.id)) { q.id = "q" + Date.now(); q.nom = "Copie de " + src.nom.replace(" (démo)", ""); }
   q.chapitres = q.chapitres.map(normaliser);
   ED = { quete: q, ch: src === QUETE ? Math.min(S ? S.chapitre : 0, q.chapitres.length - 1) : 0, outil: "mur", sel: null, retour, get carte() { return this.quete.chapitres[this.ch]; } };
   afficherForm();
@@ -9714,7 +10083,7 @@ function renderEditeur() {
   set("ed-qnom", ED.quete.nom); set("ed-fin", ED.quete.fin || ""); set("ed-qmus", ED.quete.musique || "mystere"); set("ed-qniv", ED.quete.niveau || "");
   document.getElementById("ed-brume").checked = !!ED.carte.brume; document.getElementById("ed-froid").checked = !!ED.carte.froid;
   set("ed-mus", ED.carte.musique || "quete"); set("ed-met", ED.carte.meteo || "aucune"); set("ed-amb", ED.carte.ambiance || "auto"); set("ed-sol", ED.carte.sol || "pierre");
-  document.getElementById("ed-ani").innerHTML = Object.entries(ANIMAUX).map(([k, n]) => `<button type="button" data-a="${k}" aria-pressed="${(ED.carte.animaux || []).includes(k)}">${n}</button>`).join(""); set("ed-nom", ED.carte.nom); set("ed-intro", ED.carte.intro || "");
+  document.getElementById("ed-ani").innerHTML = Object.entries(ANIMAUX).map(([k, n]) => `<button type="button" data-a="${k}" aria-pressed="${(ED.carte.animaux || []).includes(k)}">${n}</button>`).join(""); set("ed-nom", ED.carte.nom); set("ed-cpt", (ED.carte.compte || {}).tours || 0); set("ed-cpt-t", (ED.carte.compte || {}).texte || ""); set("ed-cpt-e", (ED.carte.compte || {}).echec || ""); set("ed-intro", ED.carte.intro || "");
   document.getElementById("ed-cols").value = W; document.getElementById("ed-rows").value = H;
   if (!document.getElementById("ed-evts").contains(document.activeElement)) renderEvtsEditeur();
   set("ed-rep", ED.carte.repliques || ""); set("ed-repboss", ED.carte.repliqueBoss || ""); set("ed-suspense", ED.carte.suspense || "");
@@ -9726,6 +10095,8 @@ function renderEditeur() {
   document.getElementById("ed-var-boss").checked = !!ED.carte.transfoBoss;
   document.getElementById("ed-chaps").innerHTML = ED.quete.chapitres.map((c, i) => `<button class="chap ${i === ED.ch ? "on" : ""}" type="button" data-ch="${i}">${i + 1}. ${esc(c.nom)}</button>`).join("");
   document.getElementById("ed-ch-del").disabled = ED.quete.chapitres.length < 2;
+  const dl = document.getElementById("ed-del"), lib = estFournie(ED.quete.id) ? "Revenir à l'original" : "Supprimer la quête";
+  if (!dl.dataset.confirm && dl.textContent !== lib) dl.textContent = lib;
 }
 function afficherForm() {
   const f = document.getElementById("ed-form");
@@ -9749,6 +10120,8 @@ function afficherForm() {
     <div class="edbtns"><button class="btn" type="button" data-jeton="pnj">${r.img ? "Changer l'image" : "Mettre une image"}</button><button class="btn" type="button" data-jeton-off="pnj" ${r.img ? "" : "disabled"}>Image par défaut</button></div>
     <label>Dialogue <textarea id="f-dia" data-f="dialogue" rows="6">${esc(r.dialogue || "")}</textarea></label>
     <p class="hint">Sépare les répliques par une ligne vide : les élèves les verront une à la fois. Parler ne coûte pas d'action.</p>
+    <p class="hint">Choix de réponse : une ligne qui commence par « > », par exemple<br><code>> Pouvez-vous nous aider? | Prenez cette potion. | vie</code><br><code>> [voleur] ?Vous cachez quelque chose… | Hé hé, voici ma clé. | cle</code><br>[…] réserve le choix à une race ou une classe; ? demande une question de français. Effets : ${EFFETS_PNJ} (plusieurs avec +).</p>
+    <label>Déplacement <select data-f="bouge">${opts({ "": "Reste sur place", erre: "Se promène (quelques pas par manche)", suit: "Suit le groupe" }, r.bouge || "")}</select></label>
     <button class="btn" type="button" data-f-del>Retirer ce personnage</button>`
     : `<h4>Secret</h4>
     <label>Se déclenche quand l'équipe… <select id="f-act" data-f="action">${opts(DECLENCHEURS, r.action)}</select></label>
@@ -9857,6 +10230,11 @@ document.getElementById("ed-rows").addEventListener("change", e => redimensionne
 document.getElementById("ed-qnom").addEventListener("input", e => { ED.quete.nom = e.target.value.trim() || "Quête sans nom"; renderTop(); });
 document.getElementById("ed-nom").addEventListener("input", e => { ED.carte.nom = e.target.value.trim() || "Chapitre"; renderEditeur(); renderTop(); });
 document.getElementById("ed-intro").addEventListener("input", e => { ED.carte.intro = e.target.value; });
+for (const [id, k] of [["ed-cpt", "tours"], ["ed-cpt-t", "texte"], ["ed-cpt-e", "echec"]]) document.getElementById(id).addEventListener("input", e => {
+  const c = ED.carte.compte = { tours: 0, texte: "", echec: "", ...ED.carte.compte };
+  c[k] = k === "tours" ? Math.max(0, Math.min(40, Number(e.target.value) || 0)) : e.target.value;
+  if (!c.tours && !c.texte && !c.echec) delete ED.carte.compte;
+});
 {
   const opts = o => Object.entries(o).map(([k, n]) => `<option value="${k}">${n}</option>`).join("");
   document.getElementById("ed-qmus").innerHTML = opts(TRAMES);
@@ -9978,16 +10356,19 @@ async function enregistrerEdition() {
   const r = await Stock.sauverQuete(ED.quete);
   if (!r) { msgEd("Impossible d'enregistrer ici. La quête reste ouverte : exporte-la en fichier pour ne pas la perdre."); return null; }
   r.q.chapitres.forEach((ch, i) => { if (ED.quete.chapitres[i]) { ED.quete.chapitres[i].imageId = ch.imageId; if (ch.imageId) ED.quete.chapitres[i].image = null; } });
+  if (QUETE && QUETE.id === ED.quete.id) QUETE = lesQuetes().find(x => x.id === ED.quete.id) || QUETE;
   msgEd(r.ou === "compte" ? `« ${ED.quete.nom} » est enregistrée dans ton compte Claude. Elle sera là sur n'importe quel ordinateur.` : `« ${ED.quete.nom} » est enregistrée dans ce navigateur seulement. Pense à l'exporter en fichier.`);
   await remplirQuetes(ED.quete.id);
   return r.q;
 }
 document.getElementById("ed-save").onclick = enregistrerEdition;
 confirmer(document.getElementById("ed-del"), async () => {
-  await Stock.supprimerQuete(ED.quete.id);
+  const id = ED.quete.id, o = originale(id);
+  if (o) { if (Stock.db) { try { await Stock.db.doc("quetes/" + id).delete(); } catch {} } await IDB.del("quetes", id); }
+  else await Stock.supprimerQuete(id);
   await remplirQuetes();
-  ED = null; demarrerQuete(DEMO);
-  toast("Quête supprimée.");
+  ED = null; demarrerQuete(o || DEMO);
+  toast(o ? "La quête est revenue à sa version d'origine." : "Quête supprimée.");
 });
 document.getElementById("ed-quit").onclick = () => {
   const r = ED.retour; ED = null;
@@ -10041,11 +10422,12 @@ const Stock = {
     // Cartes de la version précédente : chacune devient une quête d'un chapitre
     const vieilles = (await IDB.all("cartes")).map(c => ({ id: c.id, nom: c.nom, chapitres: [c] }));
     for (const q of [...locales, ...vieilles]) if (!list.some(x => x.id === q.id)) list.push(q);
-    return list.map(q => ({ ...clone(q), chapitres: q.chapitres.map(normaliser) }));
+    return list.map(q => ({ ...clone(q), chapitres: q.chapitres.map(c => { c = normaliser(c); c.image = depuisRef(c.image); if (c.variantes) c.variantes = c.variantes.map(depuisRef); return c; }) }));
   },
   async sauverQuete(quete) {
     const q = clone(quete);
-    if (this.assets) for (const ch of q.chapitres) if (ch.image && !ch.imageId) {
+    for (const ch of q.chapitres) { ch.image = versRef(ch.image); if (ch.variantes) ch.variantes = ch.variantes.map(versRef); }
+    if (this.assets) for (const ch of q.chapitres) if (ch.image && !ch.imageId && !ch.image.startsWith("int:")) {
       try { const r = await this.assets.upload(dataUrlBlob(ch.image), { type: "image/jpeg" }); ch.imageId = r.id; ch.image = null; } catch {}
     }
     const ranger = async d => { if (!this.assets || !d || !d.startsWith("data:")) return d; try { const b = dataUrlBlob(d); return "asset:" + (await this.assets.upload(b, { type: b.type })).id; } catch { return d; } };
@@ -10138,13 +10520,14 @@ const Stock = {
   },
 };
 let QUETES = [];
+const lesQuetes = () => [...INTEGREES.map(i => QUETES.find(q => q.id === i.id) || i), ...QUETES.filter(q => !estFournie(q.id))];
 async function remplirQuetes(choisie) {
   QUETES = await Stock.quetes();
   const sel = document.getElementById("quete-sel"), id = choisie || QUETE.id;
-  sel.innerHTML = [...INTEGREES, ...QUETES].map(q => `<option value="${esc(q.id)}" ${q.id === id ? "selected" : ""}>Quête : ${esc(q.nom)}</option>`).join("");
+  sel.innerHTML = lesQuetes().map(q => `<option value="${esc(q.id)}" ${q.id === id ? "selected" : ""}>Quête : ${esc(q.nom)}</option>`).join("");
 }
 document.getElementById("quete-sel").onchange = async e => {
-  const q = [...INTEGREES, ...QUETES].find(x => x.id === e.target.value);
+  const q = lesQuetes().find(x => x.id === e.target.value);
   if (q && S && !S.busy) { await sauvegarderPartie(true); await ouvrirQuete(q); }
 };
 async function exporterQuetes(sortie) {
@@ -10163,10 +10546,10 @@ document.getElementById("ed-import").addEventListener("change", async e => {
 // ---------- panneau et barre ----------
 // Bouton à deux temps : un premier toucher demande confirmation
 function confirmer(btn, fn) {
-  let t; const lib = btn.textContent;
+  let t, lib = btn.textContent;
   btn.addEventListener("click", () => {
     if (btn.dataset.confirm) { clearTimeout(t); delete btn.dataset.confirm; btn.textContent = lib; fn(); return; }
-    btn.dataset.confirm = 1; btn.textContent = "Confirmer?";
+    lib = btn.textContent; btn.dataset.confirm = 1; btn.textContent = "Confirmer?";
     t = setTimeout(() => { delete btn.dataset.confirm; btn.textContent = lib; }, 3000);
   });
 }
@@ -10199,10 +10582,12 @@ document.getElementById("inv").addEventListener("click", e => {
   const b = e.target.closest("[data-item]"); if (!b || S.busy) return;
   const k = b.dataset.item, h = S.phase === "heros" ? heros() : null;
   if (k === "cle") return toast("Touche une porte cadenassée sur la carte pour utiliser la clé.");
+  if (h && b.dataset.h && b.dataset.h !== h.cls) { const p = S.heroes.find(x => x.cls === b.dataset.h); return toast(`C'est le sac de ${p.nom}. Il peut te le donner (à côté) ou te le lancer pendant son tour.`, 4000); }
+  if (!h && !k.startsWith("sp:")) return toast("Les objets s'utilisent pendant le tour d'un héros.");
   if (k.startsWith("sp:")) {
     choisir(esc(k.slice(3)), `${esc(itemInfo(k).desc)}<br>Utiliser cet objet? Le maître du jeu raconte ce qui arrive.`, [{ txt: "Utiliser", v: "go", cls: "gold" }, { txt: "Garder", v: "non" }]).then(v => {
       if (v !== "go") return;
-      S.inv[k]--; if (!S.inv[k]) delete S.inv[k];
+      retirerObjet(h || S.heroes.find(x => x.cls === b.dataset.h), k);
       log(`${h ? esc(h.nom) : "Le groupe"} utilise : <b>${esc(k.slice(3))}</b>.`); render(); if (h) anim(h, "heal");
     });
     return;
@@ -10210,7 +10595,10 @@ document.getElementById("inv").addEventListener("click", e => {
   if (!h || h.pv <= 0) return toast("Les potions s'utilisent pendant le tour d'un héros.");
   if (k === "vie") { if (h.pv >= st(h).pv) return toast(`${h.nom} a déjà tous ses PV.`); h.pv++; flotter(h.x, h.y, "+1", "#72d39b"); }
   if (k === "mana") { if (h.mana >= st(h).mana) return toast(`${h.nom} a déjà tout son mana.`); h.mana++; flotter(h.x, h.y, "+1 mana", "#8cc4ff"); }
-  S.inv[k]--; log(`${esc(h.nom)} boit une ${ITEMS[k].nom.toLowerCase()}.`); render(); anim(h, "heal");
+  if (k === "force") { if (h.force) return toast(`${h.nom} a déjà la force brute.`); h.force = true; flotter(h.x, h.y, "💪 ×2", "#ffb36b"); }
+  if (k === "rapidite") { if (h.actions <= 0) return toast(`${h.nom} n'a plus d'actions ce tour-ci.`); h.actions++; flotter(h.x, h.y, "+1 action", "#ffe08a"); }
+  if (k === "bouclier") { if (h.bouclier) return toast(`${h.nom} est déjà protégé.`); h.bouclier = true; flotter(h.x, h.y, "🛡️", "#9fe7ff"); }
+  retirerObjet(h, k); log(`${esc(h.nom)} utilise : ${ITEMS[k].nom.toLowerCase()}.`); render(); anim(h, "heal");
 });
 document.getElementById("btn-pass").onclick = () => { if (!S.busy) { S.mode = null; finTourHeros(); } };
 document.getElementById("btn-auto").onclick = ennemisAuto;
@@ -10255,7 +10643,7 @@ document.getElementById("btn-reg").onclick = () => {
     for (const h of S.heroes) if (h.pv > 0 && !h.joue) h.actions = Math.max(0, h.actions + diff);
     render();
   };
-  document.getElementById("r-niv").onchange = e => { S.niveau = e.target.value; };
+  document.getElementById("r-niv").onchange = e => { S.niveau = e.target.value; NIV_BASE = e.target.value; };
   document.getElementById("r-ind").onchange = e => { PREF.indices = Number(e.target.value); sauverPref(); };
   document.getElementById("r-evt").onchange = e => { PREF.evts = e.target.value; sauverPref(); S.dernierEvt = Date.now(); };
   document.getElementById("r-per").onchange = e => { PREF.periode = Number(e.target.value); sauverPref(); demarrerPeriode(); toast(PREF.periode ? `Minuterie : ${PREF.periode} minutes à partir de maintenant.` : "Minuterie désactivée."); };
@@ -10292,9 +10680,11 @@ const MONDE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 100
 </defs><rect width="1600" height="1000" fill="#8fb1aa"/><rect width="1600" height="1000" fill="url(#vag)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="none" stroke="#a9c5bd" stroke-width="70" opacity="0.5" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="none" stroke="#b8d0c6" stroke-width="44" opacity="0.6" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="none" stroke="#cddccf" stroke-width="22" opacity="0.7" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="#e9d8a8" stroke="#5a4127" stroke-width="4" filter="url(#rough)"/><path d="M1316.5,505.0 L1330.5,514.2 L1341.7,523.8 L1347.7,533.6 L1347.1,543.1 L1340.2,552.2 L1328.9,560.6 L1315.7,568.4 L1303.6,576.1 L1295.4,584.1 L1292.5,592.8 L1295.2,602.7 L1302.3,613.8 L1311.5,625.9 L1320.0,638.4 L1325.0,650.6 L1324.8,661.7 L1318.5,671.1 L1306.9,678.8 L1291.6,685.0 L1275.2,690.4 L1260.0,696.0 L1248.1,702.7 L1240.3,711.2 L1236.4,721.7 L1235.0,733.8 L1233.8,746.7 L1230.7,759.1 L1223.5,769.6 L1211.1,776.9 L1193.4,780.7 L1171.6,780.9 L1147.2,778.4 L1122.7,774.6 L1100.0,771.4 L1080.6,770.1 L1065.2,772.0 L1053.5,777.5 L1044.3,786.1 L1036.2,796.7 L1027.6,807.6 L1017.2,817.1 L1004.5,823.9 L989.5,827.4 L972.7,827.6 L955.0,825.5 L937.5,822.7 L920.9,820.8 L905.6,821.3 L891.2,825.1 L877.5,832.2 L863.7,841.9 L849.2,852.5 L833.7,862.4 L817.2,869.7 L800.0,873.2 L782.7,872.5 L765.8,868.2 L749.6,861.5 L734.0,854.1 L718.8,848.0 L703.2,844.5 L686.7,844.4 L668.8,847.6 L649.4,852.9 L628.9,858.8 L608.3,863.3 L588.6,864.7 L571.1,862.0 L556.4,855.0 L544.8,844.3 L535.7,831.4 L528.0,818.0 L520.1,805.9 L510.5,796.5 L497.8,790.5 L481.7,787.6 L462.5,787.1 L441.4,787.3 L420.3,786.9 L401.2,784.4 L385.7,779.0 L374.8,770.6 L368.4,759.7 L365.3,747.3 L363.6,734.6 L361.3,722.8 L356.3,712.7 L347.6,704.6 L334.9,698.1 L319.4,692.5 L303.1,686.9 L288.5,680.4 L278.0,672.2 L273.3,662.2 L274.7,650.7 L281.3,638.1 L291.1,625.3 L301.1,613.1 L308.3,602.0 L310.4,592.3 L306.0,583.8 L295.5,576.2 L280.7,568.9 L264.3,561.3 L249.7,553.0 L239.8,544.0 L236.7,534.4 L240.9,524.4 L251.5,514.5 L266.2,505.0 L281.7,496.0 L295.1,487.5 L303.8,479.1 L306.5,470.6 L303.7,461.7 L296.9,452.1 L288.9,442.1 L282.7,432.0 L280.9,422.2 L285.0,413.2 L295.4,405.5 L310.8,399.0 L328.9,393.6 L346.9,388.7 L362.2,383.6 L372.8,377.5 L378.1,369.8 L378.6,360.5 L376.3,349.9 L373.4,338.5 L372.5,327.5 L375.6,317.8 L383.5,310.0 L396.0,304.4 L411.7,300.7 L428.5,298.0 L444.0,294.9 L456.1,290.2 L463.9,282.6 L467.1,271.8 L466.8,257.6 L464.9,241.1 L463.4,223.7 L464.6,207.2 L469.8,193.0 L479.6,182.4 L493.8,175.9 L511.3,172.9 L530.6,172.3 L549.9,172.5 L568.2,172.0 L584.7,169.2 L599.4,163.7 L612.9,155.5 L626.2,145.5 L640.0,135.5 L655.2,126.9 L672.0,121.5 L690.3,120.0 L709.4,122.5 L728.8,128.2 L747.7,135.6 L765.9,142.9 L783.2,148.4 L800.0,150.9 L816.7,149.8 L833.8,145.9 L851.6,140.2 L870.0,134.7 L888.5,131.1 L906.6,131.0 L923.5,134.9 L938.7,142.8 L952.1,153.6 L964.2,165.6 L975.6,176.9 L987.6,185.8 L1001.2,191.3 L1017.1,193.0 L1035.6,191.8 L1056.0,188.9 L1077.1,186.1 L1097.4,185.3 L1115.2,187.6 L1129.3,193.9 L1139.2,203.8 L1145.2,216.6 L1148.5,230.6 L1151.1,244.3 L1154.7,256.4 L1161.2,266.0 L1171.4,273.0 L1185.2,277.7 L1201.4,281.3 L1218.3,285.0 L1233.5,289.8 L1245.3,296.5 L1252.4,305.4 L1254.7,316.2 L1253.3,328.1 L1250.2,340.2 L1248.0,351.4 L1249.1,361.1 L1255.1,369.2 L1266.4,375.7 L1282.1,381.3 L1300.2,386.8 L1317.6,392.9 L1331.6,400.1 L1339.6,408.8 L1340.5,418.7 L1334.5,429.5 L1323.4,440.6 L1310.1,451.4 L1297.9,461.5 L1289.7,470.9 L1287.7,479.6 L1292.3,487.9 L1302.7,496.3Z" fill="#000" filter="url(#pap)" opacity=".9"/><ellipse cx="520" cy="700" rx="170" ry="110" fill="#8c8a6a" opacity=".35" filter="url(#rough)"/><ellipse cx="1130" cy="720" rx="130" ry="80" fill="#7f9a78" opacity=".35" filter="url(#rough)"/><path d="M1095 685 l6 -10 M1100 685 l0 -12 M1105 685 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1160 677 l6 -10 M1165 677 l0 -12 M1170 677 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1137 707 l6 -10 M1142 707 l0 -12 M1147 707 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1042 721 l6 -10 M1047 721 l0 -12 M1052 721 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1037 713 l6 -10 M1042 713 l0 -12 M1047 713 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1044 679 l6 -10 M1049 679 l0 -12 M1054 679 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1115 753 l6 -10 M1120 753 l0 -12 M1125 753 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1055 692 l6 -10 M1060 692 l0 -12 M1065 692 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1155 765 l6 -10 M1160 765 l0 -12 M1165 765 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1145 710 l6 -10 M1150 710 l0 -12 M1155 710 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1225 675 l6 -10 M1230 675 l0 -12 M1235 675 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1202 699 l6 -10 M1207 699 l0 -12 M1212 699 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1059 682 l6 -10 M1064 682 l0 -12 M1069 682 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1092 752 l6 -10 M1097 752 l0 -12 M1102 752 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1066 728 l6 -10 M1071 728 l0 -12 M1076 728 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1158 707 l6 -10 M1163 707 l0 -12 M1168 707 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1140 676 l6 -10 M1145 676 l0 -12 M1150 676 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1042 691 l6 -10 M1047 691 l0 -12 M1052 691 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1166 713 l6 -10 M1171 713 l0 -12 M1176 713 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1093 729 l6 -10 M1098 729 l0 -12 M1103 729 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1121 700 l6 -10 M1126 700 l0 -12 M1131 700 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1189 740 l6 -10 M1194 740 l0 -12 M1199 740 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1079 727 l6 -10 M1084 727 l0 -12 M1089 727 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1135 758 l6 -10 M1140 758 l0 -12 M1145 758 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1176 699 l6 -10 M1181 699 l0 -12 M1186 699 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1226 682 l6 -10 M1231 682 l0 -12 M1236 682 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1114 746 l6 -10 M1119 746 l0 -12 M1124 746 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1060 719 l6 -10 M1065 719 l0 -12 M1070 719 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1038 737 l6 -10 M1043 737 l0 -12 M1048 737 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1183 727 l6 -10 M1188 727 l0 -12 M1193 727 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1205 701 l6 -10 M1210 701 l0 -12 M1215 701 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1169 729 l6 -10 M1174 729 l0 -12 M1179 729 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1146 716 l6 -10 M1151 716 l0 -12 M1156 716 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1198 764 l6 -10 M1203 764 l0 -12 M1208 764 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1125 736 l6 -10 M1130 736 l0 -12 M1135 736 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1042 740 l6 -10 M1047 740 l0 -12 M1052 740 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1159 769 l6 -10 M1164 769 l0 -12 M1169 769 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1194 698 l6 -10 M1199 698 l0 -12 M1204 698 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1107 737 l6 -10 M1112 737 l0 -12 M1117 737 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M1035 716 l6 -10 M1040 716 l0 -12 M1045 716 l-5 -10" stroke="#4d6448" stroke-width="2" fill="none"/><path d="M905 300 C 880 380, 960 420, 940 480 S 1000 560, 1040 560" fill="none" stroke="#6f9ea1" stroke-width="7" stroke-linecap="round"/><path d="M1080 600 C 1060 680, 980 720, 960 800 S 900 860, 880 900" fill="none" stroke="#6f9ea1" stroke-width="8" stroke-linecap="round"/><path d="M1000 560 q40 -40 90 -10 q40 30 10 60 q-40 30 -80 10 q-40 -20 -20 -60z" fill="#8fb6b4" stroke="#4f6f70" stroke-width="3"/><path d="M840 610 C 760 650, 640 690, 560 700" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M840 600 C 880 520, 930 420, 975 330" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M860 610 C 960 640, 1080 700, 1120 720" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M860 600 C 980 520, 1120 460, 1215 430" fill="none" stroke="#8b6b45" stroke-width="3" stroke-dasharray="10 8"/><path d="M867 207 L908 156 L948 207Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M908 156 L948 207 L918 207 Z" fill="#a88d62" opacity=".8"/><path d="M897 171 L908 156 L917 169" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M720 220 L778 148 L835 220Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M778 148 L835 220 L792 220 Z" fill="#a88d62" opacity=".8"/><path d="M763 168 L778 148 L790 166" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M928 222 L993 141 L1057 222Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M993 141 L1057 222 L1009 222 Z" fill="#a88d62" opacity=".8"/><path d="M977 163 L993 141 L1007 161" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M607 243 L668 167 L728 243Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M668 167 L728 243 L683 243 Z" fill="#a88d62" opacity=".8"/><path d="M652 188 L668 167 L681 186" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M540 244 L600 169 L660 244Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M600 169 L660 244 L615 244 Z" fill="#a88d62" opacity=".8"/><path d="M585 190 L600 169 L613 187" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M885 246 L937 181 L989 246Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M937 181 L989 246 L950 246 Z" fill="#a88d62" opacity=".8"/><path d="M924 199 L937 181 L949 197" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1047 249 L1090 195 L1134 249Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1090 195 L1134 249 L1101 249 Z" fill="#a88d62" opacity=".8"/><path d="M1080 210 L1090 195 L1100 209" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M677 279 L738 203 L799 279Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M738 203 L799 279 L753 279 Z" fill="#a88d62" opacity=".8"/><path d="M723 224 L738 203 L752 222" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1123 290 L1171 230 L1219 290Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1171 230 L1219 290 L1183 290 Z" fill="#a88d62" opacity=".8"/><path d="M1159 246 L1171 230 L1182 245" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M828 294 L890 217 L951 294Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M890 217 L951 294 L905 294 Z" fill="#a88d62" opacity=".8"/><path d="M875 239 L890 217 L903 236" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M730 295 L796 212 L863 295Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M796 212 L863 295 L813 295 Z" fill="#a88d62" opacity=".8"/><path d="M780 235 L796 212 L811 233" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1048 298 L1098 236 L1148 298Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1098 236 L1148 298 L1110 298 Z" fill="#a88d62" opacity=".8"/><path d="M1085 253 L1098 236 L1109 251" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M562 300 L612 237 L662 300Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M612 237 L662 300 L624 300 Z" fill="#a88d62" opacity=".8"/><path d="M599 255 L612 237 L623 253" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M497 301 L563 219 L628 301Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M563 219 L628 301 L579 301 Z" fill="#a88d62" opacity=".8"/><path d="M546 242 L563 219 L577 239" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M852 336 L912 262 L971 336Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M912 262 L971 336 L926 336 Z" fill="#a88d62" opacity=".8"/><path d="M897 283 L912 262 L925 281" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1127 338 L1170 284 L1213 338Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1170 284 L1213 338 L1181 338 Z" fill="#a88d62" opacity=".8"/><path d="M1159 299 L1170 284 L1180 298" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M768 339 L810 287 L852 339Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M810 287 L852 339 L821 339 Z" fill="#a88d62" opacity=".8"/><path d="M800 301 L810 287 L819 300" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M624 341 L667 288 L710 341Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M667 288 L710 341 L678 341 Z" fill="#a88d62" opacity=".8"/><path d="M656 303 L667 288 L676 301" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M895 345 L959 264 L1024 345Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M959 264 L1024 345 L976 345 Z" fill="#a88d62" opacity=".8"/><path d="M943 287 L959 264 L974 284" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M536 349 L598 272 L659 349Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M598 272 L659 349 L613 349 Z" fill="#a88d62" opacity=".8"/><path d="M582 294 L598 272 L611 291" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M1042 354 L1084 301 L1127 354Z" fill="#d9c49a" stroke="#4a3520" stroke-width="2.5"/><path d="M1084 301 L1127 354 L1095 354 Z" fill="#a88d62" opacity=".8"/><path d="M1074 316 L1084 301 L1094 314" fill="#fff8e6" stroke="#4a3520" stroke-width="1.5"/><path d="M413 414 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="413" cy="396" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="409" cy="392" r="5" fill="#fff" opacity=".18"/><path d="M387 422 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="387" cy="404" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="383" cy="400" r="5" fill="#fff" opacity=".18"/><path d="M357 426 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="357" cy="408" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="353" cy="404" r="5" fill="#fff" opacity=".18"/><path d="M486 430 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="486" cy="412" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="482" cy="408" r="5" fill="#fff" opacity=".18"/><path d="M444 439 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="444" cy="421" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="440" cy="417" r="5" fill="#fff" opacity=".18"/><path d="M407 439 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="407" cy="421" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="403" cy="417" r="5" fill="#fff" opacity=".18"/><path d="M514 448 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="514" cy="430" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="510" cy="426" r="5" fill="#fff" opacity=".18"/><path d="M431 454 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="431" cy="436" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="427" cy="432" r="5" fill="#fff" opacity=".18"/><path d="M484 461 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="484" cy="443" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="480" cy="439" r="5" fill="#fff" opacity=".18"/><path d="M372 463 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="372" cy="445" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="368" cy="441" r="5" fill="#fff" opacity=".18"/><path d="M454 467 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="454" cy="449" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="450" cy="445" r="5" fill="#fff" opacity=".18"/><path d="M415 468 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="415" cy="450" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="411" cy="446" r="5" fill="#fff" opacity=".18"/><path d="M549 469 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="549" cy="451" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="545" cy="447" r="5" fill="#fff" opacity=".18"/><path d="M508 469 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="508" cy="451" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="504" cy="447" r="5" fill="#fff" opacity=".18"/><path d="M474 487 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="474" cy="469" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="470" cy="465" r="5" fill="#fff" opacity=".18"/><path d="M551 505 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="551" cy="487" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="547" cy="483" r="5" fill="#fff" opacity=".18"/><path d="M484 510 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="484" cy="492" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="480" cy="488" r="5" fill="#fff" opacity=".18"/><path d="M532 510 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="532" cy="492" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="528" cy="488" r="5" fill="#fff" opacity=".18"/><path d="M411 519 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="411" cy="501" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="407" cy="497" r="5" fill="#fff" opacity=".18"/><path d="M439 525 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="439" cy="507" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="435" cy="503" r="5" fill="#fff" opacity=".18"/><path d="M472 526 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="472" cy="508" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="468" cy="504" r="5" fill="#fff" opacity=".18"/><path d="M326 526 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="326" cy="508" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="322" cy="504" r="5" fill="#fff" opacity=".18"/><path d="M363 533 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="363" cy="515" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="359" cy="511" r="5" fill="#fff" opacity=".18"/><path d="M547 536 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="547" cy="518" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="543" cy="514" r="5" fill="#fff" opacity=".18"/><path d="M418 538 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="418" cy="520" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="414" cy="516" r="5" fill="#fff" opacity=".18"/><path d="M521 538 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="521" cy="520" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="517" cy="516" r="5" fill="#fff" opacity=".18"/><path d="M383 547 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="383" cy="529" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="379" cy="525" r="5" fill="#fff" opacity=".18"/><path d="M466 548 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="466" cy="530" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="462" cy="526" r="5" fill="#fff" opacity=".18"/><path d="M440 555 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="440" cy="537" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="436" cy="533" r="5" fill="#fff" opacity=".18"/><path d="M491 555 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="491" cy="537" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="487" cy="533" r="5" fill="#fff" opacity=".18"/><path d="M554 564 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="554" cy="546" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="550" cy="542" r="5" fill="#fff" opacity=".18"/><path d="M523 565 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="523" cy="547" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="519" cy="543" r="5" fill="#fff" opacity=".18"/><path d="M379 569 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="379" cy="551" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="375" cy="547" r="5" fill="#fff" opacity=".18"/><path d="M423 570 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="423" cy="552" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="419" cy="548" r="5" fill="#fff" opacity=".18"/><path d="M477 582 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="477" cy="564" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="473" cy="560" r="5" fill="#fff" opacity=".18"/><path d="M534 592 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="534" cy="574" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="530" cy="570" r="5" fill="#fff" opacity=".18"/><path d="M503 611 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="503" cy="593" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="499" cy="589" r="5" fill="#fff" opacity=".18"/><path d="M426 628 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="426" cy="610" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="422" cy="606" r="5" fill="#fff" opacity=".18"/><path d="M1231 500 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1231" cy="482" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1227" cy="478" r="5" fill="#fff" opacity=".18"/><path d="M1185 505 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1185" cy="487" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1181" cy="483" r="5" fill="#fff" opacity=".18"/><path d="M1208 508 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1208" cy="490" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1204" cy="486" r="5" fill="#fff" opacity=".18"/><path d="M1222 527 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1222" cy="509" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1218" cy="505" r="5" fill="#fff" opacity=".18"/><path d="M1266 535 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1266" cy="517" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1262" cy="513" r="5" fill="#fff" opacity=".18"/><path d="M1194 537 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1194" cy="519" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1190" cy="515" r="5" fill="#fff" opacity=".18"/><path d="M1244 554 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1244" cy="536" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1240" cy="532" r="5" fill="#fff" opacity=".18"/><path d="M1183 555 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1183" cy="537" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1179" cy="533" r="5" fill="#fff" opacity=".18"/><path d="M1215 572 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1215" cy="554" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1211" cy="550" r="5" fill="#fff" opacity=".18"/><path d="M1206 604 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1206" cy="586" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1202" cy="582" r="5" fill="#fff" opacity=".18"/><path d="M1243 618 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1243" cy="600" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1239" cy="596" r="5" fill="#fff" opacity=".18"/><path d="M1184 618 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1184" cy="600" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1180" cy="596" r="5" fill="#fff" opacity=".18"/><path d="M1200 633 v-8" stroke="#4a3520" stroke-width="3"/><circle cx="1200" cy="615" r="13" fill="#6f8a4a" stroke="#2d3a1f" stroke-width="2"/><circle cx="1196" cy="611" r="5" fill="#fff" opacity=".18"/><path d="M554 646 v-26 M554 632 l-9 -8 M554 628 l8 -9 M550 624 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M521 647 v-26 M521 633 l-9 -8 M521 629 l8 -9 M517 625 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M470 655 v-26 M470 641 l-9 -8 M470 637 l8 -9 M466 633 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M596 656 v-26 M596 642 l-9 -8 M596 638 l8 -9 M592 634 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M510 670 v-26 M510 656 l-9 -8 M510 652 l8 -9 M506 648 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M619 673 v-26 M619 659 l-9 -8 M619 655 l8 -9 M615 651 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M533 673 v-26 M533 659 l-9 -8 M533 655 l8 -9 M529 651 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M460 678 v-26 M460 664 l-9 -8 M460 660 l8 -9 M456 656 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M597 683 v-26 M597 669 l-9 -8 M597 665 l8 -9 M593 661 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M506 692 v-26 M506 678 l-9 -8 M506 674 l8 -9 M502 670 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M563 694 v-26 M563 680 l-9 -8 M563 676 l8 -9 M559 672 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M470 696 v-26 M470 682 l-9 -8 M470 678 l8 -9 M466 674 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M614 704 v-26 M614 690 l-9 -8 M614 686 l8 -9 M610 682 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M667 709 v-26 M667 695 l-9 -8 M667 691 l8 -9 M663 687 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M443 713 v-26 M443 699 l-9 -8 M443 695 l8 -9 M439 691 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M533 722 v-26 M533 708 l-9 -8 M533 704 l8 -9 M529 700 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M471 729 v-26 M471 715 l-9 -8 M471 711 l8 -9 M467 707 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M658 730 v-26 M658 716 l-9 -8 M658 712 l8 -9 M654 708 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M602 731 v-26 M602 717 l-9 -8 M602 713 l8 -9 M598 709 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M630 755 v-26 M630 741 l-9 -8 M630 737 l8 -9 M626 733 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M576 761 v-26 M576 747 l-9 -8 M576 743 l8 -9 M572 739 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M599 765 v-26 M599 751 l-9 -8 M599 747 l8 -9 M595 743 l-4 -6" stroke="#3b2a1a" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M816 600 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M813 585 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M846 610 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M843 595 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M790 614 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M787 599 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M826 630 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M823 615 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M856 586 v-16 l14 -12 l14 12 v16z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="2"/><path d="M853 571 l17 -15 l17 15" fill="#b9573a" stroke="#3b2a1a" stroke-width="2"/><path d="M471 705 v-40 h68 v40z" fill="#5d5466" stroke="#1f1828" stroke-width="2.5"/><path d="M465 667 l40 -30 l40 30z" fill="#3a2f45" stroke="#1f1828" stroke-width="2.5"/><path d="M523 653 v-26 h10 v34" fill="#3a2f45" stroke="#1f1828" stroke-width="2"/><rect x="481" y="675" width="10" height="12" fill="#ffcf5a"/><rect x="517" y="675" width="10" height="12" fill="#ffcf5a"/><path d="M499 705 v-16 h12 v16" fill="#1f1828"/><path d="M950 330 v-30 q30 -34 60 0 v30z" fill="#9a9a9a" stroke="#2a2a2a" stroke-width="2.5"/><path d="M968 330 v-22 q12 -14 24 0 v22z" fill="#2a2a2a"/><path d="M980 274 v-16 M973 264 h14" stroke="#2a2a2a" stroke-width="3"/><path d="M1203 430 v-50 h24 v50z" fill="#cfc4ae" stroke="#3b2a1a" stroke-width="2"/><path d="M1199 382 l16 -28 l16 28z" fill="#3f5f9e" stroke="#3b2a1a" stroke-width="2"/><text x="900" y="175" font-size="30" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Monts du Crâne</text><text x="420" y="410" font-size="28" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Bois des Murmures</text><text x="860" y="665" font-size="26" text-anchor="middle" font-style="normal" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Valclair</text><text x="510" y="790" font-size="24" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Domaine Blackwood</text><text x="1140" y="800" font-size="24" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Marais brumeux</text><text x="1215" y="470" font-size="20" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Tour du Mage</text><text x="1260" y="660" font-size="22" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Forêt d’Ambre</text><text x="1050" y="520" font-size="20" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Lac Miroir</text><text x="300" y="880" font-size="30" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Mer des Brumes</text><text x="1380" y="170" font-size="26" text-anchor="middle" font-style="italic" fill="#3b2a1a" stroke="#efe1bd" stroke-width="5" paint-order="stroke">Mer du Nord</text><g transform="translate(1420,840)"><circle r="58" fill="none" stroke="#3b2a1a" stroke-width="2"/><circle r="46" fill="none" stroke="#3b2a1a" stroke-width="1"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(0)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(45)"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(90)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(135)"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(180)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(225)"/><path d="M0 0 L-8 -10 L0 -70 L8 -10Z" fill="#3b2a1a" transform="rotate(270)"/><path d="M0 0 L-8 -10 L0 -40 L8 -10Z" fill="#8b6b45" transform="rotate(315)"/><text y="-78" font-size="26" text-anchor="middle" fill="#3b2a1a">N</text></g><g transform="translate(60,46)"><path d="M0 0 h560 l-16 40 l16 40 h-560 l16 -40z" fill="#efe1bd" stroke="#3b2a1a" stroke-width="3"/><text x="280" y="53" font-size="34" text-anchor="middle" fill="#7a2a24" font-weight="700">Royaume de Classe et Donjon</text></g><rect width="1600" height="1000" fill="url(#mv)"/><rect x="8" y="8" width="1584" height="984" fill="none" stroke="#3b2a1a" stroke-width="6"/><rect x="20" y="20" width="1560" height="960" fill="none" stroke="#3b2a1a" stroke-width="2"/></svg>`;
 // ---------- le monde : chaque lieu ouvre une quête ----------
 const LIEUX_DEFAUT = { demo: [0.613, 0.335], "halloween-vladislav": [0.316, 0.705], "rentree-academie": [0.52, 0.56], "octobre-ferme": [0.42, 0.62], "novembre-lugubre": [0.2, 0.8], "decembre-noel": [0.7, 0.2], "janvier-yeti": [0.45, 0.12], "fevrier-valentin": [0.62, 0.82], "mars-sorciers": [0.8, 0.5], "avril-paques": [0.88, 0.72], "mai-cite": [0.62, 0.42], "juin-depart": [0.5, 0.3] };
+// Carte fixe des îles volantes (2026) : chaque quête sur son territoire
+const LIEUX_ILES = { demo: [0.17, 0.33], "rentree-academie": [0.5, 0.42], "octobre-ferme": [0.36, 0.67], "halloween-vladislav": [0.47, 0.72], "novembre-lugubre": [0.6, 0.76], "decembre-noel": [0.42, 0.2], "janvier-yeti": [0.3, 0.11], "fevrier-valentin": [0.2, 0.77], "mars-sorciers": [0.63, 0.19], "avril-paques": [0.22, 0.58], "mai-cite": [0.79, 0.43], "juin-depart": [0.87, 0.15] };
 const PLACES_LIBRES = [[0.76, 0.43], [0.71, 0.75], [0.26, 0.42], [0.54, 0.6], [0.79, 0.62], [0.4, 0.56], [0.66, 0.5], [0.44, 0.3], [0.33, 0.57], [0.6, 0.78], [0.84, 0.5], [0.5, 0.45]];
 let MONDE = { image: null, lieux: {} }, mondeEdit = false, cheminNeuf = false;
-const quetesDuMonde = () => [DEMO, ...INTEGREES.filter(q => q !== DEMO), ...QUETES.filter(q => !INTEGREES.some(i => i.id === q.id))].filter(q => !(MONDE.caches || []).includes(q.id));
+const quetesDuMonde = () => lesQuetes().filter(q => !(MONDE.caches || []).includes(q.id));
 function lieuDe(q, pris) {
   if (MONDE.lieux[q.id]) return MONDE.lieux[q.id];
   if (LIEUX_DEFAUT[q.id]) return LIEUX_DEFAUT[q.id];
@@ -10306,8 +10696,23 @@ const EFFETS_ZONE = { rien: "Rien ne change", nuit: "La zone tombe dans la nuit"
 const TAILLES_ZONE = { ".16": "Petite", ".24": "Moyenne", ".34": "Grande" };
 function campagne() {
   const c = MONDE.campagne = MONDE.campagne || {};
-  for (const [k, v] of Object.entries({ actif: false, ordre: [], finies: [], effets: {}, tailles: {}, vu: 0 })) if (c[k] === undefined) c[k] = v;
+  for (const [k, v] of Object.entries({ actif: false, ordre: [], finies: [], effets: {}, tailles: {}, vu: 0, equipes: [], prog: {}, vus: {}, depart: "", ensemble: false, noir: true })) if (c[k] === undefined) c[k] = v;
   return c;
+}
+// Carte MJ (tout est visible) ou carte d'une équipe (seulement son chemin)
+let VUE = "MJ";
+const COULEURS_EQ = ["#3f8f5a", "#3a6fb0", "#b0503a", "#8a4fb0", "#b08a2a", "#2a9a9a", "#b03a7a", "#6a7a2a"];
+const couleurEq = eq => COULEURS_EQ[Math.max(0, campagne().equipes.indexOf(eq)) % COULEURS_EQ.length];
+// Les quêtes avant le point de départ comptent comme faites pour tout le monde
+function avantDepart() {
+  const c = campagne(); if (!c.depart) return [];
+  const ordre = quetesCampagne().map(q => q.id), i = ordre.indexOf(c.depart);
+  return i > 0 ? ordre.slice(0, i) : [];
+}
+function finiesDe(eq) {
+  const c = campagne();
+  const base = eq === "MJ" ? c.finies : (c.prog[eq] || []);
+  return [...new Set([...avantDepart(), ...base])];
 }
 function quetesCampagne() {
   const c = campagne(), qs = quetesDuMonde();
@@ -10315,23 +10720,63 @@ function quetesCampagne() {
   const rang = (q, i) => c.ordre.includes(q.id) ? c.ordre.indexOf(q.id) - 1e4 : q.id === "rentree-academie" ? -1 : q.id === "demo" ? 1e4 : i;
   return qs.map((q, i) => [q, rang(q, i)]).sort((a, b) => a[1] - b[1]).map(([q]) => q);
 }
-async function marquerFinie(id, fini = true) {
+async function marquerFinie(id, fini = true, eq = EQUIPE) {
   const c = campagne();
+  const qui = eq === "MJ" ? c.equipes : [eq];
+  for (const e of qui) {
+    if (!e) continue;
+    if (!c.equipes.includes(e)) c.equipes.push(e);
+    const l = (c.prog[e] || []).filter(x => x !== id); if (fini) l.push(id); c.prog[e] = l;
+    if (!fini) c.vus[e] = Math.min(c.vus[e] || 0, l.length);
+  }
+  // la liste générale garde les quêtes finies par au moins une équipe
   c.finies = c.finies.filter(x => x !== id);
-  if (fini) c.finies.push(id);
-  else c.vu = Math.min(c.vu, c.finies.length);
+  if (fini || c.equipes.some(e => (c.prog[e] || []).includes(id))) c.finies.push(id);
+  if (!fini) c.vu = Math.min(c.vu, c.finies.length);
   await Stock.sauverMonde(MONDE);
 }
 // Les épingles visibles en campagne : les quêtes finies, puis la prochaine à faire
-function etapesCampagne() {
-  const c = campagne(), ordre = quetesCampagne();
-  const finies = ordre.filter(q => c.finies.includes(q.id)), prochaine = ordre.find(q => !c.finies.includes(q.id));
-  return { finies, prochaine };
+function etapesCampagne(eq = VUE) {
+  const c = campagne(), ordre = quetesCampagne(), f = finiesDe(eq);
+  const finies = ordre.filter(q => f.includes(q.id)), prochaine = ordre.find(q => !f.includes(q.id));
+  // Option : la quête suivante attend que toutes les équipes aient fini la précédente
+  let attente = false;
+  if (prochaine && c.ensemble && eq !== "MJ" && c.equipes.length > 1) {
+    const i = ordre.indexOf(prochaine), prec = ordre[i - 1];
+    if (prec && !avantDepart().includes(prec.id)) attente = c.equipes.some(e => !finiesDe(e).includes(prec.id));
+  }
+  return { finies, prochaine, attente };
 }
+// La carte d'une équipe est noire, sauf autour des lieux déjà visités et le long du sentier
+function dessinerNoir() {
+  const svg = document.getElementById("m-noir"), carte = document.getElementById("m-carte"), c = campagne();
+  if (!c.actif || !c.noir || VUE === "MJ" || mondeEdit) { svg.innerHTML = ""; return; }
+  const W2 = carte.clientWidth, H2 = carte.clientHeight; if (!W2) return;
+  svg.setAttribute("viewBox", `0 0 ${W2} ${H2}`);
+  const pins = [...document.querySelectorAll("#m-pins .pin.finie, #m-pins .pin.suivante")]
+    .map(p => ({ x: parseFloat(p.style.left) / 100 * W2, y: parseFloat(p.style.top) / 100 * H2, fin: p.classList.contains("finie") }));
+  const r = W2 * .13, trous = [];
+  for (const p of pins) trous.push(`<circle cx="${p.x}" cy="${p.y}" r="${p.fin ? r : r * .7}" fill="url(#noir-g)" opacity="${p.fin ? 1 : .75}"/>`);
+  // de petites lueurs le long du sentier
+  const ordre = pins.slice();
+  const chemin = [...document.querySelectorAll("#m-chemin .ch-trait")];
+  for (const ch of chemin) { const L = ch.getTotalLength(); for (let t = r * .5; t < L; t += r * .45) { const pt = ch.getPointAtLength(t); trous.push(`<circle cx="${pt.x}" cy="${pt.y}" r="${r * .42}" fill="url(#noir-g)" opacity=".8"/>`); } }
+  svg.innerHTML = `<defs><radialGradient id="noir-g"><stop offset="0" stop-color="#000"/><stop offset=".55" stop-color="#000" stop-opacity=".85"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <mask id="noir-m" maskUnits="userSpaceOnUse" x="0" y="0" width="${W2}" height="${H2}"><rect width="${W2}" height="${H2}" fill="#fff"/>${trous.join("")}</mask></defs>
+    <rect class="voile" width="${W2}" height="${H2}" fill="#07050a" opacity=".93" mask="url(#noir-m)"/>`;
+}
+function remplirVues() {
+  const sel = document.getElementById("m-vue"), c = campagne();
+  sel.hidden = !c.actif || mondeEdit;
+  if (VUE !== "MJ" && !c.equipes.includes(VUE)) VUE = "MJ";
+  sel.innerHTML = `<option value="MJ">🗺️ Carte MJ</option>` + c.equipes.map(e => `<option value="${esc(e)}"${e === VUE ? " selected" : ""}>🚩 Équipe ${esc(e)}</option>`).join("");
+  sel.value = VUE;
+}
+document.getElementById("m-vue").onchange = e => { VUE = e.target.value; afficherMonde(); };
 function dessinerChemin(animer) {
   const svg = document.getElementById("m-chemin"), carte = document.getElementById("m-carte");
   svg.innerHTML = "";
-  if (!campagne().actif || mondeEdit) return;
+  if (!campagne().actif || mondeEdit || VUE === "MJ") return;
   const pts = [...document.querySelectorAll("#m-pins .pin.finie, #m-pins .pin.suivante")]
     .sort((a, b) => Number(a.dataset.rang) - Number(b.dataset.rang))
     .map(p => [parseFloat(p.style.left) / 100 * carte.clientWidth, parseFloat(p.style.top) / 100 * carte.clientHeight]);
@@ -10357,24 +10802,43 @@ function dessinerChemin(animer) {
 }
 async function ouvrirCampagne() {
   const c = campagne();
+  let pour = VUE;
   const rendre = () => {
+    if (pour !== "MJ" && !c.equipes.includes(pour)) pour = "MJ";
     const qs = quetesCampagne();
     const opt = (o, v) => Object.entries(o).map(([k, n]) => `<option value="${k}"${k === v ? " selected" : ""}>${n}</option>`).join("");
     ouvrir(`<h2>Campagne de l'année</h2>
-      <p class="sub">En mode campagne, la carte montre seulement les quêtes finies et la prochaine à faire. Un sentier en pointillés les relie, et une zone peut changer quand sa quête est finie. Une quête gagnée est cochée toute seule.</p>
-      <label class="check"><input type="checkbox" id="camp-on"${c.actif ? " checked" : ""}> Mode campagne : montrer seulement les quêtes à faire</label>
-      <div class="camp-liste">${qs.map((q, i) => `<div class="camp-l${c.finies.includes(q.id) ? " finie" : ""}">
+      <p class="sub">En mode campagne, chaque équipe a sa carte : elle est noire au début et s'éclaircit le long du sentier, quête après quête. La carte MJ montre tout, avec un drapeau pour chaque équipe. Une quête gagnée est cochée toute seule pour l'équipe qui l'a jouée.</p>
+      <label class="check"><input type="checkbox" id="camp-on"${c.actif ? " checked" : ""}> Mode campagne</label>
+      <label>Équipes (séparées par des virgules) <input class="field" id="camp-eq" value="${esc(c.equipes.join(", "))}" placeholder="Ex. : Dragons, Licornes, Griffons"></label>
+      <div class="dims"><label>L'année commence à <select id="camp-dep"><option value="">la première quête</option>${qs.map(q => `<option value="${esc(q.id)}"${q.id === c.depart ? " selected" : ""}>${esc(q.nom.replace(" (démo)", ""))}</option>`).join("")}</select></label>
+      <label>Cases « Finie » pour <select id="camp-pour"><option value="MJ">toutes les équipes</option>${c.equipes.map(e => `<option value="${esc(e)}"${e === pour ? " selected" : ""}>l'équipe ${esc(e)}</option>`).join("")}</select></label></div>
+      <label class="check"><input type="checkbox" id="camp-noir"${c.noir ? " checked" : ""}> Carte noire qui s'éclaircit pour chaque équipe</label>
+      <label class="check"><input type="checkbox" id="camp-ens"${c.ensemble ? " checked" : ""}> La quête suivante n'apparaît que lorsque toutes les équipes ont fini la précédente</label>
+      <div class="camp-liste">${qs.map((q, i) => { const f = pour === "MJ" ? c.equipes.length ? c.equipes.every(e => finiesDe(e).includes(q.id)) : finiesDe("MJ").includes(q.id) : finiesDe(pour).includes(q.id), avant = avantDepart().includes(q.id); return `<div class="camp-l${f ? " finie" : ""}">
         <span class="n">${i + 1}</span><b>${esc(q.nom.replace(" (démo)", ""))}</b>
-        <label class="check" title="Quête terminée"><input type="checkbox" data-fin="${esc(q.id)}"${c.finies.includes(q.id) ? " checked" : ""}> Finie</label>
+        <label class="check" title="${avant ? "Avant le début de l'année" : "Quête terminée"}"><input type="checkbox" data-fin="${esc(q.id)}"${f ? " checked" : ""}${avant ? " disabled" : ""}> ${avant ? "Sautée" : "Finie"}</label>
         <span><select data-eff="${esc(q.id)}" aria-label="Ce qui change sur la carte">${opt(EFFETS_ZONE, c.effets[q.id] || "rien")}</select>
           <select data-tz="${esc(q.id)}" aria-label="Taille de la zone"${(c.effets[q.id] || "rien") === "rien" ? " hidden" : ""}>${opt(TAILLES_ZONE, c.tailles[q.id] || ".24")}</select></span>
         <span><button class="btn mini" type="button" data-up="${i}" aria-label="Monter"${i ? "" : " disabled"}>↑</button><button class="btn mini" type="button" data-down="${i}" aria-label="Descendre"${i < qs.length - 1 ? "" : " disabled"}>↓</button></span>
-      </div>`).join("")}</div>
+      </div>`; }).join("")}</div>
       <div class="row"><button class="btn" type="button" id="camp-zero">Recommencer l'année</button><button class="btn gold" type="button" id="camp-ok">Fermer</button></div>`);
     modal.classList.add("large");
     const sauver = async () => { await Stock.sauverMonde(MONDE); afficherMonde(); };
     document.getElementById("camp-on").onchange = e => { c.actif = e.target.checked; sauver(); };
-    modal.querySelectorAll("[data-fin]").forEach(b => b.onchange = async () => { await marquerFinie(b.dataset.fin, b.checked); c.vu = c.finies.length; await sauver(); rendre(); });
+    modal.querySelectorAll("[data-fin]").forEach(b => b.onchange = async () => {
+      if (pour === "MJ" && !c.equipes.length) { const l = c.finies.filter(x => x !== b.dataset.fin); if (b.checked) l.push(b.dataset.fin); c.finies = l; }
+      else await marquerFinie(b.dataset.fin, b.checked, pour);
+      c.vu = c.finies.length; for (const e of c.equipes) c.vus[e] = finiesDe(e).length; await sauver(); rendre(); });
+    document.getElementById("camp-eq").onchange = async e => {
+      const l = [...new Set(e.target.value.split(",").map(x => x.trim().slice(0, 12)).filter(Boolean))];
+      c.equipes = l; for (const k of Object.keys(c.prog)) if (!l.includes(k)) { delete c.prog[k]; delete c.vus[k]; }
+      for (const k of l) { c.prog[k] = c.prog[k] || []; c.vus[k] = c.vus[k] || 0; }
+      await sauver(); rendre(); };
+    document.getElementById("camp-dep").onchange = async e => { c.depart = e.target.value; for (const k of c.equipes) c.vus[k] = finiesDe(k).length; c.vu = finiesDe("MJ").length; await sauver(); rendre(); };
+    document.getElementById("camp-pour").onchange = e => { pour = e.target.value; rendre(); };
+    document.getElementById("camp-noir").onchange = e => { c.noir = e.target.checked; sauver(); };
+    document.getElementById("camp-ens").onchange = e => { c.ensemble = e.target.checked; sauver(); };
     modal.querySelectorAll("[data-eff]").forEach(b => b.onchange = async () => { c.effets[b.dataset.eff] = b.value; await sauver(); rendre(); });
     modal.querySelectorAll("[data-tz]").forEach(b => b.onchange = async () => { c.tailles[b.dataset.tz] = b.value; await sauver(); });
     const bouger = async (i, d) => { const ids = qs.map(q => q.id); [ids[i], ids[i + d]] = [ids[i + d], ids[i]]; c.ordre = ids; await sauver(); rendre(); };
@@ -10382,7 +10846,7 @@ async function ouvrirCampagne() {
     modal.querySelectorAll("[data-down]").forEach(b => b.onclick = () => bouger(Number(b.dataset.down), 1));
     document.getElementById("camp-zero").onclick = async () => {
       const v = await choisir("Recommencer l'année?", "Toutes les quêtes redeviennent « à faire » sur la carte. Les parties sauvegardées ne sont pas effacées.", [{ txt: "Oui, recommencer", v: "oui", cls: "gold" }, { txt: "Annuler", v: "non" }]);
-      if (v === "oui") { c.finies = []; c.vu = 0; await sauver(); }
+      if (v === "oui") { c.finies = []; c.vu = 0; c.prog = Object.fromEntries(c.equipes.map(e => [e, []])); c.vus = {}; await sauver(); }
       rendre();
     };
     document.getElementById("camp-ok").onclick = fermer;
@@ -10398,28 +10862,35 @@ async function afficherMonde() {
   const fond = carte.querySelector(".m-fond");
   if (src && MONDE.video) { if (fond.dataset.src !== src) { fond.dataset.src = src; videoEnBoucle(fond, src); } }
   else { delete fond.dataset.src; fond.innerHTML = src ? `<img src="${src}" alt="Carte du monde">` : MONDE_SVG; const im = fond.querySelector("img"); if (im) im.onload = ajusterMonde; }
-  const pris = [], pins = [], c = campagne(), enCamp = c.actif && !mondeEdit;
-  const { finies, prochaine } = etapesCampagne(), nouveau = enCamp && c.finies.length > (c.vu || 0);
+  const pris = [], pins = [], c = campagne();
+  remplirVues();
+  const mj = VUE === "MJ", enCamp = c.actif && !mondeEdit && !mj;
+  const fv = finiesDe(VUE), vuIci = mj ? c.vu || 0 : c.vus[VUE] || 0;
+  const { finies, prochaine, attente } = etapesCampagne(), nouveau = enCamp && fv.length > vuIci;
+  // en vue MJ : un drapeau par équipe sur sa prochaine quête
+  const drapeaux = {};
+  if (c.actif && mj && !mondeEdit) for (const e of c.equipes) { const p = etapesCampagne(e).prochaine; if (p) (drapeaux[p.id] = drapeaux[p.id] || []).push(e); }
   const effets = [];
   for (const q of quetesDuMonde()) {
     const [x, y] = lieuDe(q, pris); pris.push([x, y]);
-    const fin = c.finies.includes(q.id), rang = finies.indexOf(q);
-    if (fin && c.effets[q.id] && c.effets[q.id] !== "rien") effets.push(`<div class="m-eff ${c.effets[q.id]}${nouveau && q.id === c.finies[c.finies.length - 1] ? " neuf" : ""}" style="left:${x * 100}%;top:${y * 100}%;--t:${c.tailles[q.id] || .24}"></div>`);
+    const fin = fv.includes(q.id), rang = finies.indexOf(q);
+    if (fin && c.actif && c.effets[q.id] && c.effets[q.id] !== "rien") effets.push(`<div class="m-eff ${c.effets[q.id]}${nouveau && q.id === fv[fv.length - 1] ? " neuf" : ""}" style="left:${x * 100}%;top:${y * 100}%;--t:${c.tailles[q.id] || .24}"></div>`);
     if (enCamp && !fin && q !== prochaine) continue;
-    const etat = !enCamp ? "" : fin ? ` finie" data-rang="${rang}` : ` suivante${nouveau ? " apparait" : ""}" data-rang="${finies.length}`;
+    const etat = !enCamp ? "" : fin ? ` finie" data-rang="${rang}` : ` suivante${attente ? " attente" : ""}${nouveau ? " apparait" : ""}" data-rang="${finies.length}`;
+    const dr = (drapeaux[q.id] || []).map(e => `<i style="--c:${couleurEq(e)}">${esc(e)}</i>`).join("");
     const equipes = (await Stock.parties(q.id)).length;
     const boss = (q.monstres || []).find(mo => mo.boss);
     pins.push(`<button class="pin${mondeEdit ? " edit" : ""}${etat}" type="button" data-q="${esc(q.id)}" title="${esc(q.nom)}" aria-label="${esc(q.nom)}" style="left:${x * 100}%;top:${y * 100}%">
       ${mondeEdit ? `<span class="pin-del" data-del="${esc(q.id)}" role="button" aria-label="Retirer ${esc(q.nom)}">🗑</span>` : ""}
-      ${fin && c.actif ? `<span class="pin-ok" aria-label="Quête terminée">✓</span>` : ""}<span class="pin-coin">${boss ? imgMon(boss.look) || MONSVG[boss.look] || SVG[boss.look] || SVG.roi : q.id === "demo" ? imgMon("roi") : SVG.coffreDore}</span>
+      ${dr ? `<span class="pin-drapeaux">${dr}</span>` : ""}${fin && c.actif && !mj ? `<span class="pin-ok" aria-label="Quête terminée">✓</span>` : ""}<span class="pin-coin">${boss ? imgMon(boss.look) || MONSVG[boss.look] || SVG[boss.look] || SVG.roi : q.id === "demo" ? imgMon("roi") : SVG.coffreDore}</span>
       <span class="pin-nom">${esc(q.nom.replace(" (démo)", ""))}<small>${q.chapitres.length} chapitre${q.chapitres.length > 1 ? "s" : ""}${equipes ? ` · ${equipes} équipe${equipes > 1 ? "s" : ""}` : ""}</small></span></button>`);
   }
   document.getElementById("m-pins").innerHTML = pins.join("");
   document.getElementById("m-effets").innerHTML = effets.join("");
   for (const e of document.querySelectorAll(".m-eff.neuf")) { e.style.opacity = 0; setTimeout(() => e.style.opacity = "", 600); }
   for (const p of document.querySelectorAll(".pin.apparait")) p.style.animationDelay = RM.matches ? "0s" : "3s";
-  if (nouveau) { c.vu = c.finies.length; Stock.sauverMonde(MONDE); cheminNeuf = true; setTimeout(() => cheminNeuf = false, 3000); }
-  requestAnimationFrame(() => dessinerChemin(nouveau));
+  if (nouveau) { if (mj) c.vu = fv.length; else c.vus[VUE] = fv.length; Stock.sauverMonde(MONDE); cheminNeuf = true; setTimeout(() => cheminNeuf = false, 3000); }
+  requestAnimationFrame(() => { dessinerChemin(nouveau); dessinerNoir(); });
   document.getElementById("m-edit").textContent = mondeEdit ? "Terminer" : "Modifier les lieux";
   const nc = (MONDE.caches || []).length, rc = document.getElementById("m-caches");
   rc.hidden = !mondeEdit || !nc; rc.textContent = `Réafficher les quêtes retirées (${nc})`;
@@ -10432,7 +10903,7 @@ function ajusterMonde() {
   const ratio = fond && fond.videoWidth ? fond.videoHeight / fond.videoWidth : fond && fond.naturalWidth ? fond.naturalHeight / fond.naturalWidth : 1000 / 1600;
   const w = Math.min(wrap.clientWidth, wrap.clientHeight / ratio);
   carte.style.width = w + "px"; carte.style.height = w * ratio + "px"; carte.style.setProperty("--mw", w + "px");
-  dessinerChemin(cheminNeuf);
+  dessinerChemin(cheminNeuf); dessinerNoir();
 }
 // Une vidéo courte (ex. 5 s de Canva) tourne en boucle : deux lecteurs se relaient en fondu pour cacher le raccord
 function videoEnBoucle(fond, src) {
@@ -10452,6 +10923,7 @@ function videoEnBoucle(fond, src) {
 function fermerMonde() { document.getElementById("monde").hidden = true; mondeEdit = false; }
 async function choisirLieu(id) {
   const q = quetesDuMonde().find(x => x.id === id); if (!q) return;
+  if (document.querySelector(`.pin.attente[data-q="${CSS.escape(id)}"]`)) return toast(`L'équipe ${VUE} a de l'avance! Cette quête s'ouvrira quand toutes les équipes auront fini la précédente.`, 5000);
   const parties = await Stock.parties(q.id), ch = q.chapitres[0];
   const v = await choisir(esc(q.nom), `<span class="lieu-intro">${esc((ch.intro || "").split(/\n\s*\n/)[0] || "Une nouvelle aventure vous attend.")}</span>
     <span class="lieu-info">${q.chapitres.length} chapitre${q.chapitres.length > 1 ? "s" : ""} : ${q.chapitres.map(c => esc(c.nom)).join(" → ")}${parties.length ? `<br>Équipes en route : ${parties.map(p => `<b>${esc(p.equipe)}</b> (ch. ${p.chapitre + 1})`).join(", ")}` : ""}</span>`,
@@ -10495,9 +10967,9 @@ document.getElementById("m-pins").addEventListener("click", async e => {
 document.getElementById("m-caches").onclick = async () => { MONDE.caches = []; await Stock.sauverMonde(MONDE); afficherMonde(); toast("Toutes les quêtes sont de retour sur la carte."); };
 document.getElementById("m-close").onclick = fermerMonde;
 document.getElementById("m-modif").onclick = async () => {
-  const toutes = [...QUETES, ...INTEGREES.filter(i => i.id !== "demo" || !(MONDE.caches || []).includes("demo"))];
-  const v = await choisir("Modifier une quête", "Choisis la quête à ouvrir dans le Créateur. Une quête fournie avec le jeu est d'abord copiée, l'originale reste intacte.",
-    [...toutes.map(q => ({ txt: esc(q.nom.replace(" (démo)", "")), v: q.id, cls: INTEGREES.includes(q) ? "" : "blue" })), { txt: "Retour", v: null }]);
+  const toutes = lesQuetes().filter(q => q.id !== "demo" || !(MONDE.caches || []).includes("demo"));
+  const v = await choisir("Modifier une quête", "Choisis la quête à ouvrir dans le Créateur. Tes changements s'appliquent directement à la quête. Pour une quête fournie avec le jeu, le bouton « Revenir à l'original » annule tout.",
+    [...toutes.map(q => ({ txt: esc(q.nom.replace(" (démo)", "")), v: q.id, cls: estFournie(q.id) ? "" : "blue" })), { txt: "Retour", v: null }]);
   const q = toutes.find(x => x.id === v); if (!q) return;
   fermerMonde(); ouvrirEditeur(q);
 };
@@ -10530,10 +11002,19 @@ document.getElementById("m-file").addEventListener("change", async e => {
     cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
     MONDE.image = cv.toDataURL("image/jpeg", .85);
     await Stock.sauverMonde(MONDE); afficherMonde();
+    proposerIles();
   };
   im.onerror = () => toast("Cette image n'a pas pu être lue.");
   im.src = url;
 });
+// Après une nouvelle image : proposer de placer les quêtes sur les territoires de la carte des îles
+function proposerIles() {
+  ouvrir(`<h2>Placer les quêtes?</h2>
+    <p class="sub">Si c'est la carte des îles volantes, chaque quête peut aller sur son territoire (glace au nord, école des sorciers, cité, ferme, manoir, marais, prairie…). Tu pourras encore les déplacer avec « Modifier les lieux ».</p>
+    <div class="row"><button class="btn" type="button" id="iles-non">Garder les positions</button><button class="btn gold" type="button" id="iles-oui">Placer sur la carte des îles</button></div>`);
+  document.getElementById("iles-non").onclick = fermer;
+  document.getElementById("iles-oui").onclick = async () => { MONDE.lieux = { ...MONDE.lieux, ...LIEUX_ILES }; await Stock.sauverMonde(MONDE); fermer(); afficherMonde(); toast("Les quêtes sont sur leurs territoires."); };
+}
 // ---------- plein écran ----------
 function pleinEcran() {
   const d = document, el = d.documentElement;
@@ -10574,7 +11055,7 @@ new ResizeObserver(() => resize()).observe(wrap);
   MONDE = Object.assign({ image: null, lieux: {} }, await Stock.chargerMonde());
   if (MONDE.campagne) MONDE.campagne = clone(MONDE.campagne); // une lecture du compte est figée
   let id = null; try { id = localStorage.getItem("donjon-quete"); } catch {}
-  QUETE = [...INTEGREES, ...QUETES].find(x => x.id === id) || DEMO;
+  QUETE = lesQuetes().find(x => x.id === id) || DEMO;
   document.getElementById("quete-sel").value = QUETE.id;
   // Le plateau se prépare derrière la carte du monde
   construire(QUETE.chapitres[0], "heros", 0); resize(true);
