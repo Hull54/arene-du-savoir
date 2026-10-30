@@ -168,6 +168,39 @@
   .rules .who { text-align: center; margin-top: 12px; color: #44386a; font-weight: 700; }
   #count { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 140px; font-weight: 700; color: #ffd54a; text-shadow: 8px 8px 0 #1b1424, -4px -4px 0 #1b1424, 4px -4px 0 #1b1424, -4px 4px 0 #1b1424; pointer-events: none; z-index: 4; }
   @media (max-width: 560px) { .choices { grid-template-columns: 1fr; } }
+  /* ----- tablettes et téléphones ----- */
+  /* un écran plus court que son contenu défile au lieu de couper le haut */
+  .screen { justify-content: flex-start; } .screen > :first-child { margin-top: auto; } .screen > :last-child { margin-bottom: auto; }
+  .seg, .sw, .lrow { flex-wrap: wrap; justify-content: center; } .wnav { flex-wrap: wrap; }
+  .wiz .seg.small { justify-content: center; }
+  /* sur écran tactile : les boutons à l'écran remplacent les touches du clavier et montrent la recharge */
+  body.tactile #hud, body.tactile details.keys { display: none !important; }
+  body.tactile #gear { bottom: 12px; } body.tactile #msgBtn { bottom: 64px; } body.tactile #msgMenu { bottom: 116px; } body.tactile #buffs { bottom: 120px; }
+  #touch button { position: relative; padding: 0; background-image: linear-gradient(to top, #000a var(--cd, 0%), transparent var(--cd, 0%)); }
+  #touch button[data-s]::after { content: attr(data-s); position: absolute; left: 0; right: 0; bottom: 3px; font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #1b1424; }
+  #touch button:active { transform: translate(2px, 2px); }
+  @media (max-width: 600px) {
+    .screen { padding: 10px; gap: 10px; }
+    .wiz { padding: 10px; } .wbody { gap: 10px; min-height: 0; } .wcontent { min-width: 0; }
+    .wiz .sw span, .wiz .lrow > span { min-width: 0; flex-basis: 100%; text-align: center; }
+    .wiz .sw b { width: 34px; height: 34px; }
+    .wiz #gender button { padding: 8px 12px; font-size: 19px; } .wiz #gender canvas { width: 72px; height: 90px; }
+    .wnav .btn { font-size: 17px; padding: 8px 14px; flex: 1 1 40%; }
+    .wiz .classes { grid-template-columns: repeat(2, 1fr); gap: 8px; } .wiz .cls canvas { width: 72px; height: 90px; } .cls small { font-size: 12px; }
+    #touch { right: 10px; bottom: 10px; gap: 8px; } #touch button { width: 64px; height: 64px; font-size: 26px; }
+    #feed { top: 96px; font-size: 12px; max-width: 55vw; } #feed div:nth-child(n+4) { display: none; }
+  }
+  /* écrans bas (téléphone couché) : fenêtres plus compactes */
+  @media (max-height: 520px) {
+    .screen { padding: 8px; gap: 8px; }
+    .card { padding: 10px 14px; } .card h2 { margin: 6px 0 8px; font-size: 20px; }
+    .rgL { font-size: 15px; line-height: 1.35; } .rgB { font-size: 16px; margin-bottom: 4px; } .rules .btn { margin-top: 8px; padding: 6px 22px; font-size: 18px; }
+    .choices { gap: 6px; } .choices button { padding: 8px; font-size: 17px; }
+    .wtitle { font-size: 20px; } h1 { font-size: 26px; } .wiz { gap: 8px; } .wbody { min-height: 0; } #bigPrev { width: 80px; height: 100px; }
+    .wiz .cls canvas { width: 64px; height: 80px; } .wiz .classes { gap: 6px; }
+    #touch button { width: 60px; height: 60px; font-size: 24px; }
+    #feed { top: 60px; font-size: 12px; } #feed div:nth-child(n+4) { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -465,7 +498,7 @@ function connect(name, cls, code = '', solo = false) {
       setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'eco', 'gear', 'musique'].forEach(id => $(id).style.display = ''); Son.musique(map.theme); }, 30);
       if (m.t === 'carte') toast('🗺️ ' + map.nom);
       $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls]; $('icoD').textContent = DASH_ICO[cls];
-      if ('ontouchstart' in window) $('touch').style.display = 'flex';
+      if ('ontouchstart' in window) { $('touch').style.display = 'flex'; document.body.classList.add('tactile'); $('tAtk').textContent = ATK_ICO[cls]; $('tPow').textContent = POW_ICO[cls]; $('tDash').textContent = DASH_ICO[cls]; }
     } else if (m.t === 's') {
       world = unpackWorld(m.w);
       const mp = world.p.find(p => p.id === myId);
@@ -1053,6 +1086,10 @@ function frame(now) {
     $('lblD').textContent = me.cdD > 0 ? Math.ceil(me.cdD) + ' s' : 'Espace';
     $('cdF').style.display = me.pet ? '' : 'none';
     if ('ontouchstart' in window) $('tPet').style.display = me.pet ? '' : 'none';
+    if (document.body.classList.contains('tactile')) {   // recharge affichée sur les boutons tactiles
+      const tc = (id, v, max) => { const b = $(id), pct = Math.max(0, Math.min(100, (v || 0) / max * 100)); b.style.setProperty('--cd', pct + '%'); if (v > 0.05) b.dataset.s = Math.ceil(v) + ' s'; else delete b.dataset.s; };
+      tc('tAtk', me.cdA, c.atk.cd); tc('tPow', me.cdP, c.power.cd); tc('tDash', me.cdD, c.dash.cd); if (me.pet) tc('tPet', me.cdF, info.petCd || 15);
+    }
     if (me.pet) {
       $('icoF').textContent = PET_ICO[me.pet]; $('tPet').textContent = PET_ICO[me.pet];
       $('fillF').style.height = (me.cdF / (info.petCd || 15) * 100) + '%';
