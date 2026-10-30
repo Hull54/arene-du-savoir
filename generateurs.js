@@ -137,6 +137,45 @@ function genFractions() {
   return { matiere: 'Mathématiques', notion: 'Fractions', question: quoi, svg, choix: choices(`${k}/${n}`, leurres), reponse: 0, explication: `${k} partie${k > 1 ? 's' : ''} coloriée${k > 1 ? 's' : ''} sur ${n} parties égales : ${k}/${n}.` };
 }
 
+// ---------- Mathématiques : fractions équivalentes et réduction ----------
+const pgcd = (a, b) => b ? pgcd(b, a % b) : a;
+// fraction irréductible plus petite que 1 (dénominateur de 2 à 12)
+function fracSimple() {
+  for (;;) { const b = ri(2, 12), a = ri(1, b - 1); if (pgcd(a, b) === 1) return [a, b]; }
+}
+const QF = (notion, question, bon, leurres, explication, svg) => ({ matiere: 'Mathématiques', notion, question, choix: choices(bon, melange([...new Set(leurres)].filter(l => l !== bon && !/(^|\/)0$|^0\/|-|NaN/.test(l)))), reponse: 0, explication, ...(svg ? { svg } : {}) });
+function genEquivalentes() {
+  const [a, b] = fracSimple(), k = ri(2, 6), n = a * k, d = b * k, t = ri(0, 3);
+  const pourquoi = `On multiplie le numérateur et le dénominateur par le même nombre (× ${k}) : ${a}/${b} = ${n}/${d}.`;
+  if (t === 0) return QF('Fractions équivalentes', `Quelle fraction est équivalente à ${a}/${b} ?`, `${n}/${d}`,
+    [`${n}/${d + 1}`, `${a + k}/${b + k}`, `${n}/${b}`, `${a}/${d}`, `${n + 1}/${d}`, `${b * k}/${a * k}`], pourquoi);
+  if (t === 1) return QF('Fractions équivalentes', `Complète : ${a}/${b} = ?/${d}`, String(n),
+    [String(n + 1), String(n - 1), String(a + k), String(a + d - b), String(a * (k + 1)), String(d - b), String(n + 2), String(n * 2), String(n + 3)], pourquoi);
+  if (t === 2) return QF('Fractions équivalentes', `Complète : ${a}/${b} = ${n}/?`, String(d),
+    [String(d + 1), String(d - 1), String(b + k), String(b + n - a), String(b * (k + 1)), String(n + b), String(d + 2), String(d * 2), String(d - 2)], pourquoi);
+  // laquelle n'est PAS équivalente
+  const ks = melange([2, 3, 4, 5, 6]).slice(0, 3), faux = `${a * ks[0] + 1}/${b * ks[0]}`;
+  return QF('Fractions équivalentes', `Laquelle n'est PAS équivalente à ${a}/${b} ?`, faux, ks.map(m => `${a * m}/${b * m}`),
+    `${a * ks[0] + 1}/${b * ks[0]} n'est pas équivalente : pour ${b * ks[0]} au dénominateur, il faudrait ${a * ks[0]} au numérateur.`, svgBar(b, a));
+}
+function genReduction() {
+  const [a, b] = fracSimple(), k = ri(2, 8), n = a * k, d = b * k, t = ri(0, 2);
+  const pourquoi = `${n} et ${d} se divisent tous les deux par ${k} : ${n}/${d} = ${a}/${b}, et on ne peut plus réduire.`;
+  // réduction partielle (encore réductible) : une erreur fréquente
+  const div = [2, 3, 4].find(m => k % m === 0 && m < k), partiel = div ? `${n / div}/${d / div}` : `${n}/${d}`;
+  if (t === 0) return QF('Réduction de fractions', `Réduis ${n}/${d} à sa plus simple expression (fraction irréductible).`, `${a}/${b}`,
+    [partiel, `${a}/${b + 1}`, `${a + 1}/${b}`, `${b}/${a}`, `${n - 1}/${d - 1}`, `${a}/${d}`], pourquoi);
+  if (t === 1) {
+    const autres = [];
+    for (let m = 2; m <= 12; m++) if (m !== k && (n % m || d % m || m > k)) autres.push(String(m));
+    return QF('Réduction de fractions', `Par quel plus grand nombre peut-on diviser le numérateur ET le dénominateur de ${n}/${d} ?`, String(k), melange(autres),
+      `${k} est le plus grand nombre qui divise ${n} et ${d} : ${n}/${d} = ${a}/${b}.`);
+  }
+  const red = [1, 2, 3, 4, 5, 6, 7, 8].map(() => { const [x, y] = fracSimple(), m = ri(2, 5); return `${x * m}/${y * m}`; });
+  return QF('Réduction de fractions', 'Laquelle de ces fractions est déjà irréductible (on ne peut plus la réduire) ?', `${a}/${b}`, red,
+    `${a} et ${b} n'ont aucun diviseur commun à part 1 : ${a}/${b} est irréductible.`);
+}
+
 // ---------- Mathématiques : angles (avec dessin) ----------
 function svgAngle(deg) {
   const rot = ri(0, 30), a1 = -rot * Math.PI / 180, a2 = -(rot + deg) * Math.PI / 180;
@@ -200,6 +239,8 @@ module.exports = {
   'Tables de division (0 à 12)': genDivision,
   'Numération': genNumeration,
   'Fractions': genFractions,
+  'Fractions équivalentes': genEquivalentes,
+  'Réduction de fractions': genReduction,
   'Angles': genAngles,
   'Triangles': genTriangles,
 };
