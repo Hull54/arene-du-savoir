@@ -177,6 +177,10 @@
 <script src="banques.js"></script>
 <script>
 const $ = id => document.getElementById(id);
+// outils utilisés dès le chargement (fiches, questions perso, codes) : déclarés en premier
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const jour = () => new Date().toLocaleDateString('fr-CA');
+let niv = {}, ouvertOn = false;
 const cv = $('c'), ctx = cv.getContext('2d');
 let map = null, world = null, W0 = null, last = null;
 const disp = new Map();
@@ -371,7 +375,6 @@ for (const [k, b] of Object.entries(BANQUES)) {
 renderPerso();
 // niveaux des élèves (gardés dans ce navigateur, par prénom)
 const NIV = { f: '🙂 Facile', n: 'Normal', d: '🔥 Défi' };
-let niv = {}, ouvertOn = false;
 try { niv = JSON.parse(localStorage.getItem('arene-niveaux') || '{}'); ouvertOn = localStorage.getItem('arene-ouvert') === '1'; } catch {}
 if (!niv || typeof niv !== 'object' || Array.isArray(niv)) niv = {};
 const envoyerNiv = v => { try { localStorage.setItem('arene-niveaux', JSON.stringify(niv)); localStorage.setItem('arene-ouvert', ouvertOn ? '1' : '0'); } catch {} send({ t: 'niveaux', v, ouvert: ouvertOn }); };
@@ -405,7 +408,6 @@ $('bossSel').onchange = () => {
 $('fin').onclick = () => $('fin').style.display = 'none';
 $('ecl').onclick = () => { if (!last || !last.eclair) $('ecl').style.display = 'none'; };
 
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 let subjKey = '', cartesKey = '';
 function info(m) {
   last = m;
@@ -574,7 +576,6 @@ $('bilans').onclick = () => {
   send({ t: 'bilans' });
 };
 // Historique des séances (dans ce navigateur) : pour comparer les progrès d'une séance à l'autre
-const jour = () => new Date().toLocaleDateString('fr-CA');
 function lireHisto() { try { const h = JSON.parse(localStorage.getItem('arene-historique') || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } }
 function sauverHisto(mem) {
   const h = lireHisto(), d = jour();
