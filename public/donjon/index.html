@@ -316,6 +316,10 @@ html, body, button, .board, .modal { touch-action: manipulation; }
   padding: 10px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px)); }
 .monde > * { min-width: 0; }
 .monde { grid-template-columns: minmax(0, 1fr); }
+.m-param { position: relative; }
+.m-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; display: grid; gap: 6px; min-width: 250px; padding: 10px; background: #fbf4e2; border: 2px solid var(--cerne); border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.45); }
+.m-menu[hidden] { display: none; }
+.m-menu .btn { justify-content: flex-start; text-align: left; width: 100%; box-sizing: border-box; margin: 0; }
 .monde-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 .monde-wrap { min-height: 0; display: grid; place-items: center; }
 .monde-carte { position: relative; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 3px #0b0806, 0 0 0 5px var(--line), 0 24px 60px rgba(0,0,0,.65); }
@@ -429,6 +433,25 @@ body.editing #vignette { opacity: 0 !important; }
 .chips button { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 11px; font-family: var(--body); font-size: .85rem; cursor: pointer; }
 .chips button[aria-pressed="true"] { background: #2d4a2c; color: #e9f7e2; border-color: #6fae6a; }
 .reg input[type=range] { width: 100%; accent-color: var(--gold); }
+.se-haut { display: flex; gap: 26px; align-items: center; justify-content: center; margin: 10px 0 4px; flex-wrap: wrap; }
+.se-rond { width: 150px; height: 150px; border-radius: 50%; display: grid; place-content: center; text-align: center; background: radial-gradient(closest-side, #fbf4e2 78%, transparent 80%), conic-gradient(#3f8f5a calc(var(--p) * 1%), rgba(43,31,22,.15) 0); }
+.se-rond b { font-size: 2.3rem; line-height: 1; } .se-rond small { color: var(--muted); }
+.se-chiffres { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; text-align: left; font-size: 1.05rem; } .se-chiffres b { font-size: 1.5rem; }
+.se-moments { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 8px; }
+.se-moments > div { display: grid; justify-items: center; gap: 2px; padding: 10px; border: 2px solid var(--cerne); border-radius: 12px; background: rgba(255,255,255,.35); }
+.se-ic { font-size: 2rem; } .se-moments span:not(.se-ic) { font-size: 1.25rem; font-family: var(--titre, inherit); } .se-moments small { color: var(--muted); }
+.se-heros { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 8px; }
+.se-h { display: grid; justify-items: center; gap: 4px; padding: 10px 8px; border-radius: 12px; background: rgba(255,255,255,.35); border: 2px solid rgba(43,31,22,.25); }
+.se-h img { width: 74px; height: 74px; border-radius: 50%; border: 3px solid var(--cerne); object-fit: cover; }
+.se-p { font-weight: 700; } .se-barre { width: 100%; height: 8px; border-radius: 4px; background: rgba(43,31,22,.15); overflow: hidden; } .se-barre i { display: block; height: 100%; background: #3f8f5a; }
+.se-b { font-size: 1.3rem; letter-spacing: 2px; min-height: 1.4em; }
+.reg-tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.reg-tabs button { padding: 8px 14px; } .reg-tabs button.actif { background: var(--gold, #e9b949); }
+.reg-onglet[hidden] { display: none; }
+.frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.05; margin: 0 .12em; font-size: .9em; }
+.frac sup { border-bottom: 2px solid currentColor; padding: 0 .15em; vertical-align: baseline; font-size: 1em; } .frac sub { vertical-align: baseline; font-size: 1em; }
+#ed-notions { grid-template-columns: 1fr; }
+.notions { display: grid; gap: 4px 14px; grid-template-columns: 1fr 1fr; text-align: left; } .notions b { grid-column: span 1; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .reg-t { margin: 16px 0 0; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: left; }
 .sonboard { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
 html.rm .tok .coin > svg,html.rm .tok .coin > img,html.rm .tok.enemy.boss::before,html.rm #vignette { animation: none !important; }
@@ -784,6 +807,7 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
         <label>Conclusion (lue à la victoire) <textarea id="ed-fin" rows="3" placeholder="La situation finale de ton récit."></textarea></label>
         <label>Trame sonore de la quête <select id="ed-qmus"></select></label>
         <label>Calculs + et − au départ <select id="ed-qniv"></select></label>
+        <div><h4>Notions à travailler</h4><div class="notions" id="ed-notions"></div><p class="sub" style="margin:4px 0 0">Rien de coché : on suit les Réglages.</p></div>
         <div>
           <h4>Chapitres (une carte par semaine)</h4>
           <div class="chaps" id="ed-chaps"></div>
@@ -867,7 +891,10 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 </div>
 <div class="monde" id="monde" hidden>
   <div class="monde-top"><div class="brand">Le Royaume d'Hull<small>Classe et Donjon · touche un lieu pour partir à l'aventure</small></div><span class="spacer"></span>
-    <div class="tools"><select class="btn" id="m-vue" aria-label="Carte affichée" hidden></select><button class="btn" type="button" id="m-camp">Campagne</button><button class="btn" type="button" id="m-edit">Modifier les lieux</button><button class="btn" type="button" id="m-caches" hidden></button><label class="btn" for="m-file">Changer l'image du monde</label><button class="btn" type="button" id="m-def">Image par défaut</button><button class="btn blue" type="button" id="m-creer">Créer une quête</button><button class="btn blue" type="button" id="m-modif">Modifier une quête</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button><button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
+    <div class="tools"><select class="btn" id="m-vue" aria-label="Carte affichée" hidden></select><button class="btn" type="button" id="m-caches" hidden></button><button class="btn gold" type="button" id="m-fin" hidden>✓ Terminer les lieux</button><button class="btn" type="button" id="m-plein" title="Plein écran" aria-label="Plein écran">⛶</button>
+      <div class="m-param"><button class="btn blue" type="button" id="m-param" aria-haspopup="true" aria-expanded="false">⚙️ Paramètres</button>
+        <div class="m-menu" id="m-menu" hidden><button class="btn" type="button" id="m-camp">🗺️ Campagne</button><button class="btn" type="button" id="m-creer">✏️ Créer une quête</button><button class="btn" type="button" id="m-modif">📝 Modifier une quête</button><button class="btn" type="button" id="m-edit">📍 Modifier les lieux</button><button class="btn" type="button" id="m-def">🏝️ Image par défaut</button><label class="btn" for="m-file">🖼️ Changer l'image</label></div></div>
+      <button class="btn gold" type="button" id="m-close">Retour au jeu</button></div></div>
   <div class="monde-wrap" id="m-wrap"><div class="monde-carte" id="m-carte"><div class="m-fond"></div><div class="m-effets" id="m-effets"></div><svg class="m-noir" id="m-noir" aria-hidden="true"></svg><svg class="m-chemin" id="m-chemin" aria-hidden="true"></svg><div class="m-pins" id="m-pins"></div></div></div>
   <input type="file" id="m-file" accept="image/*,video/mp4,video/webm,application/pdf" hidden>
 </div>
@@ -7004,6 +7031,43 @@ const DEMO = {
 };
 
 const INTEGREES = [DEMO, RENTREE, OCTOBRE, HALLOWEEN, NOVEMBRE, DECEMBRE, JANVIER, FEVRIER, MARS, AVRIL, MAI, JUIN];
+// Nouveautés ajoutées aux quêtes de l'année : murets, caisses, trous, pièges cachés, PNJ qui bougent, choix de dialogue, potions spéciales
+// Par quête, puis par numéro de chapitre (0 = premier) : deco = [type, x, y]; pnj = modifs par nom; secrets = modifs par « x,y »
+const AJOUTS = {
+  "novembre-lugubre": {
+    0: { deco: [["trou", 12, 5], ["trou", 5, 3], ["muret", 11, 4], ["piege", 8, 3], ["piege", 4, 2]],
+      pnj: { "Le fantôme du gardien": { bouge: "erre", choix: [
+        "> ?Demander poliment de l'aide au gardien | Enfin des enfants bien élevés! Prenez ceci, ça vous rendra rapides comme un courant d'air. | rapidite",
+        "> [voleur] Fouiller les poches du fantôme | Hé! Mes poches sont vides depuis cent ans… Bon, prends ce vieux parchemin, petit chenapan. | bouclier",
+        "> [felin] Suivre le fantôme dans l'ombre | Tu vois dans le noir, toi… Regarde : sous la troisième tombe, une fiole oubliée. | mana"] } } },
+    1: { deco: [["caisse", 10, 7], ["trou", 9, 10], ["muret", 11, 11], ["piege", 13, 5], ["piege", 7, 12]] },
+    2: { deco: [["caisse", 2, 9], ["trou", 7, 6], ["piege", 6, 5]], secrets: { "8,5": { recompense: "rapidite" } } },
+    3: { deco: [["caisse", 6, 9], ["caisse", 3, 11], ["trou", 7, 11], ["piege", 4, 13]], secrets: { "8,2": { recompense: "force" } } },
+  },
+  "decembre-noel": {"0": {"deco": [["muret", 14, 13], ["caisse", 5, 11], ["piege", 7, 13], ["trou", 6, 5], ["piege", 15, 7]], "pnj": {"Pimprenelle, la lutine": {"bouge": "erre", "choix": ["> ?Aider Pimprenelle à emballer un cadeau | Merci! Un cadeau bien emballé, c'est un cadeau réussi. Tiens, une potion qui donne de l'énergie! | rapidite", "> [oiseau] Aller chercher le ruban tout en haut de l'étagère | Tu voles? Quelle chance! Garde ce parchemin, il protège des coups. | bouclier", "> [geant] Soulever la grosse boîte de jouets | Oh là là, quelle force! Voilà une potion de force pour un costaud. | force"]}}, "secrets": {"14,10": {"recompense": "bouclier"}}}, "1": {"deco": [["caisse", 14, 13], ["trou", 20, 2], ["piege", 2, 13], ["muret", 3, 9], ["piege", 19, 8]], "secrets": {"12,6": {"recompense": "rapidite"}}}, "2": {"deco": [["trou", 7, 10], ["muret", 13, 9], ["piege", 14, 7], ["caisse", 8, 19]], "secrets": {"10,6": {"recompense": "force"}}}},
+  "janvier-yeti": {"0": {"deco": [["muret", 11, 5], ["caisse", 18, 6], ["piege", 14, 1], ["trou", 14, 4], ["piege", 10, 7]], "pnj": {"Maëlle, la trappeuse": {"choix": ["> ?Demander à Maëlle comment suivre les traces du yéti | Regardez la neige : les grosses traces vont vers le chêne. Prenez ce parchemin, il pourrait vous sauver. | bouclier", "> [felin] Flairer les traces avec Maëlle | Tu as un bon flair, toi! Voici une potion pour courir plus vite dans la neige. | rapidite"]}}, "secrets": {"13,7": {"recompense": "rapidite"}}}, "1": {"deco": [["caisse", 1, 9], ["trou", 12, 10], ["piege", 6, 10], ["muret", 17, 4], ["piege", 4, 5]]}, "2": {"deco": [["trou", 1, 9], ["muret", 20, 5], ["piege", 8, 14], ["caisse", 19, 12]], "pnj": {"Rosalie, la marchande": {"bouge": "erre", "choix": ["> ?Marchander une potion avec Rosalie | Tu parles bien, je te fais un prix! Une potion de force, gratuite. | force", "> [rat] Fouiller le fond de la charrette | Hé, petit fouineur! Bon… garde cette fiole bleue, mais ne le dis à personne. | mana"]}}}, "3": {"deco": [["muret", 11, 14], ["caisse", 1, 10], ["piege", 6, 5], ["trou", 13, 11], ["piege", 8, 7]], "secrets": {"13,8": {"recompense": "force"}}}},
+  "fevrier-valentin": {"0": {"deco": [["muret", 8, 5], ["caisse", 14, 11], ["piege", 10, 2], ["trou", 12, 12], ["piege", 11, 19]], "pnj": {"Théo, le barde": {"bouge": "erre", "choix": ["> ?Aider Théo à trouver une rime | « Cœur » rime avec « bonheur »! Merci! Prenez cette potion, elle donne des ailes. | rapidite", "> [oiseau] Chanter avec Théo | Quelle voix d'oiseau! Ce parchemin vous protégera. | bouclier"]}}}, "1": {"deco": [["caisse", 18, 2], ["trou", 17, 12], ["piege", 16, 8], ["muret", 5, 12], ["piege", 7, 8]]}, "2": {"deco": [["trou", 17, 13], ["muret", 16, 8], ["piege", 19, 11], ["caisse", 5, 10]], "secrets": {"8,2": {"recompense": "bouclier"}}}, "3": {"deco": [["muret", 9, 11], ["caisse", 1, 2], ["piege", 11, 8], ["trou", 10, 5], ["piege", 16, 6]], "pnj": {"Juliette": {"choix": ["> ?Rassurer Juliette | Merci… Je n'ai plus peur. Je viens avec vous! | suivre"]}}, "secrets": {"4,2": {"recompense": "force"}}}},
+  "mars-sorciers": {"0": {"deco": [["muret", 3, 12], ["caisse", 8, 12], ["piege", 8, 9], ["trou", 10, 5], ["piege", 3, 8]], "pnj": {"Mirabelle, la directrice": {"choix": ["> ?Réciter la formule de politesse des sorciers | Parfait, jeunes apprentis! Voici une potion de force pour la suite. | force", "> [lezard] Montrer ses écailles à la directrice | Fascinant! Un vrai lézard des marais. Garde ce parchemin protecteur. | bouclier"]}}, "secrets": {"4,10": {"recompense": "rapidite"}}}, "1": {"deco": [["caisse", 3, 7], ["trou", 15, 12], ["piege", 9, 3], ["muret", 18, 7], ["piege", 2, 10]]}, "2": {"deco": [["trou", 4, 2], ["muret", 13, 9], ["piege", 12, 5], ["caisse", 15, 8]], "secrets": {"16,4": {"recompense": "bouclier"}}}},
+  "avril-paques": {"0": {"deco": [["muret", 17, 13], ["caisse", 19, 7], ["piege", 5, 9], ["trou", 5, 14], ["piege", 1, 11]], "pnj": {"Pâquerette, la gardienne de la source": {"bouge": "erre", "choix": ["> ?Aider Pâquerette à compter les œufs | Bravo! Le compte est bon. Voici une potion pour sauter comme un lapin. | rapidite", "> [rat] Chercher un œuf caché sous les racines | Bien trouvé, petit fouineur! Garde cette fiole bleue. | mana"]}}}, "1": {"deco": [["caisse", 5, 16], ["trou", 3, 18], ["piege", 6, 2], ["muret", 13, 13], ["piege", 4, 11]]}, "2": {"deco": [["trou", 12, 9], ["muret", 17, 8], ["piege", 17, 5], ["caisse", 19, 9]], "pnj": {"Fernand, l'ermite": {"choix": ["> ?Demander à Fernand comment calmer l'escargot | Parlez-lui doucement… et visez sa coquille. Tenez, une potion de force. | force", "> [geant] Proposer de pousser l'escargot | Ha! Même toi, tu n'y arriverais pas. Mais ce parchemin te protégera. | bouclier"]}}, "secrets": {"12,6": {"recompense": "rapidite"}}}},
+  "mai-cite": {"0": {"deco": [["muret", 4, 11], ["caisse", 11, 4], ["piege", 10, 6], ["trou", 5, 8], ["piege", 12, 1]], "pnj": {"Brunehaut, la garde": {"bouge": "erre", "choix": ["> ?Saluer la garde comme un chevalier | Voilà des manières de chevalier! Passez, et prenez ce parchemin. | bouclier", "> [geant] Mesurer sa force avec Brunehaut | Tu m'as battue au bras de fer! Prends cette potion, tu l'as méritée. | force"]}}}, "1": {"deco": [["caisse", 18, 8], ["trou", 17, 10], ["piege", 11, 9], ["muret", 7, 4], ["piege", 20, 12]], "pnj": {"Anselme, le libraire": {"choix": ["> ?Ranger un livre au bon endroit | Merci! Le dictionnaire va avec les D. Voici une potion de rapidité. | rapidite"]}}}, "2": {"deco": [["trou", 4, 9], ["muret", 8, 10], ["piege", 9, 12], ["caisse", 13, 11]], "secrets": {"5,7": {"recompense": "force"}}}},
+  "juin-depart": {"0": {"deco": [["muret", 9, 7], ["caisse", 5, 7], ["piege", 10, 4], ["trou", 3, 6], ["piege", 4, 9]], "secrets": {"9,3": {"recompense": "bouclier"}}}, "1": {"deco": [["caisse", 14, 7], ["trou", 11, 3], ["piege", 14, 14], ["muret", 7, 11], ["piege", 12, 11]], "pnj": {"Anselme, le libraire": {"choix": ["> Ouvrir la cellule d'Anselme | Enfin libre! Je vous suis, je connais la sortie. | suivre"]}}}, "2": {"deco": [["trou", 5, 18], ["muret", 14, 17], ["piege", 9, 3], ["caisse", 2, 19]], "pnj": {"Capitaine Hirondelle": {"bouge": "erre", "choix": ["> ?Demander la route du bateau volant | Plein nord, moussaillons! Prenez cette potion, le vent est fort là-haut. | rapidite", "> [oiseau] Proposer de surveiller le ciel | Une vigie qui vole! Parfait. Ce parchemin vous protégera. | bouclier"]}}}, "3": {"deco": [["muret", 9, 7], ["caisse", 7, 15], ["piege", 10, 13], ["trou", 13, 10], ["piege", 7, 10]], "secrets": {"10,11": {"recompense": "force"}}}},
+};
+for (const q of INTEGREES) {
+  const a = AJOUTS[q.id]; if (!a) continue;
+  q.chapitres.forEach((ch, i) => {
+    const m = a[i]; if (!m) return;
+    ch.deco = ch.deco || [];
+    for (const d of m.deco || []) if (!ch.deco.some(([, x, y]) => x === d[1] && y === d[2])) ch.deco.push(d);
+    for (const p of ch.pnj || []) {
+      const mp = (m.pnj || {})[p.nom]; if (!mp) continue;
+      if (mp.bouge) p.bouge = mp.bouge;
+      if (mp.choix && !/^\s*>/m.test(p.dialogue || "")) p.dialogue = (p.dialogue || "") + "\n" + mp.choix.join("\n");
+    }
+    for (const s of ch.secrets || []) Object.assign(s, (m.secrets || {})[s.x + "," + s.y] || {});
+    for (const p of m.nouveauxPnj || []) (ch.pnj = ch.pnj || []).push(p);
+  });
+}
+
 const estFournie = id => INTEGREES.some(i => i.id === id);
 const originale = id => INTEGREES.find(i => i.id === id);
 // Les images des quêtes fournies ne sont pas recopiées : on garde une référence « int: »
@@ -7212,6 +7276,726 @@ const FR = [
   ["Le synonyme de « rapide » est…", ["vite", "lent", "lourd"], 0],
   ["Le contraire de « courageux » est…", ["peureux", "brave", "fort"], 0],
 ];
+// Classes de mots invariables (les mêmes questions que dans l'Arène du savoir)
+const INVAR = [
+[
+"Quelles sont les trois classes de mots invariables ?",
+[
+"L'adverbe, la préposition et la conjonction",
+"Le nom, l'adjectif et le verbe",
+"Le déterminant, le pronom et l'adverbe",
+"La préposition, le nom et la conjonction"
+],
+0,
+""
+],
+[
+"Un mot invariable, c'est un mot qui…",
+[
+"ne change jamais d'orthographe",
+"change selon le genre",
+"change selon le nombre",
+"se conjugue"
+],
+0,
+"Il ne prend jamais de marque de genre, de nombre ou de personne."
+],
+[
+"Laquelle est une classe de mots invariable ?",
+[
+"La préposition",
+"L'adjectif",
+"Le pronom",
+"Le déterminant"
+],
+0,
+""
+],
+[
+"Laquelle est une classe de mots invariable ?",
+[
+"La conjonction",
+"Le nom",
+"Le verbe",
+"L'adjectif"
+],
+0,
+""
+],
+[
+"Laquelle N'est PAS une classe de mots invariable ?",
+[
+"Le pronom",
+"L'adverbe",
+"La préposition",
+"La conjonction"
+],
+0,
+""
+],
+[
+"Dans « Le lièvre court rapidement. », le mot « rapidement » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Nous allons souvent au parc. », le mot « souvent » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Ce gâteau est très bon. », le mot « très » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Hier, j'ai vu un renard. », le mot « hier » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Tu parles trop fort. », le mot « trop » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Elle sourit toujours. », le mot « toujours » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Viens ici ! », le mot « ici » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « La tortue avance lentement. », le mot « lentement » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Il mange beaucoup. », le mot « beaucoup » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Nous partirons demain. », le mot « demain » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Tu as bien travaillé. », le mot « bien » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Il ne ment jamais. », le mot « jamais » est…",
+[
+"un adverbe",
+"une préposition",
+"une conjonction",
+"un adjectif"
+],
+0,
+""
+],
+[
+"Dans « Le chat dort dans la boîte. », le mot « dans » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Je joue avec mon frère. », le mot « avec » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Le ballon roule sous la table. », le mot « sous » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Ce dessin est pour toi. », le mot « pour » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Le livre est sur le bureau. », le mot « sur » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Il est parti sans son manteau. », le mot « sans » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Nous allons chez Léa. », le mot « chez » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « L'oiseau vole vers le nid. », le mot « vers » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Après le dîner, on joue dehors. », le mot « après » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « La balle passe entre les arbres. », le mot « entre » est…",
+[
+"une préposition",
+"un adverbe",
+"une conjonction",
+"un déterminant"
+],
+0,
+""
+],
+[
+"Dans « Léa et Noah jouent au soccer. », « et » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Dans « Il pleut, mais nous sortons. », « mais » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Dans « Veux-tu du jus ou du lait ? », « ou » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Dans « Je mets mon manteau, car il fait froid. », « car » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Dans « Il est malade, donc il reste au lit. », « donc » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Dans « Je souris quand il fait beau. », « quand » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Dans « Elle rit parce que le clown est drôle. », « parce que » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Dans « Il n'aime ni les épinards ni le brocoli. », « ni » est…",
+[
+"une conjonction",
+"une préposition",
+"un adverbe",
+"un pronom"
+],
+0,
+""
+],
+[
+"Quel mot est un adverbe ?",
+[
+"joyeusement",
+"joyeux",
+"joie",
+"jouer"
+],
+0,
+"Beaucoup d'adverbes se terminent par -ment."
+],
+[
+"Quel mot est un adverbe ?",
+[
+"vite",
+"vitesse",
+"rapide",
+"courir"
+],
+0,
+""
+],
+[
+"Quel mot est une préposition ?",
+[
+"devant",
+"devenir",
+"dent",
+"doux"
+],
+0,
+""
+],
+[
+"Quel mot est une préposition ?",
+[
+"contre",
+"conte",
+"content",
+"compter"
+],
+0,
+""
+],
+[
+"Quel mot est une conjonction ?",
+[
+"mais",
+"mai",
+"mauve",
+"maison"
+],
+0,
+""
+],
+[
+"Quel mot est une conjonction ?",
+[
+"or",
+"orange",
+"oreille",
+"oser"
+],
+0,
+""
+],
+[
+"Lequel de ces mots est invariable ?",
+[
+"dehors",
+"chevaux",
+"gentille",
+"mangent"
+],
+0,
+""
+],
+[
+"Lequel de ces mots est invariable ?",
+[
+"parfois",
+"petites",
+"nos",
+"ils"
+],
+0,
+""
+],
+[
+"Lequel de ces mots est invariable ?",
+[
+"avant",
+"amis",
+"belles",
+"chantez"
+],
+0,
+""
+],
+[
+"Dans « Les enfants jouent calmement dans la cour. », combien y a-t-il de mots invariables ?",
+[
+"2",
+"1",
+"3",
+"4"
+],
+0,
+"« calmement » (adverbe) et « dans » (préposition)."
+],
+[
+"Dans « Mon chien et mon chat dorment souvent ensemble. », quels mots sont invariables ?",
+[
+"et, souvent, ensemble",
+"mon, chien, chat",
+"dorment, souvent",
+"et, mon, ensemble"
+],
+0,
+""
+],
+[
+"À quoi sert une conjonction ?",
+[
+"À joindre des mots ou des phrases",
+"À remplacer un nom",
+"À décrire un nom",
+"À exprimer une action"
+],
+0,
+""
+],
+[
+"Une préposition est souvent suivie…",
+[
+"d'un groupe du nom ou d'un pronom",
+"d'un point",
+"d'un verbe conjugué",
+"de rien du tout"
+],
+0,
+"Ex. : sur la table, avec lui."
+],
+[
+"Un adverbe peut modifier…",
+[
+"un verbe, un adjectif ou un autre adverbe",
+"seulement un nom",
+"seulement un déterminant",
+"seulement un pronom"
+],
+0,
+"Ex. : courir vite, très beau, trop lentement."
+],
+[
+"Quel adverbe complète bien : « Le chien aboie ___. » ?",
+[
+"fort",
+"forte",
+"fortes",
+"force"
+],
+0,
+""
+],
+[
+"Choisis la bonne orthographe : « Elles marchent ___. »",
+[
+"lentement",
+"lentements",
+"lentementes",
+"lentes"
+],
+0,
+"L'adverbe est invariable : il ne prend jamais de s."
+],
+[
+"Choisis la bonne orthographe : « Les filles sont ___ contentes. »",
+[
+"très",
+"trés",
+"trèss",
+"trèses"
+],
+0,
+""
+],
+[
+"Quelle conjonction complète bien : « J'ai faim, ___ je n'ai pas le temps de manger. » ?",
+[
+"mais",
+"et",
+"ou",
+"car"
+],
+0,
+""
+],
+[
+"Quelle conjonction complète bien : « Prends ton parapluie, ___ il va pleuvoir. » ?",
+[
+"car",
+"mais",
+"ou",
+"ni"
+],
+0,
+""
+],
+[
+"Quelle préposition complète bien : « Le poisson nage ___ l'eau. » ?",
+[
+"dans",
+"sur",
+"et",
+"très"
+],
+0,
+""
+],
+[
+"Quelle préposition complète bien : « Je vais à l'école ___ autobus. » ?",
+[
+"en",
+"et",
+"très",
+"mais"
+],
+0,
+""
+],
+[
+"Dans « Le chat saute sur le lit. », quel mot est une préposition ?",
+[
+"sur",
+"saute",
+"le",
+"lit"
+],
+0,
+""
+],
+[
+"Dans « Tu es vraiment gentil. », quel mot est un adverbe ?",
+[
+"vraiment",
+"gentil",
+"es",
+"tu"
+],
+0,
+""
+],
+[
+"Dans « Je lis ou je dessine. », quel mot est une conjonction ?",
+[
+"ou",
+"je",
+"lis",
+"dessine"
+],
+0,
+""
+],
+[
+"Les mots « dans, avec, pour, sans » sont des…",
+[
+"prépositions",
+"adverbes",
+"conjonctions",
+"déterminants"
+],
+0,
+""
+],
+[
+"Les mots « et, ou, mais, car » sont des…",
+[
+"conjonctions",
+"prépositions",
+"adverbes",
+"pronoms"
+],
+0,
+""
+],
+[
+"Les mots « vite, souvent, très, hier » sont des…",
+[
+"adverbes",
+"adjectifs",
+"prépositions",
+"conjonctions"
+],
+0,
+""
+]
+];
+
+// Notions à travailler : choisies par quête dans le créateur, ou pour toutes les quêtes dans Réglages
+const NOTIONS = {
+  maths: { calcul: "Calcul (+ − × ÷)", equiv: "Fractions équivalentes", reduc: "Réduction de fractions" },
+  fr: { vocab: "Homophones et vocabulaire", conj: "Conjugaison", inv: "Classes de mots invariables" },
+};
+const NOTIONS_DEFAUT = { maths: ["calcul"], fr: ["vocab", "conj"] };
+function notionsActives(m) {
+  const src = (QUETE && QUETE.notions && QUETE.notions[m]) || (PREF.notions && PREF.notions[m]) || NOTIONS_DEFAUT[m];
+  const l = src.filter(k => NOTIONS[m][k]); return l.length ? l : NOTIONS_DEFAUT[m];
+}
+// Fractions (mêmes générateurs que l'Arène du savoir)
+const pgcd = (a, b) => b ? pgcd(b, a % b) : a;
+function fracSimple() { for (;;) { const b = rnd2(2, 12), a = rnd2(1, b - 1); if (pgcd(a, b) === 1) return [a, b]; } }
+const qcm = (q, bon, leurres, expl) => { const l = [...new Set(leurres.map(String))].filter(x => x !== String(bon) && !/(^|\/)0$|^0\/|-|NaN/.test(x)).sort(() => Math.random() - .5).slice(0, 3); return [q, [String(bon), ...l], 0, expl]; };
+function questionEquivalentes() {
+  const [a, b] = fracSimple(), k = rnd2(2, 6), n = a * k, d = b * k, t = rnd2(0, 3);
+  const pourquoi = `On multiplie le numérateur et le dénominateur par le même nombre (× ${k}) : ${a}/${b} = ${n}/${d}.`;
+  if (t === 0) return qcm(`Quelle fraction est équivalente à ${a}/${b}?`, `${n}/${d}`, [`${n}/${d + 1}`, `${a + k}/${b + k}`, `${n}/${b}`, `${a}/${d}`, `${n + 1}/${d}`, `${d}/${n}`], pourquoi);
+  if (t === 1) return qcm(`Complète : ${a}/${b} = ?/${d}`, n, [n + 1, n - 1, a + k, a + d - b, a * (k + 1), d - b, n + 2, n * 2], pourquoi);
+  if (t === 2) return qcm(`Complète : ${a}/${b} = ${n}/?`, d, [d + 1, d - 1, b + k, b + n - a, b * (k + 1), n + b, d + 2, d * 2], pourquoi);
+  const ks = [2, 3, 4, 5, 6].sort(() => Math.random() - .5).slice(0, 3), faux = `${a * ks[0] + 1}/${b * ks[0]}`;
+  return qcm(`Laquelle n'est PAS équivalente à ${a}/${b}?`, faux, ks.map(m => `${a * m}/${b * m}`), `Pour ${b * ks[0]} au dénominateur, il faudrait ${a * ks[0]} au numérateur.`);
+}
+function questionReduction() {
+  const [a, b] = fracSimple(), k = rnd2(2, 8), n = a * k, d = b * k, t = rnd2(0, 2);
+  const pourquoi = `${n} et ${d} se divisent tous les deux par ${k} : ${n}/${d} = ${a}/${b}.`;
+  const div = [2, 3, 4].find(m => k % m === 0 && m < k), partiel = div ? `${n / div}/${d / div}` : `${n}/${d}`;
+  if (t === 0) return qcm(`Réduis ${n}/${d} à sa plus simple expression.`, `${a}/${b}`, [partiel, `${a}/${b + 1}`, `${a + 1}/${b}`, `${b}/${a}`, `${n - 1}/${d - 1}`, `${a}/${d}`], pourquoi);
+  if (t === 1) { const autres = []; for (let m = 2; m <= 12; m++) if (m !== k && (n % m || d % m || m > k)) autres.push(m); return qcm(`Par quel plus grand nombre peut-on diviser ${n} ET ${d}?`, k, autres, pourquoi); }
+  const red = [1, 2, 3, 4, 5, 6].map(() => { const [x, y] = fracSimple(), m = rnd2(2, 5); return `${x * m}/${y * m}`; });
+  return qcm("Laquelle de ces fractions est déjà irréductible (on ne peut plus la réduire)?", `${a}/${b}`, red, `${a} et ${b} n'ont aucun diviseur commun à part 1.`);
+}
+// Une fraction « a/b » s'affiche empilée
+const fracHtml = t => esc(String(t)).replace(/(\d+)\/(\d+)/g, '<span class="frac"><sup>$1</sup><sub>$2</sub></span>');
 // Conjugaison générée, comme dans l'Arène du savoir
 const V1 = ["parler", "chanter", "jouer", "danser", "regarder", "marcher", "écouter", "sauter", "gagner", "trouver", "chercher", "explorer"];
 const V2 = ["finir", "choisir", "grandir", "réussir", "remplir", "bâtir", "obéir", "réfléchir", "agir"];
@@ -7355,7 +8139,15 @@ async function sauvegarderPartie(discret) {
   if (S.essai) { if (!discret) toast("Chapitre en essai : rien n'est sauvegardé."); return; }
   const ok = await Stock.sauverPartie(QUETE.id, EQUIPE, photoPartie());
   if (ficheActive()) { clearTimeout(ficheMinuteur); await Stock.sauverEquipe(FICHE); }
+  if (ok) envoiAutoGS();
   if (!discret) toast(ok ? `Partie de l'équipe ${EQUIPE} sauvegardée (${Stock.ou()}).` : "La sauvegarde n'a pas fonctionné.");
+}
+// Si une feuille Google est reliée, les totaux partent seuls après une sauvegarde (au plus toutes les 2 minutes)
+let dernierEnvoiGS = 0;
+async function envoiAutoGS() {
+  if (!MONDE.sheet || Date.now() - dernierEnvoiGS < 120000) return;
+  dernierEnvoiGS = Date.now();
+  try { const lignes = await lignesBilanAnnee(); if (lignes.length) await fetch(MONDE.sheet, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ jeu: "Donjon", lignes }) }); } catch {}
 }
 const codeEquipe = s => s.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9]/g, "").slice(0, 12);
 // Choix de l'équipe : chaque code a sa propre sauvegarde de la quête
@@ -8535,11 +9327,11 @@ function ouvrirFiches(nouvelle) {
   });
 }
 
-function noter(type, quoi, ok) {
+function noter(type, quoi, ok, notion) {
   if (!S || S.phase === "edit" || !S.rep) return;
   const h = S.qui || (S.phase === "heros" ? heros() : null);
   if (ok && S.phase !== "edit") remplirJauge();
-  S.rep.push({ t: type, q: String(quoi).replace(/<[^>]+>/g, "").slice(0, 120), ok: ok ? 1 : 0, h: h ? h.nom : "", c: h ? h.cls : "", ch: S.chapitre });
+  S.rep.push({ t: type, q: String(quoi).replace(/<[^>]+>/g, "").slice(0, 120), ok: ok ? 1 : 0, h: h ? h.nom : "", c: h ? h.cls : "", ch: S.chapitre, ...(notion ? { n: notion } : {}) });
   if (h) progres(h, s => {
     if (!ok) { s.serie = 0; return; }
     s[type] = (s[type] || 0) + 1; s.serie++; s.serieMax = Math.max(s.serieMax, s.serie);
@@ -8557,7 +9349,7 @@ async function ouvrirBilan() {
   const lignes = parties.map(p => {
     const rep = p.rep || [];
     const m = compte(rep, r => r.t === "maths"), f = compte(rep, r => r.t === "fr"), e = compte(rep, r => r.t === "enigme"), tout = compte(rep, () => true);
-    const ops = ["+", "−", "×", "÷"].map(o => { const c = compte(rep, r => r.t === "maths" && r.q.includes(" " + o + " ")); return c.n ? `${o} ${c.ok}/${c.n}` : ""; }).filter(Boolean).join(" · ");
+    const ops = ["+", "−", "×", "÷"].map(o => { const c = compte(rep, r => r.t === "maths" && String(r.q || "").includes(" " + o + " ")); return c.n ? `${o} ${c.ok}/${c.n}` : ""; }).filter(Boolean).join(" · ");
     const noms = [...new Set(rep.map(r => r.h).filter(Boolean))];
     const parEleve = noms.map(nm => { const a = compte(rep, r => r.h === nm && r.t === "maths"), b = compte(rep, r => r.h === nm && r.t !== "maths"); return `<li><b>${esc(nm)}</b> : maths ${a.n ? a.ok + "/" + a.n : "—"}, français et énigmes ${b.n ? b.ok + "/" + b.n : "—"}</li>`; }).join("");
     const erreurs = rep.filter(r => !r.ok).map(r => esc(r.q)).slice(-12).join(" · ");
@@ -8568,8 +9360,33 @@ async function ouvrirBilan() {
   }).join("");
   ouvrir(`<h2>Bilan de l'enseignant</h2><p class="sub">${esc(QUETE.nom)} · réponses notées pour chaque équipe (les héros sont les élèves).</p>
     <div class="bilan-wrap"><table class="bilan"><thead><tr><th>Équipe</th><th>Maths</th><th>Français</th><th>Énigmes</th><th>Total</th></tr></thead><tbody>${lignes || `<tr><td colspan="5">Aucune réponse notée pour l'instant.</td></tr>`}</tbody></table></div>
-    <div class="row"><button class="btn" type="button" id="b-csv">Télécharger le tableau (Excel)</button><button class="btn gold" type="button" id="b-ok">Fermer</button></div><p class="sub" id="b-msg"></p>`);
+    <div class="row"><button class="btn" type="button" id="b-csv">Télécharger le tableau (Excel)</button><button class="btn gold" type="button" id="b-ok">Fermer</button></div><p class="sub" id="b-msg"></p>
+    <details class="b-gs"${MONDE.sheet ? "" : " open"}><summary><b>Google Sheets</b> : totaux de l'année par élève</summary>
+      <label>Lien de ta feuille (l'URL qui finit par /exec) <input class="field" id="b-url" value="${esc(MONDE.sheet || "")}" placeholder="https://script.google.com/macros/s/…/exec"></label>
+      <div class="row" style="justify-content:flex-start"><button class="btn blue" type="button" id="b-gs">📤 Envoyer toutes les quêtes</button><button class="btn" type="button" id="b-cp">📋 Copier pour coller dans « Données »</button></div>
+      <p class="sub" id="b-gsmsg">On envoie, pour chaque élève, ses bonnes réponses et son total en maths, en français et aux énigmes, quête par quête. Une fois le lien collé, l'envoi se fait aussi tout seul après chaque sauvegarde. Si on envoie deux fois, les lignes sont remplacées, pas doublées.</p></details>`);
   document.getElementById("b-ok").onclick = fermer;
+  const gsMsg = t => { const m = document.getElementById("b-gsmsg"); if (m) m.textContent = t; };
+  document.getElementById("b-url").onchange = async e => { MONDE.sheet = e.target.value.trim(); await Stock.sauverMonde(MONDE); gsMsg(MONDE.sheet ? "Lien enregistré." : "Lien retiré."); };
+  document.getElementById("b-gs").onclick = async () => {
+    const url = document.getElementById("b-url").value.trim();
+    if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)) return gsMsg("Colle d'abord le lien de ton script Google (il commence par https://script.google.com et finit par /exec).");
+    if (url !== MONDE.sheet) { MONDE.sheet = url; await Stock.sauverMonde(MONDE); }
+    const lignes = await lignesBilanAnnee();
+    if (!lignes.length) return gsMsg("Aucune réponse notée pour l'instant.");
+    gsMsg("Envoi en cours…");
+    try {
+      await fetch(url, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ jeu: "Donjon", lignes }) });
+      gsMsg(`Envoyé : ${lignes.length} lignes. Regarde l'onglet « Totaux Donjon » de ta feuille dans quelques secondes.`);
+    } catch { gsMsg("L'envoi est bloqué par la sécurité de la page. Utilise « Copier », puis colle dans l'onglet « Données », à la première ligne vide, et fais Bilans > Recalculer les totaux."); }
+  };
+  document.getElementById("b-cp").onclick = async () => {
+    const lignes = await lignesBilanAnnee();
+    if (!lignes.length) return gsMsg("Aucune réponse notée pour l'instant.");
+    const tsv = lignes.map(l => [l.cle, l.date, "Donjon", l.source, l.eleve, l.type, l.bonnes, l.total].map(v => String(v).replace(/[\t\n]/g, " ")).join("\t")).join("\n");
+    try { await navigator.clipboard.writeText(tsv); gsMsg(`${lignes.length} lignes copiées. Dans ta feuille, clique la première case vide de la colonne A de « Données », colle, puis Bilans > Recalculer les totaux.`); }
+    catch { gsMsg("La copie a été refusée par le navigateur."); }
+  };
   document.getElementById("b-csv").onclick = async () => {
     const q = s => `"${String(s).replace(/"/g, '""')}"`;
     const rows = [["Équipe", "Chapitre", "Élève (héros)", "Type", "Question", "Réussi"]];
@@ -8578,6 +9395,21 @@ async function ouvrirBilan() {
     const res = await telecharger(`bilan-${codeEquipe(QUETE.nom).toLowerCase() || "quete"}-${new Date().toISOString().slice(0, 10)}.csv`, data, "text/csv");
     document.getElementById("b-msg").textContent = { ok: "Fichier enregistré. Il s'ouvre dans Excel.", refuse: "Enregistrement annulé." }[res] || "Le téléchargement n'a pas fonctionné.";
   };
+}
+// Totaux par élève (héros), par type de question et par quête, pour toutes les équipes
+async function lignesBilanAnnee() {
+  const types = { maths: "Maths", fr: "Français", enigme: "Énigmes" }, quetes = lesQuetes(), lignes = [];
+  for (const p of await Stock.toutesParties()) {
+    const eq = codeEquipe(p.equipe); if (!eq || eq === "TEST") continue;
+    const q = quetes.find(x => x.id === p.quete), nomQ = q ? q.nom.replace(" (démo)", "") : p.quete, tot = {};
+    for (const r of p.rep || []) {
+      const nom = String(r.h || "").trim(); if (!nom || !types[r.t]) continue;
+      const ty = r.n || types[r.t], k = nom + "|" + ty, t = tot[k] = tot[k] || { nom, type: ty, b: 0, n: 0 };
+      t.b += r.ok ? 1 : 0; t.n++;
+    }
+    for (const t of Object.values(tot)) lignes.push({ cle: `donjon|${p.quete}|${eq}|${t.nom}|${t.type}`, date: String(p.date || "").slice(0, 10), source: `${nomQ} (${eq})`, eleve: t.nom, type: t.type, bonnes: t.b, total: t.n });
+  }
+  return lignes;
 }
 async function telecharger(nom, data, type) {
   if (!Stock.dl) {
@@ -8672,7 +9504,7 @@ document.getElementById("jauge").onclick = async () => {
 // ---------- minuterie de la période ----------
 const PERIODE = { debut: 0, duree: 0, alerte: false, fin: false, rep0: 0, badges: [] };
 function demarrerPeriode() {
-  Object.assign(PERIODE, { debut: Date.now(), duree: Number(PREF.periode ?? 50) || 0, alerte: false, fin: false, rep0: S && S.rep ? S.rep.length : 0, badges: [] });
+  Object.assign(PERIODE, { debut: Date.now(), duree: Number(PREF.periode ?? 50) || 0, alerte: false, fin: false, rep0: S && S.rep ? S.rep.length : 0, badges: [], ch0: S ? S.chapitre : 0, stats0: FICHE && FICHE.stats ? clone(FICHE.stats) : {} });
   majChrono();
 }
 function majChrono() {
@@ -8707,8 +9539,50 @@ async function aSuivre() {
     <div class="intro">${esc(suspense)}</div>
     ${rep.length || badges.length ? `<p class="sub">${rep.length ? `Aujourd'hui, l'équipe ${esc(EQUIPE)} a donné ${bons} bonne${bons > 1 ? "s" : ""} réponse${bons > 1 ? "s" : ""} sur ${rep.length}.` : ""}${badges.length ? `<br>Badges gagnés : ${badges.join(" · ")}` : ""}</p>` : ""}
     <p class="sub">La partie est sauvegardée. La prochaine fois, choisissez l'équipe ${esc(EQUIPE)} pour reprendre ici.</p>
-    <div class="row"><button class="btn gold" type="button" id="suite-ok">Fermer</button></div>`);
+    <div class="row"><button class="btn blue" type="button" id="suite-bilan">🏆 Bilan de la séance</button><button class="btn gold" type="button" id="suite-ok">Fermer</button></div>`);
   document.getElementById("suite-ok").onclick = fermer;
+  document.getElementById("suite-bilan").onclick = ecranSeance;
+}
+
+// Écran de fin de séance, à montrer au TBI : ce que l'équipe a accompli depuis le début de la période
+function ecranSeance() {
+  if (!S) return;
+  const rep = (S.rep || []).slice(PERIODE.rep0), bons = rep.filter(r => r.ok).length, pct = rep.length ? Math.round(bons / rep.length * 100) : 0;
+  const parH = {};
+  for (const r of rep) {
+    if (!r.h) continue;
+    const h = parH[r.h] = parH[r.h] || { nom: r.h, cls: r.c, ok: 0, n: 0, maths: 0, serie: 0, best: 0 };
+    h.n++; if (r.ok) { h.ok++; if (r.t === "maths") h.maths++; h.serie++; h.best = Math.max(h.best, h.serie); } else h.serie = 0;
+  }
+  const s0 = PERIODE.stats0 || {}, kills = {};
+  for (const h of S.heroes) { const a = (FICHE && FICHE.stats && FICHE.stats[h.cls]) || {}, b = s0[h.cls]; kills[h.nom] = b ? Math.max(0, (a.kills || 0) - (b.kills || 0)) : 0; }
+  const meilleur = (f, min = 1) => { let m = null; for (const h of S.heroes) { const v = f(h); if (v >= min && (!m || v > m.v)) m = { nom: h.nom, v }; } return m; };
+  const moments = [
+    [meilleur(h => (parH[h.nom] || {}).maths || 0), "🧮", "Meilleur calculateur", v => `${v} bonne${v > 1 ? "s" : ""} réponse${v > 1 ? "s" : ""} en maths`],
+    [meilleur(h => (parH[h.nom] || {}).best || 0, 2), "🔥", "Plus longue série", v => `${v} bonnes réponses de suite`],
+    [meilleur(h => kills[h.nom] || 0), "⚔️", "Chasseur de monstres", v => `${v} monstre${v > 1 ? "s" : ""} vaincu${v > 1 ? "s" : ""}`],
+  ].filter(m => m[0]);
+  const parBadge = {}; for (const [n, b] of PERIODE.badges) (parBadge[n] = parBadge[n] || []).push(b);
+  const carte = h => {
+    const d = parH[h.nom] || { ok: 0, n: 0 }, f = (FICHE && FICHE.heros && FICHE.heros[h.cls]) || {}, p = d.n ? Math.round(d.ok / d.n * 100) : null;
+    return `<div class="se-h"><img src="${MONIMG[portraitDe(h.cls, f)] || IMG[h.cls]}" alt=""><b>${esc(h.nom)}</b>
+      <span class="se-p">${d.n ? `${d.ok}/${d.n}` : "—"}</span><div class="se-barre"><i style="width:${p || 0}%"></i></div>
+      <span class="se-b">${(parBadge[h.nom] || []).map(b => `<span title="${esc(b.nom)}">${b.ic}</span>`).join("") || "&nbsp;"}</span></div>`;
+  };
+  const ch1 = S.chapitre + 1, ch0 = (PERIODE.ch0 || 0) + 1, nbCh = QUETE.chapitres.length;
+  ouvrir(`<p class="sub kicker">${esc(QUETE.nom)} · équipe ${esc(EQUIPE)}</p><h2>Bilan de la séance</h2>
+    <div class="se-haut">
+      <div class="se-rond" style="--p:${pct}"><b>${rep.length ? pct + "%" : "—"}</b><small>de réussite</small></div>
+      <div class="se-chiffres"><div><b>${rep.length}</b> question${rep.length > 1 ? "s" : ""}</div><div><b>${bons}</b> bonne${bons > 1 ? "s" : ""} réponse${bons > 1 ? "s" : ""}</div>
+        <div><b>${PERIODE.badges.length}</b> badge${PERIODE.badges.length > 1 ? "s" : ""} gagné${PERIODE.badges.length > 1 ? "s" : ""}</div>
+        <div>Chapitre <b>${ch1}</b> sur ${nbCh}${ch1 > ch0 ? ` <small>(${ch1 - ch0} de plus aujourd'hui!)</small>` : ""}</div></div>
+    </div>
+    ${moments.length ? `<h3 class="reg-t">Les meilleurs moments</h3><div class="se-moments">${moments.map(([m, ic, t, txt]) => `<div><span class="se-ic">${ic}</span><b>${t}</b><span>${esc(m.nom)}</span><small>${txt(m.v)}</small></div>`).join("")}</div>` : ""}
+    <h3 class="reg-t">Nos héros</h3><div class="se-heros">${S.heroes.map(carte).join("")}</div>
+    <div class="row"><button class="btn gold" type="button" id="se-ok">Fermer</button></div>`);
+  modal.classList.add("large");
+  bruit("cloche");
+  document.getElementById("se-ok").onclick = fermer;
 }
 
 // ---------- souffleur du MJ et événements ----------
@@ -9002,6 +9876,8 @@ function indicesCalcul(q) {
 
 // Épreuve de calcul avec clavier à l'écran. op : "+", "−", "×" (deux dés de 12) ou "÷"
 function epreuveMath(op, titre, danger) {
+  const n = pick(notionsActives("maths"));
+  if (n !== "calcul") return epreuveFraction(titre, n, danger);
   return new Promise(async resolve => {
     const opNom = { "+": "Addition", "−": "Soustraction", "×": "Multiplication", "÷": "Division" }[op];
     const des = (op === "×" && DIFF !== "expert") || ((op === "+" || op === "−") && S.niveau === "des");
@@ -9058,13 +9934,25 @@ function epreuveMath(op, titre, danger) {
   });
 }
 function epreuveFr(titre) {
+  const l = notionsActives("fr");
+  let n = pick(l);
+  if (l.includes("conj") && l.includes("vocab") && l.length === 2) n = Math.random() < (DIFF === "expert" ? .6 : .3) ? "conj" : "vocab";
+  const [q, choix, r, expl] = n === "conj" ? questionVerbe() : n === "inv" ? pick(INVAR) : pick(FR);
+  return epreuveQcm(titre, "Question de français · " + NOTIONS.fr[n], q, choix, r, "fr", expl, false, n === "vocab" ? "" : NOTIONS.fr[n]);
+}
+// Épreuve de maths à choix (fractions)
+function epreuveFraction(titre, n, danger) {
+  const [q, choix, r, expl] = n === "reduc" ? questionReduction() : questionEquivalentes();
+  return epreuveQcm(titre, "Épreuve : " + NOTIONS.maths[n], q, choix, r, "maths", expl, danger, NOTIONS.maths[n]);
+}
+function epreuveQcm(titre, sous, q, choix, r, type, expl, danger, notion) {
   return new Promise(resolve => {
-    const [q, choix, r] = Math.random() < (DIFF === "expert" ? .6 : .3) ? questionVerbe() : pick(FR);
     let ordre = choix.map((c, i) => [c, i]).sort(() => Math.random() - .5);
     // en facile, une mauvaise réponse est déjà retirée
     if (DIFF === "facile" && ordre.length > 2) { const f = ordre.findIndex(([, i]) => i !== r); ordre.splice(f, 1); }
-    ouvrir(`<h2>${titre}</h2><p class="sub">Question de français</p><p class="fr-q">${q}</p>
-      <div class="choices" id="ch">${ordre.map(([c, i]) => `<button type="button" data-i="${i}">${c}</button>`).join("")}</div><div id="suite"></div>`);
+    const f = type === "maths" ? fracHtml : x => x;
+    ouvrir(`<h2>${titre}</h2><p class="sub">${esc(sous)}</p><p class="fr-q">${f(q)}</p>
+      <div class="choices" id="ch">${ordre.map(([c, i]) => `<button type="button" data-i="${i}">${f(c)}</button>`).join("")}</div><div id="suite"></div>`, danger);
     const ch = document.getElementById("ch");
     ch.insertAdjacentHTML("afterend", `<div class="indice-q" id="iq"></div>`);
     aideProgressive(document.getElementById("iq"), ["Une mauvaise réponse en moins!"], () => ch.dataset.done, () => {
@@ -9075,12 +9963,23 @@ function epreuveFr(titre) {
       const b = e.target.closest("button"); if (!b || ch.dataset.done) return;
       ch.dataset.done = 1;
       const ok = Number(b.dataset.i) === r;
-      bruit(ok ? "ok" : "echec"); noter("fr", q, ok);
+      bruit(ok ? "ok" : "echec"); noter(type, q, ok, notion);
       ch.querySelectorAll("button").forEach(x => { if (Number(x.dataset.i) === r) x.classList.add("right"); else if (x === b) x.classList.add("wrong"); });
-      document.getElementById("suite").innerHTML = `<p class="verdict ${ok ? "ok" : "bad"}">${ok ? "Bravo!" : "Pas tout à fait!"}</p><div class="row" style="margin-top:10px"><button class="btn gold" id="cont" type="button">Continuer</button></div>`;
+      document.getElementById("suite").innerHTML = `<p class="verdict ${ok ? "ok" : "bad"}">${ok ? "Bravo!" : "Pas tout à fait!"}</p>${expl ? `<p class="sub">${f(expl)}</p>` : ""}<div class="row" style="margin-top:10px"><button class="btn gold" id="cont" type="button">Continuer</button></div>`;
       document.getElementById("cont").onclick = () => { fermer(); resolve(ok); };
     };
   });
+}
+// Cases à cocher des notions (maths et français) ; rien de coché = undefined
+function caseNotions(box, val, change) {
+  if (!box) return;
+  const v = val || {};
+  box.innerHTML = Object.entries(NOTIONS).map(([m, l]) => `<div><b>${m === "maths" ? "Maths" : "Français"}</b>${Object.entries(l).map(([k, nom]) => `<label class="check"><input type="checkbox" data-m="${m}" data-k="${k}"${(v[m] || []).includes(k) ? " checked" : ""}> ${nom}</label>`).join("")}</div>`).join("");
+  box.onchange = () => {
+    const r = {};
+    for (const m of Object.keys(NOTIONS)) { const l = [...box.querySelectorAll(`[data-m="${m}"]:checked`)].map(x => x.dataset.k); if (l.length) r[m] = l; }
+    change(Object.keys(r).length ? r : undefined);
+  };
 }
 // Pouvoir de classe : question de français ou de maths, au hasard
 function epreuvePouvoir(titre) {
@@ -10080,6 +10979,7 @@ function renderEditeur() {
   document.getElementById("ed-mons").innerHTML = mons.length ? mons.map(m => `<button class="tool${ED.sel && ED.sel.ref === m ? " on" : ""}" type="button" data-mon="${esc(m.id)}">✎ ${esc(m.nom || "Monstre")} · ${m.pv} PV</button>`).join("") : "";
   document.querySelectorAll("#editor [data-tool]").forEach(b => b.classList.toggle("on", b.dataset.tool === ED.outil));
   const set = (id, v) => { const el = document.getElementById(id); if (document.activeElement !== el) el.value = v; };
+  caseNotions(document.getElementById("ed-notions"), ED.quete.notions, v => { ED.quete.notions = v; });
   set("ed-qnom", ED.quete.nom); set("ed-fin", ED.quete.fin || ""); set("ed-qmus", ED.quete.musique || "mystere"); set("ed-qniv", ED.quete.niveau || "");
   document.getElementById("ed-brume").checked = !!ED.carte.brume; document.getElementById("ed-froid").checked = !!ED.carte.froid;
   set("ed-mus", ED.carte.musique || "quete"); set("ed-met", ED.carte.meteo || "aucune"); set("ed-amb", ED.carte.ambiance || "auto"); set("ed-sol", ED.carte.sol || "pierre");
@@ -10492,7 +11392,7 @@ const Stock = {
     return (await IDB.all("reglages")).find(x => x.id === "monde") || null;
   },
   async sauverMonde(m) {
-    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, video: !!(m.image && m.video), caches: m.caches || [], campagne: m.campagne || null };
+    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, video: !!(m.image && m.video), caches: m.caches || [], campagne: m.campagne || null, sheet: m.sheet || "" };
     if (d.image && d.image.startsWith("data:") && this.assets) { try { const b = dataUrlBlob(d.image); d.image = "asset:" + (await this.assets.upload(b, { type: b.type })).id; m.image = d.image; } catch {} }
     if (this.db) { try { await this.db.doc("reglages/monde").set(d); return true; } catch {} }
     return !!(await IDB.put("reglages", d));
@@ -10633,29 +11533,44 @@ document.getElementById("btn-reg").onclick = () => {
   if (!S || S.busy) return;
   const opt = (v, list) => list.map(([k, n]) => `<option value="${k}" ${String(k) === String(v) ? "selected" : ""}>${n}</option>`).join("");
   ouvrir(`<h2>Réglages</h2><p class="sub">Équipe en jeu : <b>${esc(EQUIPE)}</b></p>
+    <div class="reg-tabs" role="tablist"><button class="btn" type="button" data-onglet="partie">🎲 Partie</button><button class="btn" type="button" data-onglet="regles">📏 Règles du jeu</button><button class="btn" type="button" data-onglet="son">🔊 Son et ambiance</button><button class="btn" type="button" data-onglet="mj">🛠️ Outils du MJ</button></div>
+    <div class="reg-onglet" data-o="partie">
+    <div class="row"><button class="btn gold" type="button" id="r-equipe">Changer d'équipe</button><button class="btn blue" type="button" id="r-seance">🏆 Bilan de la séance</button><button class="btn" type="button" id="r-fiches">Fiches des héros</button><button class="btn" type="button" id="r-prec">« Précédemment… »</button>${S.carte.brume ? `<button class="btn" type="button" id="r-brume">${S.brumeOff ? "Remettre le brouillard" : "Dévoiler toute la carte"}</button>` : ""}</div>
+    <div class="row"><button class="btn" type="button" id="r-reset">Recommencer le chapitre</button><button class="btn" type="button" id="r-restart">Recommencer la quête</button></div>
+    </div>
+    <div class="reg-onglet" data-o="regles">
     <div class="reg">
       <label>Actions par tour <select id="r-act">${opt(S.nbActions, [[2, "2 actions"], [3, "3 actions"]])}</select></label>
       <label>Additions et soustractions <select id="r-niv">${opt(S.niveau, Object.entries(NIVEAUX))}</select></label>
       <label>Indices pendant les questions <select id="r-ind">${opt(String(PREF.indices ?? 30), [["20", "Après 20 secondes"], ["30", "Après 30 secondes"], ["45", "Après 45 secondes"], ["0", "Jamais"]])}</select></label>
       <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
+      <div style="grid-column:1/-1"><b class="reg-t" style="display:block;margin:0 0 4px">Notions travaillées (toutes les quêtes)</b><div class="notions" id="r-notions"></div><p class="sub" style="margin:4px 0 0">Une quête qui a ses propres notions (créateur de quêtes) garde les siennes.${QUETE.notions ? " <b>Cette quête a ses propres notions.</b>" : ""}</p></div>
       <label>Durée de la période <select id="r-per">${opt(String(PREF.periode ?? 50), [["0", "Pas de minuterie"], ["30", "30 minutes"], ["45", "45 minutes"], ["50", "50 minutes"], ["60", "60 minutes"], ["75", "75 minutes"], ["90", "90 minutes"]])}</select></label>
+    </div></div>
+    <div class="reg-onglet" data-o="son"><div class="reg">
       <label>Voix des PNJ <select id="r-voix">${opt(PREF.voix || "auto", [["auto", "Lit les dialogues tout seul"], ["bouton", "Avec le bouton 🔊 seulement"], ["non", "Désactivée"]])}</select></label>
       <label>Animations <select id="r-anim">${opt(PREF.anims === "reduit" ? "reduit" : "vivant", [["vivant", "Jetons vivants"], ["reduit", "Réduites"]])}</select></label>
-      <label>Souffleur du MJ <select id="r-souf">${opt(PREF.souffleur === false ? "0" : "1", [["1", "Affiché sur le plateau"], ["0", "Caché"]])}</select></label>
-    </div>
-    <div class="row"><button class="btn blue" type="button" id="r-edit">Créateur de quêtes</button><button class="btn" type="button" id="r-reset">Recommencer le chapitre</button><button class="btn" type="button" id="r-restart">Recommencer la quête</button></div>
-    <div class="row"><button class="btn gold" type="button" id="r-equipe">Changer d'équipe</button><button class="btn blue" type="button" id="r-bilan">Bilan de l'enseignant</button><button class="btn" type="button" id="r-fiches">Fiches des héros</button><button class="btn" type="button" id="r-prec">« Précédemment… »</button>${S.carte.brume ? `<button class="btn" type="button" id="r-brume">${S.brumeOff ? "Remettre le brouillard" : "Dévoiler toute la carte"}</button>` : ""}</div>
-    <h3 class="reg-t">Son et ambiance</h3>
-    <div class="reg">
+
       <label>Volume <input type="range" id="r-vol" min="0" max="100" value="${Math.round(PREF.vol * 100)}"></label>
       <label>Musique <select id="r-mus">${opt(PREF.musique ? 1 : 0, [[1, "Activée"], [0, "Coupée"]])}</select></label>
       <label>Bruits d'ambiance <select id="r-amb">${opt(PREF.ambiance ? 1 : 0, [[1, "Activés"], [0, "Coupés"]])}</select></label>
       <label>Météo <select id="r-met">${opt(METEO_FORCEE || "auto", [["auto", "Selon le chapitre"], ...Object.entries(METEOS)])}</select></label>
     </div>
     <div class="sonboard"><button class="btn" type="button" data-fx="eclair">Éclair!</button><button class="btn" type="button" data-fx="loups">Hurlement</button><button class="btn" type="button" data-fx="cloche">Cloche de minuit</button><button class="btn" type="button" data-fx="porte">Porte qui grince</button><button class="btn" type="button" data-fx="grogne">Grognement</button><button class="btn" type="button" data-fx="corbeaux">Corbeaux</button></div>
+    </div>
+    <div class="reg-onglet" data-o="mj">
+    <div class="row"><button class="btn blue" type="button" id="r-bilan">📊 Bilan de l'enseignant</button><button class="btn blue" type="button" id="r-edit">Créateur de quêtes</button></div>
+    <div class="reg"><label>Souffleur du MJ <select id="r-souf">${opt(PREF.souffleur === false ? "0" : "1", [["1", "Affiché sur le plateau"], ["0", "Caché"]])}</select></label></div>
     <div class="row"><button class="btn" type="button" id="r-export">Exporter mes quêtes</button><label class="btn" for="ed-import">Importer un fichier</label></div>
     <p class="sub" id="r-msg">Quêtes et parties enregistrées ${Stock.ou()}.</p>
+    </div>
     <div class="row"><button class="btn gold" type="button" id="r-ok">Fermer</button></div>`);
+  modal.classList.add("large");
+  const onglet = o => { PREF.ongletReg = o; modal.querySelectorAll(".reg-onglet").forEach(d => d.hidden = d.dataset.o !== o); modal.querySelectorAll("[data-onglet]").forEach(b => { b.classList.toggle("actif", b.dataset.onglet === o); b.setAttribute("aria-selected", b.dataset.onglet === o); }); };
+  modal.querySelectorAll("[data-onglet]").forEach(b => b.onclick = () => { onglet(b.dataset.onglet); sauverPref(); });
+  onglet(["partie", "regles", "son", "mj"].includes(PREF.ongletReg) ? PREF.ongletReg : "partie");
+  document.getElementById("r-seance").onclick = ecranSeance;
+  caseNotions(document.getElementById("r-notions"), PREF.notions || NOTIONS_DEFAUT, v => { PREF.notions = v; sauverPref(); });
   document.getElementById("r-act").onchange = e => {
     const n = Number(e.target.value), diff = n - S.nbActions; S.nbActions = n; PREF.nbActions = n; sauverPref();
     for (const h of S.heroes) if (h.pv > 0 && !h.joue) h.actions = Math.max(0, h.actions + diff);
@@ -10700,11 +11615,14 @@ const MONDE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 100
 const LIEUX_DEFAUT = { demo: [0.613, 0.335], "halloween-vladislav": [0.316, 0.705], "rentree-academie": [0.52, 0.56], "octobre-ferme": [0.42, 0.62], "novembre-lugubre": [0.2, 0.8], "decembre-noel": [0.7, 0.2], "janvier-yeti": [0.45, 0.12], "fevrier-valentin": [0.62, 0.82], "mars-sorciers": [0.8, 0.5], "avril-paques": [0.88, 0.72], "mai-cite": [0.62, 0.42], "juin-depart": [0.5, 0.3] };
 // Carte fixe des îles volantes (2026) : chaque quête sur son territoire
 const LIEUX_ILES = { demo: [0.17, 0.33], "rentree-academie": [0.5, 0.42], "octobre-ferme": [0.36, 0.67], "halloween-vladislav": [0.47, 0.72], "novembre-lugubre": [0.6, 0.76], "decembre-noel": [0.42, 0.2], "janvier-yeti": [0.3, 0.11], "fevrier-valentin": [0.2, 0.77], "mars-sorciers": [0.63, 0.19], "avril-paques": [0.77, 0.71], "mai-cite": [0.79, 0.43], "juin-depart": [0.87, 0.15] };
+// La carte des îles volantes est l'image par défaut du monde
+const MONDE_DEFAUT = null;
 const PLACES_LIBRES = [[0.76, 0.43], [0.71, 0.75], [0.26, 0.42], [0.54, 0.6], [0.79, 0.62], [0.4, 0.56], [0.66, 0.5], [0.44, 0.3], [0.33, 0.57], [0.6, 0.78], [0.84, 0.5], [0.5, 0.45]];
 let MONDE = { image: null, lieux: {} }, mondeEdit = false, cheminNeuf = false;
 const quetesDuMonde = () => lesQuetes().filter(q => !(MONDE.caches || []).includes(q.id));
 function lieuDe(q, pris) {
   if (MONDE.lieux[q.id]) return MONDE.lieux[q.id];
+  if (MONDE_DEFAUT && LIEUX_ILES[q.id]) return LIEUX_ILES[q.id];
   if (LIEUX_DEFAUT[q.id]) return LIEUX_DEFAUT[q.id];
   const libre = PLACES_LIBRES.find(p => !pris.some(o => Math.hypot(o[0] - p[0], o[1] - p[1]) < 0.06));
   return libre || [0.5 + (pris.length % 5) * 0.04 - 0.08, 0.5];
@@ -10925,7 +11843,7 @@ async function afficherMonde() {
   fermerMenu();
   const m = document.getElementById("monde"); m.hidden = false;
   const carte = document.getElementById("m-carte");
-  const src = srcJeton(MONDE.image);
+  const src = srcJeton(MONDE.image) || MONDE_DEFAUT;
   const fond = carte.querySelector(".m-fond");
   if (src && MONDE.video) { if (fond.dataset.src !== src) { fond.dataset.src = src; videoEnBoucle(fond, src); } }
   else { delete fond.dataset.src; fond.innerHTML = src ? `<img src="${src}" alt="Carte du monde">` : MONDE_SVG; const im = fond.querySelector("img"); if (im) im.onload = ajusterMonde; }
@@ -10959,7 +11877,7 @@ async function afficherMonde() {
   for (const p of document.querySelectorAll(".pin.apparait")) p.style.animationDelay = RM.matches ? "0s" : "3s";
   if (nouveau) { if (mj) c.vu = fv.length; else c.vus[VUE] = fv.length; Stock.sauverMonde(MONDE); cheminNeuf = true; setTimeout(() => cheminNeuf = false, 3000); }
   requestAnimationFrame(() => { dessinerChemin(nouveau); dessinerNoir(); });
-  document.getElementById("m-edit").textContent = mondeEdit ? "Terminer" : "Modifier les lieux";
+  document.getElementById("m-fin").hidden = !mondeEdit;
   const nc = (MONDE.caches || []).length, rc = document.getElementById("m-caches");
   rc.hidden = !mondeEdit || !nc; rc.textContent = `Réafficher les quêtes retirées (${nc})`;
   document.getElementById("m-close").hidden = !S;
@@ -10971,6 +11889,8 @@ function ajusterMonde() {
   const ratio = fond && fond.videoWidth ? fond.videoHeight / fond.videoWidth : fond && fond.naturalWidth ? fond.naturalHeight / fond.naturalWidth : 1000 / 1600;
   const w = Math.min(wrap.clientWidth, wrap.clientHeight / ratio);
   carte.style.width = w + "px"; carte.style.height = w * ratio + "px"; carte.style.setProperty("--mw", w + "px");
+  // la barre du haut s'aligne sur le cadre de la carte
+  const haut = document.querySelector(".monde-top"); haut.style.width = Math.round(w) + "px"; haut.style.justifySelf = "center";
   dessinerChemin(cheminNeuf); dessinerNoir();
 }
 // Une vidéo courte (ex. 5 s de Canva) tourne en boucle : deux lecteurs se relaient en fondu pour cacher le raccord
@@ -11020,7 +11940,14 @@ document.getElementById("m-pins").addEventListener("pointerdown", e => {
   };
   b.addEventListener("pointermove", bouger); b.addEventListener("pointerup", fin);
 });
-document.getElementById("m-edit").onclick = () => { mondeEdit = !mondeEdit; afficherMonde(); };
+document.getElementById("m-edit").onclick = () => { mondeEdit = true; afficherMonde(); toast("Glisse les lieux à leur place, puis touche « ✓ Terminer les lieux ».", 4000); };
+document.getElementById("m-fin").onclick = () => { mondeEdit = false; afficherMonde(); };
+// Menu Paramètres de la carte : s'ouvre sous le bouton et se referme après un choix ou un clic ailleurs
+const mMenu = document.getElementById("m-menu"), mParam = document.getElementById("m-param");
+const menuMonde = ouvert => { mMenu.hidden = !ouvert; mParam.setAttribute("aria-expanded", ouvert); };
+mParam.onclick = e => { e.stopPropagation(); menuMonde(mMenu.hidden); };
+mMenu.addEventListener("click", e => { if (e.target.closest(".btn")) setTimeout(() => menuMonde(false), 0); });
+document.addEventListener("click", e => { if (!mMenu.hidden && !e.target.closest(".m-param")) menuMonde(false); });
 // Retirer une quête de la carte : les quêtes fournies sont seulement cachées, les quêtes créées sont supprimées
 document.getElementById("m-pins").addEventListener("click", async e => {
   const d = e.target.closest("[data-del]"); if (!d) return;
@@ -11114,7 +12041,20 @@ function resize(force) {
   board.style.setProperty("--cell", c + "px");
   paths.setAttribute("viewBox", `0 0 ${W * c} ${H * c}`);
   drawTerrain(); render();
+  alignerBarre();
 }
+// La barre du haut commence au bord gauche du cadre du plateau (le plateau est centré dans sa zone)
+function alignerBarre() {
+  const haut = document.querySelector("header.top"); if (!haut || !board) return;
+  haut.style.paddingLeft = "";
+  // le souffleur se pose dans le coin du plateau, pas dans la marge
+  const dx = Math.max(0, Math.round(board.getBoundingClientRect().left - wrap.getBoundingClientRect().left)), dy = Math.max(0, Math.round(board.getBoundingClientRect().top - wrap.getBoundingClientRect().top));
+  for (const id of ["souffleur", "sf-ouvrir"]) { const el = document.getElementById(id); if (el) { el.style.left = dx + 10 + "px"; el.style.top = dy + 10 + "px"; } }
+  if (matchMedia("(max-width: 980px)").matches) return;
+  const d = board.getBoundingClientRect().left - haut.getBoundingClientRect().left - parseFloat(getComputedStyle(haut).paddingLeft || 0);
+  if (d > 2) haut.style.paddingLeft = `calc(${getComputedStyle(haut).paddingLeft} + ${Math.round(d)}px)`;
+}
+addEventListener("resize", () => setTimeout(alignerBarre, 50));
 new ResizeObserver(() => resize()).observe(wrap);
 
 (async () => {
