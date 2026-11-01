@@ -31,7 +31,7 @@
 <main>
   <h1>📅 Planification des notions</h1>
   <p>Coche les notions travaillées chaque mois. L'Arène du Savoir et Classe et Donjon utilisent cette planification : le menu « Notions d'un mois » de l'Arène et les quêtes de chaque mois du Donjon. Chaque changement est enregistré tout de suite dans ce navigateur. Une case sur fond doré n'est pas comme dans la planification de base.</p>
-  <p>Tu travailles sur un autre ordinateur ? Clique sur « Exporter » ici, puis sur « Importer » là-bas.</p>
+  <p>Avec le lien de ton Google Sheet des bilans (collé dans la page prof), la planification y est gardée : l'Arène et Classe et Donjon la reçoivent sur n'importe quel ordinateur. Sans ce lien, « Exporter » puis « Importer » font le même travail à la main.</p>
   <div class="barre">
     <button class="sec" id="exporter">💾 Exporter</button>
     <label class="bouton sec">📂 Importer<input type="file" id="importer" accept=".json,application/json" hidden></label>
@@ -47,10 +47,28 @@ const MOIS = Object.keys(P.BASE);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const MAT = { maths: 'Mathématiques', fr: 'Français' };
 
+// Le Google Sheet des bilans (même lien que dans la page prof) garde la planification pour les deux jeux, sur tous les ordinateurs
+let sheet = ''; try { sheet = localStorage.getItem('arene-sheet') || ''; } catch {}
+const planifActuelle = () => Object.fromEntries(MOIS.map(id => [id, { maths: P.MOIS_NOTIONS[id].maths, fr: P.MOIS_NOTIONS[id].fr,
+  noms: { maths: P.MOIS_NOTIONS[id].maths.map(k => P.NOTIONS.maths[k]), fr: P.MOIS_NOTIONS[id].fr.map(k => P.NOTIONS.fr[k]) } }]));
 function sauver(msg) {
-  const p = Object.fromEntries(MOIS.map(id => [id, { maths: P.MOIS_NOTIONS[id].maths, fr: P.MOIS_NOTIONS[id].fr }]));
-  try { localStorage.setItem('planification', JSON.stringify(p)); $('etat').textContent = msg || '✅ Enregistré'; }
-  catch { $('etat').textContent = '⚠️ Impossible d\'enregistrer dans ce navigateur (navigation privée ?)'; }
+  const p = planifActuelle();
+  try { localStorage.setItem('planification', JSON.stringify(p)); } catch {}
+  if (!sheet) { $('etat').textContent = (msg || '✅ Enregistré') + ' dans ce navigateur. Pour la partager avec Classe et Donjon, colle le lien de ton Google Sheet dans la page prof (📊 Google Sheet des bilans).'; return; }
+  $('etat').textContent = '⏳ Envoi au Google Sheet…';
+  fetch(sheet, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ planif: p }) })
+    .then(() => { $('etat').textContent = (msg || '✅ Enregistré') + ' (Google Sheet : les deux jeux la reçoivent)'; })
+    .catch(() => { $('etat').textContent = '⚠️ Enregistré ici, mais pas dans le Google Sheet. Réessaie dans un moment.'; });
+}
+// au chargement : la version du Google Sheet a priorité (elle a peut-être été changée sur un autre ordinateur)
+function chargerSheet() {
+  if (!sheet) return;
+  fetch(sheet + (sheet.includes('?') ? '&' : '?') + 'planif=1').then(r => r.json()).then(r => {
+    if (!r || !r.planif) return;
+    P.appliquer(r.planif);
+    try { localStorage.setItem('planification', JSON.stringify(r.planif)); } catch {}
+    dessiner(); $('etat').textContent = '☁️ Planification chargée du Google Sheet';
+  }).catch(() => {});
 }
 function dessiner() {
   let h = `<thead><tr><th style="text-align:left">Notion</th>${MOIS.map(id => `<th>${esc(P.BASE[id].nom.replace(' (révision)', ''))}</th>`).join('')}</tr></thead><tbody>`;
@@ -74,12 +92,11 @@ $('grille').onchange = e => {
 };
 $('base').onclick = () => {
   if (!confirm('Revenir à la planification de base ? Tes changements seront effacés.')) return;
-  try { localStorage.removeItem('planification'); } catch {}
-  P.appliquer(null); dessiner(); $('etat').textContent = '↺ Planification de base';
+  P.appliquer(null); sauver('↺ Planification de base'); dessiner();
 };
 $('exporter').onclick = () => {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([localStorage.getItem('planification') || JSON.stringify(P.BASE)], { type: 'application/json' }));
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(planifActuelle())], { type: 'application/json' }));
   a.download = 'planification-5e.json'; a.click();
 };
 $('importer').onchange = async e => {
@@ -89,6 +106,7 @@ $('importer').onchange = async e => {
   e.target.value = '';
 };
 dessiner();
+chargerSheet();
 </script>
 </body>
 </html>
