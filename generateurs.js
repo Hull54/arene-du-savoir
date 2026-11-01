@@ -1,5 +1,5 @@
 // Générateurs de questions : chaque appel crée une question nouvelle (nombres, dessins, verbes…)
-// Les tables viennent d'ici ; toutes les autres notions viennent de notions-donjon.js (communes avec Classe et Donjon).
+// Les tables viennent d'ici ; toutes les autres notions viennent de public/notions.js (source unique, commune avec Classe et Donjon).
 // Format retourné : { matiere, notion, question, choix, reponse, svg?, explication? }
 
 const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
@@ -35,24 +35,24 @@ function genDivision() {
 }
 
 // ---------- Notions de la planification (les mêmes que dans Classe et Donjon) ----------
-const DONJON = require('./notions-donjon');
+const PLANIF = require('./public/notions');
 const MATIERE = { maths: 'Mathématiques', fr: 'Français' };
 function notionDonjon(m, k) {
   return () => {
-    const [question, choix, reponse, explication, svg] = DONJON.questionNotion(m, k);
-    return { matiere: MATIERE[m], notion: DONJON.NOTIONS[m][k], question, choix, reponse, ...(explication ? { explication } : {}), ...(svg ? { svg } : {}) };
+    const [question, choix, reponse, explication, svg] = PLANIF.questionNotion(m, k);
+    return { matiere: MATIERE[m], notion: PLANIF.NOTIONS[m][k], question, choix, reponse, ...(explication ? { explication } : {}), ...(svg ? { svg } : {}) };
   };
 }
-const NOTION_DE = (m, k) => DONJON.NOTIONS[m][k];
+const NOTION_DE = (m, k) => PLANIF.NOTIONS[m][k];
 // les notions de chaque mois de la planification (septembre à juin), par leur nom affiché
-const MOIS = Object.entries(DONJON.MOIS_NOTIONS).map(([id, x]) => ({ id, nom: x.nom, notions: [...x.maths.map(k => NOTION_DE('maths', k)), ...x.fr.map(k => NOTION_DE('fr', k))] }));
+const MOIS = Object.entries(PLANIF.MOIS_NOTIONS).map(([id, x]) => ({ id, nom: x.nom, notions: [...x.maths.map(k => NOTION_DE('maths', k)), ...x.fr.map(k => NOTION_DE('fr', k))] }));
 
 module.exports = {
-  ...Object.fromEntries(Object.keys(DONJON.NOTIONS.maths).map(k => [DONJON.NOTIONS.maths[k], notionDonjon('maths', k)])),
+  ...Object.fromEntries(Object.keys(PLANIF.NOTIONS.maths).map(k => [PLANIF.NOTIONS.maths[k], notionDonjon('maths', k)])),
   'Tables d\'addition (0 à 12)': genAddition,
   'Tables de soustraction (0 à 12)': genSoustraction,
   'Tables de multiplication (0 à 12)': genMultiplication,
   'Tables de division (0 à 12)': genDivision,
-  ...Object.fromEntries(Object.keys(DONJON.NOTIONS.fr).map(k => [DONJON.NOTIONS.fr[k], notionDonjon('fr', k)])),
+  ...Object.fromEntries(Object.keys(PLANIF.NOTIONS.fr).map(k => [PLANIF.NOTIONS.fr[k], notionDonjon('fr', k)])),
 };
 Object.defineProperty(module.exports, 'MOIS', { value: MOIS, enumerable: false });

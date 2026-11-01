@@ -84,6 +84,7 @@
       <button class="sec" id="finir">🏁 Finir la manche</button>
       <button class="sec" id="plein">⛶ Plein écran</button>
       <a class="sec" href="/guide" target="_blank" style="text-decoration:none"><button class="sec">📘 Guide</button></a>
+      <a class="sec" href="/planif" target="_blank" style="text-decoration:none"><button class="sec">📅 Planification</button></a>
       <div class="row"><span>Mode :</span>
         <button class="sec" data-mode="libre">Chacun pour soi</button>
         <button class="sec" data-mode="equipes" data-nb="2">2 équipes</button>
@@ -180,6 +181,7 @@
 </div>
 <script src="sons.js"></script>
 <script src="draw.js"></script>
+<script src="notions.js"></script>
 <script src="banques.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -192,7 +194,7 @@ let map = null, world = null, W0 = null, last = null;
 const disp = new Map();
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
-ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); if (notionsOn) send({ t: 'subjects', list: notionsOn }); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
+ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); if (notionsOn) send({ t: 'subjects', list: notionsOn }); else choisirMois(moisEnCours()); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
 // coupure : on attend que le serveur réponde de nouveau, puis on recharge la page toute seule
 ws.onclose = () => {
   $('urls').textContent = '📶 Connexion perdue… reconnexion automatique';
@@ -201,7 +203,7 @@ ws.onclose = () => {
 };
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
-  if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); remplirMois(m.mois); }
+  if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); }
   else if (m.t === 'casse') { if (map) casserObjet(map, m.x, m.y); }
   else if (m.t === 'carte') { map = m.map; mapLayer = null; disp.clear(); if (Son.musOn) Son.musique(map.theme); }
   else if (m.t === 'codeMaj') { const i = codes.findIndex(r => r.code === m.rec.code); if (i >= 0 && (m.rec.v || 0) >= (codes[i].v || 0)) { codes[i] = m.rec; sauverCodes(false); } }
@@ -348,20 +350,17 @@ function cocher(liste, s, on) {
   try { localStorage.setItem('arene-notions', JSON.stringify(notionsOn)); } catch {}
   send({ t: 'subject', s, on });
 }
-// menu « Notions d'un mois » : coche exactement les notions de ce mois de la planification (les mêmes que dans Classe et Donjon)
-let MOIS = [];
-function remplirMois(l) {
-  if (!Array.isArray(l) || MOIS.length) return;
-  MOIS = l;
-  for (const x of l) { const o = document.createElement('option'); o.value = x.id; o.textContent = `${x.nom} (${x.notions.length} notions)`; $('mois').appendChild(o); }
-}
-$('mois').onchange = () => {
-  const x = MOIS.find(y => y.id === $('mois').value);
-  if (!x) return;
-  notionsOn = [...x.notions];
+// menu « Notions d'un mois » : coche exactement les notions de ce mois de la planification (page /planif, commune avec Classe et Donjon)
+const PL = window.Planification;
+const notionsDuMois = id => { const x = PL.MOIS_NOTIONS[id]; return [...x.maths.map(k => PL.NOTIONS.maths[k]), ...x.fr.map(k => PL.NOTIONS.fr[k])]; };
+for (const [id, x] of Object.entries(PL.MOIS_NOTIONS)) { const o = document.createElement('option'); o.value = id; o.textContent = `${x.nom} (${x.maths.length + x.fr.length} notions)`; $('mois').appendChild(o); }
+function choisirMois(id) {
+  notionsOn = notionsDuMois(id);
   try { localStorage.setItem('arene-notions', JSON.stringify(notionsOn)); } catch {}
   send({ t: 'subjects', list: notionsOn });
-};
+}
+$('mois').onchange = () => { if ($('mois').value) choisirMois($('mois').value); };
+const moisEnCours = () => ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'septembre', 'septembre', 'septembre', 'octobre', 'novembre', 'decembre'][new Date().getMonth()];
 const envoyerPerso = () => { try { localStorage.setItem('arene-perso', JSON.stringify(perso)); } catch {} send({ t: 'perso', qs: perso }); renderPerso(); };
 function renderPerso() {
   const par = {};

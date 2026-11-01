@@ -1,6 +1,9 @@
-// Notions de la planification de 5e année, reprises telles quelles de Classe et Donjon (public/donjon/index.html, v67).
-// Ne pas modifier ici sans modifier aussi le Donjon : les deux jeux posent les mêmes questions.
-let DIFF = 'normal';
+// Planification de 5e année : notions de chaque mois (septembre à juin) et leurs questions.
+// SOURCE UNIQUE pour les deux jeux : l'Arène du Savoir (serveur, require) et Classe et Donjon (navigateur, <script src="/notions.js">).
+// Pour changer la planification ou les questions, on modifie seulement ce fichier.
+// Une question = [question, choix, index de la bonne réponse, explication, dessin svg?]
+(function (exp) {
+let DIFF = 'normal';   // difficulté du Donjon (« expert » : plus de futur simple dans le mélange présent/imparfait)
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const FR = [
   ["Le chevalier ___ une épée.", ["a", "à"], 0],
@@ -1341,4 +1344,16 @@ function questionNotion(m, n) {
 // Une fraction « a/b » s'affiche empilée
 const fracHtml = t => esc(String(t)).replace(/(\d+)\/(\d+)/g, '<span class="frac"><sup>$1</sup><sub>$2</sub></span>');
 const pick = a => a[Math.floor(Math.random() * a.length)];
-module.exports = { NOTIONS, MOIS_NOTIONS, questionNotion };
+// La planification de base (ci-dessus) peut être modifiée par l'enseignant dans la page /planif.
+// Elle est gardée dans ce navigateur (clé « planification ») : l'Arène et le Donjon, ouverts sur le même site, la lisent tous les deux.
+const BASE = JSON.parse(JSON.stringify(MOIS_NOTIONS));
+function appliquer(p) {
+  for (const [id, x] of Object.entries(BASE)) {
+    const m = p && p[id] && typeof p[id] === 'object' ? p[id] : null;
+    const garde = (mat, l) => Array.isArray(l) ? l.filter(k => NOTIONS[mat][k]) : x[mat];
+    MOIS_NOTIONS[id] = { nom: x.nom, maths: m ? garde('maths', m.maths) : x.maths.slice(), fr: m ? garde('fr', m.fr) : x.fr.slice() };
+  }
+}
+if (typeof localStorage !== 'undefined') try { appliquer(JSON.parse(localStorage.getItem('planification') || 'null')); } catch {}
+Object.assign(exp, { NOTIONS, NOTIONS_DEFAUT, MOIS_NOTIONS, BASE, appliquer, questionNotion, fracHtml, difficulte: d => { DIFF = d; } });
+})(typeof module !== 'undefined' ? module.exports : (window.Planification = {}));

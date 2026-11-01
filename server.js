@@ -2196,7 +2196,7 @@ const infoT = setInterval(() => {
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
 
-const welcome = () => ({ t: 'welcome', map: carte, dur: [...DUR].join(''), mur: [...WALL].join(''), classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD, mois: GENERATEURS.MOIS });
+const welcome = () => ({ t: 'welcome', map: carte, dur: [...DUR].join(''), mur: [...WALL].join(''), classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
 setCarte(CARTES[0]);
 const stepT = setInterval(step, solo ? TICK * 2 : TICK);   // une partie à la maison coûte deux fois moins au serveur
 
@@ -2423,6 +2423,7 @@ const server = http.createServer((req, res) => {
   if (file === '/') file = '/index.html';
   if (file === '/prof') file = '/prof.html';
   if (file === '/guide') file = '/guide.html';
+  if (file === '/planif') file = '/planif.html';
   if (file === '/ping') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
   const full = path.join(PUBLIC, path.normalize(file));
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
