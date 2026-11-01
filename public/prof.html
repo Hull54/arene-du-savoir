@@ -131,6 +131,7 @@
     </div>
     <div class="box">
       <h2>Notions des questions</h2>
+      <label class="moisSel" style="display:block;margin-bottom:8px;font-size:13px">Notions d'un mois de la planification : <select id="mois"><option value="">Choisir un mois…</option></select></label>
       <div id="subjects"></div>
     </div>
     <div class="box">
@@ -200,7 +201,7 @@ ws.onclose = () => {
 };
 ws.onmessage = e => {
   const m = JSON.parse(e.data);
-  if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); }
+  if (m.t === 'welcome') { W0 = m; map = m.map; mapLayer = null; if (Son.musOn) Son.musique(map.theme); remplirMois(m.mois); }
   else if (m.t === 'casse') { if (map) casserObjet(map, m.x, m.y); }
   else if (m.t === 'carte') { map = m.map; mapLayer = null; disp.clear(); if (Son.musOn) Son.musique(map.theme); }
   else if (m.t === 'codeMaj') { const i = codes.findIndex(r => r.code === m.rec.code); if (i >= 0 && (m.rec.v || 0) >= (codes[i].v || 0)) { codes[i] = m.rec; sauverCodes(false); } }
@@ -347,6 +348,20 @@ function cocher(liste, s, on) {
   try { localStorage.setItem('arene-notions', JSON.stringify(notionsOn)); } catch {}
   send({ t: 'subject', s, on });
 }
+// menu « Notions d'un mois » : coche exactement les notions de ce mois de la planification (les mêmes que dans Classe et Donjon)
+let MOIS = [];
+function remplirMois(l) {
+  if (!Array.isArray(l) || MOIS.length) return;
+  MOIS = l;
+  for (const x of l) { const o = document.createElement('option'); o.value = x.id; o.textContent = `${x.nom} (${x.notions.length} notions)`; $('mois').appendChild(o); }
+}
+$('mois').onchange = () => {
+  const x = MOIS.find(y => y.id === $('mois').value);
+  if (!x) return;
+  notionsOn = [...x.notions];
+  try { localStorage.setItem('arene-notions', JSON.stringify(notionsOn)); } catch {}
+  send({ t: 'subjects', list: notionsOn });
+};
 const envoyerPerso = () => { try { localStorage.setItem('arene-perso', JSON.stringify(perso)); } catch {} send({ t: 'perso', qs: perso }); renderPerso(); };
 function renderPerso() {
   const par = {};

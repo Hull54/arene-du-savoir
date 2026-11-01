@@ -16,7 +16,7 @@ const MV = require('./public/mouvement');   // déplacement partagé avec le nav
 const DUR = new Set([...WALL, ...WATER]);
 // Liste des notions (cases à cocher de l'enseignant), regroupées par matière
 const NOTIONS_BASE = [];
-for (const q of [...QUESTIONS, ...Object.values(GENERATEURS).map(g => g())])
+for (const q of [...Object.values(GENERATEURS).map(g => g()), ...QUESTIONS])
   if (!NOTIONS_BASE.some(n => n.s === q.notion)) NOTIONS_BASE.push({ s: q.notion, m: q.matiere });
 
 // ---------- Codes des élèves (communs à la classe et aux parties à la maison) ----------
@@ -141,7 +141,13 @@ let projectiles = [];
 let fx = [];
 let feed = [];
 let paused = false;
-const subjects = new Set(NOTIONS.map(n => n.s));
+// au départ : les notions du mois en cours dans la planification (juillet et août : celles de septembre)
+const moisEnCours = () => {
+  const i = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })).getMonth();
+  const id = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'septembre', 'septembre', 'septembre', 'octobre', 'novembre', 'decembre'][i];
+  return GENERATEURS.MOIS.find(m => m.id === id);
+};
+const subjects = new Set(moisEnCours().notions);
 // Questions de l'enseignant (gardées dans son navigateur et renvoyées à chaque connexion de /prof)
 let PERSO = [], PERSO_BRUT = [];
 let reglagesV = 0;   // heure du dernier réglage de l'enseignant (0 : rien depuis le démarrage du serveur)
@@ -2190,7 +2196,7 @@ const infoT = setInterval(() => {
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
 
-const welcome = () => ({ t: 'welcome', map: carte, dur: [...DUR].join(''), mur: [...WALL].join(''), classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
+const welcome = () => ({ t: 'welcome', map: carte, dur: [...DUR].join(''), mur: [...WALL].join(''), classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD, mois: GENERATEURS.MOIS });
 setCarte(CARTES[0]);
 const stepT = setInterval(step, solo ? TICK * 2 : TICK);   // une partie à la maison coûte deux fois moins au serveur
 
