@@ -6,18 +6,18 @@
 <title>Arène du Savoir</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&family=Pixelify+Sans:wght@600;700&display=swap" rel="stylesheet">
 <style>
   /* Style rétro : coins carrés, contours épais, ombres en escalier */
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1424; color: #fff; font-family: "Pixelify Sans", monospace; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b1424; color: #fff; font-family: "Lexend", sans-serif; }
   canvas { display: block; touch-action: none; image-rendering: pixelated; }
   .screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; padding: 16px; overflow-y: auto; }
   #join { background: #24304a; background-image: linear-gradient(#ffffff08 2px, transparent 2px), linear-gradient(90deg, #ffffff08 2px, transparent 2px); background-size: 24px 24px; }
-  h1 { margin: 0; font-size: clamp(30px, 6vw, 56px); letter-spacing: 2px; color: #ffd54a; text-shadow: 4px 4px 0 #1b1424, -2px -2px 0 #1b1424, 2px -2px 0 #1b1424, -2px 2px 0 #1b1424; }
+  h1 { font-family: "Pixelify Sans", sans-serif; margin: 0; font-size: clamp(30px, 6vw, 56px); letter-spacing: 2px; color: #ffd54a; text-shadow: 4px 4px 0 #1b1424, -2px -2px 0 #1b1424, 2px -2px 0 #1b1424, -2px 2px 0 #1b1424; }
   .sub { opacity: .9; margin-top: -6px; text-align: center; }
   .panel { background: #2e2445; border: 4px solid #1b1424; box-shadow: inset -4px -4px 0 #211a33, inset 4px 4px 0 #44386a, 4px 4px 0 #0008; }
-  input#name { font: 600 22px "Pixelify Sans", monospace; padding: 10px 16px; border: 4px solid #1b1424; box-shadow: inset 3px 3px 0 #d9d2c0; background: #f4ecd8; width: min(320px, 90vw); text-align: center; outline: none; }
+  input#name { font: 600 22px "Lexend", sans-serif; padding: 10px 16px; border: 4px solid #1b1424; box-shadow: inset 3px 3px 0 #d9d2c0; background: #f4ecd8; width: min(320px, 90vw); text-align: center; outline: none; }
   input#name:focus { border-color: #ffd54a; }
   /* ----- menu en étapes ----- */
   .dots { display: flex; gap: 8px; margin-top: -6px; }
@@ -54,7 +54,7 @@
   .cls small { opacity: .9; line-height: 1.3; display: block; font-size: 13px; }
   .look { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: center; padding: 8px 12px; }
   .seg { display: flex; gap: 4px; }
-  .seg button { font: 600 16px "Pixelify Sans", monospace; padding: 6px 12px; border: 3px solid #1b1424; background: #44386a; color: #fff; cursor: pointer; }
+  .seg button { font: 600 16px "Lexend", sans-serif; padding: 6px 12px; border: 3px solid #1b1424; background: #44386a; color: #fff; cursor: pointer; }
   .seg button.on { background: #ffd54a; color: #1b1424; }
   .sw { display: flex; align-items: center; gap: 6px; font-size: 15px; }
   .sw b { width: 26px; height: 26px; display: inline-block; cursor: pointer; border: 3px solid #1b1424; }
@@ -68,7 +68,7 @@
   #shop { margin-top: 10px; background: #2e2445; color: #fff; padding: 8px 10px; border: 3px solid #1b1424; }
   #shop h3 { margin: 0 0 6px; font-size: 18px; color: #ffd54a; }
   #shop .items { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-  #shop button { font: 600 14px "Pixelify Sans", monospace; padding: 5px 9px; border: 3px solid #1b1424; background: #44386a; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  #shop button { font: 600 14px "Lexend", sans-serif; padding: 5px 9px; border: 3px solid #1b1424; background: #44386a; color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px; }
   #shop button:disabled { opacity: .45; cursor: default; }
   #shop button.owned { background: #2f6a3a; opacity: 1; }
   #shop button i { width: 14px; height: 14px; display: inline-block; border: 2px solid #1b1424; }
@@ -77,30 +77,32 @@
   #gear div { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; position: relative; }
   #gear div.off { opacity: .35; filter: grayscale(1); }
   #gear div i { position: absolute; right: 2px; bottom: 0; font-style: normal; font-size: 11px; font-weight: 700; text-shadow: 1px 1px 0 #1b1424; }
-  .btn { font: 700 22px "Pixelify Sans", monospace; padding: 10px 30px; border: 4px solid #1b1424; background: #ffd54a; color: #1b1424; cursor: pointer; box-shadow: inset -4px -4px 0 #c99a1e, inset 4px 4px 0 #fff0a8, 4px 4px 0 #0008; }
+  .btn { font: 700 22px "Lexend", sans-serif; padding: 10px 30px; border: 4px solid #1b1424; background: #ffd54a; color: #1b1424; cursor: pointer; box-shadow: inset -4px -4px 0 #c99a1e, inset 4px 4px 0 #fff0a8, 4px 4px 0 #0008; }
   .btn:active { transform: translate(2px, 2px); box-shadow: inset -4px -4px 0 #c99a1e, inset 4px 4px 0 #fff0a8; }
   .btn:disabled { opacity: .5; cursor: default; }
   .keys { font-size: 15px; opacity: .85; text-align: center; }
+  #cadre { position: fixed; inset: 0; pointer-events: none; display: none; z-index: 1; }
+  #cadre span { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); font: 700 14px "Lexend", sans-serif; color: #fff; padding: 2px 12px; border: 3px solid #1b1424; text-shadow: 1px 1px 0 #1b1424; }
   #hud { position: fixed; left: 12px; bottom: 12px; display: flex; gap: 10px; pointer-events: none; }
   .cd { width: 76px; height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; font-size: 13px; }
   .cd .ico { font-size: 28px; }
   .cd.super { pointer-events: auto; cursor: pointer; background: #6a4a10; box-shadow: 0 0 0 3px #ffd54a, 0 0 18px #ffd54a; animation: brille 0.8s ease-in-out infinite alternate; } @keyframes brille { to { box-shadow: 0 0 0 3px #fff2b0, 0 0 30px #ffd54a; } }
   .cd .fill { position: absolute; left: 0; right: 0; bottom: 0; background: #000a; }
-  #code { font: 600 16px "Pixelify Sans", monospace; width: 100%; padding: 8px 10px; margin-top: 8px; text-transform: uppercase; letter-spacing: 2px; border: 3px solid #1b1424; background: #fffaf0; }
+  #code { font: 600 16px "Lexend", sans-serif; width: 100%; padding: 8px 10px; margin-top: 8px; text-transform: uppercase; letter-spacing: 2px; border: 3px solid #1b1424; background: #fffaf0; }
   #codeMsg { font-size: 14px; color: #ffd54a; min-height: 18px; margin-top: 4px; }
   #reco { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); display: none; padding: 14px 22px; background: #1b1424e6; border: 3px solid #ffd54a; font-size: 20px; color: #fff; text-align: center; z-index: 30; }
   #gele { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #9fd6ff55; font-size: 28px; color: #fff; text-shadow: 3px 3px 0 #1b1424; text-align: center; pointer-events: none; z-index: 5; }
   #msgBtn { position: fixed; left: 12px; bottom: 100px; font-size: 22px; padding: 6px 10px; cursor: pointer; display: none; }
   #msgMenu { position: fixed; left: 12px; bottom: 150px; display: none; flex-direction: column; gap: 6px; z-index: 4; }
-  #msgMenu button { font: 600 16px "Pixelify Sans", monospace; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; }
+  #msgMenu button { font: 600 16px "Lexend", sans-serif; padding: 8px 12px; text-align: left; cursor: pointer; color: #fff; }
   #joy { position: fixed; width: 110px; height: 110px; margin: -55px 0 0 -55px; border-radius: 50%; border: 4px solid #ffffff66; background: #1b142433; display: none; pointer-events: none; }
   #joy i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: #ffd54acc; border: 3px solid #1b1424; }
-  #c { touch-action: none; }
+  #c { touch-action: none; cursor: crosshair; position: fixed; left: 0; top: 0; width: 100%; height: 100%; }   /* taille écran : sur téléphone (écran haute densité), le canevas a 2 à 3 fois plus de pixels */
   #nuit { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; display: none; }
   #score { position: fixed; top: 10px; left: 12px; padding: 3px 12px 3px 4px; font-size: 16px; display: flex; align-items: center; gap: 8px; }
   #portrait { width: 30px; height: 30px; image-rendering: pixelated; background: #44386a; border: 2px solid #1b1424; }
   #pv { position: absolute; left: 4px; bottom: 2px; width: 34px; height: 3px; background: #1b1424; } #pv i { display: block; height: 100%; background: #6fd85a; }
-  #musique { position: fixed; top: 52px; left: 116px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
+  #musique { position: fixed; top: 52px; left: 116px; font: 600 15px "Lexend", sans-serif; padding: 4px 10px; color: #fff; cursor: pointer; }
   #tempete { position: fixed; top: 40%; left: 50%; transform: translateX(-50%); font-size: 22px; color: #f0d0ff; text-shadow: 3px 3px 0 #1b1424; display: none; animation: clign .6s steps(2) infinite; pointer-events: none; }
   #zone { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); padding: 4px 14px; font-size: 18px; color: #ffd54a; white-space: nowrap; }
   #hidden { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: none; }
@@ -115,13 +117,17 @@
   #quiz .card { position: relative; }
   #qVoix { position: absolute; top: 8px; right: 8px; font-size: 22px; background: #44386a; border: 3px solid #1b1424; cursor: pointer; padding: 2px 8px; }
   .ouvert { grid-column: 1 / -1; display: flex; gap: 10px; justify-content: center; }
-  .ouvert input { font: 700 28px "Pixelify Sans", monospace; width: 180px; text-align: center; padding: 8px; border: 4px solid #1b1424; background: #fffaf0; outline: none; }
+  .ouvert input { font: 700 28px "Lexend", sans-serif; width: 180px; text-align: center; padding: 8px; border: 4px solid #1b1424; background: #fffaf0; outline: none; }
   .ouvert input:focus { border-color: #d9a93a; } .ouvert.good input { background: #a8e6a1; } .ouvert.bad input { background: #ffb3a7; }
   .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .choices button { font: 600 19px "Pixelify Sans", monospace; padding: 12px 10px; border: 4px solid #1b1424; background: #fffaf0; color: #2a1f3d; cursor: pointer; box-shadow: inset -3px -3px 0 #d9c9a3; }
+  .choices button { font: 600 19px "Lexend", sans-serif; padding: 12px 10px; border: 4px solid #1b1424; background: #fffaf0; color: #2a1f3d; cursor: pointer; box-shadow: inset -3px -3px 0 #d9c9a3; }
   .choices button:hover { background: #ffe9a8; }
   .choices button.good { background: #a8e6a1; }
   .choices button.bad { background: #ffb3a8; }
+  .ouvert.dictee input { width: min(440px, 70vw); font-size: 26px; }
+  .ecoute { grid-column: 1 / -1; justify-self: center; font-size: 20px; padding: 8px 18px; }
+  .diff b { background: #ffb3a7; color: #8a1a1a; } .diff u { background: #ffb3a7; text-decoration: none; padding: 0 2px; }
+  .bilan { text-align: left; max-height: 46vh; overflow: auto; font-size: 17px; } .bilan div { padding: 6px 0; border-top: 1px solid #00000022; }
   .exp { display: none; margin-top: 10px; padding: 10px 14px; background: #fff7d6; border: 3px solid #d9a93a; font-size: 18px; text-align: left; }
   .exp.on { display: block; }
   .msg { min-height: 26px; margin-top: 12px; font-weight: 600; font-size: 17px; }
@@ -131,9 +137,13 @@
   #touch button { width: 76px; height: 76px; font-size: 30px; }
   #loading { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 26px; color: #ffd54a; background: #1b1424; }
   #zone.fin10 { color: #ff6a5a; animation: clign .5s steps(2) infinite; } @keyframes clign { 50% { opacity: .4; } }
-  #eco { position: fixed; top: 52px; left: 64px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
-  #mute { position: fixed; top: 52px; left: 12px; font: 600 15px "Pixelify Sans", monospace; padding: 4px 10px; color: #fff; cursor: pointer; }
-  #buffs { position: fixed; top: 56px; left: 172px; font-size: 15px; text-shadow: 2px 2px 0 #1b1424; display: flex; gap: 10px; }
+  #eco { position: fixed; top: 52px; left: 64px; font: 600 15px "Lexend", sans-serif; padding: 4px 10px; color: #fff; cursor: pointer; }
+  #mute { position: fixed; top: 52px; left: 12px; font: 600 15px "Lexend", sans-serif; padding: 4px 10px; color: #fff; cursor: pointer; }
+  /* objets actifs : une étiquette par effet, avec le temps qui reste */
+  #buffs { position: fixed; left: 12px; bottom: 156px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+  #buffs .bf { display: flex; align-items: center; gap: 8px; padding: 5px 10px 7px; font-size: 15px; font-weight: 600; min-width: 170px; position: relative; }
+  #buffs .bf b { font-size: 20px; } #buffs .bf span { flex: 1; } #buffs .bf em { font-style: normal; color: #ffd54a; }
+  #buffs .bf i { position: absolute; left: 6px; right: 6px; bottom: 3px; height: 3px; background: #ffd54a; transform-origin: left; }
   #bossbar { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); width: min(520px, 70vw); padding: 4px 10px 8px; text-align: center; font-size: 16px; display: none; pointer-events: none; }
   #bossbar .bar { height: 14px; background: #3a2a3a; border: 3px solid #1b1424; margin-top: 3px; }
   #bossbar .bar i { display: block; height: 100%; background: #e04a5a; transition: width .2s; }
@@ -158,12 +168,46 @@
   .rules .who { text-align: center; margin-top: 12px; color: #44386a; font-weight: 700; }
   #count { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; font-size: 140px; font-weight: 700; color: #ffd54a; text-shadow: 8px 8px 0 #1b1424, -4px -4px 0 #1b1424, 4px -4px 0 #1b1424, -4px 4px 0 #1b1424; pointer-events: none; z-index: 4; }
   @media (max-width: 560px) { .choices { grid-template-columns: 1fr; } }
+  /* ----- tablettes et téléphones ----- */
+  /* un écran plus court que son contenu défile au lieu de couper le haut */
+  .screen { justify-content: flex-start; } .screen > :first-child { margin-top: auto; } .screen > :last-child { margin-bottom: auto; }
+  .seg, .sw, .lrow { flex-wrap: wrap; justify-content: center; } .wnav { flex-wrap: wrap; }
+  .wiz .seg.small { justify-content: center; }
+  /* sur écran tactile : les boutons à l'écran remplacent les touches du clavier et montrent la recharge */
+  body.tactile #hud, body.tactile details.keys { display: none !important; }
+  body.tactile #gear { bottom: 12px; } body.tactile #msgBtn { bottom: 64px; } body.tactile #msgMenu { bottom: 116px; } body.tactile #buffs { bottom: 120px; }
+  #touch button { position: relative; padding: 0; background-image: linear-gradient(to top, #000a var(--cd, 0%), transparent var(--cd, 0%)); }
+  #touch button[data-s]::after { content: attr(data-s); position: absolute; left: 0; right: 0; bottom: 3px; font-size: 13px; color: #fff; text-shadow: 1px 1px 0 #1b1424; }
+  #touch button:active { transform: translate(2px, 2px); }
+  @media (max-width: 600px) {
+    .screen { padding: 10px; gap: 10px; }
+    .wiz { padding: 10px; } .wbody { gap: 10px; min-height: 0; } .wcontent { min-width: 0; }
+    .wiz .sw span, .wiz .lrow > span { min-width: 0; flex-basis: 100%; text-align: center; }
+    .wiz .sw b { width: 34px; height: 34px; }
+    .wiz #gender button { padding: 8px 12px; font-size: 19px; } .wiz #gender canvas { width: 72px; height: 90px; }
+    .wnav .btn { font-size: 17px; padding: 8px 14px; flex: 1 1 40%; }
+    .wiz .classes { grid-template-columns: repeat(2, 1fr); gap: 8px; } .wiz .cls canvas { width: 72px; height: 90px; } .cls small { font-size: 12px; }
+    #touch { right: 10px; bottom: 10px; gap: 8px; } #touch button { width: 64px; height: 64px; font-size: 26px; }
+    #feed { top: 96px; font-size: 12px; max-width: 55vw; } #feed div:nth-child(n+4) { display: none; }
+  }
+  /* écrans bas (téléphone couché) : fenêtres plus compactes */
+  @media (max-height: 520px) {
+    .screen { padding: 8px; gap: 8px; }
+    .card { padding: 10px 14px; } .card h2 { margin: 6px 0 8px; font-size: 20px; }
+    .rgL { font-size: 15px; line-height: 1.35; } .rgB { font-size: 16px; margin-bottom: 4px; } .rules .btn { margin-top: 8px; padding: 6px 22px; font-size: 18px; }
+    .choices { gap: 6px; } .choices button { padding: 8px; font-size: 17px; }
+    .wtitle { font-size: 20px; } h1 { font-size: 26px; } .wiz { gap: 8px; } .wbody { min-height: 0; } #bigPrev { width: 80px; height: 100px; }
+    .wiz .cls canvas { width: 64px; height: 80px; } .wiz .classes { gap: 6px; }
+    #touch button { width: 60px; height: 60px; font-size: 24px; }
+    #feed { top: 60px; font-size: 12px; } #feed div:nth-child(n+4) { display: none; }
+  }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <canvas id="nuit"></canvas>
 
+<div id="cadre"><span></span></div>
 <div id="score" class="panel" style="display:none"><canvas id="portrait" width="16" height="16"></canvas><span id="scoreT"></span><span id="pv"><i></i></span></div>
 <div id="zone" class="panel" style="display:none"></div>
 <button id="mute" class="panel" style="display:none">🔊</button>
@@ -247,6 +291,7 @@
 
 <script src="sons.js"></script>
 <script src="draw.js"></script>
+<script src="mouvement.js"></script>
 <script>
 
 const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️', druide: '🌿' };
@@ -407,11 +452,14 @@ $('go').onclick = () => partir(false);
 $('solo').onclick = () => partir(true);
 // copie de la fiche du code sur cet appareil : elle revient avec l'élève si le serveur s'est endormi
 const lireFiche = code => { try { return JSON.parse(localStorage.getItem('arene-fiche-' + code) || 'null'); } catch { return null; } };
+// copie des notions et questions choisies par l'enseignant : sert à la maison si le serveur s'est endormi
+const lireReglages = () => { try { return JSON.parse(localStorage.getItem('arene-reglages') || 'null'); } catch { return null; } };
+const garderReglages = r => { try { const a = lireReglages(); if (!a || !(a.v > r.v)) localStorage.setItem('arene-reglages', JSON.stringify(r)); } catch {} };
 const garderFiche = rec => { try { localStorage.setItem('arene-fiche-' + rec.code, JSON.stringify(rec)); } catch {} };
 $('name').onkeydown = e => { if (e.key === 'Enter' && !$('next').disabled) showStep(2); };
 
 // ----- Réseau -----
-let lastHp = null, lastCd = 0, lastGear = null;
+let lastHp = null, lastCd = 0, lastGear = null, lastBuffs = '';
 let ws, myId, world = null, me = null, map = null, myCls = null, info = null;
 const MOTS = { cache: 'trouvé', coffre: 'coffre', serie: 'série' };
 function toast(t) {
@@ -434,23 +482,27 @@ function connect(name, cls, code = '', solo = false) {
   SOLO = solo; dernier = [name, cls, code, solo];
   myCls = cls;
   ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + (solo ? '/maison' : ''));
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined, fiche: code ? lireFiche(code) || undefined : undefined }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined, fiche: code ? lireFiche(code) || undefined : undefined, reglages: solo ? lireReglages() || undefined : undefined }));
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     vuServeur = Date.now();
     if (m.t === 'welcome' && essais) { essais = 0; $('reco').style.display = 'none'; answering = false; $('quiz').style.display = 'none'; toast('📶 Te revoilà ! Tes points sont gardés.'); }
+    if (m.t === 'casse') { if (map) casserObjet(map, m.x, m.y); return; }
     if (m.t === 'welcome' || m.t === 'carte') {
       if (m.t === 'welcome') { myId = m.id; info = m; if (m.nom && !code && m.nom !== $('name').value.trim()) setTimeout(() => toast(`Ce prénom est déjà pris : tu t'appelles « ${m.nom} » dans le jeu`), 800); }
-      map = m.map; mapLayer = null;
+      map = m.map; mapLayer = null; pred = null; hist = [];
+      if (m.dur) dur = new Set(m.dur);
+      if (m.mur) MUR = new Set(m.mur);
       $('join').style.display = 'none';
       $('loading').style.display = 'flex';
       setTimeout(() => { buildMapLayers(map); $('loading').style.display = 'none'; ['score', 'zone', 'hud', 'mute', 'eco', 'gear', 'musique'].forEach(id => $(id).style.display = ''); Son.musique(map.theme); }, 30);
       if (m.t === 'carte') toast('🗺️ ' + map.nom);
       $('icoA').textContent = ATK_ICO[cls]; $('icoP').textContent = POW_ICO[cls]; $('icoD').textContent = DASH_ICO[cls];
-      if ('ontouchstart' in window) $('touch').style.display = 'flex';
+      if ('ontouchstart' in window) { $('touch').style.display = 'flex'; document.body.classList.add('tactile'); $('tAtk').textContent = ATK_ICO[cls]; $('tPow').textContent = POW_ICO[cls]; $('tDash').textContent = DASH_ICO[cls]; }
     } else if (m.t === 's') {
       world = unpackWorld(m.w);
       const mp = world.p.find(p => p.id === myId);
+      if (pred && mp) corriger(mp);
       if (me && m.me) {
         if (me.alive && !m.me.alive) Son.play('ko');
         else if (mp && lastHp != null && mp.hp < lastHp - 1 && m.me.alive) { Son.play('touche'); secousse = Math.min(1, secousse + 0.25 + (lastHp - mp.hp) / 80); flashRouge = 0.3; }
@@ -460,12 +512,21 @@ function connect(name, cls, code = '', solo = false) {
       if (world.fx.some(f => (f.k === 'slam' || f.k === 'boom' || f.k === 'cri' || f.k === 'souffle') && f.t > f.d - 0.08 && mp && Math.hypot(f.x - mp.x, f.y - mp.y) < 700)) { Son.play('boom'); secousse = Math.min(1, secousse + 0.5); }
       lastHp = mp ? mp.hp : null;
       me = m.me;
-    } else if (m.t === 'q') showQuestion(m);
+    } else if (m.t === 'pg') { const r = (performance.now() - m.k) / 1000; if (r >= 0 && r < 3) rtt = rtt ? rtt * 0.7 + r * 0.3 : r; }
+    else if (m.t === 'ctlFin') {   // contrôle terminé pour moi : on attend les autres
+      answering = false; $('quiz').style.display = 'flex'; $('qHead').className = 'ko chest'; $('qHead').textContent = '📝 Tu as terminé !';
+      $('qTag').textContent = ''; $('qSvg').innerHTML = ''; $('qChoices').innerHTML = ''; $('qExp').className = 'exp';
+      $('qText').textContent = m.total ? `Tu as ${m.ok} bonne${m.ok > 1 ? 's' : ''} réponse${m.ok > 1 ? 's' : ''} sur ${m.total}.` : 'Bravo pour ton travail !';
+      $('qMsg').textContent = 'Attends que tout le monde ait fini. Ton bilan arrive à la fin.';
+    }
+    else if (m.t === 'ctlBilan') ctlBilan = m;
+    else if (m.t === 'q') showQuestion(m);
     else if (m.t === 'res') showResult(m);
     else if (m.t === 'close') { answering = false; $('quiz').style.display = 'none'; }
     else if (m.t === 'item') { if (m.gear) toast(`${m.ico} ${m.nom} ! (${m.bonus})`); else if (m.src !== 'coffre') toast(`${m.ico} ${m.nom} !`); Son.play(m.gear ? 'serie' : 'objet'); }
     else if (m.t === 'portail') Son.play('tp');
     else if (m.t === 'or') { monOr = Math.max(0, monOr + m.n); sauverOr(); if (m.n > 1) toast(`🪙 +${m.n} pièces d'or !`); }
+    else if (m.t === 'reglages') garderReglages(m.r);
     else if (m.t === 'compteMaj') { garderFiche(m.rec); monOr = m.rec.or; achats = m.rec.achats; sauverOr(); }
     else if (m.t === 'complet') { ws.onclose = null; alert('Beaucoup d\'élèves s\'entraînent en ce moment. Réessaie dans quelques minutes !'); location.reload(); }
     else if (m.t === 'compte') { if (m.rec) garderFiche(m.rec); $('name').value = m.nom; monOr = m.or; achats = m.achats || []; mesBadges = m.badges || []; sauverOr(); toast(`🔑 Bienvenue ${m.nom} ! Tu as ${m.or} pièce${m.or > 1 ? 's' : ''} d'or.`); }
@@ -485,6 +546,8 @@ function connect(name, cls, code = '', solo = false) {
     else if (m.t === 'fin') showFin(m);
     else if (m.t === 'route') ROUTE = m.pts;
     else if (m.t === 'debut') { $('fin').style.display = 'none'; document.querySelector('.wcontent').appendChild($('lookPanel')); }
+    else if (m.t === 'ailleurs') { ws.onclose = null; alert('Tu viens de te connecter sur un autre appareil : ton héros continue là-bas.'); location.reload(); }
+    else if (m.t === 'inactif') { ws.onclose = null; alert('Tu as été déconnecté parce que tu ne jouais plus. Reviens quand tu veux !'); location.reload(); }
     else if (m.t === 'kicked') { ws.onclose = null; alert('L\'enseignant t\'a retiré de la partie.'); location.reload(); }
   };
   // coupure (Wi-Fi, serveur redémarré) : on réessaie toutes les 2 s pendant une minute, sans rien perdre
@@ -516,22 +579,30 @@ function showQuestion(m) {
   head.className = 'ko ' + qKind;
   clearInterval(qTimer);
   if (qKind === 'chest' && m.gold) { head.className = 'ko gold'; head.textContent = `🌟 Coffre doré ! Question ${m.step} sur 2 : deux bonnes réponses = trésor légendaire.`; if (m.step === 1) Son.play('coffre'); }
+  else if (qKind === 'cage') { head.className = 'ko chest'; head.textContent = '🔓 Réponds juste pour libérer ton camarade de la retenue !'; Son.play('coffre'); }
   else if (qKind === 'releve') { head.className = 'ko chest'; head.textContent = '💚 Réponds juste pour relever ton coéquipier !'; Son.play('coffre'); }
   else if (qKind === 'chest') { head.textContent = '🎁 Un coffre au trésor ! Bonne réponse = meilleur objet.'; Son.play('coffre'); }
   else if (qKind === 'eclair') {
     let t = m.temps || 20; Son.play('eclair');
-    const upd = () => { head.textContent = m.bouclier ? `🛡️ Bouclier du savoir ! Si la majorité répond juste, il se brise. ${t} s` : `⚡ Question éclair pour toute la classe ! ${t} s`; t = Math.max(0, t - 1); };
+    const upd = () => { head.textContent = m.titre ? `${m.titre} · ${t} s` : m.bouclier ? `🛡️ Bouclier du savoir ! Si la majorité répond juste, il se brise. ${t} s` : `⚡ Question éclair pour toute la classe ! ${t} s`; t = Math.max(0, t - 1); };
     upd(); qTimer = setInterval(upd, 1000);
-  } else head.textContent = '💫 Tu es K.O. ! Réponds pour revenir au combat.';
+  } else if (qKind === 'controle') { head.className = 'ko chest'; head.textContent = m.dire ? `🎧 Dictée · ${m.num} sur ${m.total}` : `📝 Contrôle · Question ${m.num} sur ${m.total}`; }
+  else head.textContent = '💫 Tu es K.O. ! Réponds pour revenir au combat.';
   $('qTag').textContent = m.notion ? `${m.matiere} · ${m.notion}` : m.matiere;
   $('qSvg').innerHTML = m.svg || '';
   $('qText').textContent = m.question;
   $('qMsg').textContent = ''; $('qExp').className = 'exp';
   const box = $('qChoices'); box.innerHTML = '';
-  qOuvert = !!m.ouvert; qVoixTxt = m.question + (qOuvert ? '' : ' … ' + m.choix.join(' … ou … '));
+  qOuvert = !!m.ouvert; qVoixTxt = m.dire || m.question + (qOuvert ? '' : ' … ' + m.choix.join(' … ou … '));
+  if (m.dire) {   // dictée : le jeu lit le mot, on peut réécouter
+    const b = document.createElement('button'); b.className = 'btn ecoute'; b.textContent = '🔊 Réécouter';
+    b.onclick = () => $('qVoix').onclick(); box.appendChild(b);
+    setTimeout(() => $('qVoix').onclick(), 250);
+  }
   if (qOuvert) {   // niveau défi : on tape la réponse
-    const d = document.createElement('div'); d.className = 'ouvert';
-    d.innerHTML = '<input id="qIn" inputmode="decimal" autocomplete="off" placeholder="?"><button class="btn" id="qOk">Valider</button>';
+    const d = document.createElement('div'); d.className = 'ouvert' + (m.dire ? ' dictee' : '');
+    d.innerHTML = m.dire ? '<input id="qIn" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Écris ici"><button class="btn" id="qOk">Valider</button>'
+      : '<input id="qIn" inputmode="decimal" autocomplete="off" placeholder="?"><button class="btn" id="qOk">Valider</button>';
     box.appendChild(d);
     const valider = () => { if (!answering || !$('qIn').value.trim()) return; answering = false; $('qIn').disabled = true; sendMsg({ t: 'ans', i: -1, txt: $('qIn').value }); };
     $('qOk').onclick = valider; $('qIn').onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') valider(); };
@@ -540,8 +611,7 @@ function showQuestion(m) {
   }
   m.choix.forEach((c, i) => {
     const b = document.createElement('button');
-    b.innerHTML = `<b>${i + 1}.</b> `;
-    b.append(c);
+    b.append(c);   // pas de numéro : seulement la réponse (les touches 1 à 4 marchent toujours)
     b.onclick = () => choose(i);
     box.appendChild(b);
   });
@@ -558,7 +628,35 @@ $('qVoix').onclick = () => {
     const v = speechSynthesis.getVoices().find(v => v.lang === 'fr-CA') || speechSynthesis.getVoices().find(v => v.lang.startsWith('fr')); if (v) u.voice = v;
     speechSynthesis.speak(u); } catch {}
 };
+// dictée : les lettres fausses en rouge, les lettres oubliées marquées d'un _
+function diffDictee(tape, bonne) {
+  const a = [...tape], b = [...bonne], L = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let x = a.length - 1; x >= 0; x--) for (let y = b.length - 1; y >= 0; y--) L[x][y] = a[x] === b[y] ? L[x + 1][y + 1] + 1 : Math.max(L[x + 1][y], L[x][y + 1]);
+  let x = 0, y = 0, h = '';
+  const esc = c => c.replace(/[&<>]/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[s]));
+  if (L[0][0] * 2 < Math.max(a.length, b.length)) return `<b>${esc(tape)}</b>`;   // mot très différent : pas de comparaison lettre par lettre
+  while (x < a.length || y < b.length) {
+    if (x < a.length && y < b.length && a[x] === b[y]) { h += esc(a[x]); x++; y++; }
+    else if (y < b.length && (x >= a.length || L[x][y + 1] >= L[x + 1][y])) { h += '<u>_</u>'; y++; }
+    else { h += `<b>${esc(a[x])}</b>`; x++; }
+  }
+  return h;
+}
+let ctlBilan = null;
 function showResult(m) {
+  if (m.kind === 'controle') {
+    answering = false;
+    if (m.neutre) { $('qMsg').textContent = '✔️ Réponse enregistrée'; return; }
+    const d = document.querySelector('.ouvert'); if (d) d.classList.add(m.ok ? 'good' : 'bad');
+    const btns = [...$('qChoices').children], chosenBtn = btns.find(b => b.classList.contains('chosen'));
+    if (!qOuvert) { if (m.ok) chosenBtn && chosenBtn.classList.add('good'); else { chosenBtn && chosenBtn.classList.add('bad'); btns[m.bonne] && btns[m.bonne].classList.add('good'); } }
+    Son.play(m.ok ? 'bon' : 'faux');
+    if (m.ok) $('qMsg').textContent = '✅ Bravo !';
+    else if (m.tape != null) { $('qMsg').innerHTML = `❌ Tu as écrit : <span class="diff">${diffDictee(m.tape, m.bonneTxt)}</span><br>✏️ Il fallait écrire : <b>${m.bonneTxt.replace(/[&<>]/g, '')}</b>`; }
+    else $('qMsg').textContent = '❌ Pas tout à fait.' + (m.bonneTxt ? ` La bonne réponse est ${m.bonneTxt}.` : '');
+    if (!m.ok && m.explication && m.tape == null) { $('qExp').textContent = '💡 À retenir : ' + m.explication; $('qExp').className = 'exp on'; }
+    return;
+  }
   if (qOuvert) {
     const d = document.querySelector('.ouvert'); if (d) d.classList.add(m.ok ? 'good' : 'bad');
     if (!m.ok && m.bonneTxt) m.explication = `La bonne réponse est ${m.bonneTxt}.` + (m.explication ? ' ' + m.explication : '');
@@ -625,6 +723,22 @@ function showFin(m) {
   const bn = m.boss ? m.boss.nom : 'Le Roi Gluant';
   h.textContent = m.titre ? m.titre : m.why === 'boss-gagne' ? `🎉 Victoire ! ${bn} est vaincu !` : m.why === 'boss-perdu' ? `${m.boss ? BOSS_INFO[m.boss.k].ico : '👑'} ${bn} a gagné cette fois…` : m.why === 'colline' ? '⛰️ Une équipe est reine de la colline !' : m.why === 'drapeau' ? '🚩 Trois drapeaux capturés !' : '🏁 Fin de la manche !';
   card.appendChild(h);
+  if (m.controle) {   // contrôle ou dictée : mon bilan, pas de podium
+    const b = ctlBilan, t = document.createElement('div'); t.className = 'finlist';
+    if (b) {
+      t.innerHTML = `<b>${b.ok} sur ${b.total}</b> ${b.ok === b.total ? '🌟 Parfait !' : b.ok >= b.total * 0.8 ? '👏 Très bien !' : b.ok >= b.total * 0.6 ? '🙂 Bien !' : '💪 On continue de pratiquer !'}`;
+      card.appendChild(t);
+      if (b.erreurs.length) {
+        const l = document.createElement('div'); l.className = 'bilan';
+        const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+        l.innerHTML = '<b>À revoir :</b>' + b.erreurs.map(e => `<div>${e.n}. ${e.question ? esc(e.question) + '<br>' : ''}Ta réponse : ${b.dictee && e.ta !== '(pas de réponse)' ? `<span class="diff">${diffDictee(e.ta, e.bonne)}</span>` : esc(e.ta)} · Bonne réponse : <b>${esc(e.bonne)}</b></div>`).join('');
+        card.appendChild(l);
+      }
+    }
+    const w = document.createElement('div'); w.className = 'msg'; w.textContent = 'Ton enseignant a reçu tes résultats.';
+    card.appendChild(w); $('fin').style.display = 'flex'; ctlBilan = null;
+    return;
+  }
   if (m.teams) {
     const t = document.createElement('div'); t.className = 'finlist';
     t.innerHTML = `<b style="color:${m.teams[0].color}">🏆 Les ${m.teams[0].nom} gagnent !</b>`;
@@ -694,7 +808,7 @@ let aim = 0, mouseAim = false, lastMouse = 0, mouse = { x: 0, y: 0 };
 addEventListener('keydown', e => {
   if (!map) return;
   if (answering && !qOuvert && /^Digit[1-4]$/.test(e.code)) return choose(+e.code.slice(5) - 1);
-  if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 1; e.preventDefault(); }
+  if (KEYMAP[e.code]) { e.preventDefault(); if (!keys[KEYMAP[e.code]]) { keys[KEYMAP[e.code]] = 1; envoyerInput(); } }
   Son.unlock();
   if (e.code === 'KeyJ') { attackSound(); sendMsg({ t: 'atk' }); }
   if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { dashSound(); sendMsg({ t: 'dash' }); } }
@@ -703,13 +817,13 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR' && !e.repeat) sendMsg({ t: 'super' });
   if (!answering && /^Digit[5-9]$/.test(e.code) && !e.repeat && msgPermis()) envoyerMsgRapide(+e.code.slice(5) - 5);
 });
-addEventListener('keyup', e => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = 0; });
+addEventListener('keyup', e => { if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 0; envoyerInput(); } });
 const cv = $('c'), ctx = cv.getContext('2d');
 cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; mouseAim = true; lastMouse = performance.now(); });
 cv.addEventListener('mousedown', e => { Son.unlock(); if (e.button === 2) sendMsg({ t: 'pow' }); else { attackSound(); sendMsg({ t: 'atk' }); } });
 function petPow() { if (me && me.alive && me.pet && me.cdF <= 0.05) Son.play(['', 'miaou', 'ouaf', 'feu', 'hibou', 'slime'][me.pet]); sendMsg({ t: 'pet' }); }
 function dashSound() { if (me && me.alive && me.cdD <= 0.05) Son.play(myCls === 'mage' ? 'tp' : 'dash'); }
-function attackSound() { if (me && me.alive && me.cdA <= 0.05) Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' || myCls === 'druide' ? 'tir' : 'atk'); }
+function attackSound() { if (me && me.alive && me.cdA <= 0.05) { Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' || myCls === 'druide' ? 'tir' : 'atk'); const d = disp.get(myId); if (d) d.at0 = performance.now() / 1000; } }   // le geste part tout de suite, sans attendre le serveur
 cv.addEventListener('contextmenu', e => e.preventDefault());
 
 // Tactile : glisser n'importe où à gauche pour bouger
@@ -720,10 +834,11 @@ cv.addEventListener('touchmove', e => {
     const dx = t.clientX - touchStart.x, dy = t.clientY - touchStart.y;
     keys.l = dx < -15 ? 1 : 0; keys.r = dx > 15 ? 1 : 0; keys.u = dy < -15 ? 1 : 0; keys.d = dy > 15 ? 1 : 0;
     const l = Math.hypot(dx, dy), k = l > 40 ? 40 / l : 1; $('joy').firstChild.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
+    joy = l < 15 ? null : { x: dx * k / 40, y: dy * k / 40 };   // direction exacte, pas seulement 8 directions
   }
   e.preventDefault();
 }, { passive: false });
-cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; keys.l = keys.r = keys.u = keys.d = 0; $('joy').style.display = 'none'; } });
+cv.addEventListener('touchend', e => { for (const t of e.changedTouches) if (t.identifier === touchId) { touchId = null; joy = null; keys.l = keys.r = keys.u = keys.d = 0; envoyerInput(); $('joy').style.display = 'none'; } });
 $('tAtk').ontouchstart = e => { e.preventDefault(); Son.unlock(); attackSound(); sendMsg({ t: 'atk' }); };
 $('tPow').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'pow' }); };
 $('tSuper').ontouchstart = e => { e.preventDefault(); sendMsg({ t: 'super' }); };
@@ -739,14 +854,46 @@ MSGS.forEach((t, i) => { const b = document.createElement('button'); b.className
 $('msgBtn').onclick = () => { $('msgMenu').style.display = $('msgMenu').style.display === 'flex' ? 'none' : 'flex'; };
 let geleFin = 0;
 
-setInterval(() => {
+function envoyerInput() {
   if (!map) return;
-  const mx = keys.r - keys.l, my = keys.d - keys.u;
+  const v = direction();
   if (mouseAim && performance.now() - lastMouse < 3000) {
     aim = Math.atan2(mouse.y - meScreen.y, mouse.x - meScreen.x);
-  } else if (mx || my) aim = Math.atan2(my, mx);
-  sendMsg({ t: 'in', ...keys, a: +aim.toFixed(2) });
-}, 50);
+  } else if (v.x || v.y) aim = Math.atan2(v.y, v.x);
+  sendMsg(joy ? { t: 'in', ...keys, jx: +joy.x.toFixed(2), jy: +joy.y.toFixed(2), a: +aim.toFixed(2) } : { t: 'in', ...keys, a: +aim.toFixed(2) });
+}
+setInterval(envoyerInput, 50);
+
+// ----- Prédiction : mon héros bouge dès qu'on appuie, puis le serveur le corrige doucement -----
+let joy = null, dur = new Set(), rtt = 0, pred = null, hist = [], corr = { x: 0, y: 0 };
+setInterval(() => { if (map) sendMsg({ t: 'pg', k: Math.round(performance.now()) }); }, 2000);
+function direction() {
+  if (joy) return joy;
+  const x = keys.r - keys.l, y = keys.d - keys.u, l = Math.hypot(x, y) || 1;
+  return { x: x / l, y: y / l };
+}
+const bloqueIci = (x, y, r) => Mouvement.heurte(map, dur, x, y, r);
+function predire(dt, mine) {
+  // seulement quand le serveur dit qu'on marche normalement (pas en question, charge, gel, etc.)
+  if (!mine || !mine.al || !me || !me.vb || !dur.size) { pred = null; return; }
+  if (!pred) { const d = disp.get(myId); pred = { x: d ? d.x : mine.x, y: d ? d.y : mine.y }; hist = []; corr = { x: 0, y: 0 }; }
+  const v = direction();
+  Mouvement.pas(pred, v.x, v.y, me.vb * Mouvement.terrain(Mouvement.tuile(map, pred.x, pred.y + 12)) * dt, bloqueIci, 22);
+  const f = Math.min(1, dt * 6), cx = corr.x * f, cy = corr.y * f;
+  if (cx || cy) { pred.x += cx; pred.y += cy; corr.x -= cx; corr.y -= cy; for (const h of hist) { h.x += cx; h.y += cy; } }
+  const now = performance.now();
+  hist.push({ t: now, x: pred.x, y: pred.y });
+  while (hist.length > 2 && hist[0].t < now - 1500) hist.shift();
+  disp.set(myId, pred);
+}
+// La position reçue du serveur correspond à là où j'étais il y a environ un aller-retour réseau
+function corriger(mp) {
+  const t = performance.now() - rtt * 1000 - 30;
+  let h = null;
+  for (const e of hist) if (!h || Math.abs(e.t - t) < Math.abs(h.t - t)) h = e;
+  if (!h || Math.hypot(mp.x - pred.x, mp.y - pred.y) > 140) { pred.x = mp.x; pred.y = mp.y; hist = []; corr = { x: 0, y: 0 }; }
+  else corr = { x: mp.x - h.x, y: mp.y - h.y };
+}
 
 // ----- Rendu -----
 // Mode économie : image moins fine et moins d'effets (s'active seul si l'appareil rame)
@@ -835,6 +982,18 @@ function ambiance(now, vw, vh, zoom) {
   }
   ctx.restore();
 }
+// En équipe : un cadre de la couleur de mon équipe autour de l'écran
+let cadreAvant = '';
+function cadreEquipe(teams, mine) {
+  const t = teams && mine && mine.tm >= 0 && teams[mine.tm], cle = t ? t.color + t.nom : '';
+  if (cle === cadreAvant) return;
+  cadreAvant = cle;
+  const c = $('cadre');
+  c.style.display = t ? 'block' : 'none';
+  if (!t) return;
+  c.style.boxShadow = `inset 0 0 0 6px ${t.color}, inset 0 0 36px ${t.color}aa`;
+  c.firstChild.textContent = `Ton équipe : ${t.nom}`; c.firstChild.style.background = t.color;
+}
 let lastPortrait = '';
 let lastTm = -1, lastFrame = performance.now(), camX = 0, camY = 0, meScreen = { x: innerWidth / 2, y: innerHeight / 2 };
 function frame(now) {
@@ -844,11 +1003,13 @@ function frame(now) {
   gel = Math.max(0, gel - dt);
   const k = gel > 0 ? 0 : Math.min(1, dt * 18);
   for (const p of world.p) {
+    if (pred && p.id === myId) continue;
     const d = disp.get(p.id);
     if (!d || Math.hypot(d.x - p.x, d.y - p.y) > 150) disp.set(p.id, { x: p.x, y: p.y });
     else { d.x += (p.x - d.x) * k; d.y += (p.y - d.y) * k; }
   }
   const mine = world.p.find(p => p.id === myId);
+  predire(dt, mine);
   const md = mine && disp.get(mine.id);
   if (md) { camX = md.x; camY = md.y; }
 
@@ -856,7 +1017,8 @@ function frame(now) {
   const dpr = DPR(), vw = innerWidth, vh = innerHeight;
   if (!mapLayer) return;
   // zoom : chaque pixel d'art fait 2 ou 3 pixels d'écran (net, sans flou)
-  const zoom = Math.min(vw, vh) < 620 ? 2 / 3 : 1;
+  // sur écran tactile, on rapproche un peu la caméra pour bien voir son personnage (téléphone : 0,85 ; tablette : 1,2)
+  const zoom = 'ontouchstart' in window ? (Math.min(vw, vh) < 620 ? 0.85 : 1.2) : Math.min(vw, vh) < 620 ? 2 / 3 : 1;
   // la caméra reste dans la carte (pas de vide sur les bords)
   const hw = vw / 2 / zoom, hh = vh / 2 / zoom;
   camX = map.W > hw * 2 ? Math.max(hw, Math.min(map.W - hw, camX)) : map.W / 2;
@@ -867,10 +1029,13 @@ function frame(now) {
   const sx = secousse > 0.02 ? (Math.random() - 0.5) * secousse * 12 : 0, sy = secousse > 0.02 ? (Math.random() - 0.5) * secousse * 12 : 0;
   ctx.translate(Math.round(vw / 2 - camX * zoom + sx), Math.round(vh / 2 - camY * zoom + sy)); ctx.scale(zoom, zoom);
   const teams = equipesDe(world, equipes());
-  if (mine) mine.aim = aim;
+  if (mouseAim && performance.now() - lastMouse < 3000) aim = Math.atan2(mouse.y - meScreen.y, mouse.x - meScreen.x);   // la mire suit la souris à chaque image
+  if (mine) { mine.aim = aim; mine.aimD = mouseAim && performance.now() - lastMouse < 3000 ? Math.hypot(mouse.x - meScreen.x, mouse.y - meScreen.y) / zoom : null; }
   drawWorld(ctx, world, map, mine, disp, PX, teams);
+  cadreEquipe(teams, mine);
   if (md) meScreen = { x: vw / 2 + (md.x - camX) * zoom, y: vh / 2 + (md.y - camY) * zoom };
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (map.theme === 'caverne' && md) drawNoir(ctx, world, map, mine, md, vw, vh, zoom, camX, camY, teams);
   ambiance(now, vw, vh, zoom);
   if (flashRouge > 0) {   // touché : bords rouges un court instant
     flashRouge -= dt;
@@ -924,13 +1089,23 @@ function frame(now) {
     $('lblD').textContent = me.cdD > 0 ? Math.ceil(me.cdD) + ' s' : 'Espace';
     $('cdF').style.display = me.pet ? '' : 'none';
     if ('ontouchstart' in window) $('tPet').style.display = me.pet ? '' : 'none';
+    if (document.body.classList.contains('tactile')) {   // recharge affichée sur les boutons tactiles
+      const tc = (id, v, max) => { const b = $(id), pct = Math.max(0, Math.min(100, (v || 0) / max * 100)); b.style.setProperty('--cd', pct + '%'); if (v > 0.05) b.dataset.s = Math.ceil(v) + ' s'; else delete b.dataset.s; };
+      tc('tAtk', me.cdA, c.atk.cd); tc('tPow', me.cdP, c.power.cd); tc('tDash', me.cdD, c.dash.cd); if (me.pet) tc('tPet', me.cdF, info.petCd || 15);
+    }
     if (me.pet) {
       $('icoF').textContent = PET_ICO[me.pet]; $('tPet').textContent = PET_ICO[me.pet];
       $('fillF').style.height = (me.cdF / (info.petCd || 15) * 100) + '%';
       $('lblF').textContent = me.cdF > 0 ? Math.ceil(me.cdF) + ' s' : 'E';
     }
     $('scoreT').textContent = `🏆 ${me.kills}   💫 ${me.deaths}   🧠 ${me.good}   🪙 ${monOr}` + (me.sk >= 2 ? `   🔥 ${me.sk}` : '');
-    $('buffs').textContent = [me.st ? `💪 ${me.st}` : '', me.fa ? `👢 ${me.fa}` : ''].filter(Boolean).join('  ');
+    // objets actifs (potion de force, bottes de vitesse, bouclier, cape d'ombre) avec leur temps restant
+    const actifs = [['st', '💪', 'Force +50 %', 10], ['fa', '👢', 'Vitesse', 10], ['bo', '🛡️', 'Bouclier', 4], ['om', '🌑', 'Invisible', 5]].filter(([k]) => me[k] > 0);
+    const cleB = actifs.map(([k]) => k + me[k]).join();
+    if (cleB !== lastBuffs) {
+      lastBuffs = cleB;
+      $('buffs').innerHTML = actifs.map(([k, ico, nom, dur]) => `<div class="bf panel"><b>${ico}</b><span>${nom}</span><em>${me[k]} s</em><i style="transform:scaleX(${Math.min(1, me[k] / dur)})"></i></div>`).join('');
+    }
     // équipement trouvé : 4 cases, bordure de la couleur du niveau
     const gk = me.ge ? GEAR_ORDRE.map(k => me.ge[k]).join('') : '';
     if (gk !== lastGear && info.gear) {

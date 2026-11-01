@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planification des notions</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --fond: #141b26; --carte: #1d2636; --ligne: #2c384d; --texte: #fff; --doux: #cfd6e6; --or: #ffd54a; }
+  body { margin: 0; background: var(--fond); color: var(--texte); font-family: "Lexend", system-ui, sans-serif; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { margin: 0 0 4px; font-size: 24px; color: var(--or); }
+  p { color: var(--doux); font-size: 14px; margin: 4px 0 12px; line-height: 1.45; }
+  .barre { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 16px; }
+  button, .bouton { font: 700 14px "Lexend", system-ui; padding: 7px 12px; border-radius: 9px; border: 0; background: var(--or); color: #222; cursor: pointer; }
+  .sec { background: #33405a; color: #fff; }
+  #etat { font-size: 13px; color: #9fe08a; margin-left: 6px; }
+  .defile { overflow: auto; max-height: 78vh; background: var(--carte); border-radius: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { padding: 5px 6px; border-bottom: 1px solid var(--ligne); }
+  thead th { position: sticky; top: 0; background: var(--carte); color: var(--or); font-weight: 600; white-space: nowrap; }
+  td.nom { min-width: 230px; color: var(--doux); }
+  td.case { text-align: center; }
+  td.case.diff { background: #3a3220; }
+  tr.matiere td { color: var(--or); font-weight: 700; font-size: 14px; padding-top: 12px; }
+  input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--or); }
+  tfoot td { color: #9ab; font-size: 12px; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <h1>📅 Planification des notions</h1>
+  <p>Coche les notions travaillées chaque mois. L'Arène du Savoir et Classe et Donjon utilisent cette planification : le menu « Notions d'un mois » de l'Arène et les quêtes de chaque mois du Donjon. Chaque changement est enregistré tout de suite dans ce navigateur. Une case sur fond doré n'est pas comme dans la planification de base.</p>
+  <p>Tu travailles sur un autre ordinateur ? Clique sur « Exporter » ici, puis sur « Importer » là-bas.</p>
+  <div class="barre">
+    <button class="sec" id="exporter">💾 Exporter</button>
+    <label class="bouton sec">📂 Importer<input type="file" id="importer" accept=".json,application/json" hidden></label>
+    <button class="sec" id="base">↺ Revenir à la planification de base</button>
+    <span id="etat"></span>
+  </div>
+  <div class="defile"><table id="grille"></table></div>
+</main>
+<script src="notions.js"></script>
+<script>
+const P = window.Planification, $ = id => document.getElementById(id);
+const MOIS = Object.keys(P.BASE);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const MAT = { maths: 'Mathématiques', fr: 'Français' };
+
+function sauver(msg) {
+  const p = Object.fromEntries(MOIS.map(id => [id, { maths: P.MOIS_NOTIONS[id].maths, fr: P.MOIS_NOTIONS[id].fr }]));
+  try { localStorage.setItem('planification', JSON.stringify(p)); $('etat').textContent = msg || '✅ Enregistré'; }
+  catch { $('etat').textContent = '⚠️ Impossible d\'enregistrer dans ce navigateur (navigation privée ?)'; }
+}
+function dessiner() {
+  let h = `<thead><tr><th style="text-align:left">Notion</th>${MOIS.map(id => `<th>${esc(P.BASE[id].nom.replace(' (révision)', ''))}</th>`).join('')}</tr></thead><tbody>`;
+  for (const mat of ['maths', 'fr']) {
+    h += `<tr class="matiere"><td colspan="${MOIS.length + 1}">${MAT[mat]}</td></tr>`;
+    for (const [k, nom] of Object.entries(P.NOTIONS[mat])) {
+      h += `<tr><td class="nom">${esc(nom)}</td>${MOIS.map(id => {
+        const on = P.MOIS_NOTIONS[id][mat].includes(k), base = P.BASE[id][mat].includes(k);
+        return `<td class="case${on !== base ? ' diff' : ''}"><input type="checkbox" data-m="${mat}" data-k="${k}" data-id="${id}" ${on ? 'checked' : ''} aria-label="${esc(nom)}, ${esc(P.BASE[id].nom)}"></td>`;
+      }).join('')}</tr>`;
+    }
+  }
+  h += `</tbody><tfoot><tr><td></td>${MOIS.map(id => `<td>${P.MOIS_NOTIONS[id].maths.length + P.MOIS_NOTIONS[id].fr.length} notions</td>`).join('')}</tr></tfoot>`;
+  $('grille').innerHTML = h;
+}
+$('grille').onchange = e => {
+  const c = e.target, { m, k, id } = c.dataset, l = P.MOIS_NOTIONS[id][m];
+  if (c.checked && !l.includes(k)) l.push(k);
+  if (!c.checked) l.splice(l.indexOf(k), 1);
+  sauver(); dessiner();
+};
+$('base').onclick = () => {
+  if (!confirm('Revenir à la planification de base ? Tes changements seront effacés.')) return;
+  try { localStorage.removeItem('planification'); } catch {}
+  P.appliquer(null); dessiner(); $('etat').textContent = '↺ Planification de base';
+};
+$('exporter').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([localStorage.getItem('planification') || JSON.stringify(P.BASE)], { type: 'application/json' }));
+  a.download = 'planification-5e.json'; a.click();
+};
+$('importer').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { P.appliquer(JSON.parse(await f.text())); sauver('✅ Planification importée'); dessiner(); }
+  catch { $('etat').textContent = '⚠️ Ce fichier n\'est pas une planification.'; }
+  e.target.value = '';
+};
+dessiner();
+</script>
+</body>
+</html>

@@ -3,7 +3,10 @@
 //
 // Tuiles (un caractère chacune) :
 //   sol     .  herbe   h hautes herbes (on s'y cache)   s sable   n neige   d chemin   p pavés   f dalles   w plancher   t tapis   B pont
-//   lent    m  boue / sables mouvants   =  gué (eau peu profonde)
+//   ciel    e  pont de navire (le vide autour : v, on tire par-dessus)
+//   caverne o  sol de la grotte   R  rails des wagonnets
+//   école   a  asphalte de la cour   l  linoléum   y  plancher du gymnase   r  trampoline (te propulse)
+//   lent    m  boue / sables mouvants   =  gué (eau peu profonde)   j  Jell-O renversé (colle aux pieds)
 //   rapide  i  glace
 //   eau     ~  eau   v  fosse   L  lave          (bloquent les joueurs, pas les flèches)
 //   murs    b  briques   #  pierre   k  mur du donjon   c  falaise   x  rondins   g  gradins   T  arbres denses
@@ -80,9 +83,11 @@ function atelier(id, seed, base) {
       return { x: x + 1, y: y + 1, w: w - 2, h: h - 2 };
     },
     // objets (en tuiles) : rectangle de collision
+    // décor peint au sol, sans collision (ex. l'intérieur d'un autobus)
+    deco(kind, x, y, w, h, extra) { (A.decos = A.decos || []).push({ kind, x: Math.round(x * T), y: Math.round(y * T), w: Math.round(w * T), h: Math.round(h * T), ...extra }); },
     obj(kind, x, y, w, h) { A.objs.push({ kind, x: Math.round(x * T), y: Math.round(y * T), w: Math.round(w * T), h: Math.round(h * T) }); },
     chest(x, y) { A.chests.push({ x: Math.round((x + 0.5) * T), y: Math.round((y + 0.5) * T) }); },
-    bush(x, y, r = 1.2) { A.bushes.push({ x: Math.round(x * T), y: Math.round(y * T), r: Math.round(r * T) }); },
+    bush(x, y, r = 1.2, kind) { A.bushes.push({ x: Math.round(x * T), y: Math.round(y * T), r: Math.round(r * T), ...(kind ? { kind } : {}) }); },
     spot(x, y) { A.spots.push({ x: Math.round((x + 0.5) * T), y: Math.round((y + 0.5) * T) }); },
     setHeal(x, y, kind) { A.heal = { x: Math.round(x * T), y: Math.round(y * T), r: 110, heal: 10, kind }; },
     // une case libre : sol permis tout autour, loin des objets
@@ -136,12 +141,41 @@ function atelier(id, seed, base) {
 }
 
 function fin(A, id, nom, theme, desc) {
+  // ponts : la terre doit continuer au bout de chaque pont (sinon l'eau qui touche l'entrée bloque le passage).
+  // Le pont traverse dans le sens de sa longueur.
+  const vusB = new Set();
+  for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) {
+    if (A.get(i, j) !== 'B' || vusB.has(j * COLS + i)) continue;
+    let i1 = i, j1 = j;
+    while (A.get(i1 + 1, j) === 'B') i1++;
+    while (A.get(i, j1 + 1) === 'B') j1++;
+    for (let b = j; b <= j1; b++) for (let a = i; a <= i1; a++) vusB.add(b * COLS + a);
+    const vert = j1 - j >= i1 - i;
+    for (let a = vert ? i : j; a <= (vert ? i1 : j1); a++) for (const [d0, s] of [[vert ? j : i, -1], [vert ? j1 : i1, 1]])
+      for (let k = 1; k <= 2; k++) {
+        const x = vert ? a : d0 + s * k, y = vert ? d0 + s * k : a;
+        if (!WATER.has(A.get(x, y))) break;
+        A.set(x, y, '.');
+      }
+  }
+  // un buisson ne doit pas chevaucher un arbre ou un meuble (on ne le distinguerait plus) : on le déplace un peu
+  const touche = (bx, by, r) => A.objs.some(o => bx + r > o.x - 16 && bx - r < o.x + o.w + 16 && by + r > o.y - 90 && by - r < o.y + o.h + 12);
+  A.bushes.forEach((b, n) => {
+    if (b.kind || !touche(b.x, b.y, b.r)) return;   // les casiers restent contre leur mur
+    const i0 = Math.floor(b.x / T), j0 = Math.floor(b.y / T), sol = A.get(i0, j0);
+    for (let d = 1; d <= 10; d++) for (let j = j0 - d; j <= j0 + d; j++) for (let i = i0 - d; i <= i0 + d; i++) {
+      if (Math.max(Math.abs(i - i0), Math.abs(j - j0)) !== d) continue;
+      const x = (i + 0.5) * T, y = (j + 0.5) * T;
+      if (!A.free(i, j, 1, sol) || touche(x, y, b.r) || A.bushes.some((c, m) => m !== n && Math.hypot(c.x - x, c.y - y) < T * 3)) continue;
+      b.x = Math.round(x); b.y = Math.round(y); return;
+    }
+  });
   // les buissons servent aussi de cachettes pour les objets
   for (const b of A.bushes) A.spots.push({ x: b.x, y: b.y });
   return {
     id, nom, theme, desc, T, cols: COLS, rows: ROWS, W: COLS * T, H: ROWS * T,
     tiles: A.g.map(r => r.join('')), objs: A.objs, bushes: A.bushes, chests: A.chests, spots: A.spots, heal: A.heal,
-    barrels: A.barrels, portals: A.portals,
+    barrels: A.barrels, portals: A.portals, ...(A.ballons ? { ballons: A.ballons } : {}), ...(A.rails ? { rails: A.rails } : {}), ...(A.fantome ? { fantome: A.fantome } : {}), ...(A.vent ? { vent: A.vent } : {}), ...(A.decos ? { decos: A.decos } : {}),
   };
 }
 
@@ -381,5 +415,234 @@ function marais() {
   return fin(A, 'marais', 'Marais Gluant', 'marais', 'Boue qui ralentit, passerelles et cabane de la sorcière');
 }
 
-const CARTES = [village, cite, desert, donjon, hiver, colisee, marais].map(f => f());
+// ---------- École ----------
+// L'école, avec des surprises : trampolines au gymnase, Jell-O renversé à la cafétéria,
+// casiers où se cacher et ballons géants qui roulent dans la cour.
+function ecole() {
+  const A = atelier('ecole', 4242, '.');
+  A.border('T', 1);
+  // ===== le bâtiment (nord) =====
+  A.fill(1, 1, 50, 14, 'b');
+  A.fill(2, 7, 35, 3, 'l');                                                  // grand corridor
+  const classe = (x, y, w, h, porte) => { A.fill(x, y, w, h, 'w'); A.fill(x + Math.floor(w / 2) - 1, porte, 2, 1, 'w'); };
+  classe(2, 2, 10, 4, 6); classe(13, 2, 10, 4, 6);                           // classes du haut
+  classe(2, 11, 10, 3, 10); classe(13, 11, 10, 3, 10);                       // classes du bas
+  // cafétéria (au nord du corridor) : du Jell-O renversé partout
+  A.fill(24, 2, 13, 4, 'l'); A.fill(29, 6, 3, 1, 'l');
+  for (const [x, y, rx, ry] of [[27, 3.5, 1.6, 0.9], [33.5, 4, 1.4, 1], [30.5, 2.8, 1.1, 0.7]]) A.blob(x, y, rx, ry, 'j', 0.4, 'l');
+  // hall d'entrée vers la cour, et salle des profs (interdite… mais il y a un trésor !)
+  A.fill(24, 10, 4, 5, 'l'); A.fill(29, 11, 8, 3, 'w'); A.fill(29, 10, 2, 1, 'w');
+  // gymnase (à l'est) : grand plancher, portes vers le corridor et vers la cour
+  A.fill(38, 2, 12, 12, 'y'); A.fill(37, 7, 1, 3, 'y'); A.fill(43, 14, 2, 1, 'y');
+  for (const [x, y] of [[40, 4], [46, 4], [43, 9], [40, 11], [46, 11]]) A.fill(x, y, 2, 2, 'r');   // trampolines
+  // portes vers l'extérieur
+  A.fill(24, 14, 4, 1, 'l');
+  // ===== dehors =====
+  A.fill(13, 16, 28, 18, 'a');                                               // cour d'école
+  A.fill(24, 15, 4, 1, 'a');
+  A.path([[44, 15], [44, 18.5], [40, 18.5]], 3, 'a', '.');
+  A.path([[13, 19], [8, 20], [7, 26], [7, 30]], 1.4, 'd', '.');               // sentier dans le parc
+  A.blob(7, 24, 3, 2, 's', 0.2);                                             // carré de sable
+  A.fill(40, 20, 11, 14, 'p');                                               // stationnement des autobus
+  A.setHeal(7, 30.5, 'fontaine');
+  // ballons géants : ils roulent dans la cour (rectangle où ils naissent)
+  A.ballons = [{ x: 22 * T, y: 22 * T }, { x: 32 * T, y: 28 * T }];
+  // ===== meubles et décor =====
+  for (const [x0, y0] of [[2, 2], [13, 2]]) { A.obj('tableau', x0 + 3, y0, 4, 0.5); for (let i = 0; i < 3; i++) A.obj('pupitre', x0 + 1.3 + i * 3, y0 + 2.2, 1.2, 0.7); }
+  for (const [x0, y0] of [[2, 11], [13, 11]]) { for (let i = 0; i < 3; i++) A.obj('pupitre', x0 + 1.3 + i * 3, y0 + 1.6, 1.2, 0.7); }
+  for (const [x, y] of [[25, 2.4], [32, 4.6]]) A.obj('tablecaf', x, y, 3, 0.8);
+  A.obj('sofa', 32, 11.2, 3, 0.8); A.obj('shelf', 29.1, 12.9, 1.4, 0.9);   // dans le coin, pas devant la porte
+  A.obj('panier', 38.4, 7.4, 0.6, 1.2); A.obj('panier', 49, 7.4, 0.6, 1.2);
+  A.obj('panier', 14, 23.5, 0.6, 1.2); A.obj('panier', 39.4, 23.5, 0.6, 1.2);
+  A.obj('balancoire', 3, 18, 4, 1); A.obj('glissade', 9, 17.6, 1.4, 2);
+  // autobus vus de haut : on entre par la porte avant ou la sortie de secours, on circule dans l'allée
+  const bus = (bx, by) => {
+    const L = 8.5, H = 3.6, e = 0.35;
+    A.deco('bus', bx, by, L, H);
+    A.obj('bord', bx, by, 0.6, e); A.obj('bord', bx + 2, by, L - 2, e);                       // côté nord, porte avant
+    A.obj('bord', bx, by + H - e, L, e); A.obj('bord', bx, by, e, H);                          // côté sud, avant
+    A.obj('bord', bx + L - e, by, e, 1.1); A.obj('bord', bx + L - e, by + 2.5, e, H - 2.5);    // arrière, sortie de secours
+    A.obj('bord', bx + 0.45, by + 2.35, 0.8, 0.85);                                            // siège du chauffeur
+    for (let x = bx + 2.4; x < bx + L - 1.2; x += 1.2) { A.obj('bord', x, by + e, 0.75, 0.7); A.obj('bord', x, by + H - e - 0.7, 0.75, 0.7); }
+  };
+  bus(41, 21.4); bus(41, 27.6);
+  for (const [x, y] of [[3.5, 21], [11, 21.5], [3, 27], [11, 31], [8.5, 33], [2.5, 33]]) A.obj('oak', x, y, 1, 0.8);
+  // casiers où l'on se cache, le long du corridor
+  for (const x of [4, 10.5, 14.5, 21, 34]) A.bush(x, 6.95, 0.85, 'casier');   // collés au mur : le corridor reste libre
+  A.scatterBushes(4, '.');
+  // coffres : dans les classes, la salle des profs et la cour
+  for (const [x, y] of [[2, 2], [22, 13], [35, 12], [48, 12], [20, 32], [8, 22], [46, 29]]) A.chest(x, y);
+  A.portal('a'); A.scatterBarrels(3, 'a');
+  for (const [x, y] of [[6, 4], [17, 12], [30, 3], [44, 6], [26, 25], [45, 33], [5, 31]]) A.spot(x, y);
+  return fin(A, 'ecole', 'École des Héros', 'ecole', 'Classes, corridor, cafétéria au Jell-O, gymnase à trampolines et cour aux ballons géants');
+}
+
+// ---------- Salle de classe géante (Boss Prof) ----------
+// La classe vue en très grand : le tableau et le bureau du Prof au nord, des rangées de pupitres pour se cacher,
+// un coin lecture, une table de sciences et les casiers du fond.
+function classe() {
+  // La vraie classe de 5e année : murs de blocs turquoise, grand tableau vert, tables grises et chaises bleues,
+  // comptoir orange au fond, plantes sous les lampes, bureau du Prof avec son écran et son ballon de volley.
+  const A = atelier('classe', 5151, 'l');
+  A.border('b', 1);
+  A.fill(1, 1, 50, 2, 'b');                                                  // mur du tableau
+  // sur le mur du fond : pochettes, double tableau vert, affiches, horloge, porte, grand écran, calculatrice géante
+  A.deco('pochettes', 7.2, 0.4, 3, 2.3); A.deco('tableauvert', 12, 0.7, 24, 2.1); A.deco('affiches', 14, 0.15, 20, 0.6);
+  A.deco('horloge', 37.3, 0.5, 0.9, 0.9); A.deco('porte', 39.5, 0.2, 2.6, 2.8); A.deco('ecrantv', 43.2, 0.5, 4.2, 2.3); A.deco('calculatrice', 48.2, 0.6, 1.6, 2.1);
+  // sous le tableau : étagères à bacs de couleur et piles de feuilles
+  for (const x of [13, 20.5, 28]) A.obj('bacs', x, 3.8, 6, 0.9);
+  A.obj('crochets', 46.5, 3, 4, 0.8);                                         // manteaux et sacs près de la porte
+  // îlots de tables grises (deux tables collées, chaises bleues autour) : on se cache derrière, le Prof les brise
+  for (const y of [9, 15.5, 22]) for (const x of [4, 13, 32.5, 41.5]) { A.obj('grandpupitre', x, y, 3.8, 1.3); A.obj('grandpupitre', x + 3.8, y, 3.8, 1.3); }
+  for (const y of [12.5, 19]) A.obj('grandpupitre', 22.5, y, 3.8, 1.3), A.obj('grandpupitre', 26.3, y, 3.8, 1.3);
+  // fond de la classe : long comptoir orange (gourdes, évier, cafetière), tabourets orange, étagère de plantes sous les lampes
+  A.obj('comptoir', 8, 33.1, 22, 1.6); for (const x of [10, 13, 16.5, 22, 25.5]) A.obj('tabouret', x, 31.3, 0.7, 0.6);
+  A.obj('serre', 2.2, 29.5, 3.2, 1.2); A.obj('serre', 32, 33.1, 3.2, 1.2);
+  A.obj('banc', 1.15, 12, 1, 6.5);                                           // banc à coussins sous les fenêtres
+  A.obj('bureauprof', 41, 28.5, 6.5, 1.8);                                   // le bureau du Prof (écran, haut-parleurs, ballon)
+  A.obj('globe', 48.3, 28.8, 1.2, 0.8);
+  A.obj('sofa', 13.5, 25.6, 3, 0.8); A.obj('shelf', 17.2, 25.5, 1.4, 0.9);   // petit coin lecture
+  A.setHeal(20, 30.6, 'fontaine');
+  // cachettes : sacs à dos et manteaux
+  A.bush(37, 33.6, 0.85, 'casier'); A.bush(49, 34.2, 0.85, 'casier');
+  for (const y of [22, 26]) A.bush(2.4, y, 0.85, 'casier');
+  for (const [x, y] of [[3, 5], [49, 8], [26, 25.5], [6, 27], [36, 30]]) A.chest(x, y);
+  for (const [x, y] of [[10, 6], [40, 12], [14, 28], [38, 26], [26, 9], [26, 28]]) A.spot(x, y);
+  return fin(A, 'classe', 'Salle de classe du Prof', 'ecole', 'La classe du Prof : grand tableau vert, tables grises et chaises bleues, comptoir orange, plantes et le bureau du Prof');
+}
+
+// ---------- Caverne ----------
+// Une mine dans le noir : on ne voit qu'autour de son héros, des lanternes, des cristaux et des champignons lumineux.
+// Trois wagonnets foncent sur une grande boucle de rails (ils traversent la lave sur des ponts de rails),
+// une géode de cristal au centre, un lac souterrain et des champignons qui font rebondir.
+function caverne() {
+  const A = atelier('caverne', 8080, 'c');
+  const salles = [[9, 7, 6, 4.5], [26, 6, 6, 3.5], [44, 8, 6, 5], [6.5, 18, 4, 4], [45.5, 18, 4, 4], [11, 29, 7, 4.8], [26, 30, 6, 3.5], [43, 29, 7, 4.8], [26, 18, 8.5, 5.5]];
+  for (const [x, y, rx, ry] of salles) A.blob(x, y, rx, ry, 'o', 0.35);
+  // tunnels : la grande boucle (celle des rails) et les quatre galeries vers la géode
+  A.path([[8, 6], [44, 6], [44, 30], [8, 30], [8, 6]], 3.2, 'o');
+  A.path([[26.5, 6], [26.5, 13]], 2.6, 'o'); A.path([[26.5, 23], [26.5, 30]], 2.6, 'o');
+  A.path([[8, 18.5], [18, 18.5]], 2.6, 'o'); A.path([[34, 18.5], [44, 18.5]], 2.6, 'o');
+  // rivière de lave (passerelles sur les galeries), lac souterrain avec un pont
+  A.path([[37, 1], [38, 8], [36, 14], [38.5, 20], [36.5, 27], [38.5, 35]], 1.7, 'L', 'oc');
+  for (let j = 16; j <= 20; j++) for (let i = 34; i <= 41; i++) if (A.get(i, j) === 'L' && Math.abs(j - 18.5) < 1.4) A.set(i, j, 'B');
+  A.blob(12.5, 26.6, 3.4, 1.7, '~', 0.25, 'o'); A.fill(12, 25, 1, 4, 'B');
+  // rails : la boucle tout autour (les rails passent par-dessus la lave)
+  const boucle = [[8, 6], [44, 6], [44, 30], [8, 30]];
+  A.rails = boucle.map(([x, y]) => ({ x: (x + 0.5) * T, y: (y + 0.5) * T }));
+  for (let k = 0; k < 4; k++) {
+    const [x0, y0] = boucle[k], [x1, y1] = boucle[(k + 1) % 4];
+    for (let i = Math.min(x0, x1); i <= Math.max(x0, x1); i++) for (let j = Math.min(y0, y1); j <= Math.max(y0, y1); j++) A.set(i, j, 'R');
+  }
+  for (const j of [5, 7, 29, 31]) for (let i = 30; i < 44; i++) if (A.get(i, j) === 'L') A.set(i, j, 'B');   // passerelles à côté des rails
+  // champignons rebondissants (comme les trampolines)
+  for (const [x, y] of [[4, 4], [47, 4], [5, 33], [46, 32], [21, 15], [30, 20]]) if (A.get(x, y) === 'o' && A.get(x + 1, y + 1) === 'o') A.fill(x, y, 2, 2, 'r');
+  A.setHeal(26.5, 18.5, 'source');
+  // la géode : un cercle de gros cristaux autour de la source
+  for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2, x = 26.2 + Math.cos(a) * 6.2, y = 18.2 + Math.sin(a) * 3.8; if (A.free(Math.floor(x), Math.floor(y), 0, 'o')) A.obj('cristal' + (k % 3), x, y, 0.8, 0.6); }
+  for (const [x, y, k] of [[5, 6, 0], [13, 9, 1], [40, 6, 1], [48, 10, 2], [6, 30, 1], [16, 31, 0], [40, 31, 2], [47, 29, 0]]) if (A.free(x, y, 0, 'o')) A.obj('cristal' + k, x, y, 0.8, 0.6);
+  // étais de mine avec une lanterne le long des rails, champignons lumineux près du lac
+  for (const [x, y, v] of [[16, 6, 0], [26, 6, 0], [35, 6, 0], [44, 13, 1], [44, 23, 1], [33, 30, 0], [20, 30, 0], [8, 23, 1], [8, 12, 1]]) A.deco('etai', x, y, 1, 1, { v });
+  for (const [x, y, c] of [[9, 25, 0], [16, 25.5, 1], [9.5, 28.5, 1], [15.5, 28.8, 0], [3.5, 17, 0], [48, 16.5, 1], [24, 27.5, 1], [29, 9.5, 0]]) A.deco('champilum', x, y, 0.6, 0.6, { c });
+  A.scatter('stalag', 12, 'o', 0.8, 0.6, 1);
+  for (const [x, y] of [[4, 9], [48, 6], [6, 31], [47, 31], [26, 4], [46, 18]]) A.chest(x, y);
+  A.scatterBarrels(4, 'o'); A.portal('o');
+  A.scatterBushes(6, 'o');
+  for (const [x, y] of [[9, 8], [26, 7], [43, 8], [10, 31], [43, 28], [22, 18], [31, 18]]) A.spot(x, y);
+  return fin(A, 'caverne', 'Mine des Cristaux', 'caverne', 'Mine dans le noir : wagonnets fous sur une grande boucle, lave, géode de cristal, lanternes et champignons lumineux');
+}
+
+// ---------- Bibliothèque ----------
+// Bibliothèque magique et un peu folle : un lac d'encre au milieu, traversé par des crayons géants,
+// une forêt de livres géants debout, un tapis-puzzle de l'alphabet avec des blocs, un observatoire étoilé,
+// des livres ouverts qui transportent ailleurs et un fantôme bibliothécaire qui fait « Chut ! ».
+function bibliotheque() {
+  const A = atelier('bibliotheque', 6464, 'w');
+  A.border('x', 1);
+  // lac d'encre, île du grand livre et ponts-crayons
+  A.blob(26, 18, 9.5, 6.2, '~', 0.18, 'w');
+  A.blob(26, 18, 4, 2.6, 't', 0.08, '~');
+  const pont = (x0, y0, w, h) => { for (let j = y0; j < y0 + h; j++) for (let i = x0; i < x0 + w; i++) if (A.get(i, j) === '~') A.set(i, j, 'B'); };
+  pont(14, 17, 10, 2); pont(28, 17, 10, 2); pont(25, 9, 2, 8); pont(25, 19, 2, 9);
+  A.setHeal(26, 18.2, 'autel'); A.deco('livreouvert', 23.4, 16.6, 5.2, 3.2);
+  // nord-ouest : forêt de livres géants debout (on se faufile entre eux)
+  let k = 0;
+  for (const y of [4, 7.6, 11.2]) for (let x = 3 + (k++ % 2) * 1.3; x < 19; ) {
+    const ep = 0.9 + ((x * 7 + y * 3) % 5) * 0.15;
+    if (((x * 13 + y * 5) | 0) % 4 !== 0) A.obj('grandlivre', x, y, ep, 0.8);
+    x += ep + (((x * 3 + y) | 0) % 3 === 0 ? 1.6 : 0.15);
+  }
+  // nord-est : grands rayons et coin lecture
+  for (const y of [4.2, 8, 11.8]) for (const [x0, x1] of [[31, 38], [40, 49]]) A.obj('rayon', x0, y - 0.9, x1 - x0, 0.9);
+  // sud-ouest : observatoire, tapis étoilé, globe et télescope
+  A.blob(10, 27, 6.5, 4.6, 'u', 0.12, 'w');
+  A.obj('globe', 9.2, 26.4, 1.6, 1); A.obj('telescope', 13.6, 24.2, 1, 0.8);
+  // sud-est : tapis-puzzle de l'alphabet et blocs géants
+  A.fill(32, 23, 17, 10, 'q');
+  for (const [x, y, l] of [[34, 25, 'A'], [38.5, 27.5, 'B'], [43, 24.5, 'C'], [46, 29.5, 'D'], [35.5, 30.5, 'E'], [41.5, 31, 'Z']]) { A.obj('cube', x, y, 1.6, 1.2); A.objs[A.objs.length - 1].lettre = l; }
+  // livres géants ouverts : ils te transportent à l'autre livre de la même couleur
+  A.portals.push([{ x: 11 * T, y: 9.6 * T }, { x: 40.5 * T, y: 28.5 * T }]);
+  A.portals.push([{ x: 44.5 * T, y: 13.8 * T }, { x: 5.5 * T, y: 23.5 * T }]);
+  // le fantôme bibliothécaire fait le tour du lac d'encre
+  A.fantome = [[15, 10.5], [37, 10.5], [37, 25.5], [15, 25.5]].map(([x, y]) => ({ x: x * T, y: y * T }));
+  // bougies qui flottent dans les airs
+  for (const [x, y] of [[8, 14.5], [20, 14], [33, 14.5], [45, 16.5], [6, 20], [20, 23], [33, 22.5], [47, 20.5], [27, 7], [26, 29.5], [16, 31], [37, 33.5]]) A.deco('bougie', x, y, 0.4, 0.4);
+  A.scatterBushes(6, 'wtqu');
+  for (const [x, y] of [[2, 2], [49, 2], [2, 33], [49, 33], [17, 5.5], [30, 31]]) A.chest(x, y);
+  A.scatterBarrels(3, 'w');
+  for (const [x, y] of [[8, 10], [44, 10], [8, 28], [44, 26], [26, 16], [20, 18], [33, 18]]) A.spot(x, y);
+  return fin(A, 'bibliotheque', 'Bibliothèque Magique', 'biblio', 'Lac d\'encre et crayons géants, forêt de livres, tapis de l\'alphabet, observatoire et fantôme qui fait « Chut ! »');
+}
+
+// ---------- Bateaux volants ----------
+// Deux galions pirates bord à bord dans les nuages : on monte à l'abordage par les planches,
+// on tire au canon sur l'autre navire (on attaque à côté d'un canon), et le vent pousse tout le monde.
+function ciel() {
+  const A = atelier('ciel', 9191, 'v');
+  // un galion : poupe un peu arrondie, ventre large, proue en pointe ; bastingage tout autour
+  const navire = (x0, y0, L, Hh, versDroite) => {
+    for (let j = 0; j < Hh; j++) for (let i = 0; i < L; i++) {
+      const u = versDroite ? (i + 0.5) / L : 1 - (i + 0.5) / L;
+      const f = u < 0.08 ? 0.8 + u * 2.5 : u > 0.58 ? 1 - ((u - 0.58) / 0.42) ** 1.7 : 1;
+      if (Math.abs(j + 0.5 - Hh / 2) < (Hh / 2) * f + 0.2) A.set(x0 + i, y0 + j, 'e');
+    }
+    for (let j = y0 - 1; j <= y0 + Hh; j++) for (let i = x0 - 1; i <= x0 + L; i++) {
+      if (A.get(i, j) !== 'v') continue;
+      let n = false; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (A.get(i + di, j + dj) === 'e') n = true;
+      if (n) A.set(i, j, 'x');
+    }
+    const cy = y0 + Hh / 2, proue = versDroite ? x0 + L : x0 - 1, poupe = versDroite ? x0 : x0 + L;
+    A.deco('beaupre', versDroite ? proue + 0.6 : proue - 4.6, cy - 0.5, 4, 1, { dir: versDroite ? 1 : -1 });   // beaupré et figure de proue
+    return { cy, poupe, proue, at: u => versDroite ? x0 + u * L : x0 + L - u * L };
+  };
+  const N = [navire(3, 2, 44, 11, true), navire(5, 23, 44, 11, false)];
+  // planches d'abordage entre les deux navires, et un rocher flottant au milieu
+  A.blob(25.5, 17.8, 4.4, 2.6, '.', 0.3, 'v');
+  for (const x of [15.5, 34]) A.path([[x, 12.5], [x, 23.5]], 1.7, 'B', 'vx');   // passerelles de corde
+  A.path([[25.5, 12.5], [25.5, 15.5]], 1.7, 'B', 'vx'); A.path([[25.5, 20], [25.5, 23.5]], 1.7, 'B', 'vx');
+  A.obj('palm', 22.6, 17.4, 0.8, 0.6); A.obj('palm', 28.2, 18.4, 0.8, 0.6);
+  A.setHeal(25.5, 17.6, 'source');
+  N.forEach((n, k) => {
+    const sud = k === 0, coul = k === 0 ? 'rouge' : 'noir';
+    // cabine du capitaine à la poupe (porte vers la proue), coffre à l'intérieur
+    const cx = k === 0 ? 5 : 41;
+    A.house(cx, k === 0 ? 4 : 25, 6, 6, 'x', 'w', [k === 0 ? 'e' : 'w'], false); A.chest(cx + 2.5, k === 0 ? 6.5 : 27.5);
+    A.obj('barre', n.at(0.22) - 0.5, n.cy - 0.4, 1, 0.8);                                     // gouvernail
+    for (const [u, voile] of [[0.36, 0], [0.55, 1], [0.74, 0]]) { A.obj('mat', n.at(u) - 0.4, n.cy - 0.4, 0.8, 0.8); A.objs[A.objs.length - 1].coul = coul; A.objs[A.objs.length - 1].crane = voile; }
+    A.deco('trappe', n.at(0.46) - 1, n.cy - 3.6, 2, 1.4); A.deco('trappe', n.at(0.64) - 1, n.cy + 2.2, 2, 1.4);
+    A.deco('drapeau', n.poupe + (k === 0 ? -1.4 : 0.4), n.cy - 0.5, 1, 1, { coul });
+    // canons sur le flanc qui fait face à l'autre navire
+    for (const x of [7, 11, 19, 30, 38, 42]) if (A.get(x, sud ? 12 : 23) === 'e' && A.get(x + 1, sud ? 12 : 23) === 'e') A.obj('canon', x, sud ? 11.9 : 23.3, 1, 0.8);
+    for (const [u, dy] of [[0.3, -3.5], [0.86, 2], [0.48, 3.2]]) A.obj('crate', n.at(u) - 0.5, n.cy + dy, 1, 0.9);
+  });
+  A.objs.filter(o => o.kind === 'canon').forEach(o => { o.dir = o.y < 15 * T ? Math.PI / 2 : -Math.PI / 2; });
+  A.scatterBarrels(5, 'e');
+  A.scatterBushes(2, '.');
+  for (const [x, y] of [[44, 7], [8, 28], [25, 17]]) A.chest(x, y);
+  for (const [x, y] of [[20, 5], [30, 30], [40, 9], [12, 27], [25, 16], [35, 4], [16, 31]]) A.spot(x, y);
+  A.vent = true;
+  return fin(A, 'ciel', 'Bateaux Volants', 'ciel', 'Deux galions pirates bord à bord dans les nuages : planches d\'abordage, canons et coups de vent');
+}
+
+const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne, bibliotheque, ciel, classe].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };

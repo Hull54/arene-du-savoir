@@ -12,9 +12,11 @@ const PUBLIC = path.join(__dirname, 'public');
 const QUESTIONS = JSON.parse(fs.readFileSync(path.join(__dirname, 'questions.json'), 'utf8'));
 const GENERATEURS = require('./generateurs');
 const { CARTES, WALL, WATER } = require('./cartes');
+const MV = require('./public/mouvement');   // déplacement partagé avec le navigateur
+const DUR = new Set([...WALL, ...WATER]);
 // Liste des notions (cases à cocher de l'enseignant), regroupées par matière
 const NOTIONS_BASE = [];
-for (const q of [...QUESTIONS, ...Object.values(GENERATEURS).map(g => g())])
+for (const q of [...Object.values(GENERATEURS).map(g => g()), ...QUESTIONS])
   if (!NOTIONS_BASE.some(n => n.s === q.notion)) NOTIONS_BASE.push({ s: q.notion, m: q.matiere });
 
 // ---------- Codes des élèves (communs à la classe et aux parties à la maison) ----------
@@ -47,20 +49,6 @@ function lanAddresses() {
     .filter(i => i && i.family === 'IPv4' && !i.internal).map(i => `http://${i.address}:${PORT}`);
 }
 
-// Objets de chaque carte rangés par tuile : un test de collision ne regarde que les objets voisins
-const GRILLES = new WeakMap(), MARGE = 48;
-function grilleObjs(c) {
-  let g = GRILLES.get(c);
-  if (g) return g;
-  g = Array.from({ length: c.cols * c.rows }, () => []);
-  for (const o of c.objs) {
-    const i0 = Math.max(0, Math.floor((o.x - MARGE) / c.T)), i1 = Math.min(c.cols - 1, Math.floor((o.x + o.w + MARGE) / c.T));
-    const j0 = Math.max(0, Math.floor((o.y - MARGE) / c.T)), j1 = Math.min(c.rows - 1, Math.floor((o.y + o.h + MARGE) / c.T));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) g[j * c.cols + i].push(o);
-  }
-  GRILLES.set(c, g);
-  return g;
-}
 
 // ---------- Une partie (un « monde ») : la classe, ou un élève seul à la maison ----------
 // Tout l'état du jeu vit dans cette fonction : chaque appel crée une partie indépendante.
@@ -76,11 +64,11 @@ const SPAWN_PROTECT = 2.5;
 const WRONG_DELAY = 3;
 
 const CLASSES = {
-  guerrier: { nom: 'Guerrier', hp: 170, speed: 150, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
+  guerrier: { nom: 'Guerrier', hp: 170, speed: 160, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
   voleur:   { nom: 'Voleur',   hp: 105, speed: 200, atk: { type: 'melee', range: 55, arc: 1.2, dmg: 18, cd: 0.35, backstab: 2 }, power: { nom: 'Ombre', cd: 9, dur: 4 }, dash: { nom: 'Roulade', cd: 2, dist: 140, dur: 0.24 } },
-  mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 380, dmg: 22, cd: 0.65, r: 10, life: 1.6 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
+  mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 430, dmg: 22, cd: 0.65, r: 10, life: 1.3 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
   druide:   { nom: 'Druide',   hp: 115, speed: 165, atk: { type: 'proj', speed: 460, dmg: 16, cd: 0.5, r: 8, life: 1.25 }, power: { nom: 'Cercle de soin', cd: 10, radius: 170, soin: 40 }, dash: { nom: 'Bond', cd: 3, dist: 140, dur: 0.24, racines: 70, rdur: 3 } },
-  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.3 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
+  archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.0 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 
 // Objets des coffres et objets cachés
@@ -128,9 +116,10 @@ const TEAMS = [
   { nom: 'Rouges', color: '#e04a3a' }, { nom: 'Bleus', color: '#3a7ae0' },
   { nom: 'Verts', color: '#3fbf5a' }, { nom: 'Jaunes', color: '#f2c94c' },
 ];
-const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement' };
+const MODES = { libre: 'Chacun pour soi', equipes: 'Équipes', colline: 'Roi de la colline', drapeau: 'Capture du drapeau', boss: 'Boss coopératif', runes: 'Course aux runes', chariot: 'Escorte du chariot', survie: 'Survie coopérative', zombie: 'Contagion', entrainement: 'Entraînement', controle: 'Contrôle', prof: 'Boss Prof' };
 const TEAM_MODES = new Set(['equipes', 'colline', 'drapeau', 'runes', 'chariot', 'zombie']);
-const coop = () => mode === 'boss' || mode === 'survie';   // toute la classe ensemble : pas de dégâts entre joueurs
+const bossMode = () => mode === 'boss' || mode === 'prof';   // un boss contre toute la classe
+const coop = () => bossMode() || mode === 'survie';   // toute la classe ensemble : pas de dégâts entre joueurs
 // noms d'équipes propres à certains modes
 const teamsNow = () => mode === 'zombie' ? [{ nom: 'Humains', color: '#3a7ae0' }, { nom: 'Zombies', color: '#5ac85a' }]
   : mode === 'chariot' ? [{ nom: 'Pousseurs', color: '#e0a03a' }, { nom: 'Défenseurs', color: '#3a7ae0' }] : TEAMS.slice(0, nbTeams);
@@ -152,9 +141,17 @@ let projectiles = [];
 let fx = [];
 let feed = [];
 let paused = false;
-const subjects = new Set(NOTIONS.map(n => n.s));
+// au départ : les notions du mois en cours dans la planification (juillet et août : celles de septembre)
+const moisEnCours = () => {
+  const i = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Toronto' })).getMonth();
+  const id = ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'septembre', 'septembre', 'septembre', 'octobre', 'novembre', 'decembre'][i];
+  return GENERATEURS.MOIS.find(m => m.id === id);
+};
+const subjects = new Set(moisEnCours().notions);
 // Questions de l'enseignant (gardées dans son navigateur et renvoyées à chaque connexion de /prof)
 let PERSO = [], PERSO_BRUT = [];
+let reglagesV = 0;   // heure du dernier réglage de l'enseignant (0 : rien depuis le démarrage du serveur)
+const reglagesEleve = () => ({ subjects: [...subjects], perso: PERSO_BRUT, ouvert: ouvertTous, v: reglagesV });
 const str = (v, n) => typeof v === 'string' ? v.trim().slice(0, n) : '';
 function setPerso(qs) {
   if (!Array.isArray(qs)) return;
@@ -199,6 +196,17 @@ function badge(p, id) {
 const badgesDe = p => [...new Set([...(badgesSeance[p.name] || []), ...((codeDe(p) || {}).badges || [])])];
 
 let carte = CARTES[0], T = carte.T, W = carte.W, H = carte.H;
+// Contrôle et dictée : mêmes questions pour tous, dans le même ordre, sans combat
+let ctl = null;
+const ctlReglages = { n: 10, correction: false, mots: [] };
+let ballons = [];   // École : ballons géants qui roulent dans la cour
+let wagons = [];    // Caverne : wagonnets qui font le tour des rails
+let fantome = null; // Bibliothèque : le fantôme bibliothécaire
+let vent = null, canonCd = new Map();    // Bateaux volants : coups de vent, recharge des canons
+const VENT = { tous: 14, dur: 3, force: 90 }, CANON = { cd: 2.5, v: 520, dmg: 30, r: 14, life: 1.6 };
+const FANTOME = { v: 70, r: 150, slow: 1.2 };
+const WAGON = { v: 270, r: 30, push: 110, stun: 0.6, dmg: 15 };
+const BALLON = { r: 34, v: 230, push: 120, stun: 0.5 };
 let chests = [], items = [], itemTimer = 0, barrels = [], puddles = [], traps = [], smokes = [], ames = [];   // ames : coéquipiers K.O. qu'on peut relever
 let mode = 'libre', nbTeams = 2;
 let boss = null;
@@ -223,24 +231,12 @@ function tileAt(x, y) {
   if (i < 0 || j < 0 || i >= carte.cols || j >= carte.rows) return 'c';
   return carte.tiles[j][i];
 }
-function circleHitsRect(x, y, r, o) {
-  const cx = clamp(x, o.x, o.x + o.w), cy = clamp(y, o.y, o.y + o.h);
-  return (x - cx) ** 2 + (y - cy) ** 2 < r * r;
-}
+const circleHitsRect = MV.circleHitsRect;
 const healCore = () => carte.heal && carte.heal.kind !== 'source';
-function touchObj(x, y, r) {
-  const os = r > MARGE ? carte.objs : grilleObjs(carte)[clamp(Math.floor(y / T), 0, carte.rows - 1) * carte.cols + clamp(Math.floor(x / T), 0, carte.cols - 1)];
-  for (const o of os) if (circleHitsRect(x, y, r, o)) return true;
-  return false;
-}
+const touchObj = (x, y, r) => MV.touchObj(carte, x, y, r);
 // Pour les joueurs : murs, eau, fosses, objets
 function blocked(x, y, r) {
-  if (x < r || y < r || x > W - r || y > H - r) return true;
-  const k = r * 0.75;
-  const dur = (px, py) => { const t = tileAt(px, py); return WALL.has(t) || WATER.has(t); };
-  if (dur(x, y) || dur(x + k, y) || dur(x - k, y) || dur(x, y + k) || dur(x, y - k)) return true;
-  if (touchObj(x, y, r)) return true;
-  if (healCore() && Math.hypot(x - carte.heal.x, y - carte.heal.y) < 30 + r) return true;
+  if (MV.heurte(carte, DUR, x, y, r)) return true;
   if (barrels.some(b => !b.t && Math.hypot(x - b.x, y - b.y) < BARREL.r + r - 4)) return true;
   return false;
 }
@@ -280,7 +276,26 @@ function sendAll(obj) { const s = JSON.stringify(obj); for (const c of conns) if
 
 // ---------- Carte : grille de marche (pour les robots) ----------
 let walk = [];
+// pupitres géants de la classe : le Prof peut les briser ; tout revient à la manche suivante
+function casserPupitres(x, y, r) {
+  for (const o of [...carte.objs]) {
+    if (o.kind !== 'grandpupitre' || Math.hypot(o.x + o.w / 2 - x, o.y + o.h / 2 - y) > r + 40) continue;
+    if ((o.pv = (o.pv == null ? 3 : o.pv) - 1) > 0) { fx.push({ k: 'hit', x: o.x + o.w / 2, y: o.y, t: 0.25, d: 0.25 }); continue; }
+    if (!carte.objs0) carte.objs0 = [...carte.objs];
+    carte.objs.splice(carte.objs.indexOf(o), 1); MV.oublier(carte);
+    (carte.debris = carte.debris || []).push({ x: o.x, y: o.y - 10 });
+    fx.push({ k: 'boom', x: o.x + o.w / 2, y: o.y + o.h / 2, r: 70, t: 0.4, d: 0.4 });
+    sendAll({ t: 'casse', x: o.x, y: o.y });
+  }
+}
+function reparerPupitres() {
+  if (!carte.objs0) return false;
+  for (const o of carte.objs0) delete o.pv;
+  carte.objs.length = 0; carte.objs.push(...carte.objs0); delete carte.objs0; delete carte.debris; MV.oublier(carte);
+  return true;
+}
 function setCarte(c) {
+  if (carte) reparerPupitres();
   carte = c; T = c.T; W = c.W; H = c.H;
   walk = [];
   for (let j = 0; j < c.rows; j++) for (let i = 0; i < c.cols; i++) {
@@ -290,6 +305,11 @@ function setCarte(c) {
   chests = c.chests.map(ch => ({ ...ch, open: 0, by: 0, gold: false }));
   pickGold();
   barrels = c.barrels.map(b => ({ ...b, t: 0, fuse: 0, by: null }));
+  vent = c.vent ? { t: VENT.tous, actif: 0, a: 0 } : null;
+  canonCd = new Map();
+  fantome = c.fantome ? { s: 0, x: c.fantome[0].x, y: c.fantome[0].y, a: 0, chut: 0 } : null;
+  wagons = c.rails ? (c.rails.length >= 4 && railLong(c.rails) > 3000 ? [0, 1 / 3, 2 / 3] : [0, 0.5]).map(f => ({ s: f * railLong(c.rails), x: c.rails[0].x, y: c.rails[0].y, a: 0 })) : [];
+  ballons = (c.ballons || []).map((b, i) => ({ x: b.x, y: b.y, vx: BALLON.v * (i % 2 ? -0.8 : 0.8), vy: BALLON.v * 0.6, rot: 0 }));
   items = []; itemTimer = 0;
   projectiles = []; fx = []; puddles = []; traps = []; smokes = []; ames = [];
 }
@@ -388,7 +408,7 @@ function createPlayer(name, cls, bot = false, look = '') {
   return p;
 }
 
-function newQuestion(p) {
+function newQuestion(p, forcee = null) {
   // On choisit d'abord une notion (parmi celles cochées), puis une question de cette notion.
   // Révision ciblée : une notion souvent ratée par cet élève revient plus souvent (jusqu'à 4 fois plus).
   const actives = NOTIONS.filter(n => subjects.has(n.s));
@@ -396,7 +416,7 @@ function newQuestion(p) {
   const poids = pool.map(n => { const s = mem && mem[n.s]; return s ? clamp((s.ko + 1) / (s.ok + 1), 0.5, 4) : 1; });
   let r = Math.random() * poids.reduce((a, b) => a + b, 0), ni = 0;
   while (ni < pool.length - 1 && (r -= poids[ni]) > 0) ni++;
-  const notion = pool[ni].s;
+  const notion = forcee || pool[ni].s;   // forcee : notion imposée (interros du Boss Prof)
   const list = QUESTIONS.filter(q => q.notion === notion).concat(PERSO.filter(q => q.notion === notion));
   const gen = GENERATEURS[notion];
   p.recent = p.recent || [];
@@ -515,7 +535,7 @@ function kill(target, killer) {
 function respawn(p) {
   Object.assign(p, freeSpot(p.team));
   p.hp = p.maxHp; p.alive = true; p.protect = SPAWN_PROTECT; p.question = null;
-  p.cdA = 0; p.cdP = 0; p.cdD = 0; p.dash = null; p.stun = 0;
+  p.cdA = 0; p.cdP = 0; p.cdD = 0; p.dash = null; p.stun = 0; p.cage = 0; p.cageBy = 0;
   fx.push({ k: 'spawn', x: p.x, y: p.y, t: 0.6, d: 0.6 });
 }
 
@@ -537,6 +557,7 @@ function answer(p, i, txt) {
   if (eclair) { if (eclair.ids.includes(p.id) && !eclair.answers.has(p.id)) eclair.answers.set(p.id, i); return; }
   if (!p.question) return;
   const Q = p.question;
+  if (Q.kind === 'controle') return answerControle(p, Q, i, txt);
   if (Q.ouvert && typeof txt === 'string') i = norm(txt) === norm(Q.q.choix[Q.q.reponse]) ? Q.answer : -1;
   const ok = i === Q.answer;
   record(p, Q.q, ok);
@@ -574,6 +595,14 @@ function answer(p, i, txt) {
       res('🧟 Oh non ! Tu deviens un zombie. Attrape les humains !');
       addFeed(`🧟 ${p.name} devient un zombie !`);
     }
+    return;
+  }
+  if (Q.kind === 'cage') {   // libérer un camarade de la retenue
+    p.question = null; p.busy = false; p.protect = 0.8;
+    const o = players.get(Q.cage);
+    if (o) { o.cageBy = 0; o.cageProg = 0; }
+    if (ok && o && o.cage) { o.cage = 0; o.stun = 0; addFeed(`🔓 ${p.name} libère ${o.name} de la retenue !`); fx.push({ k: 'heal', x: o.x, y: o.y, t: 0.9, d: 0.9 }); res(`🔓 Bravo ! ${o.name} est libéré.`); }
+    else res('❌ Pas tout à fait… Réessaie dans un instant.');
     return;
   }
   if (Q.kind === 'releve') {   // un coéquipier répond pour relever un K.O.
@@ -691,6 +720,7 @@ function attack(p) {
   p.revealed = 1;                       // attaquer révèle le joueur caché dans un buisson
   const fromShadow = p.stealth > 0;
   p.stealth = 0;
+  if (carte.vent && tirCanon(p)) return;
   if (a.type === 'proj') return shoot(p, p.angle, a, a.dmg * (sword(p) - 1));
   fx.push({ k: 'slash', x: p.x, y: p.y, a: p.angle, r: a.range + R, arc: a.arc, t: 0.18, d: 0.18 });
   const base = a.dmg * sword(p);
@@ -699,6 +729,7 @@ function attack(p) {
     if (Math.hypot(dx, dy) < a.range + R + boss.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.5) hitBoss(base * (fromShadow ? 1.5 : 1), p);
   }
   if (minions.length) hitMinions(m => Math.hypot(m.x - p.x, m.y - p.y) < a.range + R + SBIRE.r && angDiff(Math.atan2(m.y - p.y, m.x - p.x), p.angle) < a.arc / 2 + 0.4, base, p);
+  for (const b of ballons) if (Math.hypot(b.x - p.x, b.y - p.y) < a.range + R + BALLON.r && angDiff(Math.atan2(b.y - p.y, b.x - p.x), p.angle) < a.arc / 2 + 0.4) frapperBallon(b, p.angle, 1.5);
   for (const b of barrels) {
     const dx = b.x - p.x, dy = b.y - p.y;
     if (!b.t && Math.hypot(dx, dy) < a.range + R + BARREL.r && angDiff(Math.atan2(dy, dx), p.angle) < a.arc / 2 + 0.3) lightBarrel(b, p);
@@ -830,7 +861,7 @@ function updatePuddles(dt) {
     if (!o.alive) continue;
     for (const z of puddles) {
       const owner = players.get(z.owner);
-      if (o.id === z.owner || (owner && !canHit(owner, o)) || (!owner && mode === 'boss' && !z.boss)) continue;   // encre du Kraken : touche tout le monde
+      if (o.id === z.owner || (owner && !canHit(owner, o)) || (!owner && bossMode() && !z.boss)) continue;   // encre du Kraken : touche tout le monde
       if (Math.hypot(o.x - z.x, (o.y - z.y) * 1.6) < z.r) o.slow = Math.max(o.slow, 1);   // ralenti tant qu'on y marche, et 1 s après
     }
   }
@@ -873,7 +904,7 @@ function dashStep(p, dt) {
   const bx = blocked(p.x + mx, p.y, R), by = blocked(p.x, p.y + my, R);
   if (!bx) p.x += mx;
   if (!by) p.y += my;
-  if (p.cls === 'guerrier') {
+  if (p.cls === 'guerrier' && !D.saut) {
     // la charge bouscule les adversaires touchés
     const d = CLASSES.guerrier.dash, len = Math.hypot(D.vx, D.vy);
     for (const o of players.values()) {
@@ -885,6 +916,171 @@ function dashStep(p, dt) {
     if (boss && boss.hp > 0 && !D.hit.has('boss') && Math.hypot(boss.x - p.x, boss.y - p.y) < boss.r + R + 6) { D.hit.add('boss'); hitBoss(d.dmg, p); }
   }
   if ((D.t -= dt) <= 0 || (bx && by)) { p.dash = null; if (p.cls !== 'archer') fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.3, d: 0.3 }); }
+}
+
+// ---------- Ballons géants (École) ----------
+// Ils roulent et rebondissent sur les murs. Un ballon qui te frappe te renverse (sans dégâts) ;
+// un coup d'arme ou un tir l'envoie ailleurs.
+// les ballons restent sur l'asphalte de la cour
+function bloqueBallon(x, y) {
+  const k = BALLON.r * 0.8;
+  return MV.heurte(carte, DUR, x, y, BALLON.r) || [[0, 0], [k, 0], [-k, 0], [0, k], [0, -k]].some(([dx, dy]) => tileAt(x + dx, y + dy) !== 'a');
+}
+function frapperBallon(b, ang, force = 1) {
+  const v = BALLON.v * (1.5 + 0.3 * force); b.vx = Math.cos(ang) * v; b.vy = Math.sin(ang) * v;
+}
+function updateBallons(dt) {
+  for (const b of ballons) {
+    const sp = Math.hypot(b.vx, b.vy);
+    if (sp > BALLON.v) { const k = Math.max(BALLON.v, sp - 120 * dt) / sp; b.vx *= k; b.vy *= k; }   // ralentit après un coup
+    const nx = b.x + b.vx * dt, ny = b.y + b.vy * dt;
+    if (bloqueBallon(nx, b.y)) b.vx = -b.vx; else b.x = nx;
+    if (bloqueBallon(b.x, ny)) b.vy = -b.vy; else b.y = ny;
+    b.rot += sp * dt / BALLON.r;
+    for (const p of players.values()) {
+      if (!p.alive || p.dash || (p.ballonT || 0) > 0 || p.busy) continue;
+      const dx = p.x - b.x, dy = p.y - b.y, d = Math.hypot(dx, dy);
+      if (d > BALLON.r + R) continue;
+      p.ballonT = 1;
+      const a = Math.atan2(dy, dx);
+      for (let k = BALLON.push; k > 0; k -= 10) { const tx = p.x + Math.cos(a) * k, ty = p.y + Math.sin(a) * k; if (!blocked(tx, ty, R)) { p.x = tx; p.y = ty; break; } }
+      if (p.protect <= 0 && p.shield <= 0) p.stun = Math.max(p.stun || 0, BALLON.stun);
+      fx.push({ k: 'boing', x: p.x, y: p.y - 30, t: 0.5, d: 0.5 });
+      b.vx = -Math.cos(a) * Math.hypot(b.vx, b.vy); b.vy = -Math.sin(a) * Math.hypot(b.vx, b.vy);   // le ballon rebondit sur le joueur
+    }
+  }
+}
+
+// ---------- Contrôle et dictée ----------
+// Chaque élève répond à son rythme. L'enseignant voit l'avancement en direct et reçoit un bilan à la fin.
+// La correction après chaque question est un choix de l'enseignant ; sinon tout arrive à la fin.
+const normDictee = t => String(t).trim().toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').replace(/\s*([.!?])$/, '');
+function setupControle() {
+  const dictee = mode === 'dictee';
+  let qs = [];
+  if (dictee) qs = ctlReglages.mots.map(mot => ({ q: { question: 'Écoute bien et écris ce que tu entends.', choix: [mot], reponse: 0, matiere: 'Français', notion: 'Dictée', dire: mot }, order: [0], answer: 0, ouvert: true }));
+  else {
+    const fictif = { name: null, recent: [] };
+    for (let k = 0; qs.length < ctlReglages.n && k < ctlReglages.n * 6; k++) {
+      const Q = newQuestion(fictif);
+      if (qs.some(x => x.q.question === Q.q.question)) continue;
+      if (ouvertTous && /^[\d\s\u00a0.,]+$/.test(Q.q.choix[Q.q.reponse])) Q.ouvert = true;
+      qs.push(Q);
+    }
+  }
+  ctl = { qs, dictee, correction: ctlReglages.correction, eleves: new Map() };
+  for (const p of players.values()) commencerControle(p);
+}
+function commencerControle(p) {
+  p.busy = true; p.busyT = 1e9; p.question = null;
+  if (p.bot) return;   // les robots attendent sans bouger
+  if (!ctl.eleves.has(p.name)) ctl.eleves.set(p.name, { i: 0, rep: [], fini: false });
+  p.ctlNext = 0.1;
+}
+function questionControle(p) {
+  const e = ctl.eleves.get(p.name);
+  if (!e) return;
+  if (e.i >= ctl.qs.length) {
+    e.fini = true; p.question = null;
+    send(p.conn, { t: 'ctlFin', ...(ctl.correction ? { ok: e.rep.filter(r => r.ok).length, total: ctl.qs.length } : {}) });
+    const eleves = [...players.values()].filter(q => !q.bot && ctl.eleves.has(q.name));
+    if (eleves.length && eleves.every(q => ctl.eleves.get(q.name).fini)) endRound('controle');
+    return;
+  }
+  const Q = ctl.qs[e.i];
+  p.question = { ...Q, kind: 'controle' };
+  send(p.conn, questionMsg(Q, 'controle', { num: e.i + 1, total: ctl.qs.length, ...(Q.ouvert ? { ouvert: true } : {}), ...(Q.q.dire ? { dire: Q.q.dire, choix: [], question: Q.q.question } : {}) }));
+}
+function answerControle(p, Q, i, txt) {
+  const e = ctl && ctl.eleves.get(p.name);
+  if (!e || e.fini) return;
+  const tape = typeof txt === 'string' ? txt.slice(0, 80) : '';
+  const ok = Q.ouvert ? (Q.q.dire ? normDictee(tape) === normDictee(Q.q.choix[0]) : norm(tape) === norm(Q.q.choix[Q.q.reponse])) : i === Q.answer;
+  e.rep[e.i] = { ok, txt: Q.ouvert ? tape : Q.order[i] != null ? Q.q.choix[Q.order[i]] : '' };
+  const s = (stats[p.name][Q.q.notion] = stats[p.name][Q.q.notion] || { ok: 0, ko: 0 });
+  if (ok) { s.ok++; p.good++; } else { s.ko++; p.bad++; }
+  e.i++; p.question = null;
+  if (ctl.correction) send(p.conn, { t: 'res', kind: 'controle', ok, bonne: Q.answer, bonneTxt: Q.ouvert ? Q.q.choix[Q.q.reponse] : undefined, tape: Q.q.dire ? tape : undefined, explication: ok ? '' : expl(Q.q) });
+  else send(p.conn, { t: 'res', kind: 'controle', neutre: true });
+  p.ctlNext = !ctl.correction ? 0.4 : ok ? 1.3 : Q.q.dire ? 4.5 : expl(Q.q) ? 4.5 : 3;
+}
+// à la fin : chaque élève reçoit son bilan, l'enseignant reçoit le rapport complet
+function finControle() {
+  const eleves = [...ctl.eleves.entries()].map(([nom, e]) => ({ nom, ok: e.rep.filter(r => r && r.ok).length, fait: e.i, rep: ctl.qs.map((_, k) => e.rep[k] || null) }));
+  const questions = ctl.qs.map((Q, k) => {
+    const rep = eleves.map(x => x.rep[k]).filter(Boolean);
+    return { texte: Q.q.dire ? `🎧 ${Q.q.dire}` : Q.q.question, matiere: Q.q.matiere, notion: Q.q.notion, bonne: Q.q.choix[Q.q.reponse], reussite: rep.length ? Math.round(rep.filter(r => r.ok).length / rep.length * 100) : null };
+  });
+  for (const p of players.values()) {
+    const e = ctl.eleves.get(p.name);
+    if (!e || p.bot) continue;
+    send(p.conn, { t: 'ctlBilan', dictee: ctl.dictee, total: ctl.qs.length, ok: e.rep.filter(r => r && r.ok).length,
+      erreurs: ctl.qs.map((Q, k) => ({ k, Q, r: e.rep[k] })).filter(x => !x.r || !x.r.ok).map(({ k, Q, r }) => ({ n: k + 1, question: Q.q.dire ? '' : Q.q.question, ta: r ? r.txt : '(pas de réponse)', bonne: Q.q.choix[Q.q.reponse] })) });
+  }
+  const rapport = { t: 'ctlRapport', dictee: ctl.dictee, total: ctl.qs.length, questions, eleves };
+  for (const c of conns) if (c.role === 'prof') send(c, rapport);
+}
+
+// ---------- Wagonnets (Caverne) ----------
+// Ils suivent la boucle des rails sans s'arrêter : se faire frapper fait mal et projette sur le côté.
+// position sur une boucle de points (rails des wagonnets, ronde du fantôme)
+function surBoucle(pts, s, o) {
+  for (let k = 0; k < pts.length; k++) {
+    const a = pts[k], b = pts[(k + 1) % pts.length], l = Math.hypot(b.x - a.x, b.y - a.y);
+    if (s <= l) { o.x = a.x + (b.x - a.x) * s / l; o.y = a.y + (b.y - a.y) * s / l; o.a = Math.atan2(b.y - a.y, b.x - a.x); return; }
+    s -= l;
+  }
+}
+// ---------- Bateaux volants : vent et canons ----------
+function updateVent(dt) {
+  if (vent.actif > 0) {
+    vent.actif -= dt;
+    const dx = Math.cos(vent.a) * VENT.force * dt, dy = Math.sin(vent.a) * VENT.force * dt;
+    for (const p of players.values()) if (p.alive && !p.busy && !p.dash) { if (!blocked(p.x + dx, p.y, R)) p.x += dx; if (!blocked(p.x, p.y + dy, R)) p.y += dy; }
+  } else if ((vent.t -= dt) <= 0) {
+    vent.t = VENT.tous + rand(-3, 3); vent.actif = VENT.dur; vent.a = pick([0, Math.PI, Math.PI / 2, -Math.PI / 2]);
+    addFeed(`💨 Coup de vent vers ${['l\'est', 'le sud', 'l\'ouest', 'le nord'][Math.round(((vent.a / (Math.PI / 2)) % 4 + 4) % 4)]} !`);
+  }
+}
+// à côté d'un canon, l'attaque tire un gros boulet vers l'autre navire
+function tirCanon(p) {
+  const c = carte.objs.find(o => o.kind === 'canon' && Math.hypot(o.x + o.w / 2 - p.x, o.y + o.h / 2 - p.y) < 70);
+  if (!c || (canonCd.get(c) || 0) > Date.now()) return false;
+  canonCd.set(c, Date.now() + CANON.cd * 1000);
+  const x = c.x + c.w / 2 + Math.cos(c.dir) * 40, y = c.y + c.h / 2 + Math.sin(c.dir) * 40;
+  projectiles.push({ x, y, vx: Math.cos(c.dir) * CANON.v, vy: Math.sin(c.dir) * CANON.v, r: CANON.r, dmg: CANON.dmg, life: CANON.life, owner: p.id, cls: 'boulet' });
+  fx.push({ k: 'boom', x, y, r: 40, t: 0.3, d: 0.3 });
+  return true;
+}
+// ---------- Fantôme bibliothécaire ----------
+// Il fait sa ronde lentement : près de lui, « Chut ! », on avance au ralenti.
+function updateFantome(dt) {
+  const f = fantome;
+  f.s = (f.s + FANTOME.v * dt) % railLong(carte.fantome);
+  surBoucle(carte.fantome, f.s, f);
+  f.chut = Math.max(0, f.chut - dt);
+  for (const p of players.values()) {
+    if (!p.alive || p.busy || Math.hypot(p.x - f.x, p.y - f.y) > FANTOME.r) continue;
+    if (!(p.slow > 0)) { p.slow = FANTOME.slow; if (f.chut <= 0) { f.chut = 2.5; fx.push({ k: 'crit', x: f.x, y: f.y - 60, txt: 'Chut !', t: 1, d: 1 }); } }
+  }
+}
+function railLong(pts) { let L = 0; for (let k = 0; k < pts.length; k++) { const a = pts[k], b = pts[(k + 1) % pts.length]; L += Math.hypot(b.x - a.x, b.y - a.y); } return L; }
+function updateWagons(dt) {
+  const pts = carte.rails, L = railLong(pts);
+  for (const w of wagons) {
+    w.s = (w.s + WAGON.v * dt) % L;
+    surBoucle(pts, w.s, w);
+    for (const p of players.values()) {
+      if (!p.alive || p.busy || (p.ballonT || 0) > 0 || (p.dash && p.dash.saut) || Math.hypot(p.x - w.x, p.y - w.y) > WAGON.r + R) continue;
+      p.ballonT = 1;
+      // projeté sur le côté du rail
+      const nx = -Math.sin(w.a), ny = Math.cos(w.a), cote = (p.x - w.x) * nx + (p.y - w.y) * ny >= 0 ? 1 : -1;
+      for (let k = WAGON.push; k > 0; k -= 10) { const tx = p.x + nx * cote * k, ty = p.y + ny * cote * k; if (!blocked(tx, ty, R)) { p.x = tx; p.y = ty; break; } }
+      if (p.protect <= 0 && p.shield <= 0) p.stun = Math.max(p.stun || 0, WAGON.stun);
+      fx.push({ k: 'crit', x: p.x, y: p.y - 30, txt: 'Ouch !', t: 0.7, d: 0.7 });
+      damage(p, WAGON.dmg, null);
+    }
+  }
 }
 
 // ---------- Tonneaux explosifs ----------
@@ -961,6 +1157,18 @@ function updateLoot(dt) {
   }
 }
 // Relever un coéquipier : rester 2 s près de son âme, puis répondre à une question à sa place
+// Retenue (Boss Prof) : l'élève en cage ne bouge plus ; un camarade reste 2 s à côté, puis répond pour le libérer
+function updateCages(dt) {
+  for (const p of players.values()) {
+    if (!p.cage) continue;
+    p.stun = Math.max(p.stun || 0, 0.2); p.protect = Math.max(p.protect, 0.2);
+    if ((p.cage -= dt) <= 0 || !p.alive) { p.cage = 0; p.cageBy = 0; continue; }
+    if (p.cageBy || eclair) continue;
+    const r = [...players.values()].find(q => q.alive && !q.bot && !q.busy && !q.cage && q.id !== p.id && Math.hypot(q.x - p.x, q.y - p.y) < 70);
+    if (!r) { p.cageProg = 0; continue; }
+    if ((p.cageProg = (p.cageProg || 0) + dt) >= 2) { p.cageBy = r.id; r.busy = true; r.busyT = 25; askQuestion(r, 'cage', { cage: p.id }); }
+  }
+}
 function updateAmes(dt) {
   ames = ames.filter(a => { const o = players.get(a.id); return o && !o.alive && (a.t -= dt) > 0; });
   for (const a of ames) {
@@ -1007,6 +1215,13 @@ const BOSSES = {
     A: { t: 'onde', portee: 220, r: 230, dmg: 24, stun: 1, cd: 4 }, B: { t: 'chute', portee: 800, n: 2, r: 100, dmg: 20, delai: 1.3, cd: 2.4, obj: 'rocher' } },
   empereur:  { nom: 'Empereur du Chaos', ico: '😈', mois: 'Juin', pv: 200, speed: 85, r: 60, sbire: 'chevalier', boucliers: [0.75, 0.5, 0.25],
     A: { t: 'tourbillon', portee: 190, r: 195, dmg: 26, cd: 3 }, B: { t: 'chute', portee: 850, n: 3, r: 80, dmg: 20, delai: 1, cd: 2.2, obj: 'eclair' } },
+  // Boss Prof : l'enseignant en personne ! Coup de poing (près), regard (rayon), voix (onde qui étourdit).
+  // Ses boucliers sont des « interros surprises » : les mêmes questions pour toute la classe, notées pour chaque élève.
+  prof:      { nom: 'Le Prof', ico: '🧑‍🏫', pv: 120, speed: 85, r: 34, sbire: null, boucliers: [0.75, 0.5, 0.25],
+    A: { t: 'poing', portee: 130, r: 135, dmg: 18, recul: 220, stun: 0.3, cd: 2 }, B: { t: 'rayon', portee: 800, long: 850, l: 30, dmg: 22, delai: 0.9, cd: 3.4 },
+    C: { t: 'cri', portee: 300, r: 300, dmg: 10, stun: 1, cd: 6.5 },
+    D: { t: 'sifflet', portee: 900, r: 650, stun: 1.1, delai: 0.8, cd: 11 }, E: { t: 'eventail', portee: 700, n: 7, ecart: 1.3, vit: 330, dmg: 9, cls: 'papier', cd: 5 },
+    F: { t: 'retenue', portee: 700, dur: 12, cd: 14 }, G: { t: 'craie', portee: 1100, vit: 640, dmg: 14, cd: 4.5 } },
   gluant:    { nom: 'Roi Gluant', ico: '👑', mois: '', pv: 50, speed: 75, r: 56, sbire: 'slime',
     A: { t: 'onde', portee: 170, r: 180, dmg: 22, cd: 3.2 }, B: { t: 'eventail', portee: 750, n: 3, ecart: 0.5, vit: 300, dmg: 13, cls: 'boss', cd: 1.4 } },
 };
@@ -1016,17 +1231,21 @@ const bossDuMois = () => ['cyclope', 'minotaure', 'kraken', 'golem', 'titan', 'e
 let bossKind = bossDuMois();
 let minions = [], bombs = [], beams = [];
 function spawnBoss() {
-  const B = BOSSES[bossKind], n = Math.max(1, players.size);
+  const kind = mode === 'prof' ? 'prof' : bossKind;
+  const B = BOSSES[kind], n = Math.max(1, players.size);
   const spot = freeSpot();
-  boss = { k: bossKind, nom: B.nom, ico: B.ico, x: carte.heal ? carte.heal.x + 220 : spot.x, y: carte.heal ? carte.heal.y : spot.y, r: B.r, hp: 0, max: 0,
+  boss = { k: kind, nom: B.nom, cdC: 5, cdD: 9, cdE: 4, cdF: 10, cdG: 3, sifflet: 0, ico: B.ico, x: carte.heal ? carte.heal.x + 220 : spot.x, y: carte.heal ? carte.heal.y : spot.y, r: B.r, hp: 0, max: 0,
     cdA: 3, cdB: 2, flash: 0, angle: 0, path: null, pathT: 0, phase: 1, shield: 0, shields: [...(B.boucliers || [0.75, 0.25])], cdSbire: 0, charge: null };
+  if (kind === 'prof' && carte.id === 'classe') { boss.x = 26 * T; boss.y = 9.6 * T; }   // devant son bureau
   if (blocked(boss.x, boss.y, 44)) Object.assign(boss, freeSpot());
-  boss.max = boss.hp = Math.round((400 + 140 * n) * (0.8 + (B.pv - 40) / 200));
+  boss.max = boss.hp = Math.round((400 + 140 * n) * (0.8 + (B.pv - 40) / 200) * (+process.env.BOSS_PV_TEST || 1));   // BOSS_PV_TEST : pour les essais seulement
   minions = []; bombs = []; beams = [];
   addFeed(`${B.ico} ${B.nom} arrive ! Unissez vos forces !`);
+  if (kind === 'prof') setupInterros();
 }
 function bossDefeated(by) {
   if (ended) return;
+  if (boss.k === 'prof' && !boss.vaincu) return startFinale();   // le Prof tombe à genoux : la question finale décide
   addFeed(`🎉 ${boss.nom} est vaincu${by ? ' (coup final : ' + by.name + ')' : ''} !`);
   fx.push({ k: 'boom', x: boss.x, y: boss.y, r: 200, t: 0.8, d: 0.8 });
   minions = []; bombs = []; beams = [];
@@ -1038,12 +1257,13 @@ function bossCheck(by) {
   if (boss.hp <= 0) return bossDefeated(by);
   if (boss.phase === 1 && boss.hp <= boss.max / 2) {
     boss.phase = 2;
-    addFeed(`😡 ${boss.nom} est enragé ! Attention aux sbires !`);
-    summon(3 + Math.floor(players.size / 4));
+    addFeed(BOSSES[boss.k].sbire === null ? `😡 ${boss.nom} se fâche ! Il attaque plus vite !` : `😡 ${boss.nom} est enragé ! Attention aux sbires !`);
+    if (BOSSES[boss.k].sbire !== null) summon(3 + Math.floor(players.size / 4));
   }
   if (boss.shields.length && !boss.shield && boss.hp <= boss.max * boss.shields[0]) {
     boss.shields.shift();
     boss.shield = Infinity;   // jusqu'à la fin de la question éclair
+    if (boss.k === 'prof') return startInterro();
     addFeed('🛡️ Bouclier du savoir ! Répondez tous pour le briser !');
     startEclair(true);
     if (!eclair) boss.shield = 0;
@@ -1142,6 +1362,38 @@ function bossAttack(a, best, aim) {
       fx.push({ k: a.t === 'cri' ? 'cri' : a.t === 'sablier' ? 'sablier' : a.t === 'tourbillon' ? 'tourbillon' : 'slam', x: bx, y: by, r: a.r, t: 0.6, d: 0.6, b: boss.k });
       for (const p of playersNear(boss.x, boss.y, a.r)) hurt(p, a.dmg, a);
       break;
+    case 'retenue': {   // un élève (au hasard) est enfermé dans une cage ; un camarade le libère en répondant à une question
+      const libres = [...players.values()].filter(p => p.alive && !p.busy && !p.cage);
+      const p = libres[Math.floor(Math.random() * libres.length)];
+      if (!p) break;
+      p.cage = a.dur; p.dash = null;
+      fx.push({ k: 'crit', x: Math.round(p.x), y: Math.round(p.y) - 60, txt: '🔒', t: 1, d: 1 });
+      addFeed(`🔒 ${p.name} est en retenue ! Un camarade peut le libérer.`);
+      break;
+    }
+    case 'craie': {   // craie lancée très vite vers l'élève le plus loin
+      let loin = null, ld = 0;
+      for (const p of players.values()) { if (!p.alive || p.busy) continue; const d = Math.hypot(p.x - boss.x, p.y - boss.y); if (d < a.portee && d > ld) { ld = d; loin = p; } }
+      const an = best ? (loin ? Math.atan2(loin.y - boss.y, loin.x - boss.x) : aim) : aim;
+      projectiles.push({ x: boss.x, y: boss.y - 20, vx: Math.cos(an) * a.vit, vy: Math.sin(an) * a.vit, r: 9, dmg: a.dmg, life: 2, owner: -1, cls: 'craie', slow: 0 });
+      break;
+    }
+    case 'sifflet':   // le coach prend son sifflet : un avertissement, puis tout le monde est figé
+      boss.sifflet = a.delai;
+      fx.push({ k: 'crit', x: bx, y: by - 100, txt: '📣', t: a.delai, d: a.delai });
+      break;
+    case 'poing': {   // coup de poing : coup devant lui qui repousse loin
+      const px = bx + Math.round(Math.cos(aim) * 70), py = by + Math.round(Math.sin(aim) * 70);
+      fx.push({ k: 'slam', x: px, y: py, r: 90, t: 0.4, d: 0.4, b: 'prof' }, { k: 'crit', x: px, y: py - 40, txt: '🥊', t: 0.6, d: 0.6 });
+      casserPupitres(px, py, 60);
+      for (const p of playersNear(boss.x, boss.y, a.r)) {
+        const an = Math.atan2(p.y - boss.y, p.x - boss.x);
+        if (angDiff(an, aim) > 0.75) continue;
+        hurt(p, a.dmg, a);
+        for (let k = a.recul; k > 0; k -= 20) { const tx = p.x + Math.cos(an) * k, ty = p.y + Math.sin(an) * k; if (!blocked(tx, ty, R) && !WATER.has(tileAt(tx, ty))) { p.x = tx; p.y = ty; break; } }
+      }
+      break;
+    }
     case 'eventail': shots(Array.from({ length: a.n }, (_, i) => aim - a.ecart / 2 + a.ecart * i / (a.n - 1)), a.cls); break;
     case 'cercle': shots(Array.from({ length: a.n }, (_, i) => aim + i / a.n * Math.PI * 2), a.cls); break;
     case 'souffle':
@@ -1190,7 +1442,13 @@ function bossThink(dt) {
   boss.cdA -= dt; boss.cdB -= dt; boss.flash = Math.max(0, boss.flash - dt); boss.pathT -= dt;
   boss.anim = Math.max(0, (boss.anim || 0) - dt); boss.moving = !!boss.charge;   // pour l'animation : attaque, marche
   if (boss.shield > 0 && boss.shield !== Infinity && (boss.shield -= dt) <= 0) { boss.shield = 0; addFeed('🛡️ Le bouclier disparaît !'); }
-  if (boss.phase === 2 && (boss.cdSbire -= dt) <= 0) { boss.cdSbire = 18; summon(2); }
+  if (boss.phase === 2 && B.sbire !== null && (boss.cdSbire -= dt) <= 0) { boss.cdSbire = 18; summon(2); }
+  boss.cdC -= dt; boss.cdD -= dt; boss.cdE -= dt; boss.cdF -= dt; boss.cdG -= dt;
+  if (boss.sifflet > 0 && (boss.sifflet -= dt) <= 0) {   // coup de sifflet : tout le monde est figé, sauf ceux qui esquivent à ce moment
+    fx.push({ k: 'cri', x: Math.round(boss.x), y: Math.round(boss.y), r: B.D.r, t: 0.6, d: 0.6, b: 'prof' });
+    for (const p of playersNear(boss.x, boss.y, B.D.r)) if (!p.dash && p.protect <= 0) p.stun = Math.max(p.stun || 0, B.D.stun);
+  }
+  if (boss.ctl && Date.now() - boss.ctl.t < 4000) return bossPilote(dt, B, cm);   // l'enseignant contrôle le boss
   updateMinions(dt);
   // charge du minotaure : fonce en ligne droite
   if (boss.charge) {
@@ -1224,7 +1482,32 @@ function bossThink(dt) {
   }
   const aim = Math.atan2(best.y - boss.y, best.x - boss.x);
   if (bd < B.A.portee && boss.cdA <= 0) { boss.cdA = B.A.cd * cm; bossAttack(B.A, best, aim); }
+  else if (B.F && boss.cdF <= 0 && players.size > 1) { boss.cdF = B.F.cd * cm; bossAttack(B.F, best, aim); }
+  else if (B.G && boss.cdG <= 0 && bd > 300) { boss.cdG = B.G.cd * cm; bossAttack(B.G, best, aim); }
+  else if (B.D && bd < B.D.portee && boss.cdD <= 0) { boss.cdD = B.D.cd * cm; bossAttack(B.D, best, aim); }
+  else if (B.E && bd < B.E.portee && boss.cdE <= 0 && bd > 200) { boss.cdE = B.E.cd * cm; bossAttack(B.E, best, aim); }
+  else if (B.C && bd < B.C.portee && boss.cdC <= 0) { boss.cdC = B.C.cd * cm; bossAttack(B.C, best, aim); }
   else if (bd < B.B.portee && boss.cdB <= 0) { boss.cdB = B.B.cd * cm; bossAttack(B.B, best, aim); }
+}
+// L'enseignant pilote le boss depuis son tableau de bord : flèches pour bouger, 1-2-3 pour attaquer vers la souris
+function bossPilote(dt, B, cm) {
+  const c = boss.ctl, mx = (c.r ? 1 : 0) - (c.l ? 1 : 0), my = (c.d ? 1 : 0) - (c.u ? 1 : 0);
+  boss.moving = !!(mx || my);
+  if (mx || my) {
+    const n = Math.hypot(mx, my), sp = B.speed * 1.5 * dt;
+    if (!blocked(boss.x + mx / n * sp, boss.y, 30)) boss.x += mx / n * sp;
+    if (!blocked(boss.x, boss.y + my / n * sp, 30)) boss.y += my / n * sp;
+  }
+  const aim = c.ax != null ? Math.atan2(c.ay - boss.y, c.ax - boss.x) : boss.angle;
+  boss.angle = aim;
+  const k = c.atk; c.atk = null;
+  if (k === 'A' && boss.cdA <= 0) { boss.cdA = B.A.cd * cm; bossAttack(B.A, null, aim); }
+  if (k === 'B' && boss.cdB <= 0) { boss.cdB = B.B.cd * cm; bossAttack(B.B, null, aim); }
+  if (k === 'C' && B.C && boss.cdC <= 0) { boss.cdC = B.C.cd * cm; bossAttack(B.C, null, aim); }
+  if (k === 'D' && B.D && boss.cdD <= 0) { boss.cdD = B.D.cd * cm; bossAttack(B.D, null, aim); }
+  if (k === 'E' && B.E && boss.cdE <= 0) { boss.cdE = B.E.cd * cm; bossAttack(B.E, null, aim); }
+  if (k === 'F' && B.F && boss.cdF <= 0) { boss.cdF = B.F.cd * cm; bossAttack(B.F, null, aim); }
+  if (k === 'G' && B.G && boss.cdG <= 0) { boss.cdG = B.G.cd * cm; bossAttack(B.G, null, aim); }
 }
 
 // ---------- Roi de la colline ----------
@@ -1431,8 +1714,8 @@ function endRound(why) {
   if (ended) return;
   const ps = [...players.values()];
   const top = (key, n = 3) => [...ps].sort((a, b) => b[key] - a[key] || b.good - a.good).slice(0, n).filter(p => p[key] > 0).map(p => ({ n: p.name, c: p.cls, l: p.look, v: Math.round(p[key]), team: p.team }));
-  const cle = mode === 'boss' || mode === 'survie' ? 'dmgBoss' : ['colline', 'drapeau', 'runes', 'chariot', 'zombie'].includes(mode) ? 'obj' : 'kills';
-  ended = { why, mode, boss: mode === 'boss' && boss ? { k: boss.k, nom: boss.nom } : null, top: top(cle), cerveaux: top('good') };
+  const cle = bossMode() || mode === 'survie' ? 'dmgBoss' : ['colline', 'drapeau', 'runes', 'chariot', 'zombie'].includes(mode) ? 'obj' : 'kills';
+  ended = { why, mode, boss: bossMode() && boss ? { k: boss.k, nom: boss.nom } : null, top: top(cle), cerveaux: top('good') };
   if (teamMode()) ended.teams = teamScores().map((s, i) => ({ ...teamsNow()[i], ...s })).sort((a, b) => b.score - a.score);
   // titres des nouveaux modes (le gagnant d'abord)
   if (mode === 'runes') Object.assign(ended, { titre: '✨ Course aux runes terminée !', unite: 'rune', sous: 'Le plus de runes capturées' });
@@ -1448,6 +1731,8 @@ function endRound(why) {
     Object.assign(ended, { titre: hum ? `🧄 ${hum} humain${hum > 1 ? 's ont' : ' a'} survécu : les Humains gagnent !` : '🧟 Les zombies ont contaminé tout le monde !', unite: 'joueur', sous: 'Survie et contagion' });
   }
   if (mode === 'entrainement') Object.assign(ended, { sous: 'Le plus de robots vaincus' });
+  if (mode === 'prof' && interros) rapportInterros();
+  if (ctl) { Object.assign(ended, { titre: ctl.dictee ? '🎧 Dictée terminée !' : '📝 Contrôle terminé !', top: [], cerveaux: [], controle: true }); finControle(); }
   // badges de fin de manche
   for (const p of ps) {
     if (why === 'boss-gagne') badge(p, 'boss');
@@ -1491,8 +1776,9 @@ function newRound() {
   for (const k in stats) stats[k] = {};
   timer.left = timer.dur;
   boss = null; hill = null; flags = null; minions = []; bombs = []; beams = [];
-  runes = []; cart = null; surv = null; zomb = null;
-  if (mode === 'boss') spawnBoss();
+  if (reparerPupitres()) sendAll({ t: 'carte', map: carte });
+  runes = []; cart = null; surv = null; zomb = null; ctl = null; interros = null;
+  if (bossMode()) spawnBoss();
   if (mode === 'colline') placeHill();
   if (mode === 'drapeau') setupFlags();
   if (mode === 'runes') setupRunes();
@@ -1500,6 +1786,7 @@ function newRound() {
   if (mode === 'survie') setupSurvie();
   if (mode === 'zombie') setupZombie();
   if (mode === 'entrainement') ensureBots();
+  if (mode === 'controle' || mode === 'dictee') setupControle();
   if (flags || cart) for (const q of players.values()) Object.assign(q, freeSpot(q.team));
   chests.forEach(c => { c.open = 0; c.by = 0; });
   goldFrom = -1; pickGold();
@@ -1511,18 +1798,18 @@ function newRound() {
 }
 
 // ---------- Question éclair : la même question pour toute la classe ----------
-function startEclair(bouclier = false) {
+function startEclair(bouclier = false, Qdonne = null, extra = {}, duree = eclairDur) {
   if (eclair || ended) return;
-  const Q = newQuestion({});
-  eclair = { ...Q, left: eclairDur, answers: new Map(), ids: [], bouclier };
+  const Q = Qdonne || newQuestion({});
+  eclair = { ...Q, left: duree, answers: new Map(), ids: [], bouclier, ...extra };
   for (const p of players.values()) {
     cancelChest(p);
     eclair.ids.push(p.id);
     p.question = null;
     if (p.bot) p.botT = rand(3, 12);
-    else send(p.conn, questionMsg(Q, 'eclair', { temps: eclairDur, bouclier }));
+    else send(p.conn, questionMsg(Q, 'eclair', { temps: duree, bouclier, ...(extra.titre ? { titre: extra.titre } : {}) }));
   }
-  addFeed('⚡ Question éclair pour toute la classe !');
+  if (!extra.titre) addFeed('⚡ Question éclair pour toute la classe !');
 }
 function finishEclair() {
   const E = eclair;
@@ -1535,6 +1822,7 @@ function finishEclair() {
     if (i >= 0) counts[i]++;
     const ok = i === E.answer;
     if (i >= 0) record(p, E.q, ok);
+    if (E.interro != null && !p.bot) noterInterro(p, E, i, ok);
     if (ok) { nbOk++; p.pending = 'force'; }
     send(p.conn, { t: 'res', kind: 'eclair', ok, bonne: E.answer, explication: ok ? '' : expl(E.q), repondu: i >= 0 });
     if (!p.alive) { p.question = null; p.waitQ = 2.5; }
@@ -1543,7 +1831,87 @@ function finishEclair() {
   for (const c of conns) if (c.role === 'prof') send(c, res);
   addFeed(`⚡ ${nbOk} bonne${nbOk > 1 ? 's' : ''} réponse${nbOk > 1 ? 's' : ''} sur ${E.ids.length}`);
   eclair = null;
+  if (E.interro != null) return finInterroQ(E, nbOk);
   shieldResult(nbOk, E.ids.length);
+}
+
+// ---------- Boss Prof : interros surprises et question finale ----------
+// Au début du combat, une seule liste de questions est tirée (réparties entre les notions cochées) : toute la classe
+// reçoit les mêmes, dans le même ordre, et chaque élève est noté seul. La majorité ne sert qu'à briser le bouclier.
+// Les questions pour revenir d'un K.O. ne comptent pas. La finale : la notion la plus ratée par la classe.
+let interros = null;
+function setupInterros() {
+  const n = ctlReglages.n, actives = NOTIONS.filter(x => subjects.has(x.s)), pool = (actives.length ? actives : NOTIONS).map(x => x.s);
+  const qs = [];
+  for (let k = 0; qs.length < n && k < n * 8; k++) {
+    const Q = newQuestion({ name: null, recent: [] }, pool[qs.length % pool.length]);
+    if (!qs.some(x => x.q.question === Q.q.question)) qs.push(Q);
+  }
+  const par = Math.ceil(qs.length / 3);
+  interros = { qs, lots: [qs.slice(0, par), qs.slice(par, par * 2), qs.slice(par * 2)], lot: -1, k: 0, ok: 0, tot: 0, pause: 0, eleves: new Map(), finales: 0 };
+}
+function startInterro() {
+  if (!interros) return;
+  interros.lot++;
+  const lot = interros.lots[interros.lot];
+  if (!lot || !lot.length) { boss.shield = 0; return; }
+  interros.k = 0; interros.ok = 0; interros.tot = 0;
+  addFeed(`📝 Interro surprise ! ${lot.length} questions pour toute la classe`);
+  fx.push({ k: 'crit', x: boss.x, y: boss.y - 90, txt: '📝', t: 1, d: 1 });
+  interros.pause = 1.5;   // petit temps pour lire « Interro surprise ! »
+}
+function poserInterro() {
+  const I = interros, lot = I.lots[I.lot], Q = lot[I.k], num = I.qs.indexOf(Q);
+  startEclair(true, Q, { interro: num, titre: `📝 Interro surprise · question ${I.k + 1} sur ${lot.length}` }, Math.max(20, eclairDur));
+}
+function noterInterro(p, E, i, ok) {
+  const I = interros; if (!I) return;
+  if (!I.eleves.has(p.name)) I.eleves.set(p.name, []);
+  I.eleves.get(p.name)[E.interro === 'finale' ? E.num : E.interro] = { ok, txt: i >= 0 ? E.q.choix[E.order[i]] : '' };
+  // le chouchou : 3 bonnes réponses de suite aux interros = coups doublés pendant 15 s
+  p.serieI = ok ? (p.serieI || 0) + 1 : 0;
+  if (p.serieI === 3) { p.serieI = 0; p.strong = Math.max(p.strong, 15); addFeed(`⭐ ${p.name} est le chouchou du Prof : coups puissants pendant 15 s !`); }
+}
+function finInterroQ(E, nbOk) {
+  const I = interros;
+  if (E.interro === 'finale') return finFinale(E, nbOk);
+  I.ok += nbOk; I.tot += E.ids.length; I.k++;
+  if (I.k < I.lots[I.lot].length) { I.pause = 2.5; return; }
+  shieldResult(I.ok, I.tot);
+}
+function startFinale() {
+  const I = interros;
+  boss.hp = 1; boss.genoux = true; boss.shield = Infinity;
+  // la notion la plus ratée par la classe pendant les interros
+  const parNotion = {};
+  for (const rep of I.eleves.values()) rep.forEach((r, k) => { if (!r) return; const n = I.qs[k].q.notion, o = (parNotion[n] = parNotion[n] || { ok: 0, t: 0 }); o.t++; if (r.ok) o.ok++; });
+  const pire = Object.entries(parNotion).sort((a, b) => a[1].ok / a[1].t - b[1].ok / b[1].t)[0];
+  let Q = null;
+  for (let k = 0; k < 20; k++) { Q = newQuestion({ name: null, recent: [] }, pire ? pire[0] : null); if (!I.qs.some(x => x.q.question === Q.q.question)) break; }
+  I.qs.push(Q); I.finales++;
+  addFeed(`🧑‍🏫 Le Prof tombe à genoux… Question finale${pire ? ' (' + pire[0] + ')' : ''} : la plus difficile !`);
+  fx.push({ k: 'crit', x: boss.x, y: boss.y - 90, txt: '😵', t: 1.2, d: 1.2 });
+  startEclair(true, Q, { interro: 'finale', num: I.qs.length - 1, titre: '🏆 Question finale : si la classe a juste, le Prof tombe !' }, Math.max(30, eclairDur + 10));
+}
+function finFinale(E, nbOk) {
+  boss.genoux = false;
+  if (nbOk * 2 > E.ids.length) {
+    boss.shield = 0; boss.vaincu = true; boss.hp = 0;
+    addFeed(`🎉 ${nbOk} bonnes réponses sur ${E.ids.length} : le Prof tombe au combat !`);
+    return bossDefeated(null);
+  }
+  boss.shield = 0; boss.hp = Math.round(boss.max * 0.25);
+  addFeed(`😤 Seulement ${nbOk} sur ${E.ids.length}… le Prof se relève avec 25 % de vie !`);
+}
+// rapport : même forme que le Contrôle (fiches pour les parents)
+function rapportInterros() {
+  const I = interros; if (!I) return;
+  const eleves = [...I.eleves.entries()].map(([nom, rep]) => ({ nom, ok: I.qs.reduce((t, _, k) => t + (rep[k] && rep[k].ok ? 1 : 0), 0), fait: rep.filter(Boolean).length, rep: I.qs.map((_, k) => rep[k] || null) }));
+  const posees = I.qs.map((Q, k) => eleves.some(e => e.rep[k]) ? k : -1).filter(k => k >= 0);
+  const questions = posees.map(k => { const Q = I.qs[k], rep = eleves.map(x => x.rep[k]).filter(Boolean); return { texte: (k >= I.qs.length - I.finales ? '🏆 Finale : ' : '') + Q.q.question, matiere: Q.q.matiere, notion: Q.q.notion, bonne: Q.q.choix[Q.q.reponse], reussite: rep.length ? Math.round(rep.filter(r => r.ok).length / rep.length * 100) : null }; });
+  for (const e of eleves) { e.rep = posees.map(k => e.rep[k]); e.ok = e.rep.filter(r => r && r.ok).length; }
+  const rapport = { t: 'ctlRapport', prof: true, total: questions.length, questions, eleves };
+  for (const c of conns) if (c.role === 'prof') send(c, rapport);
 }
 
 // ---------- Robots (pour tester ou compléter la classe) ----------
@@ -1566,7 +1934,7 @@ function botThink(p, dt) {
   }
   // cible : le boss, ou l'adversaire le plus proche
   let best = null, bd = Infinity;
-  if (mode === 'boss' && boss && boss.hp > 0) { best = boss; bd = Math.hypot(boss.x - p.x, boss.y - p.y) - boss.r + R; }
+  if (bossMode() && boss && boss.hp > 0) { best = boss; bd = Math.hypot(boss.x - p.x, boss.y - p.y) - boss.r + R; }
   else if (mode === 'survie') for (const m of minions) { const d = Math.hypot(m.x - p.x, m.y - p.y); if (d < bd) { bd = d; best = m; } }
   else for (const o of players.values()) {
     if (!canHit(p, o) || o.busy) continue;
@@ -1660,10 +2028,12 @@ function step() {
     if (eclair.left <= 0 || !waiting) finishEclair();
   }
   if (countdown > 0 && !paused && !eclair) countdown = Math.max(0, countdown - dt);
-  const frozen = paused || !!eclair || countdown > 0;
-  if (!frozen && timer.dur && !ended) { if (timer.left > 60 && timer.left - dt <= 60 && timer.dur > 90) addFeed('⏱ Plus qu\'une minute !'); timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); } }
+  if (interros && !eclair && interros.pause > 0 && !paused && (interros.pause -= dt) <= 0) poserInterro();
+  const frozen = paused || !!eclair || countdown > 0 || !!(interros && interros.pause > 0);
+  if (!frozen && timer.dur && !ended) { if (timer.left > 60 && timer.left - dt <= 60 && timer.dur > 90) addFeed('⏱ Plus qu\'une minute !'); timer.left -= dt; if (timer.left <= 0) { timer.left = 0; endRound(bossMode() ? 'boss-perdu' : 'temps'); } }
 
   for (const p of players.values()) {
+    p.vb = 0;
     if (frozen) continue;
     if (p.bot) botThink(p, dt);
     if (!p.alive) {
@@ -1675,8 +2045,10 @@ function step() {
     p.shield = Math.max(0, p.shield - dt); p.protect = Math.max(0, p.protect - dt);
     p.stealth = Math.max(0, p.stealth - dt); p.revealed = Math.max(0, p.revealed - dt);
     p.fast = Math.max(0, p.fast - dt); p.strong = Math.max(0, p.strong - dt); p.stun = Math.max(0, (p.stun || 0) - dt); p.atkT = Math.max(0, (p.atkT || 0) - dt);
+    p.sautT = Math.max(0, (p.sautT || 0) - dt); p.ballonT = Math.max(0, (p.ballonT || 0) - dt);
     p.hidden = p.revealed <= 0 && (inBush(p) || smokes.some(z => Math.hypot(z.x - p.x, z.y - p.y) < z.r));
     if (p.busy) {
+      if (p.ctlNext > 0 && (p.ctlNext -= dt) <= 0 && ctl) questionControle(p);
       if (p.goldNext && (p.goldNext.t -= dt) <= 0) { const g = p.goldNext; p.goldNext = null; askQuestion(p, 'chest', { chest: g.chest, gold: true, step: 2, nOk: g.nOk }); }
       if ((p.busyT -= dt) <= 0) cancelChest(p);
       continue;
@@ -1691,33 +2063,36 @@ function step() {
       mx = p.moveAngle == null ? 0 : Math.cos(p.moveAngle);
       my = p.moveAngle == null ? 0 : Math.sin(p.moveAngle);
     } else {
-      mx = p.input.r - p.input.l; my = p.input.d - p.input.u;
-      const len = Math.hypot(mx, my) || 1; mx /= len; my /= len;
+      mx = p.input.jx != null ? p.input.jx : p.input.r - p.input.l; my = p.input.jx != null ? p.input.jy : p.input.d - p.input.u;
+      const len = Math.hypot(mx, my); if (len > 1) { mx /= len; my /= len; }
     }
-    let sp = CLASSES[p.cls].speed * dt;
-    const under = tileAt(p.x, p.y + 12);
-    if (under === 'm') sp *= 0.55;          // boue, sables mouvants : ralentit
-    else if (under === '=') sp *= 0.7;      // gué : on traverse l'eau lentement
-    else if (under === 'i') sp *= 1.4;      // glace : on glisse plus vite !
-    if (p.stealth > 0) sp *= 1.2;
-    if (mode === 'zombie' && p.team === 1) sp *= 1.1;
-    if (p.fast > 0) sp *= 1.35;
-    if (p.slow > 0) sp *= 0.5;
-    if (p.carry) sp *= FLAG.slow;
-    sp *= 1 + GEAR.bottes.vitesse * p.gear.bottes / 100;
-    sp *= raceDe(p).vitesse || 1;
-    const bx = blocked(p.x + mx * sp, p.y, R), by = blocked(p.x, p.y + my * sp, R);
-    if (!bx) p.x += mx * sp;
-    if (!by) p.y += my * sp;
-    if (p.bot && p.moveAngle != null && bx && by) { p.moveAngle += Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1); p.stuckT = 0.4; p.path = null; }
+    let vb = CLASSES[p.cls].speed;          // vitesse sans le terrain (envoyée au joueur pour sa prédiction)
+    if (p.stealth > 0) vb *= 1.2;
+    if (mode === 'zombie' && p.team === 1) vb *= 1.1;
+    if (p.fast > 0) vb *= 1.35;
+    if (p.slow > 0) vb *= 0.5;
+    if (p.carry) vb *= FLAG.slow;
+    vb *= 1 + GEAR.bottes.vitesse * p.gear.bottes / 100;
+    vb *= raceDe(p).vitesse || 1;
+    p.vb = vb;
+    // boue ×0.55, gué ×0.7, glace ×1.4
+    const coince = MV.pas(p, mx, my, vb * MV.terrain(tileAt(p.x, p.y + 12)) * dt, blocked, R);
+    // trampoline du gymnase : un grand bond dans la direction où l'on va (ou où l'on regarde)
+    if (tileAt(p.x, p.y + 12) === 'r' && !(p.sautT > 0)) {
+      const a = mx || my ? Math.atan2(my, mx) : p.angle;
+      p.dash = { vx: Math.cos(a) * 640, vy: Math.sin(a) * 640, t: 0.4, hit: new Set(), saut: true };
+      p.sautT = 0.9;
+      fx.push({ k: 'boing', x: p.x, y: p.y + 10, t: 0.5, d: 0.5 });
+    }
+    if (p.bot && p.moveAngle != null && coince) { p.moveAngle += Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1); p.stuckT = 0.4; p.path = null; }
   }
 
   if (!frozen) {
     bossThink(dt);
     updateLoot(dt);
-    updateBarrels(dt);
+    updateBarrels(dt); updateBallons(dt); if (wagons.length) updateWagons(dt); if (fantome) updateFantome(dt); if (vent) updateVent(dt);
     updatePortals(dt);
-    updatePuddles(dt); updateTraps(dt); updateAmes(dt);
+    updatePuddles(dt); updateTraps(dt); updateAmes(dt); updateCages(dt);
     updateHill(dt);
     updateFlags(dt);
     if (mode === 'runes') updateRunes(dt);
@@ -1731,6 +2106,8 @@ function step() {
       const owner = players.get(b.owner) || null;
       const bar = b.owner !== -1 && barrels.find(o => !o.t && Math.hypot(o.x - b.x, o.y - b.y) < BARREL.r + b.r);
       if (bar) { lightBarrel(bar, owner); return false; }
+      const bal = ballons.find(o => Math.hypot(o.x - b.x, o.y - b.y) < BALLON.r + b.r);
+      if (bal) { frapperBallon(bal, Math.atan2(b.vy, b.vx)); return false; }
       if (b.owner !== -1 && boss && boss.hp > 0 && Math.hypot(boss.x - b.x, boss.y - 20 - b.y) < boss.r + b.r) { hitBoss(b.dmg, owner); return false; }
       if (b.owner !== -1 && minions.length && hitMinions(m => Math.hypot(m.x - b.x, m.y - b.y) < SBIRE.r + b.r + 6, b.dmg, owner)) return false;
       for (const o of players.values()) {
@@ -1758,9 +2135,13 @@ function publicState() {
     // joueurs en tableaux compacts (décodés par unpackWorld dans draw.js) pour alléger le Wi-Fi
     p: [...players.values()].map(p => [
       p.id, p.name, p.cls, p.look, Math.round(p.x), Math.round(p.y), +p.angle.toFixed(2), Math.max(0, Math.round(p.hp)), p.maxHp, p.kills,
-      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0),
+      (p.alive ? 1 : 0) | (p.shield > 0 ? 2 : 0) | (p.protect > 0 ? 4 : 0) | (p.hidden ? 8 : 0) | (p.stealth > 0 ? 16 : 0) | (p.strong > 0 ? 32 : 0) | (p.fast > 0 ? 64 : 0) | (p.busy ? 128 : 0) | (p.dash ? 256 : 0) | (p.id === lead ? 512 : 0) | (p.slow > 0 ? 1024 : 0) | (p.stun > 0 ? 2048 : 0) | (p.atkT > 0 ? 4096 : 0) | (p.dash && p.dash.saut ? 8192 : 0) | (p.cage ? 16384 : 0),
       p.team, gearCode(p),
     ]),
+    vt: vent && vent.actif > 0 ? +vent.a.toFixed(2) : null,
+    fa: fantome ? [Math.round(fantome.x), Math.round(fantome.y)] : 0,
+    wg: wagons.length ? wagons.map(w => [Math.round(w.x), Math.round(w.y), +w.a.toFixed(2)]) : 0,
+    bl: ballons.length ? ballons.map(b => [Math.round(b.x), Math.round(b.y), +b.rot.toFixed(1)]) : 0,
     b: projectiles.map(b => [Math.round(b.x), Math.round(b.y), b.cls, +Math.atan2(b.vy, b.vx).toFixed(2)]),
     fx: fx.map(f => { const o = {}; for (const k in f) o[k] = typeof f[k] === 'number' ? Math.round(f[k] * 100) / 100 : f[k]; return o; }),
     ch: chests.map(c => (c.open > 0 ? 1 : 0)).join(''),
@@ -1773,7 +2154,7 @@ function publicState() {
     tn: mode === 'zombie' || mode === 'chariot' ? teamsNow().map(t => t.nom) : 0,
     am: ames.map(a => [a.x, a.y, a.team, Math.min(1, a.prog / 2).toFixed(2) * 1, a.id]),
     tr: traps.map(tr => [tr.x, tr.y, tr.owner, tr.arm > 0 ? 1 : 0]), sm: smokes.map(z => [z.x, z.y, z.r, +z.t.toFixed(1)]),
-    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase, (boss.anim > 0 ? 1 : 0) | (boss.moving ? 2 : 0)] : 0,
+    boss: boss && boss.hp > 0 ? [Math.round(boss.x), Math.round(boss.y), Math.round(boss.hp), boss.max, +boss.angle.toFixed(1), boss.flash > 0 ? 1 : 0, boss.k, boss.shield ? 1 : 0, boss.phase, (boss.anim > 0 ? 1 : 0) | (boss.moving ? 2 : 0) | (boss.genoux ? 4 : 0) | (boss.k === 'prof' && boss.hp <= boss.max * 0.25 ? 8 : 0)] : 0,
     mn: minions.map(m => [Math.round(m.x), Math.round(m.y), Math.round(m.hp / (m.max || SBIRE.hp) * 100), m.flash > 0 ? 1 : 0, +(m.a || 0).toFixed(1)]),
     tm: timer.dur ? Math.ceil(timer.left) : cart && isFinite(cart.left) ? Math.ceil(cart.left) : zomb && isFinite(zomb.left) ? Math.ceil(zomb.left) : -1,
     mode, te: teamMode() ? teamScores().map(s => s.score) : 0,
@@ -1793,7 +2174,7 @@ function broadcast() {
     if (c.role === 'prof') c.etat(`{"t":"s","w":${common}}`);
     else if (c.player) {
       const p = c.player;
-      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear };
+      const me = { id: p.id, cdA: +p.cdA.toFixed(2), cdP: +p.cdP.toFixed(2), cdD: +p.cdD.toFixed(2), cdF: +p.cdF.toFixed(2), pet: +p.look[5] || 0, alive: p.alive, kills: p.kills, deaths: p.deaths, good: p.good, fa: Math.ceil(p.fast), st: Math.ceil(p.strong), bo: Math.ceil(p.shield), om: Math.ceil(p.stealth), sk: p.streak, su: !!p.superP, team: p.team, ar: armorOf(p), ge: p.gear, vb: Math.round(p.vb || 0) };
       c.etat(`{"t":"s","me":${JSON.stringify(me)},"w":${common}}`);
     }
   }
@@ -1808,21 +2189,25 @@ const infoT = setInterval(() => {
     carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
     eclairDur, tempete: tempeteOn, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
+    ctl: ctl ? { total: ctl.qs.length, correction: ctl.correction, dictee: ctl.dictee, eleves: [...ctl.eleves.entries()].map(([nom, e]) => ({ nom, fait: e.i, ok: e.rep.filter(r => r && r.ok).length })) } : null,
     eclair: eclair ? { left: Math.ceil(eclair.left), n: eclair.answers.size, total: eclair.ids.length, question: eclair.q.question } : null,
     players: [...players.values()].map(p => ({ id: p.id, n: p.name, c: p.cls, l: p.look, k: p.kills, d: p.deaths, g: p.good, b: p.bad, bot: p.bot, team: p.team, dm: Math.round(p.dmgBoss), nv: niveaux[p.name] || 'n', bg: p.bot ? [] : badgesDe(p), ge: p.gele > 0 ? 1 : 0, cd: p.code ? 1 : 0 })), ouvert: ouvertTous,
   });
   for (const c of conns) if (c.role === 'prof') c.send(info);
 }, 1000);
 
-const welcome = () => ({ t: 'welcome', map: carte, classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
+const welcome = () => ({ t: 'welcome', map: carte, dur: [...DUR].join(''), mur: [...WALL].join(''), classes: CLASSES, races: RACES, teams: TEAMS, items: ITEMS, gear: GEAR, pets: PETS, petCd: PET_CD });
 setCarte(CARTES[0]);
 const stepT = setInterval(step, solo ? TICK * 2 : TICK);   // une partie à la maison coûte deux fois moins au serveur
 
 // ---------- Messages ----------
+const ACTIF = new Set(['atk', 'dash', 'pow', 'super', 'pet', 'ans', 'msg', 'achat', 'look']);
 function onMessage(conn, msg) {
   let m;
   try { m = JSON.parse(msg); } catch { return; }
   const p = conn.player;
+  // dernier geste de l'élève (bouger, attaquer, répondre…) : sert à fermer les connexions oubliées
+  if (p && (ACTIF.has(m.t) || m.t === 'in' && (m.u || m.d || m.l || m.r || m.jx || m.jy))) p.actif = Date.now();
   switch (m.t) {
     case 'join':
       if (p) return;
@@ -1832,9 +2217,21 @@ function onMessage(conn, msg) {
       // serveur réveillé qui a oublié les codes : on reprend la fiche gardée par l'appareil de l'élève
       if (code && !rec && m.fiche && String(m.fiche.code).toUpperCase() === code && FORMAT_CODE.test(code)) { rec = ficheCode(m.fiche); CODES.set(code, rec); }
       if (code && !rec) { send(conn, { t: 'codeFaux' }); return; }
+      // le même élève (même code, ou même prénom sans code) déjà dans l'arène : l'ancien appareil est déconnecté
+      // et le nouveau reprend sa place, au lieu d'avoir deux héros (« Léa » et « Léa 2 »)
+      const base = String(rec ? rec.nom : m.name || '').trim().slice(0, 16).toLowerCase();
+      const double = !solo && [...players.values()].find(q => !q.bot && (rec ? q.code === rec.code : !q.code && q.name.toLowerCase() === base));
+      if (double) {
+        cancelChest(double); players.delete(double.id);
+        if (double.conn) { send(double.conn, { t: 'ailleurs' }); double.conn.player = null; const s = double.conn.socket; setTimeout(() => s.destroy(), 500); }
+      }
       conn.player = createPlayer(rec ? rec.nom : m.name, m.cls, false, String(m.look || ''));
-      conn.player.conn = conn;
+      conn.player.conn = conn; conn.player.actif = Date.now();
       if (rec) conn.player.code = rec.code;
+      if (double) {
+        for (const k of ['kills', 'deaths', 'good', 'bad', 'streak', 'dmgBoss', 'obj', 'gear', 'team', 'gele']) if (double[k] !== undefined) conn.player[k] = double[k];
+        if (double.cls === conn.player.cls) Object.assign(conn.player, { x: double.x, y: double.y, hp: double.hp, alive: double.alive });
+      }
       const ancien = partis.get(conn.player.name);
       if (ancien && Date.now() - ancien.t < 120000 && ancien.cls === conn.player.cls) {   // retour après une coupure
         const { t, cls, team, ...garde } = ancien;
@@ -1844,6 +2241,15 @@ function onMessage(conn, msg) {
       }
       send(conn, { ...welcome(), id: conn.player.id, nom: conn.player.name });
       if (rec) send(conn, { t: 'compte', nom: rec.nom, or: rec.or, achats: rec.achats, badges: rec.badges, rec });
+      // réglages de l'enseignant : l'appareil en garde une copie ; à la maison, la copie sert si le serveur s'est endormi depuis
+      const cp = m.reglages;
+      if (solo && !(opts.depuis && opts.depuis.v) && cp && typeof cp === 'object' && +cp.v > 0) {
+        setPerso(cp.perso);
+        const ok = (Array.isArray(cp.subjects) ? cp.subjects : []).filter(s => NOTIONS.some(n => n.s === s));
+        if (ok.length) { subjects.clear(); for (const s of ok) subjects.add(s); }
+        ouvertTous = !!cp.ouvert; reglagesV = +cp.v;
+      }
+      if (reglagesV) send(conn, { t: 'reglages', r: reglagesEleve() });
       if (solo) {   // à la maison : sa révision ciblée revient (séance de classe et pratiques précédentes), et des robots
         const q = conn.player, mem = memoire[q.name] || (memoire[q.name] = {});
         const depuis = opts.depuis && opts.depuis.memoire[q.name];
@@ -1851,19 +2257,26 @@ function onMessage(conn, msg) {
         q.debut = Date.now();
         ensureBots();
       }
+      if (ctl && !ended) commencerControle(conn.player);   // arrivé pendant le contrôle : il commence (ou reprend où il était)
     }
       if (ended) send(conn, { t: 'fin', ...ended });
       if (cart) send(conn, { t: 'route', pts: cart.pts.map(p => [Math.round(p.x), Math.round(p.y)]) });
       break;
     case 'in':
-      if (p) { p.input = { u: +!!m.u, d: +!!m.d, l: +!!m.l, r: +!!m.r }; if (typeof m.a === 'number') p.angle = m.a; }
+      if (p) {
+        p.input = { u: +!!m.u, d: +!!m.d, l: +!!m.l, r: +!!m.r };
+        // manette tactile : direction exacte (pas seulement 8 directions)
+        if (Number.isFinite(m.jx) && Number.isFinite(m.jy) && Math.hypot(m.jx, m.jy) > 0.1) { p.input.jx = clamp(m.jx, -1, 1); p.input.jy = clamp(m.jy, -1, 1); }
+        if (typeof m.a === 'number') p.angle = m.a;
+      }
       break;
+    case 'pg': send(conn, { t: 'pg', k: +m.k || 0 }); break;   // mesure du délai réseau (prédiction du déplacement)
     case 'atk': if (p && !(p.gele > 0)) attack(p); break;
     case 'dash': if (p && !(p.gele > 0)) dash(p); break;
     case 'pow': if (p && !(p.gele > 0)) power(p); break;
     case 'super': if (p && !(p.gele > 0)) superPower(p); break;
     case 'pet': if (p && !(p.gele > 0)) petPower(p); break;
-    case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 30) : undefined); break;
+    case 'ans': if (p && Number.isInteger(m.i)) answer(p, m.i, typeof m.txt === 'string' ? m.txt.slice(0, 120) : undefined); break;
     case 'look': if (p && cleanLook(m.look)) {
       p.look = cleanLook(m.look);
       p.maxHp = CLASSES[p.cls].hp + (raceDe(p).pv || 0); p.hp = Math.min(p.hp, p.maxHp);
@@ -1880,6 +2293,9 @@ function onMessage(conn, msg) {
       for (const q of players.values()) if (q !== p && q.conn && (coop() || (teamMode() && q.team === p.team))) send(q.conn, { t: 'msg', de: p.name, txt: MSGS[m.i] });
       break;
     }
+    case 'errClient':   // erreur d'affichage chez l'enseignant : on la garde dans le journal du serveur
+      if (conn.role === 'prof' && typeof m.msg === 'string') console.log('[erreur projecteur]', m.msg.slice(0, 600));
+      break;
     case 'prof':
       if (solo) return;
       conn.role = 'prof';
@@ -1890,8 +2306,11 @@ function onMessage(conn, msg) {
   }
   if (conn.role !== 'prof') return;
   switch (m.t) {
-    case 'subject': m.on ? subjects.add(m.s) : subjects.delete(m.s); break;
-    case 'perso': setPerso(m.qs); break;
+    case 'subject': m.on ? subjects.add(m.s) : subjects.delete(m.s); reglagesV = Date.now(); break;
+    case 'subjects':   // notions gardées dans le navigateur de l'enseignant, renvoyées à l'ouverture du tableau de bord
+      if (Array.isArray(m.list)) { const ok = m.list.filter(s => NOTIONS.some(n => n.s === s)); if (ok.length) { subjects.clear(); for (const s of ok) subjects.add(s); reglagesV = Date.now(); } }
+      break;
+    case 'perso': setPerso(m.qs); reglagesV = Date.now(); break;
     case 'codes':   // liste des codes (au chargement du tableau de bord) : on garde la version la plus récente de chaque fiche
       if (Array.isArray(m.list)) for (const r of m.list.slice(0, 60)) {
         if (!r || typeof r.code !== 'string' || typeof r.nom !== 'string') continue;
@@ -1939,14 +2358,25 @@ function onMessage(conn, msg) {
       if (m.nb >= 2 && m.nb <= 4) nbTeams = m.nb;
       if (mode === 'drapeau' || mode === 'chariot' || mode === 'zombie') nbTeams = 2;
       assignTeams();
+      if (mode === 'prof') { const c = CARTES.find(c => c.id === 'classe'); if (c && c !== carte) { setCarte(c); sendAll({ t: 'carte', map: carte }); } }   // le Boss Prof se bat dans sa classe
       newRound();
       addFeed(`🎮 Mode : ${MODES[mode]}${mode === 'equipes' || mode === 'colline' ? ' (' + nbTeams + ' équipes)' : ''}`);
+      break;
+    case 'bossIn':   // l'enseignant pilote le Boss Prof
+      if (!boss || boss.k !== 'prof') break;
+      if (m.off) { boss.ctl = null; break; }
+      boss.ctl = { u: !!m.u, d: !!m.d, l: !!m.l, r: !!m.r, ax: Number.isFinite(m.ax) ? m.ax : null, ay: Number.isFinite(m.ay) ? m.ay : null, atk: 'ABCDEFG'.includes(m.atk) && m.atk ? m.atk : (boss.ctl && boss.ctl.atk) || null, t: Date.now() };
+      break;
+    case 'ctlReglages':   // contrôle et dictée : nombre de questions, correction, mots de la dictée
+      ctlReglages.n = clamp(Math.round(+m.n || 10), 3, 30);
+      ctlReglages.correction = !!m.correction;
+      if (Array.isArray(m.mots)) ctlReglages.mots = m.mots.map(s => String(s).trim().slice(0, 80)).filter(Boolean).slice(0, 40);
       break;
     case 'timer':
       timer.dur = [0, 3, 5, 10, 15, 20].includes(m.min) ? m.min * 60 : 0;
       timer.left = timer.dur;
       break;
-    case 'finir': endRound(mode === 'boss' ? 'boss-perdu' : 'temps'); break;
+    case 'finir': endRound(bossMode() ? 'boss-perdu' : 'temps'); break;
     case 'eclair': startEclair(); break;
     case 'eclairdur': if ([10, 20, 30, 45].includes(m.s)) eclairDur = m.s; break;
     case 'boss':
@@ -1973,12 +2403,12 @@ function onClose(conn) {
 if (solo) {   // à la maison : entraînement contre des robots, avec les notions et les questions choisies par l'enseignant
   mode = 'entrainement';
   const r = opts.depuis;
-  if (r) { setPerso(r.perso); subjects.clear(); for (const n of r.subjects) subjects.add(n); Object.assign(niveaux, r.niveaux); ouvertTous = r.ouvert; }
+  if (r) { setPerso(r.perso); subjects.clear(); for (const n of r.subjects) subjects.add(n); Object.assign(niveaux, r.niveaux); ouvertTous = r.ouvert; reglagesV = r.v; }
 }
 return {
   conns, onMessage, onClose,
   arreter() { clearInterval(infoT); clearInterval(stepT); },
-  reglages: () => ({ perso: PERSO_BRUT, subjects: [...subjects], niveaux: { ...niveaux }, ouvert: ouvertTous, memoire }),
+  reglages: () => ({ perso: PERSO_BRUT, subjects: [...subjects], niveaux: { ...niveaux }, ouvert: ouvertTous, memoire, v: reglagesV }),
 };
 }   // fin de creerMonde
 
@@ -1994,6 +2424,8 @@ const server = http.createServer((req, res) => {
   if (file === '/prof') file = '/prof.html';
   if (file === '/guide') file = '/guide.html';
   if (file === '/donjon' || file === '/donjon/') file = '/donjon/index.html';   // Classe et Donjon (page statique)
+  if (file === '/planif') file = '/planif.html';
+  if (file === '/ping') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
   const full = path.join(PUBLIC, path.normalize(file));
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }
   fs.readFile(full, (err, data) => {
@@ -2062,9 +2494,25 @@ server.on('upgrade', (req, socket) => {
   socket.on('error', () => socket.destroy());
 });
 
+// Garder le serveur éveillé de 8 h à 22 h (heure du Québec) : il ne s'endort plus en soirée, donc il garde
+// les réglages de l'enseignant pour la pratique à la maison. Render donne l'adresse publique dans RENDER_EXTERNAL_URL.
+if (process.env.RENDER_EXTERNAL_URL) setInterval(() => {
+  const h = +new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: 'America/Toronto' }).format(new Date());
+  if (h >= 8 && h < 22) fetch(process.env.RENDER_EXTERNAL_URL + '/ping').catch(() => {});
+}, 10 * 60 * 1000);
+
 // toutes les 5 s : on ferme les connexions d'élèves muettes depuis 20 s (l'appareil envoie un signe de vie)
 setInterval(() => {
   for (const m of MONDES) for (const c of m.conns) if (c.player && c.role !== 'prof' && Date.now() - c.vu > 20000) c.socket.destroy();
+  // arène de la classe : un élève qui ne joue plus est déconnecté (appareil oublié ouvert, à la maison le soir…).
+  // Projecteur de l'enseignant ouvert : après 20 min sans jouer. Projecteur fermé : après 3 min.
+  const prof = [...classe.conns].some(c => c.role === 'prof');
+  for (const c of classe.conns) {
+    const q = c.player;
+    if (!q || q.bot || q.gele > 0 || c.oublie) continue;
+    const inactif = Date.now() - (q.actif || 0);
+    if (inactif > (prof ? 20 : 3) * 60000) { c.oublie = true; c.send(JSON.stringify({ t: 'inactif' })); setTimeout(() => c.socket.destroy(), 500); }
+  }
 }, 5000);
 
 server.listen(PORT, () => {
