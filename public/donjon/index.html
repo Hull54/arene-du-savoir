@@ -9306,7 +9306,13 @@ const SOLS = { pierre: "Pierre", herbe: "Herbe", terre: "Terre", bois: "Plancher
 
 const PREF = { vol: .7, muet: false, musique: true, ambiance: true };
 try { Object.assign(PREF, JSON.parse(localStorage.getItem("donjon-son") || "{}")); } catch {}
-// Planification importée (fichier exporté de la page « Planification » de l'Arène)
+// Planification de l'enseignant : gardée avec le monde (partagée entre ses appareils), sinon dans ce navigateur
+function appliquerPlanif() {
+  const p = (typeof MONDE !== "undefined" && MONDE.planif) || PREF.planif;
+  if (p) try { Planification.appliquer(p); } catch {}
+  // Hors de claude.ai, on lit aussi la planification gardée dans le Google Sheet (claude.ai bloque ces échanges)
+  if (typeof MONDE !== "undefined" && MONDE.sheet) fetch(MONDE.sheet + "?planif=1").then(r => r.json()).then(r => { if (r && r.planif) Planification.appliquer(r.planif); }).catch(() => {});
+}
 if (PREF.planif) try { Planification.appliquer(PREF.planif); } catch {}
 const sauverPref = () => { try { localStorage.setItem("donjon-son", JSON.stringify(PREF)); } catch {} };
 majAnims();
@@ -12010,7 +12016,7 @@ const Stock = {
     return (await IDB.all("reglages")).find(x => x.id === "monde") || null;
   },
   async sauverMonde(m) {
-    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, video: !!(m.image && m.video), caches: m.caches || [], campagne: m.campagne || null, sheet: m.sheet || "" };
+    const d = { id: "monde", lieux: m.lieux || {}, image: m.image || null, video: !!(m.image && m.video), caches: m.caches || [], campagne: m.campagne || null, sheet: m.sheet || "", planif: m.planif || null };
     if (d.image && d.image.startsWith("data:") && this.assets) { try { const b = dataUrlBlob(d.image); d.image = "asset:" + (await this.assets.upload(b, { type: b.type })).id; m.image = d.image; } catch {} }
     if (this.db) { try { await this.db.doc("reglages/monde").set(d); return true; } catch {} }
     return !!(await IDB.put("reglages", d));
@@ -12163,8 +12169,8 @@ document.getElementById("btn-reg").onclick = () => {
       <label>Indices pendant les questions <select id="r-ind">${opt(String(PREF.indices ?? 30), [["20", "Après 20 secondes"], ["30", "Après 30 secondes"], ["45", "Après 45 secondes"], ["0", "Jamais"]])}</select></label>
       <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
       <div style="grid-column:1/-1"><b class="reg-t" style="display:block;margin:0 0 4px">Notions travaillées (toutes les quêtes)</b><div class="notions" id="r-notions"></div><p class="sub" style="margin:4px 0 0">Les quêtes de l'année suivent les notions de leur mois (ta planification). Une quête qui a ses propres notions (créateur de quêtes) garde les siennes.${QUETE.notions ? " <b>Cette quête a ses propres notions.</b>" : ""}</p>
-        <div class="row" style="justify-content:flex-start;gap:8px;margin-top:6px"><button type="button" class="btn" id="r-planif">📂 Importer ma planification (.json)</button>${PREF.planif ? `<button type="button" class="btn" id="r-planif-base">↺ Planification de base</button>` : ""}<input type="file" id="r-planif-f" accept=".json,application/json" hidden></div>
-        <p class="sub" id="r-planif-etat" style="margin:4px 0 0">${PREF.planif ? "Ta planification importée est utilisée." : "Le fichier s'exporte depuis la page Planification de l'Arène du savoir."}</p></div>
+        <div class="row" style="justify-content:flex-start;gap:8px;margin-top:6px"><button type="button" class="btn" id="r-planif">📂 Importer ma planification (.json)</button>${MONDE.planif || PREF.planif ? `<button type="button" class="btn" id="r-planif-base">↺ Planification de base</button>` : ""}<input type="file" id="r-planif-f" accept=".json,application/json" hidden></div>
+        <p class="sub" id="r-planif-etat" style="margin:4px 0 0">${MONDE.planif || PREF.planif ? "Ta planification importée est utilisée (sur tous tes appareils)." : "Le fichier s'exporte depuis la page Planification de l'Arène du savoir."}</p></div>
       <label>Durée de la période <select id="r-per">${opt(String(PREF.periode ?? 50), [["0", "Pas de minuterie"], ["30", "30 minutes"], ["45", "45 minutes"], ["50", "50 minutes"], ["60", "60 minutes"], ["75", "75 minutes"], ["90", "90 minutes"]])}</select></label>
     </div></div>
     <div class="reg-onglet" data-o="son"><div class="reg">
@@ -12197,11 +12203,11 @@ document.getElementById("btn-reg").onclick = () => {
     try {
       const p = JSON.parse(await fPlanif.files[0].text());
       if (!p || typeof p !== "object" || !Object.keys(p).some(k => MOIS_NOTIONS[k])) throw new Error("format");
-      Planification.appliquer(p); PREF.planif = p; sauverPref(); etatPlanif.textContent = "✅ Planification importée : les quêtes de chaque mois l'utilisent.";
+      Planification.appliquer(p); MONDE.planif = p; await Stock.sauverMonde(MONDE); etatPlanif.textContent = "✅ Planification importée : les quêtes de chaque mois l'utilisent.";
     } catch { etatPlanif.textContent = "⚠️ Ce fichier n'est pas une planification."; }
   };
   const basePlanif = document.getElementById("r-planif-base");
-  if (basePlanif) basePlanif.onclick = () => { delete PREF.planif; sauverPref(); let l = null; try { l = JSON.parse(localStorage.getItem("planification") || "null"); } catch {} Planification.appliquer(l); basePlanif.remove(); etatPlanif.textContent = "Planification de base rétablie."; };
+  if (basePlanif) basePlanif.onclick = async () => { delete PREF.planif; sauverPref(); MONDE.planif = null; await Stock.sauverMonde(MONDE); let l = null; try { l = JSON.parse(localStorage.getItem("planification") || "null"); } catch {} Planification.appliquer(l); basePlanif.remove(); etatPlanif.textContent = "Planification de base rétablie."; };
   document.getElementById("r-act").onchange = e => {
     const n = Number(e.target.value), diff = n - S.nbActions; S.nbActions = n; PREF.nbActions = n; sauverPref();
     for (const h of S.heroes) if (h.pv > 0 && !h.joue) h.actions = Math.max(0, h.actions + diff);
@@ -12693,6 +12699,7 @@ new ResizeObserver(() => resize()).observe(wrap);
   await remplirQuetes();
   MONDE = Object.assign({ image: null, lieux: {} }, await Stock.chargerMonde());
   if (MONDE.campagne) MONDE.campagne = clone(MONDE.campagne); // une lecture du compte est figée
+  appliquerPlanif();
   let id = null; try { id = localStorage.getItem("donjon-quete"); } catch {}
   QUETE = lesQuetes().find(x => x.id === id) || DEMO;
   document.getElementById("quete-sel").value = QUETE.id;
