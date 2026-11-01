@@ -7249,6 +7249,14 @@ const ITEMS = {
 };
 const BUTIN = ["vie", "vie", "mana", "force", "rapidite", "bouclier"];
 
+// Planification et questions : source unique partagée avec l'Arène (public/notions.js, intégré à la construction)
+// Planification de 5e année : notions de chaque mois (septembre à juin) et leurs questions.
+// SOURCE UNIQUE pour les deux jeux : l'Arène du Savoir (serveur, require) et Classe et Donjon (navigateur, <script src="/notions.js">).
+// Pour changer la planification ou les questions, on modifie seulement ce fichier.
+// Une question = [question, choix, index de la bonne réponse, explication, dessin svg?]
+(function (exp) {
+let DIFF = 'normal';   // difficulté du Donjon (« expert » : plus de futur simple dans le mélange présent/imparfait)
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const FR = [
   ["Le chevalier ___ une épée.", ["a", "à"], 0],
   ["Le dragon dort ___ fond de la grotte.", ["au", "eau", "haut"], 0],
@@ -8588,6 +8596,31 @@ function questionNotion(m, n) {
 // Une fraction « a/b » s'affiche empilée
 const fracHtml = t => esc(String(t)).replace(/(\d+)\/(\d+)/g, '<span class="frac"><sup>$1</sup><sub>$2</sub></span>');
 const pick = a => a[Math.floor(Math.random() * a.length)];
+// La planification de base (ci-dessus) peut être modifiée par l'enseignant dans la page /planif.
+// Elle est gardée dans ce navigateur (clé « planification ») : l'Arène et le Donjon, ouverts sur le même site, la lisent tous les deux.
+const BASE = JSON.parse(JSON.stringify(MOIS_NOTIONS));
+function appliquer(p) {
+  for (const [id, x] of Object.entries(BASE)) {
+    const m = p && p[id] && typeof p[id] === 'object' ? p[id] : null;
+    const garde = (mat, l) => Array.isArray(l) ? l.filter(k => NOTIONS[mat][k]) : x[mat];
+    MOIS_NOTIONS[id] = { nom: x.nom, maths: m ? garde('maths', m.maths) : x.maths.slice(), fr: m ? garde('fr', m.fr) : x.fr.slice() };
+  }
+}
+if (typeof localStorage !== 'undefined') try { appliquer(JSON.parse(localStorage.getItem('planification') || 'null')); } catch {}
+Object.assign(exp, { NOTIONS, NOTIONS_DEFAUT, MOIS_NOTIONS, BASE, appliquer, questionNotion, fracHtml, difficulte: d => { DIFF = d; } });
+})(typeof module !== 'undefined' ? module.exports : (window.Planification = {}));
+
+const { NOTIONS, NOTIONS_DEFAUT, MOIS_NOTIONS, questionNotion, fracHtml } = window.Planification;
+const QUETE_MOIS = { "rentree-academie": "septembre", "octobre-ferme": "octobre", "halloween-vladislav": "octobre", "novembre-lugubre": "novembre", "decembre-noel": "decembre",
+  "janvier-yeti": "janvier", "fevrier-valentin": "fevrier", "mars-sorciers": "mars", "avril-paques": "avril", "mai-cite": "mai", "juin-depart": "juin" };
+const notionsMois = id => { const m = MOIS_NOTIONS[QUETE_MOIS[id]]; return m ? { maths: m.maths, fr: m.fr } : undefined; };
+// Priorité : notions cochées dans la quête, puis celles de son mois, puis Réglages, puis le défaut
+function notionsActives(m) {
+  const mois = QUETE && MOIS_NOTIONS[QUETE_MOIS[QUETE.id]];
+  const src = (QUETE && QUETE.notions && QUETE.notions[m]) || (mois && mois[m]) || (PREF.notions && PREF.notions[m]) || NOTIONS_DEFAUT[m];
+  const l = src.filter(k => NOTIONS[m][k]); return l.length ? l : NOTIONS_DEFAUT[m];
+}
+const pick = a => a[Math.floor(Math.random() * a.length)];
 
 // ---------- état ----------
 let S = null, W = 18, H = 12, QUETE = DEMO, EQUIPE = "CLASSE";
@@ -9273,6 +9306,8 @@ const SOLS = { pierre: "Pierre", herbe: "Herbe", terre: "Terre", bois: "Plancher
 
 const PREF = { vol: .7, muet: false, musique: true, ambiance: true };
 try { Object.assign(PREF, JSON.parse(localStorage.getItem("donjon-son") || "{}")); } catch {}
+// Planification importée (fichier exporté de la page « Planification » de l'Arène)
+if (PREF.planif) try { Planification.appliquer(PREF.planif); } catch {}
 const sauverPref = () => { try { localStorage.setItem("donjon-son", JSON.stringify(PREF)); } catch {} };
 majAnims();
 let METEO_FORCEE = null;
@@ -10516,7 +10551,8 @@ function epreuveFr(titre) {
 // Épreuve de maths à choix (fractions)
 // Épreuve à choix pour une notion de la planification (maths ou français)
 function epreuveNotion(titre, m, n, danger) {
-  let qq; try { qq = questionNotion(m, n); } catch (err) { signaler(err); qq = m === "maths" ? questionEquivalentes() : pick(FR); }
+  Planification.difficulte(DIFF);
+  let qq; try { qq = questionNotion(m, n); } catch (err) { signaler(err); qq = questionNotion(m, m === "maths" ? "equiv" : "vocab"); }
   const [q, choix, r, expl, svg] = qq, nom = NOTIONS[m][n] || "";
   return epreuveQcm(titre, (m === "maths" ? "Épreuve : " : "Question de français · ") + nom, q, choix, r, m, expl, danger, n === "vocab" ? "" : nom, svg);
 }
@@ -12126,7 +12162,9 @@ document.getElementById("btn-reg").onclick = () => {
       <label>Additions et soustractions <select id="r-niv">${opt(S.niveau, Object.entries(NIVEAUX))}</select></label>
       <label>Indices pendant les questions <select id="r-ind">${opt(String(PREF.indices ?? 30), [["20", "Après 20 secondes"], ["30", "Après 30 secondes"], ["45", "Après 45 secondes"], ["0", "Jamais"]])}</select></label>
       <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
-      <div style="grid-column:1/-1"><b class="reg-t" style="display:block;margin:0 0 4px">Notions travaillées (toutes les quêtes)</b><div class="notions" id="r-notions"></div><p class="sub" style="margin:4px 0 0">Les quêtes de l'année suivent les notions de leur mois (ta planification). Une quête qui a ses propres notions (créateur de quêtes) garde les siennes.${QUETE.notions ? " <b>Cette quête a ses propres notions.</b>" : ""}</p></div>
+      <div style="grid-column:1/-1"><b class="reg-t" style="display:block;margin:0 0 4px">Notions travaillées (toutes les quêtes)</b><div class="notions" id="r-notions"></div><p class="sub" style="margin:4px 0 0">Les quêtes de l'année suivent les notions de leur mois (ta planification). Une quête qui a ses propres notions (créateur de quêtes) garde les siennes.${QUETE.notions ? " <b>Cette quête a ses propres notions.</b>" : ""}</p>
+        <div class="row" style="justify-content:flex-start;gap:8px;margin-top:6px"><button type="button" class="btn" id="r-planif">📂 Importer ma planification (.json)</button>${PREF.planif ? `<button type="button" class="btn" id="r-planif-base">↺ Planification de base</button>` : ""}<input type="file" id="r-planif-f" accept=".json,application/json" hidden></div>
+        <p class="sub" id="r-planif-etat" style="margin:4px 0 0">${PREF.planif ? "Ta planification importée est utilisée." : "Le fichier s'exporte depuis la page Planification de l'Arène du savoir."}</p></div>
       <label>Durée de la période <select id="r-per">${opt(String(PREF.periode ?? 50), [["0", "Pas de minuterie"], ["30", "30 minutes"], ["45", "45 minutes"], ["50", "50 minutes"], ["60", "60 minutes"], ["75", "75 minutes"], ["90", "90 minutes"]])}</select></label>
     </div></div>
     <div class="reg-onglet" data-o="son"><div class="reg">
@@ -12153,6 +12191,17 @@ document.getElementById("btn-reg").onclick = () => {
   onglet(["partie", "regles", "son", "mj"].includes(PREF.ongletReg) ? PREF.ongletReg : "partie");
   document.getElementById("r-seance").onclick = ecranSeance;
   caseNotions(document.getElementById("r-notions"), PREF.notions || NOTIONS_DEFAUT, v => { PREF.notions = v; sauverPref(); });
+  const fPlanif = document.getElementById("r-planif-f"), etatPlanif = document.getElementById("r-planif-etat");
+  document.getElementById("r-planif").onclick = () => fPlanif.click();
+  fPlanif.onchange = async () => {
+    try {
+      const p = JSON.parse(await fPlanif.files[0].text());
+      if (!p || typeof p !== "object" || !Object.keys(p).some(k => MOIS_NOTIONS[k])) throw new Error("format");
+      Planification.appliquer(p); PREF.planif = p; sauverPref(); etatPlanif.textContent = "✅ Planification importée : les quêtes de chaque mois l'utilisent.";
+    } catch { etatPlanif.textContent = "⚠️ Ce fichier n'est pas une planification."; }
+  };
+  const basePlanif = document.getElementById("r-planif-base");
+  if (basePlanif) basePlanif.onclick = () => { delete PREF.planif; sauverPref(); let l = null; try { l = JSON.parse(localStorage.getItem("planification") || "null"); } catch {} Planification.appliquer(l); basePlanif.remove(); etatPlanif.textContent = "Planification de base rétablie."; };
   document.getElementById("r-act").onchange = e => {
     const n = Number(e.target.value), diff = n - S.nbActions; S.nbActions = n; PREF.nbActions = n; sauverPref();
     for (const h of S.heroes) if (h.pv > 0 && !h.joue) h.actions = Math.max(0, h.actions + diff);
