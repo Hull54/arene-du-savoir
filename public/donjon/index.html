@@ -790,6 +790,27 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 .cr-ds { border-left: 4px solid currentColor; border-bottom: 4px solid currentColor; padding: 0 .3em 0 .3em; min-width: 1.6em; }
 .cr-aide { margin: 0; }
 .pad .reste { font-size: 1rem; }
+/* Colonne des héros compacte : les 4 héros, l'inventaire et le journal tiennent à l'écran */
+.side { gap: 8px; overflow: hidden; }
+.heroes { gap: 6px; }
+.hcard { padding: 5px 8px; gap: 1px 8px; grid-template-columns: 46px minmax(0,1fr); }
+.hcard .por { width: 46px; height: 46px; }
+.hcard input { font-size: 1rem; }
+.hcard .cls { font-size: .72rem; }
+.hcard .race select { font-size: .72rem; padding: 1px 3px; }
+.hcard .icons svg { width: 15px; height: 15px; }
+.hcard .dmg { font-size: .72rem; padding: 0 5px; }
+.hcard .chip { font-size: .68rem; }
+#inv-box, #log-box { padding: 6px 8px; }
+#inv-box h3, #log-box h3 { font-size: 1rem; margin: 0 0 4px; }
+#inv-box .item { padding: 3px 7px; font-size: .8rem; }
+#log-box ol { font-size: .8rem; }
+@media (max-height: 800px) {
+  .hcard { grid-template-columns: 38px minmax(0,1fr); padding: 4px 7px; }
+  .hcard .por { width: 38px; height: 38px; border-width: 2px; }
+  .hcard input { font-size: .92rem; }
+  .hcard .icons svg { width: 13px; height: 13px; }
+}
 </style>
 
 <div class="app">
