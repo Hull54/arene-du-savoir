@@ -353,7 +353,13 @@ function cocher(liste, s, on) {
 // menu « Notions d'un mois » : coche exactement les notions de ce mois de la planification (page /planif, commune avec Classe et Donjon)
 const PL = window.Planification;
 const notionsDuMois = id => { const x = PL.MOIS_NOTIONS[id]; return [...x.maths.map(k => PL.NOTIONS.maths[k]), ...x.fr.map(k => PL.NOTIONS.fr[k])]; };
-for (const [id, x] of Object.entries(PL.MOIS_NOTIONS)) { const o = document.createElement('option'); o.value = id; o.textContent = `${x.nom} (${x.maths.length + x.fr.length} notions)`; $('mois').appendChild(o); }
+function remplirMois() {
+  $('mois').length = 1;
+  for (const [id, x] of Object.entries(PL.MOIS_NOTIONS)) { const o = document.createElement('option'); o.value = id; o.textContent = `${x.nom} (${x.maths.length + x.fr.length} notions)`; $('mois').appendChild(o); }
+}
+remplirMois();
+// planification gardée dans le Google Sheet des bilans (modifiée dans /planif, commune avec Classe et Donjon)
+try { const u = localStorage.getItem('arene-sheet'); if (u) fetch(u + (u.includes('?') ? '&' : '?') + 'planif=1').then(r => r.json()).then(r => { if (r && r.planif) { PL.appliquer(r.planif); try { localStorage.setItem('planification', JSON.stringify(r.planif)); } catch {} remplirMois(); } }).catch(() => {}); } catch {}
 function choisirMois(id) {
   notionsOn = notionsDuMois(id);
   try { localStorage.setItem('arene-notions', JSON.stringify(notionsOn)); } catch {}
