@@ -7118,29 +7118,29 @@ DEMO.musique = DEMO.musique || "mystere";
 Object.assign(DEMO.chapitres[0], { meteo: "brouillard", ambiance: "vent", sol: "pierre", animaux: ["corbeaux"] }, DEMO.chapitres[0]);
 if (DEMO.chapitres[1]) Object.assign(DEMO.chapitres[1], { brume: true, ambiance: "crypte", sol: "pierre", animaux: ["chauves", "rats"] }, DEMO.chapitres[1]);
 const C = {
-  archer: { nom: "Archer", pv: 3, mana: 3, dep: 6, deg: 3, portee: 4, distrib: true, rim: "#7c9a3f", proj: "#cfe27a",
+  archer: { trait: "🏹 Tire de loin et peut partager ses dégâts entre plusieurs monstres.", nom: "Archer", pv: 3, mana: 3, dep: 6, deg: 3, portee: 4, distrib: true, rim: "#7c9a3f", proj: "#cfe27a",
     p: [{ id: "fleches", nom: "Flèches elfiques", desc: "3 flèches de −2 PV à distribuer", cout: 1, cible: "zone" },
         { id: "lynx", nom: "Œil de lynx", desc: "−4 PV n'importe où sur la carte", cout: 1, cible: "enemyAny" }] },
-  mage: { nom: "Mage", pv: 3, mana: 5, dep: 5, deg: 3, portee: 3, distrib: true, rim: "#3a9e98", proj: "#9fe7ff",
+  mage: { trait: "🔮 Lance ses sorts de loin, partage ses dégâts et brûle les toiles d'araignée (boule de feu, 1 mana).", nom: "Mage", pv: 3, mana: 5, dep: 5, deg: 3, portee: 3, distrib: true, rim: "#3a9e98", proj: "#9fe7ff",
     p: [{ id: "poison", nom: "Empoisonnement", desc: "L'ennemi perd 1 PV par tour", cout: 1, cible: "enemy" },
         { id: "tp", nom: "Téléportation", desc: "Va sur n'importe quelle case libre", cout: 1, cible: "tile" }] },
-  guerrier: { nom: "Guerrier", pv: 6, mana: 2, dep: 4, deg: 5, portee: 1, distrib: false, rim: "#9aa3ad",
+  guerrier: { trait: "🛡️ Le plus solide : beaucoup de PV et les plus gros coups au corps à corps.", nom: "Guerrier", pv: 6, mana: 2, dep: 4, deg: 5, portee: 1, distrib: false, rim: "#9aa3ad",
     p: [{ id: "force", nom: "Force brute", desc: "Prochaine attaque : dégâts doublés", cout: 1, cible: "self" },
         { id: "priere", nom: "Prière du combattant", desc: "Retrouve 1 PV", cout: 1, cible: "self" }] },
-  voleur: { nom: "Voleur", pv: 4, mana: 3, dep: 6, deg: 3, portee: 1, distrib: false, rim: "#c9b437",
+  voleur: { trait: "🗡️ Attaque sournoise ×2 (de dos ou depuis l'ombre) et désamorce les pièges sans question.", nom: "Voleur", pv: 4, mana: 3, dep: 6, deg: 3, portee: 1, distrib: false, rim: "#c9b437",
     p: [{ id: "camo", nom: "Camouflage", desc: "Enlève la moitié des PV d'un ennemi (6 au plus contre un boss)", cout: 1, cible: "enemy" },
         { id: "pickpocket", nom: "Pickpocket", desc: "Déverrouille un cadenas", cout: 1, cible: "door" }] },
 };
 const RACES = {
   humain: { nom: "Humain", bonus: "+1 mana", mana: 1 },
-  elfe: { nom: "Elfe", bonus: "+1 déplacement, voit plus loin", dep: 1, vue: 1 },
+  elfe: { nom: "Elfe", bonus: "+1 case de portée pour attaquer, voit plus loin dans le brouillard", portee: 1, vue: 1 },
   nain: { nom: "Nain", bonus: "+2 PV", pv: 2 },
   orc: { nom: "Orc", bonus: "+1 dégât", deg: 1 },
   rat: { nom: "Homme-rat", bonus: "+1 déplacement, fouineur : un objet de plus dans les coffres", dep: 1 },
-  oiseau: { nom: "Homme-oiseau", bonus: "+2 déplacements : il vole", dep: 2 },
-  felin: { nom: "Félin", bonus: "voit dans le noir, retombe sur ses pattes : évite les pièges", vue: 2 },
+  oiseau: { nom: "Homme-oiseau", bonus: "+1 déplacement, vole par-dessus les trous et les murets sans question", dep: 1 },
+  felin: { nom: "Félin", bonus: "voit loin dans le brouillard, retombe sur ses pattes : évite les pièges", vue: 2 },
   lezard: { nom: "Homme-lézard", bonus: "+1 PV, ses coups empoisonnent", pv: 1 },
-  geant: { nom: "Demi-géant", bonus: "+3 PV, mais −1 déplacement", pv: 3, dep: -1 },
+  geant: { nom: "Demi-géant", bonus: "+3 PV, pousse les caisses sans question, mais −1 déplacement", pv: 3, dep: -1 },
 };
 // Détails dessinés autour du jeton selon la race (ailes, oreilles, queue…) et petit insigne de classe
 // Petits détails peints autour du jeton selon la race (oreilles, ailes, queue, barbe…), discrets et dans les tons des portraits
@@ -9216,7 +9216,8 @@ function voit(a, b) {
   }
   return true;
 }
-const aPortee = (h, e) => dist(h, e) <= C[h.cls].portee && vue(h, e);
+const porteeDe = h => C[h.cls].portee + ((RACES[h.race] || {}).portee || 0);
+const aPortee = (h, e) => dist(h, e) <= porteeDe(h) && vue(h, e);
 const ennemisAPortee = h => ennemisVivants().filter(e => aPortee(h, e));
 // Le Voleur double ses dégâts s'il frappe de dos ou depuis une zone d'ombre
 const dirVers = (a, b) => { const dx = b.x - a.x, dy = b.y - a.y; return Math.abs(dx) >= Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)]; };
@@ -9530,7 +9531,7 @@ function renderSide() {
     const pw = "";
     return `<div class="hcard ${h === actif ? "active" : ""} ${h.pv <= 0 ? "ko" : ""}">
       <button class="por" type="button" data-sel="${i}" style="--rim:${h.couleur || c.rim}" aria-label="Choisir ${esc(h.nom)}"><img src="${imgHeros(h.cls)}" alt=""></button>
-      <div class="row1"><input id="nom-${h.cls}" value="${esc(h.nom)}" data-nom="${h.cls}" aria-label="Nom du héros" maxlength="18" ${h.portrait ? "readonly" : ""}><span class="cls">${h.niveau > 1 ? `Niv. ${h.niveau} · ` : ""}${c.nom}${c.portee > 1 ? " · portée " + c.portee : " · corps à corps"}</span><button class="fiche-b" type="button" data-fiche="${h.cls}" title="Fiche du héros" aria-label="Fiche de ${esc(h.nom)}">📜</button></div>
+      <div class="row1"><input id="nom-${h.cls}" value="${esc(h.nom)}" data-nom="${h.cls}" aria-label="Nom du héros" maxlength="18" ${h.portrait ? "readonly" : ""}><span class="cls">${h.niveau > 1 ? `Niv. ${h.niveau} · ` : ""}${c.nom}${porteeDe(h) > 1 ? " · portée " + porteeDe(h) : " · corps à corps"}</span><button class="fiche-b" type="button" data-fiche="${h.cls}" title="Fiche du héros" aria-label="Fiche de ${esc(h.nom)}">📜</button></div>
       <div class="race"><select id="race-${h.cls}" data-race="${h.cls}" aria-label="Race" ${S.debut && !h.portrait ? "" : "disabled"}>${Object.entries(RACES).map(([k, r]) => `<option value="${k}" ${k === h.race ? "selected" : ""}>${r.nom} (${r.bonus})</option>`).join("")}</select>${h.titre ? `<span class="titre">🏅 ${esc(h.titre)}</span>` : ""}</div>
       <div class="stats" style="grid-column:2"><span class="icons" title="Points de vie">${hearts}</span><span class="icons" title="Mana">${fioles}</span>
         <span class="dmg" title="Dégâts">−${s.deg} PV${c.distrib ? " à partager" : ""}</span>${chips}</div>
@@ -10243,7 +10244,8 @@ function ouvrirFiches(nouvelle) {
           <div class="fiche-id"><p class="fiche-cls">${C[c].nom}${titre ? `<small>${esc(titre)}</small>` : ""}</p>
           <input class="field" data-k="nom" value="${esc(f.nom)}" maxlength="18" aria-label="Nom du héros ${C[c].nom}">
           <div class="fiche-ligne"><div class="seg" role="group" aria-label="Portrait">${Object.entries(GENRES).map(([k, n]) => `<button type="button" data-k="genre" data-v="${k}" aria-pressed="${f.genre === k}">${n}</button>`).join("")}</div></div></div></div>
-        <div class="fiche-bonus"><p class="fiche-st">❤️ ${t.pv} PV · 💧 ${t.mana} mana · 👟 ${t.dep} cases · ⚔️ ${t.deg} dégâts · 🎯 ${C[c].portee > 1 ? "portée " + C[c].portee : "corps à corps"}</p>
+        <div class="fiche-bonus"><p class="fiche-st">❤️ ${t.pv} PV · 💧 ${t.mana} mana · 👟 ${t.dep} cases · ⚔️ ${t.deg} dégâts · 🎯 ${porteeDe({ cls: c, race: f.race }) > 1 ? "portée " + porteeDe({ cls: c, race: f.race }) : "corps à corps"}</p>
+          <p>${C[c].trait}</p>
           ${C[c].p.map(p => `<p><b>✨ ${p.nom}</b> (${p.cout} mana) : ${esc(p.desc)}</p>`).join("")}
           <label class="fiche-race">Race <select data-k="race">${Object.entries(RACES).map(([k, x]) => `<option value="${k}"${f.race === k ? " selected" : ""}>${x.nom}</option>`).join("")}</select></label>
           <p class="fiche-rb">${esc(r.nom || "")} : ${esc(r.bonus || "")}</p></div>
@@ -11771,7 +11773,7 @@ function clicCase(x, y) {
   if (e) {
     const ok = aPortee(h, e) && h.actions > 0;
     menu(x, y, e.nom, `${e.pv} PV sur ${e.pvMax}${e.poison ? " · empoisonné" : ""}`, [
-      { txt: ok ? "Attaquer" + (sournois(h, e) ? ` ${sournois(h, e)} ×2` : "") + (allieCombo(h, e) ? ` 🤝 combo +1` : "") : (C[h.cls].portee > 1 ? "Hors de portée ou caché" : "Approche-toi pour attaquer"), op: "×", off: !ok, fn: () => attaquer(h, e) },
+      { txt: ok ? "Attaquer" + (sournois(h, e) ? ` ${sournois(h, e)} ×2` : "") + (allieCombo(h, e) ? ` 🤝 combo +1` : "") : (porteeDe(h) > 1 ? "Hors de portée ou caché" : "Approche-toi pour attaquer"), op: "×", off: !ok, fn: () => attaquer(h, e) },
       ...boutonsPouvoirs(h, [...(aPortee(h, e) ? ["poison", "camo", "fleches", "force"] : []), "lynx"], e),
     ]);
     return;
