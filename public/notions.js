@@ -742,6 +742,9 @@ const NOTIONS = {
     triangles: "Triangles",
     cartesien: "Plan cartésien",
     decimaux: "Nombres décimaux (lire, comparer, arrondir)",
+    decrep: "Nombres décimaux : représentation, comparaison et ordre",
+    cercle: "Le cercle (centre, rayon, diamètre, circonférence)",
+    longueur: "Mesures de longueur (mm, cm, dm, m, km)",
     opdec: "Opérations sur les nombres décimaux",
     multfrac: "Multiplication de fractions",
     stats: "Diagrammes (bandes, ligne brisée, circulaire)",
@@ -778,7 +781,7 @@ const NOTIONS_DEFAUT = { maths: ["calcul"], fr: ["vocab", "conj"] };
 const MOIS_NOTIONS = {
   septembre: { nom: "Septembre", maths: ["numeration", "calcul"], fr: ["variables", "phrase", "c_pres", "vocab"] },
   octobre: { nom: "Octobre", maths: ["arrondi", "divis", "pemdas", "moyenne"], fr: ["gn", "c_imp", "vocab"] },
-  novembre: { nom: "Novembre", maths: ["equiv", "reduc", "compfrac", "addfrac", "pourcent"], fr: ["inv", "accverbe", "c_fut"] },
+  novembre: { nom: "Novembre", maths: ["equiv", "reduc", "decrep", "cercle", "longueur"], fr: ["inv", "accverbe", "c_fut"] },
   decembre: { nom: "Décembre", maths: ["droites", "angles", "triangles", "cartesien"], fr: ["ponct", "c_ps"] },
   janvier: { nom: "Janvier", maths: ["compfrac", "divis", "decimaux"], fr: ["sens", "c_cond"] },
   fevrier: { nom: "Février", maths: ["decimaux", "opdec", "multfrac"], fr: ["types", "c_impe"] },
@@ -864,7 +867,7 @@ function genDivis() {
 }
 function genPemdas() {
   const t = ri(0, 5), a = ri(2, 12), b = ri(2, 9), c = ri(2, 9);
-  if (t === 0) return qc(`Combien vaut ${a} + ${b} × ${c}?`, a + b * c, [(a + b) * c, a * b + c, a + b + c], `On fait la multiplication d'abord : ${b} × ${c} = ${b * c}, puis ${a} + ${b * c} = ${a + b * c}.`);
+  if (t === 0) return qc(`Combien vaut ${a} + ${b} × ${c}?`, a + b * c, [(a + b) * c, a * b + c, a + b + c, a + b * c + 1, a + b * c - 1], `On fait la multiplication d'abord : ${b} × ${c} = ${b * c}, puis ${a} + ${b * c} = ${a + b * c}.`);
   if (t === 1) return qc(`Combien vaut (${a} + ${b}) × ${c}?`, (a + b) * c, [a + b * c, a * b + c, a + b + c], `Les parenthèses d'abord : ${a} + ${b} = ${a + b}, puis × ${c} = ${(a + b) * c}.`);
   if (t === 2) { const x = b * c + ri(1, 9); return qc(`Combien vaut ${x} − ${b} × ${c}?`, x - b * c, [(x - b) * c, x - b - c, x - b * c + 2], `La multiplication d'abord : ${b} × ${c} = ${b * c}, puis ${x} − ${b * c} = ${x - b * c}.`); }
   if (t === 3) { const q = ri(2, 9), d = b * q; return qc(`Combien vaut ${a} + ${d} ÷ ${b}?`, a + q, [(a + d) % b ? a + q + 2 : (a + d) / b, a + d + b, a + q - 1, a * q], `La division d'abord : ${d} ÷ ${b} = ${q}, puis ${a} + ${q} = ${a + q}.`); }
@@ -1006,8 +1009,8 @@ function genCartesien() {
 }
 // ---------- Janvier et février : nombres décimaux ----------
 const PDEC = ["dixièmes", "centièmes", "millièmes"];
-function genDecimaux() {
-  const t = ri(0, 4);
+function genDecimaux(t) {
+  if (t === undefined) t = ri(0, 4);
   if (t === 0) {
     const e = ri(1, 99), d = String(ri(100, 999)), p = ri(0, 2), n = `${e},${d}`, c = d[p];
     return qc(`Dans ${n}, quel chiffre est à la position des ${PDEC[p]}?`, c, mel([...new Set((String(e) + d).split(""))]).concat(["0", "5", "9"]), "Après la virgule : dixièmes, centièmes, millièmes.");
@@ -1324,7 +1327,64 @@ const BANQUE_FR = {
     ["Quelle phrase contient un attribut du sujet?", ["Mon frère devient grand.", "Mon frère mange un gâteau.", "Mon frère parle à sa mère.", "Mon frère court vite."], 0, "« devenir » est attributif : « grand » décrit le sujet."],
   ],
 };
-const GEN_MATHS = { numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
+// Novembre : représentation, comparaison et ordre des décimaux (sans l'arrondi)
+function genDecRep() {
+  if (Math.random() < .25) {
+    const e = ri(0, 9), base = [ri(1, 9), ri(1, 9)], l = [`${e},${base[0]}`, `${e},${base[0]}${base[1]}`, `${e},0${base[1]}`, `${e},${base[1]}`].filter((x, i, a) => a.indexOf(x) === i);
+    if (l.length < 3) return genDecRep();
+    const v = x => parseFloat(x.replace(",", ".")), ok = [...l].sort((a, b) => v(a) - v(b)), j = x => x.join(" ; ");
+    if (new Set(l.map(v)).size < l.length) return genDecRep();
+    return qc("Quel est l'ordre croissant (du plus petit au plus grand)?", j(ok), [j([...ok].reverse()), j([...ok].sort((a, b) => a.length - b.length || v(a) - v(b))), j([ok[1], ok[0], ...ok.slice(2)])], "On compare d'abord les unités, puis les dixièmes, puis les centièmes. Un nombre plus long n'est pas toujours plus grand!");
+  }
+  return genDecimaux(pk([0, 1, 1, 3, 4]));
+}
+function svgCercle2(t) {
+  const c = 90, r = 70, a = ri(0, 359) * Math.PI / 180, P = (ang, rr = r) => [c + rr * Math.cos(ang), c + rr * Math.sin(ang)].map(x => x.toFixed(1));
+  let seg = "";
+  if (t === 0) { const p = P(a); seg = `<line x1="${c}" y1="${c}" x2="${p[0]}" y2="${p[1]}" stroke="#d33" stroke-width="4"/>`; }
+  else if (t === 1) { const p = P(a), q = P(a + Math.PI); seg = `<line x1="${q[0]}" y1="${q[1]}" x2="${p[0]}" y2="${p[1]}" stroke="#d33" stroke-width="4"/>`; }
+  else if (t === 2) { const p = P(a), q = P(a + 1.6); seg = `<line x1="${q[0]}" y1="${q[1]}" x2="${p[0]}" y2="${p[1]}" stroke="#d33" stroke-width="4"/>`; }
+  return svgBox(180, 180, `<circle cx="${c}" cy="${c}" r="${r}" fill="#eef6ff" stroke="${t === 3 ? "#d33" : "#222"}" stroke-width="${t === 3 ? 5 : 3}"/>${seg}<circle cx="${c}" cy="${c}" r="4" fill="#222"/><text x="${c + 7}" y="${c - 7}" font-size="14" font-weight="bold" fill="#222">O</text>`);
+}
+function genCercle() {
+  const t = ri(0, 3), noms = ["Un rayon", "Un diamètre", "Une corde", "La circonférence"];
+  const ex = ["Le rayon va du centre jusqu'au cercle.", "Le diamètre traverse le cercle en passant par le centre : il vaut 2 rayons.", "Une corde relie deux points du cercle sans passer par le centre.", "La circonférence est la ligne courbe qui fait le tour du cercle."];
+  if (t === 0) { const k = ri(0, 3); return qc(k === 3 ? "Comment s'appelle la ligne rouge?" : "Comment s'appelle le segment rouge? (O est le centre)", noms[k], noms, ex[k], svgCercle2(k)); }
+  if (t === 1) { const r = ri(2, 15); return qc(`Le rayon d'un cercle mesure ${r} cm. Combien mesure son diamètre?`, `${r * 2} cm`, [`${r} cm`, `${r % 2 ? r + 1 : r / 2} cm`, `${r * 4} cm`, `${r + 2} cm`], `Le diamètre vaut 2 rayons : 2 × ${r} = ${r * 2} cm.`); }
+  if (t === 2) { const r = ri(2, 15); return qc(`Le diamètre d'un cercle mesure ${r * 2} cm. Combien mesure son rayon?`, `${r} cm`, [`${r * 2} cm`, `${r * 4} cm`, `${r + 2} cm`, `${r - 1} cm`], `Le rayon est la moitié du diamètre : ${r * 2} ÷ 2 = ${r} cm.`); }
+  return pk([
+    qc("Le point au milieu du cercle s'appelle…", "le centre", ["le rayon", "le diamètre", "la corde"], "Tous les points du cercle sont à la même distance du centre."),
+    qc("Le diamètre passe toujours par…", "le centre du cercle", ["le bord seulement", "un seul point du cercle", "l'extérieur du cercle"], "Le diamètre traverse le cercle en passant par le centre."),
+    qc("Combien de rayons faut-il pour faire un diamètre?", "2", ["1", "3", "4"], "Diamètre = 2 × rayon."),
+    qc("Dans un même cercle, tous les rayons…", "ont la même longueur", ["sont de longueurs différentes", "sont plus longs que le diamètre", "passent par deux points du cercle"], "Chaque point du cercle est à la même distance du centre."),
+    qc("Quel est le plus long segment qu'on peut tracer dans un cercle?", "le diamètre", ["le rayon", "une petite corde", "le centre"], "Le diamètre est la plus longue corde du cercle."),
+    qc("La ligne qui fait le tour du cercle s'appelle…", "la circonférence", ["le diamètre", "le rayon", "la surface"], "C'est le contour du cercle.")]);
+}
+const UL = [["mm", 1], ["cm", 10], ["dm", 100], ["m", 1000], ["km", 1000000]];
+function genLongueur() {
+  const t = ri(0, 4);
+  if (t <= 1) {
+    let i = ri(0, 3), j = t === 0 ? i + 1 + (i < 2 && Math.random() < .4 ? 1 : 0) : i; if (t === 1) { j = ri(0, 2); i = j + 1 + (j < 2 && Math.random() < .4 ? 1 : 0); }
+    if (j > 4 || i > 4) return genLongueur();
+    const [u1, f1] = UL[t === 0 ? j : i], [u2, f2] = UL[t === 0 ? i : j], n = ri(2, 9), f = f1 / f2, v = n * f;
+    return qc(`${n} ${u1} = ? ${u2}`, nb(v), [nb(v * 10), decC(v / 10), nb(v * 100), String(n)], `1 ${u1} = ${nb(f)} ${u2}, donc ${n} ${u1} = ${nb(v)} ${u2}.`);
+  }
+  if (t === 2) { const n = ri(11, 99), [u1, u2] = pk([["mm", "cm"], ["cm", "dm"], ["dm", "m"]]); return qc(`${n} ${u1} = ? ${u2}`, decC(n / 10), [String(n * 10), decC(n / 100), String(n)], `10 ${u1} = 1 ${u2}. On divise par 10 : ${decC(n / 10)} ${u2}.`); }
+  if (t === 3) {
+    const vals = mel([[2, "m"], [150, "cm"], [1800, "mm"], [25, "dm"], [3, "m"], [270, "cm"], [9, "dm"], [1200, "mm"]]).slice(0, 4), mm = ([n, u]) => n * UL.find(x => x[0] === u)[1];
+    if (new Set(vals.map(mm)).size < 4) return genLongueur();
+    const m = vals.reduce((a, b) => mm(b) > mm(a) ? b : a), f = ([n, u]) => `${nb(n)} ${u}`;
+    return qc("Quelle longueur est la plus grande?", f(m), vals.filter(x => x !== m).map(f), `On met tout dans la même unité : ${vals.map(x => `${f(x)} = ${nb(mm(x) / 10)} cm`).join(", ")}.`);
+  }
+  return pk([
+    qc("Combien de centimètres y a-t-il dans 1 mètre?", "100", ["10", "1 000", "50"], "1 m = 100 cm."),
+    qc("Combien de millimètres y a-t-il dans 1 centimètre?", "10", ["100", "1", "1 000"], "1 cm = 10 mm."),
+    qc("Combien de mètres y a-t-il dans 1 kilomètre?", "1 000", ["100", "10", "10 000"], "1 km = 1 000 m."),
+    qc("Quelle unité est 10 fois plus grande que le centimètre?", "le décimètre (dm)", ["le millimètre (mm)", "le mètre (m)", "le kilomètre (km)"], "mm → cm → dm → m : chaque unité vaut 10 fois la précédente."),
+    qc("Quelle unité utiliser pour mesurer l'épaisseur d'un crayon?", "le millimètre (mm)", ["le kilomètre (km)", "le mètre (m)", "le décimètre (dm)"], "C'est très petit : on mesure en millimètres."),
+    qc("Quelle unité utiliser pour mesurer la longueur de la cour d'école?", "le mètre (m)", ["le millimètre (mm)", "le centimètre (cm)", "le kilomètre (km)"], "Une cour fait quelques dizaines de mètres.")]);
+}
+const GEN_MATHS = { decrep: genDecRep, cercle: genCercle, longueur: genLongueur, numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
   compfrac: genCompFrac, addfrac: genAddFrac, pourcent: genPourcent, droites: genDroites, angles: genAngles, triangles: genTriangles, cartesien: genCartesien,
   decimaux: genDecimaux, opdec: genOpDec, multfrac: genMultFrac, stats: genStats, mesures: genMesures, proba: genProba };
 // Une question pour la notion choisie : [question, choix, bonne réponse, explication, dessin?]
