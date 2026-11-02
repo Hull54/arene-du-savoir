@@ -10799,7 +10799,8 @@ function genCalcul(op) {
   // ÷ en crochet. Intermédiaire : sans reste, diviseur de 1 ou 2 chiffres. Avancé : avec reste possible (2 chiffres au plus).
   const b = Math.random() < .65 ? rnd2(2, 9) : rnd2(11, 25);
   if (!av) { const q = rnd2(Math.max(2, Math.ceil(20 / b)), Math.floor(999 / b)); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op, crochet: true }; }
-  const a = rnd2(Math.max(100, 2 * b), 999), q = Math.floor(a / b), r = a % b;
+  // le diviseur entre au moins une fois dans les 2 premiers chiffres (261 ÷ 25 oui, 241 ÷ 25 non)
+  const a = rnd2(Math.max(100, b * 10), 999), q = Math.floor(a / b), r = a % b;
   return { txt: `${a} ÷ ${b}`, rep: q, reste: r, a, b, op, crochet: true };
 }
 // Indices qui apparaissent si la question prend du temps : d'abord une méthode, puis un premier pas
