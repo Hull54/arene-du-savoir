@@ -754,7 +754,9 @@ const NOTIONS = {
   fr: {
     vocab: "Homophones et vocabulaire",
     variables: "Classes de mots variables",
+    manip: "Manipulations syntaxiques",
     phrase: "Phrase de base et constituants",
+    enrichie: "Phrase de base enrichie",
     gn: "Groupe du nom et accords dans le GN",
     inv: "Classes de mots invariables",
     accverbe: "Accord du verbe avec le sujet",
@@ -779,9 +781,9 @@ const NOTIONS = {
 const NOTIONS_DEFAUT = { maths: ["calcul"], fr: ["vocab", "conj"] };
 // La planification de l'année : les notions de chaque mois
 const MOIS_NOTIONS = {
-  septembre: { nom: "Septembre", maths: ["numeration", "calcul"], fr: ["variables", "phrase", "c_pres", "vocab"] },
+  septembre: { nom: "Septembre", maths: ["numeration", "calcul"], fr: ["manip", "phrase", "variables", "c_pres", "vocab"] },
   octobre: { nom: "Octobre", maths: ["arrondi", "divis", "pemdas", "moyenne"], fr: ["gn", "c_imp", "vocab"] },
-  novembre: { nom: "Novembre", maths: ["equiv", "reduc", "decrep", "cercle", "longueur"], fr: ["inv", "accverbe", "c_fut"] },
+  novembre: { nom: "Novembre", maths: ["equiv", "reduc", "decrep", "cercle", "longueur"], fr: ["inv", "enrichie", "accverbe", "c_fut"] },
   decembre: { nom: "Décembre", maths: ["droites", "angles", "triangles", "cartesien"], fr: ["ponct", "c_ps"] },
   janvier: { nom: "Janvier", maths: ["compfrac", "divis", "decimaux"], fr: ["sens", "c_cond"] },
   fevrier: { nom: "Février", maths: ["decimaux", "opdec", "multfrac"], fr: ["types", "c_impe"] },
@@ -1140,10 +1142,26 @@ function genProba() {
 const VB1 = ["parler", "chanter", "jouer", "danser", "regarder", "marcher", "écouter", "sauter", "gagner", "trouver", "chercher", "explorer", "aider", "dessiner"];
 const VB2 = ["finir", "choisir", "grandir", "réussir", "remplir", "bâtir", "obéir", "réfléchir", "agir", "applaudir", "nourrir"];
 const SUJ = [["Je"], ["Tu"], ["Le chevalier", "La magicienne", "Il", "Elle", "Mon ami"], ["Nous", "Mon frère et moi"], ["Vous", "Ton amie et toi"], ["Les gobelins", "Ils", "Elles", "Les archères"]];
-const IRR = {
-  être: { present: "suis es est sommes êtes sont", imparfait: "étais étais était étions étiez étaient", futur: "serai seras sera serons serez seront", cond: "serais serais serait serions seriez seraient", ps: "fus fus fut fûmes fûtes furent" },
-  avoir: { present: "ai as a avons avez ont", imparfait: "avais avais avait avions aviez avaient", futur: "aurai auras aura aurons aurez auront", cond: "aurais aurais aurait aurions auriez auraient", ps: "eus eus eut eûmes eûtes eurent" },
-  aller: { present: "vais vas va allons allez vont", imparfait: "allais allais allait allions alliez allaient", futur: "irai iras ira irons irez iront", cond: "irais irais irait irions iriez iraient", ps: "allai allas alla allâmes allâtes allèrent" },
+// Verbes par bloc du document d'étude (5e) : Bloc 1 avoir, être, aimer, aller; Bloc 2 partir, venir, tenir, devoir;
+// Bloc 3 pouvoir, vouloir, savoir, voir; Bloc 4 faire, mettre, prendre, rendre, dire. (aimer suit le 1er groupe)
+// pres = présent; fut = radical du futur et du conditionnel; ps = passé simple; impe = impératif (tu, nous, vous); ppr = participe présent; pp = participe passé
+const BLOCS = {
+  avoir: { bloc: 1, pres: "ai as a avons avez ont", fut: "aur", ps: "eus eus eut eûmes eûtes eurent", impe: "aie ayons ayez", ppr: "ayant", pp: "eu" },
+  être: { bloc: 1, pres: "suis es est sommes êtes sont", imp: "ét", fut: "ser", ps: "fus fus fut fûmes fûtes furent", impe: "sois soyons soyez", ppr: "étant", pp: "été" },
+  aller: { bloc: 1, pres: "vais vas va allons allez vont", fut: "ir", ps: "allai allas alla allâmes allâtes allèrent", impe: "va allons allez", ppr: "allant", pp: "allé", etre: true },
+  partir: { bloc: 2, pres: "pars pars part partons partez partent", fut: "partir", ps: "partis partis partit partîmes partîtes partirent", impe: "pars partons partez", ppr: "partant", pp: "parti", etre: true },
+  venir: { bloc: 2, pres: "viens viens vient venons venez viennent", fut: "viendr", ps: "vins vins vint vînmes vîntes vinrent", impe: "viens venons venez", ppr: "venant", pp: "venu", etre: true },
+  tenir: { bloc: 2, pres: "tiens tiens tient tenons tenez tiennent", fut: "tiendr", ps: "tins tins tint tînmes tîntes tinrent", impe: "tiens tenons tenez", ppr: "tenant", pp: "tenu" },
+  devoir: { bloc: 2, pres: "dois dois doit devons devez doivent", fut: "devr", ps: "dus dus dut dûmes dûtes durent", impe: "dois devons devez", ppr: "devant", pp: "dû" },
+  pouvoir: { bloc: 3, pres: "peux peux peut pouvons pouvez peuvent", fut: "pourr", ps: "pus pus put pûmes pûtes purent", impe: null, ppr: "pouvant", pp: "pu" },
+  vouloir: { bloc: 3, pres: "veux veux veut voulons voulez veulent", fut: "voudr", ps: "voulus voulus voulut voulûmes voulûtes voulurent", impe: "veuille veuillons veuillez", ppr: "voulant", pp: "voulu" },
+  savoir: { bloc: 3, pres: "sais sais sait savons savez savent", fut: "saur", ps: "sus sus sut sûmes sûtes surent", impe: "sache sachons sachez", ppr: "sachant", pp: "su" },
+  voir: { bloc: 3, pres: "vois vois voit voyons voyez voient", fut: "verr", ps: "vis vis vit vîmes vîtes virent", impe: "vois voyons voyez", ppr: "voyant", pp: "vu" },
+  faire: { bloc: 4, pres: "fais fais fait faisons faites font", fut: "fer", ps: "fis fis fit fîmes fîtes firent", impe: "fais faisons faites", ppr: "faisant", pp: "fait" },
+  mettre: { bloc: 4, pres: "mets mets met mettons mettez mettent", fut: "mettr", ps: "mis mis mit mîmes mîtes mirent", impe: "mets mettons mettez", ppr: "mettant", pp: "mis" },
+  prendre: { bloc: 4, pres: "prends prends prend prenons prenez prennent", fut: "prendr", ps: "pris pris prit prîmes prîtes prirent", impe: "prends prenons prenez", ppr: "prenant", pp: "pris" },
+  rendre: { bloc: 4, pres: "rends rends rend rendons rendez rendent", fut: "rendr", ps: "rendis rendis rendit rendîmes rendîtes rendirent", impe: "rends rendons rendez", ppr: "rendant", pp: "rendu" },
+  dire: { bloc: 4, pres: "dis dis dit disons dites disent", fut: "dir", ps: "dis dis dit dîmes dîtes dirent", impe: "dis disons dites", ppr: "disant", pp: "dit" },
 };
 const TERMS = {
   1: { present: "e es e ons ez ent", imparfait: "ais ais ait ions iez aient", ps: "ai as a âmes âtes èrent" },
@@ -1152,36 +1170,71 @@ const TERMS = {
 const AUX = { pc: "present", pqp: "imparfait", fa: "futur", cp: "cond" };
 const NOM_TEMPS = { present: "au présent", imparfait: "à l'imparfait", futur: "au futur simple", ps: "au passé simple", cond: "au conditionnel présent", pc: "au passé composé", pqp: "au plus-que-parfait", fa: "au futur antérieur", cp: "au conditionnel passé" };
 const AIDE_TEMPS = {
-  present: "Au présent : -e, -es, -e, -ons, -ez, -ent (1er groupe) et -is, -is, -it, -issons, -issez, -issent (2e groupe).",
-  imparfait: "À l'imparfait : -ais, -ais, -ait, -ions, -iez, -aient.",
-  futur: "Au futur simple, on garde l'infinitif et on ajoute -ai, -as, -a, -ons, -ez, -ont.",
-  cond: "Au conditionnel présent, on garde l'infinitif et on ajoute les terminaisons de l'imparfait : -ais, -ais, -ait, -ions, -iez, -aient.",
-  ps: "Au passé simple : -ai, -as, -a, -âmes, -âtes, -èrent (1er groupe) et -is, -is, -it, -îmes, -îtes, -irent (2e groupe).",
-  pc: "Passé composé = auxiliaire avoir au présent + participe passé (-é pour le 1er groupe, -i pour le 2e).",
-  pqp: "Plus-que-parfait = auxiliaire avoir à l'imparfait + participe passé.",
-  fa: "Futur antérieur = auxiliaire avoir au futur simple + participe passé.",
-  cp: "Conditionnel passé = auxiliaire avoir au conditionnel présent + participe passé.",
+  present: "Au présent : -e, -es, -e, -ons, -ez, -ent (1er groupe) et -s, -s, -t, -ons, -ez, -ent (2e groupe : fini-s, finiss-ons).",
+  imparfait: "À l'imparfait : -ais, -ais, -ait, -ions, -iez, -aient (le 2e groupe double le s : finissais).",
+  futur: "Au futur simple : -rai, -ras, -ra, -rons, -rez, -ront.",
+  cond: "Au conditionnel présent : -rais, -rais, -rait, -rions, -riez, -raient.",
+  ps: "Au passé simple : -a / -èrent (1er groupe) et -it / -irent (2e groupe). Le 3e groupe : -it, -ut ou -int.",
+  pc: "Passé composé = auxiliaire avoir ou être au présent + participe passé.",
+  pqp: "Plus-que-parfait = auxiliaire avoir ou être à l'imparfait + participe passé.",
+  fa: "Futur antérieur = auxiliaire avoir ou être au futur simple + participe passé.",
+  cp: "Conditionnel passé = auxiliaire avoir ou être au conditionnel présent + participe passé.",
 };
-const ppDe = (inf, g) => inf.slice(0, -2) + (g === 1 ? "é" : "i");
+const L6 = s => s.split(" ");
 function formeSimple(inf, g, t, p) {
-  if (IRR[inf]) return IRR[inf][t].split(" ")[p];
-  if (t === "futur") return inf + "ai as a ons ez ont".split(" ")[p];
-  if (t === "cond") return inf + "ais ais ait ions iez aient".split(" ")[p];
-  return inf.slice(0, -2) + TERMS[g][t].split(" ")[p];
+  const b = BLOCS[inf];
+  if (b) {
+    if (t === "present") return L6(b.pres)[p];
+    if (t === "imparfait") return (b.imp || L6(b.pres)[3].slice(0, -3)) + L6("ais ais ait ions iez aient")[p];
+    if (t === "futur") return b.fut + L6("ai as a ons ez ont")[p];
+    if (t === "cond") return b.fut + L6("ais ais ait ions iez aient")[p];
+    if (t === "ps") return L6(b.ps)[p];
+  }
+  if (t === "futur") return inf + L6("ai as a ons ez ont")[p];
+  if (t === "cond") return inf + L6("ais ais ait ions iez aient")[p];
+  return inf.slice(0, -2) + L6(TERMS[g][t])[p];
 }
-function forme(inf, g, t, p) { return AUX[t] ? formeSimple("avoir", 0, AUX[t], p) + " " + ppDe(inf, g) : formeSimple(inf, g, t, p); }
+const ppDe = (inf, g) => BLOCS[inf] ? BLOCS[inf].pp : inf.slice(0, -2) + (g === 1 ? "é" : "i");
+const avecEtre = inf => !!(BLOCS[inf] && BLOCS[inf].etre);
+// gn : genre et nombre du sujet (ex. « fp »), pour accorder le participe passé avec être
+function forme(inf, g, t, p, gn) {
+  if (!AUX[t]) return formeSimple(inf, g, t, p);
+  const aux = avecEtre(inf) ? "être" : "avoir", pp = ppDe(inf, g);
+  return formeSimple(aux, 0, AUX[t], p) + " " + (aux === "être" && gn ? pp + (gn[0] === "f" ? "e" : "") + (gn[1] === "p" ? "s" : "") : pp);
+}
 const VOIS = { present: ["imparfait", "ps"], imparfait: ["cond", "present"], futur: ["cond", "present"], cond: ["futur", "imparfait"], ps: ["present", "imparfait"], pc: ["pqp", "fa"], pqp: ["pc", "cp"], fa: ["cp", "pc"], cp: ["fa", "pqp"] };
+// Sujets à la 3e personne, avec leur genre et leur nombre
+const SUJ3 = { 2: [["Le chevalier", "ms"], ["La magicienne", "fs"], ["Il", "ms"], ["Elle", "fs"], ["On", "ms"]], 5: [["Les gobelins", "mp"], ["Les archères", "fp"], ["Ils", "mp"], ["Elles", "fp"]] };
 function questionTemps(temps) {
   if (temps === "impe") return questionImperatif();
-  const irr = !AUX[temps] && Math.random() < .25, inf = irr ? pk(Object.keys(IRR)) : Math.random() < .55 ? pk(VB1) : pk(VB2), g = irr ? 0 : VB1.includes(inf) ? 1 : 2;
-  const p = ri(0, 5), bon = forme(inf, g, temps, p), sujet = pk(SUJ[p]);
-  const leurres = [...VOIS[temps].map(t => forme(inf, g, t, p)), ...mel([0, 1, 2, 3, 4, 5].filter(q => q !== p)).map(q => forme(inf, g, temps, q))];
-  if (AUX[temps] && g) leurres.splice(1, 0, formeSimple("avoir", 0, AUX[temps], p) + " " + (g === 1 ? inf : ppDe(inf, g) + "t"));
+  const bloc = Math.random() < .6, inf = bloc ? pk(Object.keys(BLOCS)) : Math.random() < .6 ? pk(VB1.concat(["aimer"])) : pk(VB2), g = BLOCS[inf] ? 0 : VB2.includes(inf) ? 2 : 1;
+  // Passé simple et temps composés (sauf le passé composé) : 3e personne seulement, comme au programme de 5e
+  const troisieme = temps === "ps" || temps === "pqp" || temps === "fa" || temps === "cp" || (AUX[temps] && avecEtre(inf));
+  const p = troisieme ? pk([2, 5]) : ri(0, 5);
+  let sujet, gn = null;
+  if (p === 2 || p === 5) [sujet, gn] = pk(SUJ3[p]); else sujet = pk(SUJ[p]);
+  const bon = forme(inf, g, temps, p, gn);
+  const leurres = VOIS[temps].map(t => forme(inf, g, t, p, gn));
+  if (AUX[temps]) {
+    const aux = formeSimple(avecEtre(inf) ? "être" : "avoir", 0, AUX[temps], p), pp = ppDe(inf, g);
+    if (avecEtre(inf)) leurres.unshift(aux + " " + pk([pp, pp + "e", pp + "s", pp + "es"].filter(x => aux + " " + x !== bon)), formeSimple("avoir", 0, AUX[temps], p) + " " + pp);
+    else leurres.unshift(aux + " " + (BLOCS[inf] ? L6(BLOCS[inf].ps)[2] : g === 1 ? inf : pp + "t"));
+  }
+  leurres.push(...mel([0, 1, 2, 3, 4, 5].filter(q => q !== p)).map(q => forme(inf, g, temps, q, gn)));
   const s = sujet === "Je" && /^[aeéèêiouh]/i.test(bon) ? "J'" : sujet + " ";
-  const table = irr ? IRR[inf][temps].split(" ").map((x, i) => ["je", "tu", "il", "nous", "vous", "ils"][i] + " " + x).join(", ").replace(/^je ([aeéi])/, "j'$1") : "";
-  return qc(`Conjugue « ${inf} » ${NOM_TEMPS[temps]} : ${s}___`, bon, leurres, irr ? `« ${inf} » est un verbe irrégulier, il faut le connaître par cœur : ${table}.` : AIDE_TEMPS[temps]);
+  let expl = AIDE_TEMPS[temps];
+  if (BLOCS[inf] && !AUX[temps]) expl = `« ${inf} » (bloc ${BLOCS[inf].bloc}) ${NOM_TEMPS[temps]} : ` + (temps === "ps" ? `il ${formeSimple(inf, 0, "ps", 2)}, ils ${formeSimple(inf, 0, "ps", 5)}` : [0, 1, 2, 3, 4, 5].map(q => ["je", "tu", "il", "nous", "vous", "ils"][q] + " " + formeSimple(inf, 0, temps, q)).join(", ").replace(/^je ([aeéi])/, "j'$1")) + ".";
+  else if (AUX[temps]) expl += avecEtre(inf) ? ` « ${inf} » se conjugue avec être : le participe passé s'accorde avec le sujet (${bon.split(" ")[1]}).` : ` Participe passé de « ${inf} » : ${ppDe(inf, g)}.`;
+  return qc(`Conjugue « ${inf} » ${NOM_TEMPS[temps]} : ${s}___`, bon, leurres, expl);
 }
 function questionImperatif() {
+  const bloc = Math.random() < .6;
+  if (bloc) {
+    const inf = pk(Object.keys(BLOCS).filter(v => BLOCS[v].impe)), b = BLOCS[inf];
+    if (Math.random() < .35) return qc(`Quel est le participe présent de « ${inf} »?`, b.ppr, [b.pp, L6(b.pres)[5], L6(b.pres)[3].replace(/ons$/, "ant") === b.ppr ? inf.replace(/(er|ir|re|oir)$/, "ant") : L6(b.pres)[3].replace(/ons$/, "ant"), formeSimple(inf, 0, "imparfait", 2)], "Le participe présent se termine par -ant. Il ne change jamais.");
+    const k = ri(0, 2), f = L6(b.impe), bon = f[k], qui = ["2e personne du singulier (tu)", "1re personne du pluriel (nous)", "2e personne du pluriel (vous)"][k];
+    return qc(`Impératif présent de « ${inf} », ${qui} : ___!`, bon, [L6(b.pres)[[1, 3, 4][k]], ...f.filter(x => x !== bon), formeSimple(inf, 0, "futur", [1, 3, 4][k])], `Impératif de « ${inf} » : ${f.join(", ")}. Pas de sujet à l'impératif.`);
+  }
   const inf = Math.random() < .6 ? pk(VB1) : pk(VB2), g = VB1.includes(inf) ? 1 : 2, r = inf.slice(0, -2);
   if (Math.random() < .35) { const bon = r + (g === 1 ? "ant" : "issant"); return qc(`Quel est le participe présent de « ${inf} »?`, bon, [r + (g === 1 ? "é" : "i"), g === 1 ? r + "ent" : r + "ant", r + (g === 1 ? "er" : "issent"), r + (g === 1 ? "ont" : "isant")], "Le participe présent se termine par -ant (en chantant, en finissant). Il ne change jamais."); }
   const k = ri(0, 2), f = (g === 1 ? ["e", "ons", "ez"] : ["is", "issons", "issez"]), bon = r + f[k], qui = ["2e personne du singulier (tu)", "1re personne du pluriel (nous)", "2e personne du pluriel (vous)"][k];
@@ -1214,6 +1267,19 @@ function questionPPA() {
   const S = s[0].toUpperCase() + s.slice(1);
   return qc(`${S} a ___ (${inf}) ${g.un} ${g.n}.`, pp, formesPP(pp), `Le complément direct « ${g.un} ${g.n} » est placé APRÈS le verbe : le participe passé avec avoir ne s'accorde pas.`);
 }
+const ACC_REGLES = [
+  ["Avec le sujet « on », le verbe se met à…", ["la 3e personne du singulier", "la 1re personne du pluriel", "la 3e personne du pluriel", "l'infinitif"], 0, "« On est beaucoup à parler d'environnement. »"],
+  ["Complète : « On ___ (aller) au château ce soir. »", ["va", "allons", "vont", "vas"], 0, "Avec « on », le verbe est à la 3e personne du singulier."],
+  ["Complète : « Le groupe se ___ (réunir) le samedi. »", ["réunit", "réunissent", "réunis", "réunissons"], 0, "« groupe » est un nom collectif : 3e personne du singulier."],
+  ["Complète : « La foule ___ (applaudir) les chevaliers. »", ["applaudit", "applaudissent", "applaudis", "applaudissons"], 0, "« foule » est un nom collectif : le verbe est au singulier."],
+  ["Complète : « L'équipe ___ (gagner) souvent. »", ["gagne", "gagnent", "gagnes", "gagnons"], 0, "« équipe » est un nom collectif : 3e personne du singulier."],
+  ["Complète : « Tu nous ___ (téléphoner) demain. » (futur)", ["téléphoneras", "téléphonerons", "téléphonera", "téléphonerez"], 0, "« nous » est un pronom complément (écran). Le sujet est « tu » : C'est tu qui…"],
+  ["Complète : « Les dragons le ___ (regarder). »", ["regardent", "regarde", "regardes", "regardez"], 0, "« le » est un pronom écran. Le sujet est « Les dragons »."],
+  ["Complète : « Il doit savoir ___ ce verbe. »", ["conjuguer", "conjugué", "conjugue", "conjuguez"], 0, "Quand deux verbes se suivent, le 2e se met à l'infinitif."],
+  ["Complète : « Nous allons ___ le trésor. »", ["chercher", "cherché", "cherchons", "cherchez"], 0, "Deux verbes qui se suivent : le 2e est à l'infinitif."],
+  ["Complète : « Il a ___ le trésor. »", ["trouvé", "trouver", "trouve", "trouvez"], 0, "Attention : après « avoir » ou « être », la règle de l'infinitif ne s'applique pas. C'est un participe passé."],
+  ["Comment trouve-t-on le sujet pour accorder le verbe?", ["On l'encadre par « C'est… qui »", "On l'encadre par « ne… pas »", "On cherche le premier mot", "On cherche le mot avant le verbe"], 0, "C'est… qui encadre le sujet."],
+];
 function questionAccVerbe() {
   const t = ri(0, 4), trans = ["regarder", "écouter", "aider", "chercher", "dessiner", "choisir", "nourrir", "applaudir", "remplir"];
   const inf = t === 4 ? pk(trans) : Math.random() < .6 ? pk(VB1) : pk(VB2), g = VB1.includes(inf) ? 1 : 2, f = p => formeSimple(inf, g, "present", p);
@@ -1226,10 +1292,62 @@ function questionAccVerbe() {
   return choix(`${s} les ___ (${inf}) en silence. (présent)`, 2, `« les » n'est pas le sujet : c'est un pronom complément. Le sujet est « ${s} » (singulier).`);
 }
 
+// Pluriel et féminin dans le GN (règles du document d'étude)
+const PLUR = [["un radis", "des radis", ["des radiss", "des radix"], "Les noms en -s, -x, -z ne changent pas au pluriel."], ["une noix", "des noix", ["des noixs", "des noixes"], "Les noms en -s, -x, -z ne changent pas au pluriel."], ["un nez", "des nez", ["des nezs", "des nezes"], "Les noms en -s, -x, -z ne changent pas au pluriel."],
+  ["un bateau", "des bateaux", ["des bateaus", "des bateau"], "Les noms en -au et -eu prennent un x."], ["un cheveu", "des cheveux", ["des cheveus", "des cheveu"], "Les noms en -au et -eu prennent un x."], ["un pneu", "des pneus", ["des pneux", "des pneu"], "Exception : pneus, bleus, landaus et sarraus prennent un s."],
+  ["un cristal", "des cristaux", ["des cristals", "des cristaus"], "Les noms en -al font -aux."], ["un cheval", "des chevaux", ["des chevals", "des chevaus"], "Les noms en -al font -aux."], ["un festival", "des festivals", ["des festivaux", "des festivaus"], "Exception : bals, carnavals, festivals, chacals, récitals prennent un s."], ["un carnaval", "des carnavals", ["des carnavaux", "des carnavaus"], "Exception : bals, carnavals, festivals… prennent un s."],
+  ["un chandail", "des chandails", ["des chandaux", "des chandailx"], "Les noms en -ail prennent un s."], ["un travail", "des travaux", ["des travails", "des travailx"], "Exceptions : bail → baux, corail → coraux, travail → travaux, vitrail → vitraux."], ["un vitrail", "des vitraux", ["des vitrails", "des vitrailx"], "Exceptions : travail → travaux, vitrail → vitraux…"],
+  ["un bambou", "des bambous", ["des bamboux", "des bambou"], "Les noms en -ou prennent un s."], ["un caillou", "des cailloux", ["des caillous", "des caillou"], "Exceptions en -oux : bijoux, cailloux, choux, genoux, hiboux, joujoux, poux."], ["un hibou", "des hiboux", ["des hibous", "des hibou"], "Exceptions en -oux : bijoux, cailloux, choux, genoux, hiboux, joujoux, poux."], ["un genou", "des genoux", ["des genous", "des genou"], "Exceptions en -oux : bijoux, cailloux, choux, genoux…"], ["un trou", "des trous", ["des troux", "des trou"], "Les noms en -ou prennent un s (sauf les 7 exceptions en -oux)."]];
+const FEM = [["un boulanger", "une boulangère", ["une boulangerre", "une boulangeuse"], "Les noms en -er font -ère ou -ière."], ["un droitier", "une droitière", ["une droitiere", "une droitièrre"], "Les noms en -er font -ère ou -ière."], ["un comédien", "une comédienne", ["une comédiene", "une comédientte"], "Les noms en -en et -on doublent la consonne finale : -enne, -onne."],
+  ["un baron", "une baronne", ["une barone", "une baronnesse"], "Les noms en -on doublent la consonne : -onne."], ["un acteur", "une actrice", ["une acteuse", "une acteure"], "Les noms en -teur font souvent -trice."], ["un nageur", "une nageuse", ["une nagetrice", "une nageure"], "Les noms en -eur font -euse."], ["un enseignant", "une enseignante", ["une enseignent", "une enseignantte"], "En général, on ajoute un e."],
+  ["dernier", "dernière", ["derniere", "dernièrre"], "Les adjectifs en -ier font -ière."], ["ancien", "ancienne", ["anciene", "ancienn"], "Les adjectifs en -en, -on, -et, -ot doublent la consonne finale."], ["créateur", "créatrice", ["créateuse", "créatrisse"], "Les adjectifs en -teur font -trice (ou -euse)."], ["craintif", "craintive", ["craintife", "craintiffe"], "Les adjectifs en -if font -ive."], ["heureux", "heureuse", ["heureuxe", "heureusse"], "Les adjectifs en -eux font -euse."], ["vieil", "vieille", ["vieile", "vieil"], "Les adjectifs en -eil doublent la consonne et prennent un e."], ["muet", "muette", ["muete", "muètte"], "Les adjectifs en -et doublent la consonne : -ette."], ["rapide", "rapide", ["rapidee", "rapidte"], "Un adjectif qui finit déjà par un e muet ne change pas au féminin."]];
+function questionAccordGN() {
+  const t = ri(0, 3);
+  if (t === 0) { const [a, b, l, e] = pk(PLUR); return qc(`Quel est le pluriel de « ${a} »?`, b, l.concat([b.replace(/x$/, "s").replace(/aux$/, "als")]), e); }
+  if (t === 1) { const [a, b, l, e] = pk(FEM); return qc(`Quel est le féminin de « ${a} »?`, b, l.concat([a.replace(/^un /, "une ")]), e); }
+  if (t === 2) return pk([qc("Complète : « Des robes ___ »", "jaunes", ["jaune", "jaunent", "jaunies"], "L'adjectif de couleur en un seul mot s'accorde."), qc("Complète : « Des robes jaune ___ »", "clair", ["claires", "clairs", "claire"], "Une couleur exprimée par deux mots (jaune clair) ne s'accorde pas."), qc("Complète : « Des chandails ___ »", "orange", ["oranges", "orangés", "orangent"], "« orange » est aussi un fruit : la couleur qui représente un objet ne s'accorde pas."), qc("Complète : « Des yeux ___ »", "marron", ["marrons", "marronnes", "marronne"], "« marron » est un objet (le fruit) : il ne s'accorde pas.")]);
+  return pk([qc("Comment écrit-on 80?", "quatre-vingts", ["quatre-vingt", "quatres-vingts", "quatre vingt"], "Vingt prend un s quand il est multiplié et termine le nombre."), qc("Comment écrit-on 300?", "trois-cents", ["trois-cent", "troi-cents", "trois cent"], "Cent prend un s quand il est multiplié et termine le nombre."), qc("Comment écrit-on 82?", "quatre-vingt-deux", ["quatre-vingts-deux", "quatres-vingt-deux", "quatre-vingt-deuxs"], "Vingt ne prend pas de s s'il ne termine pas le nombre."), qc("Comment écrit-on 230?", "deux-cent-trente", ["deux-cents-trente", "deux-cent-trentes", "deuxs-cent-trente"], "Cent ne prend pas de s s'il ne termine pas le nombre.")]);
+}
+
 // ---------- Banques de questions écrites ----------
 const BANQUE_FR = {
+  manip: [
+    ["Quelle manipulation consiste à supprimer un mot pour voir s'il est obligatoire?", ["L'effacement", "Le déplacement", "Le remplacement", "L'encadrement"], 0, "L'effacement : on enlève un mot ou un groupe pour voir s'il est obligatoire ou facultatif."],
+    ["Quelle manipulation consiste à changer la place d'un groupe dans la phrase?", ["Le déplacement", "L'effacement", "L'ajout", "Le remplacement"], 0, "Le déplacement : on change la place d'un élément pour voir s'il est obligatoire ou facultatif."],
+    ["Remplacer « Gérard » par « Il », c'est quelle manipulation?", ["Le remplacement", "L'ajout", "L'encadrement", "Le déplacement"], 0, "Le remplacement : on change un mot par un autre ou par un équivalent (nom → pronom)."],
+    ["Ajouter « très » devant un mot pour voir si c'est un adjectif, c'est…", ["l'ajout (l'addition)", "l'effacement", "le déplacement", "l'encadrement"], 0, "L'ajout sert à identifier la classe d'un mot : on peut ajouter « très » devant un adjectif."],
+    ["Avec quelle manipulation trouve-t-on le sujet?", ["L'encadrement par « C'est… qui »", "L'effacement", "Le déplacement", "L'ajout de « très »"], 0, "« C'est Gérard qui marche » : l'encadrement par C'est… qui montre le sujet."],
+    ["Avec quelle manipulation trouve-t-on le verbe conjugué?", ["L'encadrement par « ne… pas »", "L'encadrement par « C'est… qui »", "Le déplacement", "L'ajout de « très »"], 0, "« Gérard ne marche pas » : le verbe se laisse encadrer par ne… pas."],
+    ["Quel constituant peut être effacé ET déplacé?", ["Le complément de phrase", "Le sujet", "Le prédicat", "Le verbe"], 0, "Le complément de phrase est facultatif et mobile. Le sujet et le prédicat ne s'effacent pas et ne se déplacent pas."],
+    ["Le sujet peut-il être effacé?", ["Non", "Oui", "Seulement s'il est court", "Seulement au début"], 0, "Le sujet est obligatoire : on ne peut pas l'effacer ni le déplacer."],
+    ["Dans « Gérard marche au parc », quel groupe peut-on déplacer?", ["au parc", "Gérard", "marche", "Gérard marche"], 0, "« Au parc, Gérard marche. » : c'est le complément de phrase."],
+    ["Quelle manipulation ne fonctionne PAS avec le complément de phrase?", ["L'encadrement", "L'effacement", "Le déplacement", "Le remplacement"], 0, "Le complément de phrase s'efface, se déplace, se remplace et accepte l'ajout, mais ne s'encadre pas."],
+    ["Quelle phrase montre l'encadrement du sujet?", ["C'est le dragon qui garde le trésor.", "Le dragon ne garde pas le trésor.", "Il garde le trésor.", "Le trésor, le dragon le garde."], 0, "C'est… qui encadre le sujet « le dragon »."],
+    ["Quel mot ne peut pas être effacé dans un GN?", ["Le nom (noyau)", "L'adjectif", "Le complément du nom", "Aucun"], 0, "Le nom est le noyau du GN : on ne peut pas l'effacer."],
+    ["Quelle classe de mots peut être encadrée par « ne… pas »?", ["Le verbe", "Le nom", "L'adjectif", "Le déterminant"], 0, "Seul le verbe conjugué se laisse encadrer par ne… pas."],
+    ["Quel mot peut être précédé de « très »?", ["Un adjectif", "Un nom", "Un verbe", "Un déterminant"], 0, "On peut ajouter « très » devant un adjectif : très gros."],
+  ],
+  enrichie: [
+    ["Une phrase de base enrichie est toujours…", ["déclarative et affirmative", "interrogative et négative", "impérative", "exclamative"], 0, "Comme la phrase de base, elle est déclarative et affirmative, mais elle contient plus de détails."],
+    ["Quelle est la différence entre une phrase de base et une phrase de base enrichie?", ["L'enrichie contient des mots qui précisent et donnent plus d'informations.", "L'enrichie n'a pas de sujet.", "L'enrichie est toujours une question.", "Il n'y a aucune différence."], 0, "On ajoute des adjectifs, des adverbes, des compléments du nom…"],
+    ["Quelle phrase est une phrase de base enrichie de « La maison est lugubre. »?", ["La petite maison très abîmée est excessivement lugubre.", "La maison est-elle lugubre?", "La maison n'est pas lugubre.", "Quelle maison lugubre!"], 0, "Elle reste déclarative et affirmative, avec plus de détails."],
+    ["Dans « La petite maison très abîmée aux fenêtres brisées est lugubre. », quel est le sujet?", ["La petite maison très abîmée aux fenêtres brisées", "La petite maison", "aux fenêtres brisées", "est lugubre"], 0, "Le sujet est tout le GN enrichi : C'est… qui le prouve."],
+    ["Dans « Au bout de la clairière lointaine, la maison est lugubre. », quel est le complément de phrase?", ["Au bout de la clairière lointaine", "la maison", "est lugubre", "lointaine"], 0, "Il peut être déplacé ou effacé."],
+    ["Dans « Le vieux dragon dort profondément dans sa grotte humide. », quel est le prédicat?", ["dort profondément", "Le vieux dragon", "dans sa grotte humide", "humide"], 0, "Le prédicat contient le verbe et ce qui le complète. « dans sa grotte humide » est un complément de phrase."],
+    ["Quel mot enrichit le GN « le chevalier »?", ["courageux", "court", "rapidement", "et"], 0, "Un adjectif comme « courageux » ajoute une précision au nom."],
+    ["Quel mot enrichit le verbe dans « Le loup hurle. »?", ["fort", "le", "loup", "et"], 0, "« Le loup hurle fort » : l'adverbe précise le verbe."],
+    ["Laquelle n'est PAS une phrase de base enrichie?", ["Le grand dragon ne dort pas.", "Le grand dragon dort paisiblement.", "Le grand dragon rouge dort.", "Ce soir, le grand dragon dort."], 0, "Elle est négative : une phrase de base (enrichie ou non) est affirmative."],
+    ["Quelle phrase contient un complément du nom?", ["Les fenêtres de la tour sont brisées.", "Les fenêtres sont brisées.", "Hier, les fenêtres ont été brisées.", "Les fenêtres sont très brisées."], 0, "« de la tour » complète le nom « fenêtres »."],
+  ],
   ponct: [
     ["Quelle phrase est une phrase complexe?", ["Le dragon dort et le chevalier attend.", "Le dragon dort dans sa grotte.", "Le petit dragon vert.", "Demain matin, le dragon dormira."], 0, "Une phrase complexe contient deux verbes conjugués (deux phrases réunies)."],
+    ["Quel mot peut servir de coordonnant pour former une phrase complexe?", ["parce que", "très", "dans", "rapidement"], 0, "Phrase de base + coordonnant (mais, et, car, parce que…) + phrase de base = phrase complexe."],
+    ["Où va la virgule? « La potion est amère mais elle te guérira. »", ["Avant « mais »", "Après « mais »", "Après « potion »", "Il n'en faut pas"], 0, "On met une virgule avant les conjonctions « mais » et « car »."],
+    ["Où va la virgule? « Tout d'abord j'aimerais vous parler des dragons. »", ["Après « Tout d'abord »", "Après « j'aimerais »", "Après « parler »", "Il n'en faut pas"], 0, "On met une virgule après un marqueur de relation (tout d'abord, cependant, en effet, premièrement…)."],
+    ["Quelle phrase est bien ponctuée?", ["Le chevalier boit tous les matins une potion.", "Le chevalier boit une potion, tous les matins.", "Le chevalier, boit une potion tous les matins.", "Le chevalier boit, une potion tous les matins."], 0, "Un complément de phrase à la fin de la phrase ne prend pas de virgule."],
+    ["Quelle phrase est bien ponctuée?", ["Le mage prépare, chaque soir, une potion magique.", "Le mage prépare chaque soir, une potion magique.", "Le mage, prépare chaque soir une potion magique.", "Le mage prépare, chaque soir une potion magique."], 0, "Un complément de phrase au milieu de la phrase est encadré par deux virgules."],
+    ["« Allons manger, Grand-maman! » Que change la virgule?", ["On invite Grand-maman à manger avec nous.", "On va manger Grand-maman.", "Rien du tout.", "On pose une question."], 0, "La virgule marque une petite pause et change le sens de la phrase!"],
+    ["En lecture, que signifie une virgule?", ["Une demi-pause", "Une longue pause", "La fin de la phrase", "Une question"], 0, "La virgule sépare des mots ou des groupes de mots et signifie une demi-pause."],
     ["Combien de verbes conjugués y a-t-il dans une phrase complexe?", ["Au moins deux", "Un seul", "Aucun", "Toujours trois"], 0, "Chaque verbe conjugué forme une phrase à l'intérieur de la phrase complexe."],
     ["Dans « Le loup hurle, la lune brille. », qu'est-ce qui relie les deux phrases?", ["Une virgule", "Le mot « et »", "Un point", "Le mot « mais »"], 0, "Ici, les deux phrases sont juxtaposées : elles sont séparées par une virgule."],
     ["Quel mot peut relier deux phrases pour former une phrase complexe?", ["mais", "très", "le", "rapide"], 0, "« mais » est une conjonction : elle peut relier deux phrases."],
@@ -1237,16 +1355,13 @@ const BANQUE_FR = {
     ["Quelle phrase est bien ponctuée?", ["J'ai acheté des pommes, des poires et des bananes.", "J'ai acheté des pommes des poires, et des bananes.", "J'ai acheté, des pommes, des poires, et des bananes.", "J'ai acheté des pommes des poires et des bananes."], 0, "Dans une énumération, on met une virgule entre les éléments, sauf devant le dernier « et »."],
     ["Dans une énumération, on ne met habituellement pas de virgule…", ["devant « et »", "après le premier mot", "entre deux noms", "entre deux adjectifs"], 0, "« des pommes, des poires et des bananes » : pas de virgule devant « et »."],
     ["Quel signe annonce les paroles d'un personnage?", ["Le deux-points (:)", "Le point (.)", "La virgule (,)", "Le point d'exclamation (!)"], 0, "Le deux-points annonce qu'un personnage va parler."],
-    ["Dans un dialogue, quel signe indique qu'un nouveau personnage parle?", ["Le tiret (—)", "La virgule (,)", "Le point-virgule (;)", "Le point (.)"], 0, "Chaque changement d'interlocuteur commence par un tiret, sur une nouvelle ligne."],
+    ["Dans un dialogue, quel signe indique qu'un nouveau personnage parle?", ["Le tiret (-)", "La virgule (,)", "Le point-virgule (;)", "Le point (.)"], 0, "Chaque changement d'interlocuteur commence par un tiret, sur une nouvelle ligne."],
     ["Quels signes ouvrent et ferment un dialogue?", ["Les guillemets « »", "Les parenthèses ( )", "Les crochets [ ]", "Les points de suspension …"], 0, "Le dialogue s'ouvre avec « et se ferme avec »."],
     ["Quelle phrase est bien ponctuée?", ["Le roi demanda : « Qui a pris ma couronne? »", "Le roi demanda « Qui a pris ma couronne? »", "Le roi demanda, qui a pris ma couronne.", "Le roi demanda : qui a pris ma couronne »"], 0, "Deux-points, puis guillemets autour des paroles."],
-    ["Dans « — Où vas-tu? demanda la fée. », que signifie « demanda la fée »?", ["C'est une incise : elle dit qui parle.", "C'est le titre du texte.", "C'est un complément de phrase.", "C'est une erreur."], 0, "L'incise indique qui parle. Le sujet est placé après le verbe."],
     ["Où faut-il une virgule? « Léa range sa chambre et son frère lave la vaisselle. »", ["Il n'en faut pas", "Après « Léa »", "Après « chambre »", "Après « frère »"], 0, "Deux phrases reliées par « et » n'ont habituellement pas besoin de virgule."],
-    ["Quelle phrase complexe est formée avec une subordonnée?", ["Je mange parce que j'ai faim.", "Je mange une pomme rouge.", "Je mange, je bois.", "Je mange et je bois."], 0, "« parce que j'ai faim » dépend de la première phrase : c'est une subordonnée."],
     ["Quel mot ne peut PAS relier deux phrases?", ["avec", "et", "mais", "car"], 0, "« avec » est une préposition : elle introduit un groupe de mots, pas une phrase."],
     ["Quelle phrase contient une virgule bien placée?", ["Pendant l'hiver, les ours dorment.", "Pendant, l'hiver les ours dorment.", "Pendant l'hiver les ours, dorment.", "Les ours, dorment pendant l'hiver."], 0, "On ne sépare jamais le sujet de son verbe par une virgule."],
     ["Laquelle est une phrase complexe?", ["Quand la cloche sonne, les élèves rentrent.", "Les élèves rentrent à l'école.", "Dans la cour, les élèves jouent.", "Les élèves de 5e année."], 0, "Deux verbes conjugués : « sonne » et « rentrent »."],
-    ["À quoi servent les points de suspension (…)?", ["À montrer qu'une phrase n'est pas terminée ou une hésitation", "À poser une question", "À annoncer une énumération", "À fermer un dialogue"], 0, "« Je… je ne sais pas… » : on hésite ou on laisse la phrase en suspens."],
   ],
   sens: [
     ["Quel mot fait partie de la même famille que « terre »?", ["terrain", "tard", "tirer", "tête"], 0, "« terrain », « terrasse », « enterrer » viennent tous de « terre »."],
@@ -1255,7 +1370,24 @@ const BANQUE_FR = {
     ["Quel mot fait partie de la même famille que « lait »?", ["laitier", "laid", "laisser", "lacet"], 0, "Lait, laitier, laitage, allaiter : le radical « lait » se retrouve dans chacun."],
     ["Dans « impossible », que veut dire le préfixe « im- »?", ["Le contraire (pas)", "Encore une fois", "Avant", "Très"], 0, "Im-possible = pas possible."],
     ["Dans « refaire », que veut dire le préfixe « re- »?", ["Encore une fois", "Le contraire", "Petit", "Avant"], 0, "Refaire = faire encore une fois."],
-    ["Quel suffixe veut dire « petit »?", ["-et (comme dans « jardinet »)", "-ment", "-eur", "-able"], 0, "Un jardinet, c'est un petit jardin; un livret, un petit livre."],
+    ["Quel suffixe veut dire « petit » (diminutif)?", ["-ette (comme dans « fillette »)", "-logie", "-able", "-mètre"], 0, "-ette est un diminutif : une fillette, c'est une petite fille."],
+    ["Que veut dire le préfixe « multi- »?", ["Plusieurs", "Deux", "Contre", "Petit"], 0, "Multicolore = de plusieurs couleurs."],
+    ["Que veut dire le préfixe « bi- »?", ["Deux", "Plusieurs", "Petit", "Répétition"], 0, "Une bicyclette a deux roues."],
+    ["Que veut dire le préfixe « micro- »?", ["Petit", "Grand", "Contre", "Deux"], 0, "Un microbe est un tout petit être vivant."],
+    ["Que veut dire le préfixe « anti- »?", ["Contre", "Avant", "Plusieurs", "Petit"], 0, "Un antivol protège contre le vol."],
+    ["Que veut dire le préfixe « para- »?", ["Protection", "Répétition", "Deux", "Petit"], 0, "Un parapluie protège de la pluie."],
+    ["Que veut dire le suffixe « -logie »?", ["Science", "Mesure", "Angle", "Qui écrit"], 0, "La biologie est la science du vivant."],
+    ["Que veut dire le suffixe « -mètre »?", ["Mesure de…", "Science", "Petit", "Qui écrit"], 0, "Un thermomètre mesure la température."],
+    ["Que veut dire le suffixe « -gone »?", ["Angle", "Mesure", "Science", "Petit"], 0, "Un hexagone a six angles."],
+    ["Que veut dire le suffixe « -able »?", ["Que l'on peut", "Contraire", "Petit", "Science"], 0, "Lavable = que l'on peut laver."],
+    ["Que veut dire le suffixe « -graphe »?", ["Qui écrit", "Mesure", "Angle", "Contre"], 0, "Un photographe « écrit » avec la lumière."],
+    ["Comment est formé le mot « imprécision »?", ["Préfixe + mot de base + suffixe", "Seulement un préfixe", "Seulement un suffixe", "C'est un mot composé"], 0, "Im + précis + ion : préfixe ET suffixe."],
+    ["Lequel est un mot composé?", ["arc-en-ciel", "jardinage", "refaire", "antivol"], 0, "Un mot composé réunit plusieurs mots. Les autres sont des mots dérivés."],
+    ["Lequel est un mot dérivé?", ["jardinage", "grand-père", "arc-en-ciel", "tout à coup"], 0, "Jardin + -age : on a ajouté un suffixe à un mot existant."],
+    ["« Légumes » est un mot…", ["générique", "spécifique", "composé", "figuré"], 0, "Un mot générique a un sens général. Carotte, chou et oignon sont des mots spécifiques."],
+    ["Quel mot est spécifique dans l'ensemble « fruits »?", ["fraise", "fruits", "nourriture", "dessert"], 0, "Un mot spécifique est précis dans un ensemble."],
+    ["Quel mot est générique pour « marteau, tournevis, scie »?", ["outils", "clou", "bois", "atelier"], 0, "Le mot générique englobe tous les mots spécifiques."],
+    ["Quel mot fait partie de la même famille que « art »?", ["artistique", "arbre", "arrêt", "armure"], 0, "Art, artiste, artistique : même mot de base."],
     ["Quel est le radical de « chanteuse »?", ["chant", "chanteu", "euse", "anteu"], 0, "Chant-eur, chant-er, chant-euse : le radical est « chant »."],
     ["Quel est un synonyme de « content »?", ["heureux", "triste", "fâché", "fatigué"], 0, "Des synonymes ont presque le même sens."],
     ["Quel est un synonyme de « débuter »?", ["commencer", "terminer", "arrêter", "oublier"], 0, "Débuter = commencer."],
@@ -1280,19 +1412,24 @@ const BANQUE_FR = {
     ["Par quel signe se termine une phrase interrogative?", ["?", ".", "!", ":"], 0, "Le point d'interrogation."],
     ["Quelle phrase est impérative?", ["Fermez la porte, s'il vous plaît.", "Vous fermez la porte.", "Fermez-vous la porte?", "Vous avez fermé la porte!"], 0, "Le verbe est à l'impératif, sans sujet."],
     ["Quelle phrase est interrogative?", ["Est-ce que tu viens avec nous?", "Tu viens avec nous.", "Viens avec nous.", "Comme tu es gentil de venir!"], 0, "« Est-ce que » sert à poser une question."],
-    ["Quelle est la forme de la phrase « Le dragon ne dort pas. »?", ["Négative", "Positive", "Interrogative", "Impérative"], 0, "« ne… pas » : forme négative."],
-    ["Mets à la forme négative : « Je mange des légumes. »", ["Je ne mange pas de légumes.", "Je mange pas des légumes.", "Je ne mange des légumes.", "Je mange ne pas de légumes."], 0, "La négation a deux mots : « ne » avant le verbe et « pas » après."],
-    ["Quelle phrase est à la forme positive?", ["Le magicien a trouvé sa baguette.", "Le magicien n'a rien trouvé.", "Le magicien ne trouve jamais sa baguette.", "Le magicien n'a plus sa baguette."], 0, "Elle ne contient pas de mots de négation."],
+    ["Quelle est la forme de la phrase « Le dragon ne dort pas. »?", ["Négative", "Affirmative", "Interrogative", "Impérative"], 0, "« ne… pas » : forme négative."],
+    ["Mets à la forme négative : « Je mange des légumes. »", ["Je ne mange pas de légumes.", "Je mange pas des légumes.", "Je ne mange des légumes.", "Je mange ne pas de légumes."], 0, "Le marqueur de négation a deux mots (deux adverbes) : « ne » avant le verbe et « pas » après."],
+    ["Quelle phrase est à la forme affirmative?", ["Le magicien a trouvé sa baguette.", "Le magicien n'a rien trouvé.", "Le magicien ne trouve jamais sa baguette.", "Le magicien n'a plus sa baguette."], 0, "Elle ne contient pas de mots de négation."],
     ["Quel groupe de mots marque une négation?", ["ne… jamais", "est-ce que", "s'il vous plaît", "très"], 0, "ne… pas, ne… jamais, ne… plus, ne… rien sont des négations."],
     ["Quelle phrase négative est bien écrite?", ["On n'a pas fini.", "On a pas fini.", "On n'a fini pas.", "On ne a pas fini."], 0, "Devant une voyelle, « ne » devient « n' ». Il ne faut pas l'oublier!"],
     ["Transforme en phrase interrogative : « Tu aimes la musique. »", ["Aimes-tu la musique?", "Aime la musique.", "Comme tu aimes la musique!", "Tu n'aimes pas la musique."], 0, "On peut inverser le sujet et le verbe, avec un trait d'union."],
-    ["« Ne touche pas à ça! » est une phrase…", ["impérative et négative", "déclarative et positive", "interrogative et négative", "exclamative et positive"], 0, "Un ordre (impératif) avec « ne… pas » (négative)."],
+    ["« Ne touche pas à ça! » est une phrase…", ["impérative et négative", "déclarative et affirmative", "interrogative et négative", "exclamative et affirmative"], 0, "Un ordre (impératif) avec « ne… pas » (négative)."],
     ["Une phrase déclarative se termine habituellement par…", ["un point", "un point d'interrogation", "un deux-points", "une virgule"], 0, "Elle donne une information : point."],
     ["Laquelle est une phrase exclamative?", ["Que cette potion est puissante!", "Cette potion est puissante.", "Bois cette potion.", "Est-ce que cette potion est puissante?"], 0, "« Que… ! » exprime une émotion."],
     ["Quelle phrase n'a pas de sujet?", ["Écoute bien.", "Tu écoutes bien.", "Écoutes-tu bien?", "Il écoute bien!"], 0, "À l'impératif, il n'y a pas de sujet exprimé."],
     ["Quel signe de ponctuation termine une phrase impérative?", ["Un point ou un point d'exclamation", "Toujours un point d'interrogation", "Une virgule", "Un deux-points"], 0, "« Range ta chambre. » ou « Range ta chambre! »"],
   ],
   pp: [
+    ["Quelle est la terminaison du participe passé d'un verbe en -er?", ["-é", "-i", "-u", "-er"], 0, "Verbes en -er : -é (aimé, chanté)."],
+    ["Quelles sont les terminaisons du participe passé des verbes en -ir, -oir et -re (la plupart du temps)?", ["-i ou -u", "-é", "-er", "-ant"], 0, "Fini, venu, vu, rendu…"],
+    ["Dans « Les enfants motivés travaillent fort », « motivés » est…", ["un participe passé employé seul (PPS)", "un participe passé avec être (PPE)", "un participe passé avec avoir (PPA)", "un verbe à l'infinitif"], 0, "Sans auxiliaire, le PP joue le rôle d'un adjectif."],
+    ["Dans « Henri est allé au tableau », « allé » est…", ["un participe passé employé avec être (PPE)", "un participe passé employé seul (PPS)", "un participe présent", "un infinitif"], 0, "« est » est l'auxiliaire être."],
+    ["Quelle est la 1re étape pour accorder un participe passé?", ["Repérer le PP et dire s'il est PPS, PPE ou PPA", "Ajouter un s", "Trouver le complément de phrase", "Le mettre à l'infinitif"], 0, "#1 Repérer le PP, #2 repérer son sujet (genre et nombre), #3 ajouter e et s."],
     ["Dans « La porte est fermée », quel mot est un participe passé?", ["fermée", "est", "porte", "La"], 0, "« fermée » vient du verbe « fermer » : c'est un participe passé."],
     ["Quel est le participe passé du verbe « finir »?", ["fini", "finit", "finir", "finis"], 0, "Pour trouver la finale, on met au féminin : finie → fini."],
     ["Quel est le participe passé du verbe « prendre »?", ["pris", "prit", "prendu", "prend"], 0, "Au féminin : prise → on entend le s, donc « pris »."],
@@ -1309,6 +1446,12 @@ const BANQUE_FR = {
     ["Quelle forme termine « Mes cousines sont arrivé__ hier »?", ["-es", "-s", "-e", "rien"], 0, "Avec être, accord avec « Mes cousines » (féminin pluriel) : arrivées."],
   ],
   compl: [
+    ["Quelle question pose-t-on après le verbe pour trouver le CD?", ["Qui? ou Quoi?", "À qui? ou À quoi?", "Où? ou Quand?", "Pourquoi?"], 0, "L'homme mange quoi? une pomme → CD."],
+    ["Quelle question pose-t-on après le verbe pour trouver le CI?", ["À qui? De quoi? (avec une préposition)", "Qui? Quoi?", "Quand?", "Comment?"], 0, "Il parle de quoi? de ses vacances → CI."],
+    ["Par quel pronom remplace-t-on le CI « à son ami » dans « Elle parle à son ami »?", ["lui", "le", "la", "les"], 0, "Elle lui parle. Les pronoms CI : lui, leur."],
+    ["Dans « Il les mange », le mot « les » est…", ["un CD (pronom)", "un CI", "un sujet", "un déterminant"], 0, "Le CD peut être un pronom (le, la, les, l') placé devant le verbe."],
+    ["L'attribut du sujet peut-il être effacé?", ["Non", "Oui", "Seulement s'il est un GN", "Seulement au pluriel"], 0, "L'attribut du sujet ne peut pas être effacé."],
+    ["Dans « Cette femme est une grande artiste », l'attribut du sujet est…", ["un groupe du nom", "un adverbe", "un verbe", "une préposition"], 0, "L'attribut peut être un adjectif, adverbe + adjectif, ou un GN."],
     ["Dans « Le chevalier mange une pomme », quel est le complément direct (CD)?", ["une pomme", "Le chevalier", "mange", "pomme mange"], 0, "Le chevalier mange quoi? Une pomme. On peut le remplacer par « la » : il la mange."],
     ["Dans « Léa parle à son frère », quel est le complément indirect (CI)?", ["à son frère", "Léa", "parle", "son"], 0, "Léa parle à qui? À son frère. Le CI commence par une préposition (à, de…)."],
     ["Un complément direct (CD) se construit…", ["sans préposition", "toujours avec « à »", "toujours avec « de »", "avec une virgule"], 0, "Le CD suit directement le verbe, sans préposition."],
@@ -1395,7 +1538,8 @@ function questionNotion(m, n) {
   if (n === "inv") return pk(INVAR);
   if (n === "pp") return Math.random() < .6 ? questionPP() : pk(BANQUE_FR.pp);
   if (n === "ppa") return Math.random() < .3 ? pk(BANQUE_FR.pp.slice(1, 8)) : questionPPA();
-  if (n === "accverbe") return Math.random() < .7 ? questionAccVerbe() : pk(ARENE.accverbe);
+  if (n === "accverbe") { const r = Math.random(); return r < .55 ? questionAccVerbe() : r < .85 ? pk(ACC_REGLES) : pk(ARENE.accverbe); }
+  if (n === "gn") return Math.random() < .45 ? questionAccordGN() : pk(ARENE.gn);
   if (ARENE[n]) return pk(ARENE[n]);
   if (BANQUE_FR[n]) return pk(BANQUE_FR[n]);
   return pk(FR);
