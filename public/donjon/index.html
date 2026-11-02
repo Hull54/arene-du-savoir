@@ -785,6 +785,11 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 .modal-fiches .btn.mini { padding: 0 6px; min-height: 0; font-size: .75rem; line-height: 1.3; }
 .modal-fiches .fiche-stats { font-size: .7rem; text-align: center; }
 .modal-fiches .row { margin: 0; }
+.crochet { display: inline-grid; grid-template-columns: auto auto; align-items: start; font-variant-numeric: tabular-nums; }
+.cr-dd { padding: 0 .3em 0 0; }
+.cr-ds { border-left: 4px solid currentColor; border-bottom: 4px solid currentColor; padding: 0 .3em 0 .3em; min-width: 1.6em; }
+.cr-aide { margin: 0; }
+.pad .reste { font-size: 1rem; }
 </style>
 
 <div class="app">
@@ -10776,9 +10781,9 @@ const rnd2 = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const NIVEAUX = { des: "Dés de 1 à 12", facile: "2 chiffres", "5e": "3 chiffres", expert: "4 chiffres" };
 // Difficulté choisie par l'équipe : décale le niveau de calcul, la force des monstres et le temps des comptes à rebours
 const DIFFS = {
-  facile: { nom: "Facile", ico: "🟢", pv: .75, tours: 3, desc: "Actions : calculs avec deux dés de 12 (+, −, ×, ÷). Une mauvaise réponse en moins aux questions à choix, monstres plus faibles, plus de temps." },
-  normal: { nom: "Intermédiaire", ico: "🟡", pv: 1, tours: 0, desc: "Actions : calculs jusqu'à 2 chiffres en haut et 2 chiffres en bas (+, −, ×, ÷), avec l'ardoise. Le niveau prévu pour la quête." },
-  expert: { nom: "Avancé", ico: "🔴", pv: 1.3, tours: -2, desc: "Actions : calculs jusqu'à 3 chiffres en haut et 2 chiffres en bas (+, −, ×, ÷), avec l'ardoise. Monstres plus coriaces, moins de temps." },
+  facile: { nom: "Facile", ico: "🟢", pv: .75, tours: 3, desc: "Actions : calculs avec deux dés de 12 (+, −, ×, ÷ jusqu'à 144 ÷ 12). Une mauvaise réponse en moins aux questions à choix, monstres plus faibles, plus de temps." },
+  normal: { nom: "Intermédiaire", ico: "🟡", pv: 1, tours: 0, desc: "Actions : calculs jusqu'à 2 chiffres en haut et 2 en bas (+, −, ×), division en crochet sans reste, avec l'ardoise. Le niveau prévu pour la quête." },
+  expert: { nom: "Avancé", ico: "🔴", pv: 1.3, tours: -2, desc: "Actions : calculs jusqu'à 3 chiffres en haut et 2 en bas (+, −, ×), division en crochet avec reste possible, avec l'ardoise. Monstres plus coriaces, moins de temps." },
 };
 let DIFF = "normal", NIV_BASE = null;
 const ECHELLE = ["des", "facile", "5e", "expert"];
@@ -10791,7 +10796,11 @@ function genCalcul(op) {
   if (op === "−") { const a = rnd2(Math.max(haut[0], 22), haut[1]), b = rnd2(11, Math.min(99, a - 1)); return { txt: `${a} − ${b}`, rep: a - b, a, b, op }; }
   if (op === "×") { const a = rnd2(...(av ? [102, 999] : [12, 99])), b = av ? bas() : (Math.random() < .6 ? rnd2(3, 9) : rnd2(11, 25)); return { txt: `${a} × ${b}`, rep: a * b, a, b, op }; }
   // ÷ : réponse exacte, le dividende respecte le nombre de chiffres « en haut »
-  for (;;) { const b = av ? (Math.random() < .7 ? rnd2(3, 9) : rnd2(11, 25)) : rnd2(2, 9), q = rnd2(Math.ceil(haut[0] / b), Math.floor(haut[1] / b)); if (q >= 2) return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
+  // ÷ en crochet. Intermédiaire : sans reste, diviseur de 1 ou 2 chiffres. Avancé : avec reste possible (2 chiffres au plus).
+  const b = Math.random() < .65 ? rnd2(2, 9) : rnd2(11, 25);
+  if (!av) { const q = rnd2(Math.max(2, Math.ceil(20 / b)), Math.floor(999 / b)); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op, crochet: true }; }
+  const a = rnd2(Math.max(100, 2 * b), 999), q = Math.floor(a / b), r = a % b;
+  return { txt: `${a} ÷ ${b}`, rep: q, reste: r, a, b, op, crochet: true };
 }
 // Indices qui apparaissent si la question prend du temps : d'abord une méthode, puis un premier pas
 const DIZ = n => Math.floor(n / 10) * 10, CEN = n => Math.floor(n / 100) * 100;
@@ -10821,6 +10830,7 @@ function indicesCalcul(q) {
     // le plus petit facteur sert de stratégie ; on l'exprime avec l'autre nombre
     return m ? [`Calcule ${g} × ${p}. Astuce : ${m[0]}`, m[1]] : [`Compte par bonds de ${p}.`, ""];
   }
+  if (op === "÷" && q.reste !== undefined) return [`Combien de fois ${b} entre dans ${a}? Commence par les centaines ou les dizaines.`, (D => D ? `${b} × ${D} = ${b * D}. Il reste ${a - b * D} à partager en ${b}.` : `Cherche dans la table de ${b} le plus grand produit qui ne dépasse pas ${a}.`)(Math.floor(q.rep / 10) * 10)];
   if (op === "÷") return [`Cherche dans la table de ${b} : ${b} × ? = ${a}`, `Compte par bonds de ${b} : ${b}, ${2 * b}, ${3 * b}… jusqu'à ${a}. Combien de bonds?`];
   if (op === "+") {
     if (a <= 12 && b <= 12) { const [g, p] = a >= b ? [a, b] : [b, a]; const c = 10 - g;
@@ -10860,7 +10870,9 @@ function epreuveMath(op, titre, danger) {
       catch { const d = [...document.querySelectorAll(".die b")]; if (op === "÷") d[0].textContent = b; else d.forEach((el, i) => el.textContent = i ? b : a); }
       q = { txt: `${a} ${op} ${b}`, rep: op === "×" ? a * b : op === "+" ? a + b : op === "÷" ? a / b : a - b, a, b, op };
     } else q = genCalcul(op);
-    qel.textContent = q.txt + " = ?";
+    if (q.crochet) { qel.innerHTML = `<span class="crochet"><span class="cr-dd">${q.a}</span><span class="cr-ds">${q.b}</span></span>`; qel.insertAdjacentHTML("afterend", `<p class="sub cr-aide">${q.reste !== undefined ? "Écris le quotient, puis touche « Reste » et écris le reste (0 s'il n'y en a pas)." : "Division sans reste."}</p>`); }
+    else qel.textContent = q.txt + " = ?";
+    if (q.reste !== undefined) pad.insertAdjacentHTML("beforeend", `<button type="button" data-k="R" class="reste" style="grid-column:1 / -1">Reste (R)</button>`);
     pad.style.visibility = "visible";
     let val = "", fini = false;
     aideProgressive(document.getElementById("iq"), indicesCalcul(q), () => fini);
@@ -10868,15 +10880,17 @@ function epreuveMath(op, titre, danger) {
       if (fini) return;
       if (k === "del") val = val.slice(0, -1);
       else if (k === "ok") { if (val) valider(); return; }
-      else if (val.length < 6) val += k;
-      ans.textContent = val;
+      else if (k === "R") { if (val && !val.includes("R")) val += "R"; }
+      else if (val.length < 8) val += k;
+      ans.textContent = val.replace("R", " R ");
     };
     const valider = () => {
       if (fini) return;
       fini = true;
-      const ok = Number(val) === q.rep;
+      const [vq, vr] = val.split("R"), sol = q.reste !== undefined ? `${q.rep} reste ${q.reste}` : q.rep;
+      const ok = Number(vq) === q.rep && (q.reste === undefined ? vr === undefined : Number(vr || 0) === q.reste);
       // L'écran passe d'abord au verdict : un souci de son ou de sauvegarde ne doit jamais bloquer le jeu
-      pad.outerHTML = `<p class="verdict ${ok ? "ok" : "bad"}">${ok ? "Bravo!" : "Oups! La réponse était " + q.rep + "."}</p><div class="row"><button class="btn gold" id="cont" type="button">Continuer</button></div>`;
+      pad.outerHTML = `<p class="verdict ${ok ? "ok" : "bad"}">${ok ? "Bravo!" : "Oups! La réponse était " + sol + "."}</p><div class="row"><button class="btn gold" id="cont" type="button">Continuer</button></div>`;
       let parti = false;
       const fin = () => { if (parti) return; parti = true; fermer(); resolve(ok); };
       const cont = document.getElementById("cont");
@@ -10890,6 +10904,7 @@ function epreuveMath(op, titre, danger) {
     pad.querySelector('[data-k="ok"]').onpointerup = e => { e.preventDefault(); presse("ok"); };
     keyHandler = e => {
       if (/^[0-9]$/.test(e.key)) presse(e.key);
+      else if (/^[rR]$/.test(e.key) && q.reste !== undefined) presse("R");
       else if (e.key === "Backspace") presse("del");
       else if (e.key === "Enter") { e.preventDefault(); presse("ok"); }
     };
