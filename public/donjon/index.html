@@ -808,7 +808,7 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
         <label>Nom de la quête <input id="ed-qnom" maxlength="60"></label>
         <label>Conclusion (lue à la victoire) <textarea id="ed-fin" rows="3" placeholder="La situation finale de ton récit."></textarea></label>
         <label>Trame sonore de la quête <select id="ed-qmus"></select></label>
-        <label>Calculs + et − au départ <select id="ed-qniv"></select></label>
+        <label hidden>Calculs + et − au départ <select id="ed-qniv"></select></label>
         <div><h4>Notions à travailler</h4><div class="notions" id="ed-notions"></div><p class="sub" style="margin:4px 0 0">Les quêtes de l'année cochent d'office les notions de leur mois. Rien de coché : on suit les Réglages.</p></div>
         <div><h4>Notions de ce chapitre (planche)</h4><div class="notions" id="ed-notions-ch"></div><p class="sub" style="margin:4px 0 0">Pour une planche qui travaille autre chose que le reste de la quête. Rien de coché : on suit les notions de la quête.</p></div>
         <div>
@@ -7981,6 +7981,13 @@ const NOTIONS = {
   maths: {
     calcul: "Calcul (+ − × ÷)",
     numeration: "Numération (position, premiers, carrés, exposants)",
+    temps: "Mesure du temps et durée",
+    fracsens: "Sens des fractions et fractions sur la droite numérique",
+    multpos: "Multiplication posée (3 chiffres × 2 chiffres)",
+    solides: "Solides (prismes, pyramides, développements)",
+    aire: "Aire et volume",
+    entiers: "Nombres entiers (négatifs) sur la droite numérique",
+    transfo: "Translation, frise et dallage",
     arrondi: "Arrondir (approximation)",
     divis: "Divisibilité, division avec reste, facteurs",
     pemdas: "Priorité des opérations et terme manquant",
@@ -8034,16 +8041,17 @@ const NOTIONS = {
 const NOTIONS_DEFAUT = { maths: ["calcul"], fr: ["vocab", "conj"] };
 // La planification de l'année : les notions de chaque mois
 const MOIS_NOTIONS = {
-  septembre: { nom: "Septembre", maths: ["numeration", "calcul"], fr: ["manip", "phrase", "variables", "c_pres", "vocab"] },
-  octobre: { nom: "Octobre", maths: ["arrondi", "divis", "pemdas", "moyenne"], fr: ["gn", "c_imp", "vocab"] },
+  // Maths : suite des sections des Irréductibles 5e (Superplanification A et B), au rythme de la classe (novembre = sections 7 à 10)
+  septembre: { nom: "Septembre", maths: ["numeration", "angles", "temps"], fr: ["manip", "phrase", "variables", "c_pres", "vocab"] },
+  octobre: { nom: "Octobre", maths: ["droites", "triangles", "fracsens", "arrondi", "multpos"], fr: ["gn", "c_imp", "vocab"] },
   novembre: { nom: "Novembre", maths: ["equiv", "reduc", "decrep", "cercle", "longueur"], fr: ["inv", "enrichie", "accverbe", "c_fut"] },
-  decembre: { nom: "Décembre", maths: ["droites", "angles", "triangles", "cartesien"], fr: ["ponct", "c_ps"] },
-  janvier: { nom: "Janvier", maths: ["compfrac", "divis", "decimaux"], fr: ["sens", "c_cond"] },
-  fevrier: { nom: "Février", maths: ["decimaux", "opdec", "multfrac"], fr: ["types", "c_impe"] },
-  mars: { nom: "Mars", maths: ["stats", "moyenne"], fr: ["pp", "c_pc"] },
-  avril: { nom: "Avril", maths: ["mesures"], fr: ["compl", "c_pqp"] },
-  mai: { nom: "Mai", maths: ["proba"], fr: ["pp", "ppa", "c_comp"] },
-  juin: { nom: "Juin (révision)", maths: ["calcul", "equiv", "decimaux", "angles", "stats", "mesures", "proba"], fr: ["gn", "accverbe", "compl", "ppa", "c_pc", "c_fut"] },
+  decembre: { nom: "Décembre", maths: ["compfrac", "numeration", "divis"], fr: ["ponct", "c_ps"] },
+  janvier: { nom: "Janvier", maths: ["decimaux", "opdec", "solides", "stats"], fr: ["sens", "c_cond"] },
+  fevrier: { nom: "Février", maths: ["numeration", "pourcent", "aire", "solides", "entiers"], fr: ["types", "c_impe"] },
+  mars: { nom: "Mars", maths: ["moyenne", "stats", "pemdas", "opdec", "addfrac"], fr: ["pp", "c_pc"] },
+  avril: { nom: "Avril", maths: ["mesures", "cartesien", "addfrac", "proba"], fr: ["compl", "c_pqp"] },
+  mai: { nom: "Mai", maths: ["pemdas", "divis", "multfrac", "opdec", "transfo", "proba"], fr: ["pp", "ppa", "c_comp"] },
+  juin: { nom: "Juin (révision)", maths: ["multpos", "equiv", "decimaux", "opdec", "aire", "stats", "mesures", "proba"], fr: ["gn", "accverbe", "compl", "ppa", "c_pc", "c_fut"] },
 };
 const QUETE_MOIS = { "rentree-academie": "septembre", "octobre-ferme": "octobre", "halloween-vladislav": "octobre", "novembre-lugubre": "novembre", "decembre-noel": "decembre",
   "janvier-yeti": "janvier", "fevrier-valentin": "fevrier", "mars-sorciers": "mars", "avril-paques": "avril", "mai-cite": "mai", "juin-depart": "juin" };
@@ -8780,7 +8788,82 @@ function genLongueur() {
     qc("Quelle unité utiliser pour mesurer l'épaisseur d'un crayon?", "le millimètre (mm)", ["le kilomètre (km)", "le mètre (m)", "le décimètre (dm)"], "C'est très petit : on mesure en millimètres."),
     qc("Quelle unité utiliser pour mesurer la longueur de la cour d'école?", "le mètre (m)", ["le millimètre (mm)", "le centimètre (cm)", "le kilomètre (km)"], "Une cour fait quelques dizaines de mètres.")]);
 }
-const GEN_MATHS = { decrep: genDecRep, cercle: genCercle, longueur: genLongueur, numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
+// ---------- Planification des Irréductibles : notions ajoutées ----------
+const hm = x => `${Math.floor(x / 60)} h ${String(x % 60).padStart(2, "0")}`;
+function genTemps() {
+  const t = ri(0, 4);
+  if (t === 0) { const h = ri(1, 4), m = pk([10, 15, 20, 30, 45]), tot = h * 60 + m; return qc(`${h} h ${m} min = ? minutes`, tot, [h * 100 + m, h * 60, tot + 60, h + m], `1 h = 60 min. ${h} × 60 = ${h * 60}, plus ${m} = ${tot} minutes.`); }
+  if (t === 1) { const d = ri(8, 14) * 60 + pk([0, 15, 30, 45]), du = ri(1, 3) * 60 + pk([15, 20, 40, 50]), f = d + du; return qc(`Le film commence à ${hm(d)} et finit à ${hm(f)}. Combien de temps dure-t-il?`, `${Math.floor(du / 60)} h ${du % 60} min`, [`${Math.floor(du / 60) + 1} h ${du % 60} min`, `${Math.floor(du / 60)} h ${(du % 60 + 30) % 60 || 10} min`, `${Math.floor(f / 60) - Math.floor(d / 60)} h ${Math.abs(f % 60 - d % 60) + 10} min`], `De ${hm(d)} à ${hm(f)} : on compte les heures entières, puis les minutes qui restent.`); }
+  if (t === 2) { const m = ri(2, 9); return qc(`${m} minutes = ? secondes`, m * 60, [m * 100, m * 10, m * 60 + 60, m * 30], `1 min = 60 s, donc ${m} × 60 = ${m * 60} s.`); }
+  if (t === 3) { const j = ri(2, 5); return qc(`${j} jours = ? heures`, j * 24, [j * 12, j * 60, j * 24 + 24, j * 10], `1 jour = 24 h, donc ${j} × 24 = ${j * 24} h.`); }
+  return pk([qc("Combien y a-t-il de jours dans une semaine?", "7", ["5", "10", "12"], "1 semaine = 7 jours."),
+    qc("Combien y a-t-il de mois dans une année?", "12", ["10", "52", "365"], "1 an = 12 mois."),
+    qc("Combien y a-t-il de semaines dans une année (environ)?", "52", ["12", "48", "365"], "1 an ≈ 52 semaines."),
+    qc("Un siècle, c'est combien d'années?", "100", ["10", "1 000", "50"], "Une décennie = 10 ans, un siècle = 100 ans, un millénaire = 1 000 ans."),
+    qc("Une demi-heure, c'est combien de minutes?", "30", ["50", "15", "45"], "La moitié de 60 minutes = 30 minutes."),
+    qc("Un quart d'heure, c'est combien de minutes?", "15", ["25", "4", "45"], "60 ÷ 4 = 15 minutes.")]);
+}
+function svgBarreFrac(a, b) { const w = 300 / b; return svgBox(320, 60, Array.from({ length: b }, (_, i) => `<rect x="${10 + i * w}" y="10" width="${w}" height="40" fill="${i < a ? "#6c4cf5" : "#fff"}" stroke="#222" stroke-width="2"/>`).join("")); }
+function svgDroiteFrac(a, b) {
+  const x0 = 20, L = 280, X = i => x0 + i * L / b;
+  return svgBox(320, 70, `<line x1="${x0}" y1="30" x2="${x0 + L}" y2="30" stroke="#222" stroke-width="2"/>` + Array.from({ length: b + 1 }, (_, i) => `<line x1="${X(i)}" y1="${i % b ? 22 : 16}" x2="${X(i)}" y2="${i % b ? 38 : 44}" stroke="#222" stroke-width="2"/>`).join("")
+    + `<text x="${x0}" y="62" font-size="14" text-anchor="middle">0</text><text x="${x0 + L}" y="62" font-size="14" text-anchor="middle">1</text><circle cx="${X(a)}" cy="30" r="7" fill="#d33"/>`);
+}
+function genFracSens() {
+  const t = ri(0, 2), b = ri(3, 10), a = ri(1, b - 1);
+  if (t === 0) return qcm("Quelle fraction de la bande est coloriée?", `${a}/${b}`, [`${b - a}/${b}`, `${a}/${b - a}`, `${b}/${a}`, `${a}/${b + 1}`], `La bande a ${b} parts égales (dénominateur) et ${a} ${a > 1 ? "sont coloriées" : "est coloriée"} (numérateur).`).slice(0, 4).concat([svgBarreFrac(a, b)]);
+  if (t === 1) return qcm("Quelle fraction indique le point rouge?", `${a}/${b}`, [`${a + 1}/${b}`, `${a}/${b + 1}`, `${b - a}/${b}`, `${a - 1 || a + 2}/${b}`], `Entre 0 et 1, il y a ${b} bonds égaux : chaque bond vaut 1/${b}. Le point est au bond ${a}.`).slice(0, 4).concat([svgDroiteFrac(a, b)]);
+  return pk([qc(`Dans la fraction ${a}/${b}, que nous dit le dénominateur (${b})?`, "En combien de parts égales le tout est partagé", ["Combien de parts on prend", "La grandeur du tout", "Le nombre de touts"], "Le dénominateur (en bas) dit en combien de parts égales on partage le tout."),
+    qc(`Dans la fraction ${a}/${b}, que nous dit le numérateur (${a})?`, "Combien de parts on considère", ["En combien de parts on partage", "La grandeur d'une part", "Combien il reste de parts"], "Le numérateur (en haut) compte les parts qu'on considère."),
+    qc(`Quelle fraction est égale à 1 entier?`, `${b}/${b}`, [`1/${b}`, `${b}/1`, `${a}/${b}`], "Quand on prend toutes les parts, on a le tout : numérateur = dénominateur."),
+    qc(`Pour qu'une fraction soit juste, les parts doivent être…`, "égales", ["de couleurs différentes", "toutes coloriées", "plus nombreuses que 10"], "Une fraction partage un tout en parts égales.")]);
+}
+function genMultPos() {
+  const a = ri(102, 489), b = ri(12, 49), u = b % 10 || 1, B = u === b % 10 ? b : b + 1, d = Math.floor(B / 10), p1 = a * u, p2 = a * d * 10;
+  if (Math.random() < .3) { const ea = Math.round(a / 100) * 100, eb = Math.round(B / 10) * 10; return qc(`Environ combien font ${a} × ${B}? (arrondis d'abord)`, nb(ea * eb), [nb(ea * eb * 10), nb(ea * eb / 10), nb(ea + eb), nb((ea + 100) * eb)], `${a} ≈ ${ea} et ${B} ≈ ${eb}. ${ea} × ${eb} = ${nb(ea * eb)}.`); }
+  return qc(`${a} × ${B} = ? (calcul posé)`, nb(p1 + p2), [nb(p1 + a * d), nb(p1 + p2 + 100), nb(p2 + a * d), nb(p1 + p2 - 10)], `${a} × ${u} = ${nb(p1)} ; ${a} × ${d * 10} = ${nb(p2)} (n'oublie pas le zéro!) ; ${nb(p1)} + ${nb(p2)} = ${nb(p1 + p2)}.`);
+}
+const SOLIDES = [["un cube", 6, 8, 12], ["un prisme à base rectangulaire", 6, 8, 12], ["un prisme à base triangulaire", 5, 6, 9], ["un prisme à base pentagonale", 7, 10, 15], ["un prisme à base hexagonale", 8, 12, 18],
+  ["une pyramide à base carrée", 5, 5, 8], ["une pyramide à base triangulaire", 4, 4, 6], ["une pyramide à base pentagonale", 6, 6, 10], ["une pyramide à base hexagonale", 7, 7, 12]];
+function genSolides() {
+  if (Math.random() < .65) { const [n, f, s, a] = pk(SOLIDES), k = ri(0, 2), quoi = ["faces", "sommets", "arêtes"][k], v = [f, s, a][k]; return qc(`Combien ${quoi === "arêtes" ? "d'" : "de "}${quoi} a ${n}?`, v, [f, s, a, v + 1, v - 1, v + 2], `${n[0].toUpperCase() + n.slice(1)} : ${f} faces, ${s} sommets et ${a} arêtes.`); }
+  return pk([qc("Quel solide a deux bases identiques et parallèles reliées par des rectangles?", "un prisme", ["une pyramide", "un cône", "une sphère"], "Un prisme a 2 bases pareilles ; ses autres faces sont des rectangles."),
+    qc("Quel solide a une seule base et des faces triangulaires qui se rejoignent en un sommet?", "une pyramide", ["un prisme", "un cube", "un cylindre"], "Les faces latérales d'une pyramide sont des triangles qui se touchent au sommet."),
+    qc("Un développement de cube est formé de combien de carrés?", "6", ["4", "8", "12"], "Le cube a 6 faces carrées : son développement a 6 carrés."),
+    qc("Une arête, c'est…", "le segment où deux faces se rencontrent", ["un coin du solide", "une face plane", "le dessous du solide"], "Arête = rencontre de 2 faces. Sommet = point où les arêtes se rencontrent."),
+    qc("Lequel de ces solides n'est PAS un polyèdre?", "le cylindre", ["le cube", "la pyramide", "le prisme"], "Un polyèdre n'a que des faces planes. Le cylindre a une surface courbe."),
+    qc("Quel est le nom du développement qui forme une pyramide à base carrée?", "1 carré et 4 triangles", ["2 carrés et 4 rectangles", "6 carrés", "1 triangle et 3 carrés"], "La base est un carré, les 4 faces latérales sont des triangles.")]);
+}
+function svgGrilleRect(L, l) { const c = 22; return svgBox(L * c + 20, l * c + 20, Array.from({ length: L * l }, (_, i) => `<rect x="${10 + (i % L) * c}" y="${10 + Math.floor(i / L) * c}" width="${c}" height="${c}" fill="#cfe8ff" stroke="#3a6ea5"/>`).join("")); }
+function genAire() {
+  const t = ri(0, 3), L = ri(3, 9), l = ri(2, 6);
+  if (t === 0) return qc("Quelle est l'aire de ce rectangle? (1 carré = 1 cm²)", `${L * l} cm²`, [`${2 * (L + l)} cm²`, `${L + l} cm²`, `${L * l + L} cm²`, `${L * l - l} cm²`], `${l} rangées de ${L} carrés : ${l} × ${L} = ${L * l} cm².`).slice(0, 4).concat([svgGrilleRect(L, l)]);
+  if (t === 1) return qc(`Un rectangle mesure ${L} m sur ${l} m. Quelle est son aire?`, `${L * l} m²`, [`${2 * (L + l)} m²`, `${L + l} m²`, `${L * l} m`, `${L * l + l} m²`], `Aire = longueur × largeur = ${L} × ${l} = ${L * l} m². Attention : ${2 * (L + l)} m serait le périmètre.`);
+  if (t === 2) { const h = ri(2, 5); return qc(`Une boîte est remplie de cubes de 1 cm³ : ${L} cubes de long, ${l} de large et ${h} de haut. Quel est son volume?`, `${L * l * h} cm³`, [`${L * l} cm³`, `${L + l + h} cm³`, `${L * l * h + L * l} cm³`], `${L} × ${l} = ${L * l} cubes par étage, × ${h} étages = ${L * l * h} cm³.`); }
+  return pk([qc("Quelle unité sert à mesurer une aire?", "le centimètre carré (cm²)", ["le centimètre (cm)", "le centimètre cube (cm³)", "le litre (L)"], "L'aire couvre une surface : on la mesure en unités carrées."),
+    qc("Quelle unité sert à mesurer un volume?", "le centimètre cube (cm³)", ["le centimètre carré (cm²)", "le mètre (m)", "le kilogramme (kg)"], "Le volume, c'est la place occupée : on le mesure en unités cubes."),
+    qc("L'aire d'une surface, c'est…", "la grandeur de la surface", ["le tour de la figure", "la place dans une boîte", "la masse d'un objet"], "Le tour de la figure, c'est le périmètre."),
+    qc("Quelle unité choisir pour l'aire du plancher de la classe?", "le mètre carré (m²)", ["le centimètre carré (cm²)", "le kilomètre carré (km²)", "le mètre (m)"], "Un plancher de classe fait quelques dizaines de mètres carrés.")]);
+}
+function svgDroiteEntiers(v) { const X = i => 160 + i * 14; return svgBox(320, 60, `<line x1="10" y1="25" x2="310" y2="25" stroke="#222" stroke-width="2"/>` + Array.from({ length: 21 }, (_, i) => i - 10).map(i => `<line x1="${X(i)}" y1="${i % 5 ? 20 : 15}" x2="${X(i)}" y2="${i % 5 ? 30 : 35}" stroke="#222" stroke-width="2"/>${i % 5 ? "" : `<text x="${X(i)}" y="52" font-size="13" text-anchor="middle">${i < 0 ? "−" + -i : i}</text>`}`).join("") + `<circle cx="${X(v)}" cy="25" r="6" fill="#d33"/>`); }
+function genEntiers() {
+  const t = ri(0, 3), f = x => x < 0 ? "−" + -x : String(x);
+  if (t === 0) { const v = pk([-9, -8, -7, -6, -4, -3, -2, -1, 1, 2, 3, 4, 6, 7, 8, 9]); return qc("Quel nombre indique le point rouge?", f(v), [f(-v), f(v + 1), f(v - 1)], "À gauche de 0, les nombres sont négatifs ; plus on va à gauche, plus le nombre est petit.").slice(0, 4).concat([svgDroiteEntiers(v)]); }
+  if (t === 1) { const l = mel([-ri(1, 9), -ri(10, 20), ri(0, 9), ri(10, 20)]); const m = Math.min(...l); return qc(`Quel est le plus petit nombre? ${l.map(f).join(" ; ")}`, f(m), l.filter(x => x !== m).map(f), "Les nombres négatifs sont plus petits que 0. −20 est plus petit que −3 : il est plus loin à gauche."); }
+  if (t === 2) { const a = -ri(2, 9), b = ri(2, 9); return qc(`Il fait ${f(a)} °C le matin et ${b} °C l'après-midi. De combien de degrés la température a-t-elle monté?`, `${b - a} °C`, [f(b + a) + " °C", `${b} °C`, `${b - a + 1} °C`, `${-a} °C`], `De ${f(a)} à 0 : ${-a} degrés, puis de 0 à ${b} : ${b} degrés. ${-a} + ${b} = ${b - a}.`); }
+  const l = [-ri(5, 9), -ri(1, 4), 0, ri(1, 9)], ok = [...l].sort((x, y) => x - y), j = x => x.map(f).join(" ; ");
+  return qc("Quel est l'ordre croissant?", j(ok), [j([ok[1], ok[0], ok[2], ok[3]]), j([...ok].reverse()), j([ok[2], ok[1], ok[0], ok[3]])], "Ordre croissant : du plus petit au plus grand. Le plus petit est le négatif le plus loin de 0.");
+}
+function genTransfo() {
+  if (Math.random() < .35) { const x = ri(1, 5), y = ri(1, 5), dx = ri(1, 4), dy = ri(1, 4), dr = Math.random() < .5; return qc(`Le point A est à (${x}, ${y}). On fait une translation de ${dx} case${dx > 1 ? "s" : ""} vers la droite et ${dy} vers le haut. Où arrive A?`, `(${x + dx}, ${y + dy})`, [`(${x + dy}, ${y + dx})`, `(${x + dx - 1}, ${y + dy})`, `(${x + dx}, ${y + dy + 1})`, `(${x + dx + dy}, ${y})`], `Vers la droite : on ajoute au 1er nombre (${x} + ${dx}). Vers le haut : on ajoute au 2e (${y} + ${dy}).`); }
+  return pk([qc("Une translation, c'est…", "faire glisser une figure sans la tourner ni la retourner", ["faire tourner une figure", "retourner une figure comme dans un miroir", "agrandir une figure"], "La flèche de translation dit dans quelle direction et de combien on glisse."),
+    qc("Après une translation, la figure…", "garde la même forme et la même grandeur", ["devient plus grande", "est à l'envers", "change de forme"], "Une translation déplace seulement la figure."),
+    qc("Une frise, c'est…", "un motif qui se répète en bande", ["un dessin qui couvre toute une surface", "une figure à 4 côtés", "un motif qui ne se répète pas"], "Dans une frise, le motif se répète par translation, en ligne."),
+    qc("Un dallage, c'est…", "des figures qui couvrent une surface sans trou ni chevauchement", ["un motif en une seule ligne", "des figures qui se chevauchent", "un seul grand carré"], "Comme les tuiles d'un plancher."),
+    qc("Quelle figure ne peut PAS former un dallage toute seule?", "le cercle", ["le carré", "le triangle équilatéral", "l'hexagone régulier"], "Des cercles laissent toujours des trous entre eux."),
+    qc("Laquelle de ces figures peut former un dallage toute seule?", "l'hexagone régulier", ["le cercle", "le pentagone régulier", "l'octogone régulier"], "Comme les alvéoles d'une ruche!")]);
+}
+const GEN_MATHS = { temps: genTemps, fracsens: genFracSens, multpos: genMultPos, solides: genSolides, aire: genAire, entiers: genEntiers, transfo: genTransfo, decrep: genDecRep, cercle: genCercle, longueur: genLongueur, numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
   compfrac: genCompFrac, addfrac: genAddFrac, pourcent: genPourcent, droites: genDroites, angles: genAngles, triangles: genTriangles, cartesien: genCartesien,
   decimaux: genDecimaux, opdec: genOpDec, multfrac: genMultFrac, stats: genStats, mesures: genMesures, proba: genProba };
 // Une question pour la notion choisie : [question, choix, bonne réponse, explication, dessin?]
@@ -10570,7 +10653,7 @@ async function jouerEvenement(ev) {
     case "vie": case "mana": ajouterObjet(h, effet); bruit("tresor"); etincelles(h, "#ffe08a", 14); toast(`+1 ${ITEMS[effet].nom}`); break;
     case "soin": for (const v of vivs) if (v.pv < st(v).pv) { v.pv++; flotter(v.x, v.y, "+1", "#72d39b"); anim(v, "heal"); } bruit("soin"); break;
     case "piege": S.busy = false; await defendre(h, null, 1); break;
-    case "defi": { S.busy = false; const ok = await epreuveMath("×", "Le défi de l'équipe"); if (ok) { ajouterObjet(h, "vie"); bruit("tresor"); toast("Défi réussi : +1 potion de vie!"); log("Défi réussi : +1 potion de vie."); } else log("Le défi est raté… dommage!"); break; }
+    case "defi": { S.busy = false; const ok = await epreuveSpeciale("Le défi de l'équipe"); if (ok) { ajouterObjet(h, "vie"); bruit("tresor"); toast("Défi réussi : +1 potion de vie!"); log("Défi réussi : +1 potion de vie."); } else log("Le défi est raté… dommage!"); break; }
     case "eclair": secousse(1.5); break;
     case "transformer": await transformerPlateau(); break;
   }
@@ -10652,29 +10735,28 @@ const rnd2 = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const NIVEAUX = { des: "Dés de 1 à 12", facile: "2 chiffres", "5e": "3 chiffres", expert: "4 chiffres" };
 // Difficulté choisie par l'équipe : décale le niveau de calcul, la force des monstres et le temps des comptes à rebours
 const DIFFS = {
-  facile: { nom: "Facile", ico: "🟢", pv: .75, tours: 3, desc: "Calculs avec les dés, une mauvaise réponse en moins en français, monstres plus faibles, plus de temps." },
-  normal: { nom: "Normal", ico: "🟡", pv: 1, tours: 0, desc: "Le niveau prévu pour la quête." },
-  expert: { nom: "Expert", ico: "🔴", pv: 1.3, tours: -2, desc: "Calcul mental plus gros (×, ÷ à 2 chiffres), futur simple, monstres plus coriaces, moins de temps." },
+  facile: { nom: "Facile", ico: "🟢", pv: .75, tours: 3, desc: "Actions : calculs avec deux dés de 12 (+, −, ×, ÷). Une mauvaise réponse en moins aux questions à choix, monstres plus faibles, plus de temps." },
+  normal: { nom: "Intermédiaire", ico: "🟡", pv: 1, tours: 0, desc: "Actions : calculs jusqu'à 2 chiffres en haut et 2 chiffres en bas (+, −, ×, ÷), avec l'ardoise. Le niveau prévu pour la quête." },
+  expert: { nom: "Avancé", ico: "🔴", pv: 1.3, tours: -2, desc: "Actions : calculs jusqu'à 3 chiffres en haut et 2 chiffres en bas (+, −, ×, ÷), avec l'ardoise. Monstres plus coriaces, moins de temps." },
 };
 let DIFF = "normal", NIV_BASE = null;
 const ECHELLE = ["des", "facile", "5e", "expert"];
 const niveauDiff = base => ECHELLE[Math.max(0, Math.min(3, ECHELLE.indexOf(base) + (DIFF === "facile" ? -1 : DIFF === "expert" ? 1 : 0)))];
+// Calcul d'une action de base selon la difficulté : « en haut » = 1er nombre, « en bas » = 2e nombre (calcul posé)
+// Intermédiaire : au plus 2 chiffres en haut et 2 en bas. Avancé : au plus 3 chiffres en haut et 2 en bas. (Facile : les dés, voir epreuveMath.)
 function genCalcul(op) {
-  const dur = S.niveau === "5e", exp = S.niveau === "expert";
-  if (op === "×") { const a = rnd2(13, 49), b = rnd2(3, 9); return { txt: `${a} × ${b}`, rep: a * b, a, b, op }; }
-  if (exp && op === "+") { const a = rnd2(1205, 6899), b = rnd2(305, 2999); return { txt: `${a} + ${b}`, rep: a + b, a, b, op }; }
-  if (exp && op !== "÷") { const a = rnd2(2100, 9999), b = rnd2(305, a - 1000); return { txt: `${a} − ${b}`, rep: a - b, a, b, op: "−" }; }
-  if (op === "÷" && DIFF === "expert") { const b = rnd2(3, 9), q = rnd2(12, 60); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
-  if (op === "÷" && DIFF === "facile") { const b = rnd2(2, 5), q = rnd2(1, 10); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
-  if (op === "+") { const a = dur ? rnd2(105, 589) : rnd2(12, 68), b = dur ? rnd2(104, 399) : rnd2(11, 29); return { txt: `${a} + ${b}`, rep: a + b, a, b, op }; }
-  if (op === "÷") { const b = rnd2(2, 12), q = rnd2(2, 12); return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
-  const a = dur ? rnd2(320, 999) : rnd2(35, 99), b = dur ? rnd2(104, a - 100) : rnd2(11, a - 10);
-  return { txt: `${a} − ${b}`, rep: a - b, a, b, op: "−" };
+  const av = DIFF === "expert", haut = av ? [100, 999] : [10, 99], bas = () => Math.random() < .5 ? rnd2(2, 9) : rnd2(11, 99);
+  if (op === "+") { const a = rnd2(...haut), b = rnd2(11, 99); return { txt: `${a} + ${b}`, rep: a + b, a, b, op }; }
+  if (op === "−") { const a = rnd2(Math.max(haut[0], 22), haut[1]), b = rnd2(11, Math.min(99, a - 1)); return { txt: `${a} − ${b}`, rep: a - b, a, b, op }; }
+  if (op === "×") { const a = rnd2(...(av ? [102, 999] : [12, 99])), b = av ? bas() : (Math.random() < .6 ? rnd2(3, 9) : rnd2(11, 25)); return { txt: `${a} × ${b}`, rep: a * b, a, b, op }; }
+  // ÷ : réponse exacte, le dividende respecte le nombre de chiffres « en haut »
+  for (;;) { const b = av ? (Math.random() < .7 ? rnd2(3, 9) : rnd2(11, 25)) : rnd2(2, 9), q = rnd2(Math.ceil(haut[0] / b), Math.floor(haut[1] / b)); if (q >= 2) return { txt: `${b * q} ÷ ${b}`, rep: q, a: b * q, b, op }; }
 }
 // Indices qui apparaissent si la question prend du temps : d'abord une méthode, puis un premier pas
 const DIZ = n => Math.floor(n / 10) * 10, CEN = n => Math.floor(n / 100) * 100;
 function indicesCalcul(q) {
   const { a, b, op } = q;
+  if (op === "×" && b > 12) return [`Décompose ${b} : ${DIZ(b)} et ${b % 10}.`, `${a} × ${DIZ(b)} = ${a * DIZ(b)} et ${a} × ${b % 10} = ${a * (b % 10)}. Additionne-les!`];
   if (op === "×" && a > 12) return [`Décompose ${a} : ${DIZ(a)} et ${a % 10}.`, `${DIZ(a)} × ${b} = ${DIZ(a) * b} et ${a % 10} × ${b} = ${(a % 10) * b}. Additionne-les!`];
   if (op === "÷" && a > 12 * b) return [`Combien de fois ${b} × 10 = ${b * 10} entre dans ${a}?`, `${b} × ${Math.floor(a / b / 10) * 10} = ${b * Math.floor(a / b / 10) * 10}. Il reste ${a - b * Math.floor(a / b / 10) * 10} à diviser par ${b}.`];
   if (op === "×") {
@@ -10715,15 +10797,14 @@ function indicesCalcul(q) {
 
 // Épreuve de calcul avec clavier à l'écran. op : "+", "−", "×" (deux dés de 12) ou "÷"
 function epreuveMath(op, titre, danger) {
-  const n = choisirNotion("maths");
-  if (n !== "calcul") return epreuveNotion(titre, "maths", n, danger);
   return new Promise(async resolve => {
     const opNom = { "+": "Addition", "−": "Soustraction", "×": "Multiplication", "÷": "Division" }[op];
-    const des = (op === "×" && DIFF !== "expert") || ((op === "+" || op === "−") && S.niveau === "des");
-    const diceHtml = des ? `<div class="dice"><div class="die" id="d1">${D12}<b>?</b></div><span class="x">${op}</span><div class="die" id="d2">${D12}<b>?</b></div></div>` : "";
+    // Facile : toujours deux dés de 12. Pour ÷, les dés donnent le diviseur et la réponse cachée.
+    const des = DIFF === "facile";
+    const diceHtml = des ? (op === "÷" ? `<div class="dice"><span class="x">Diviseur</span><div class="die" id="d2">${D12}<b>?</b></div></div>` : `<div class="dice"><div class="die" id="d1">${D12}<b>?</b></div><span class="x">${op}</span><div class="die" id="d2">${D12}<b>?</b></div></div>`) : "";
     ouvrir(`<h2>${titre}</h2><p class="sub">Épreuve : ${opNom}</p>${diceHtml}<div class="big" id="q">&nbsp;</div>
       <div class="ans" id="ans" aria-live="polite"></div><div class="indice-q" id="iq" aria-live="polite"></div>
-      <div class="calc-zone">${op === "+" || op === "−" ? `<div class="ardoise"><canvas id="ardoise" aria-label="Ardoise pour calculer"></canvas><button type="button" class="btn" id="ard-eff">Effacer l'ardoise</button></div>` : ""}
+      <div class="calc-zone">${!des ? `<div class="ardoise"><canvas id="ardoise" aria-label="Ardoise pour calculer"></canvas><button type="button" class="btn" id="ard-eff">Effacer l'ardoise</button></div>` : ""}
       <div class="pad" id="pad">${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => `<button type="button" data-k="${n}">${n}</button>`).join("")}
       <button type="button" class="del" data-k="del">Effacer</button><button type="button" data-k="0">0</button><button type="button" class="ok" data-k="ok" aria-label="Valider">✓</button></div></div>`, danger);
     if (document.getElementById("ardoise")) { modal.classList.add("large"); ardoise(document.getElementById("ardoise"), document.getElementById("ard-eff")); }
@@ -10731,11 +10812,12 @@ function epreuveMath(op, titre, danger) {
     let q;
     pad.style.visibility = "hidden";
     if (des) {
-      let a = d12(), b = op === "×" && DIFF === "facile" ? rnd2(1, 6) : d12();
+      let a = d12(), b = d12();
+      if (op === "÷") { b = rnd2(2, 12); a = rnd2(2, 12) * b; }
       if (op === "−" && b > a) [a, b] = [b, a];
-      try { await Promise.all([lancer(document.getElementById("d1"), a), lancer(document.getElementById("d2"), b)]); }
-      catch { document.querySelectorAll(".die b").forEach((el, i) => el.textContent = i ? b : a); }
-      q = { txt: `${a} ${op} ${b}`, rep: op === "×" ? a * b : op === "+" ? a + b : a - b, a, b, op };
+      try { await Promise.all([op === "÷" ? null : lancer(document.getElementById("d1"), a), lancer(document.getElementById("d2"), b)]); }
+      catch { const d = [...document.querySelectorAll(".die b")]; if (op === "÷") d[0].textContent = b; else d.forEach((el, i) => el.textContent = i ? b : a); }
+      q = { txt: `${a} ${op} ${b}`, rep: op === "×" ? a * b : op === "+" ? a + b : op === "÷" ? a / b : a - b, a, b, op };
     } else q = genCalcul(op);
     qel.textContent = q.txt + " = ?";
     pad.style.visibility = "visible";
@@ -10745,7 +10827,7 @@ function epreuveMath(op, titre, danger) {
       if (fini) return;
       if (k === "del") val = val.slice(0, -1);
       else if (k === "ok") { if (val) valider(); return; }
-      else if (val.length < 5) val += k;
+      else if (val.length < 6) val += k;
       ans.textContent = val;
     };
     const valider = () => {
@@ -10829,10 +10911,13 @@ function caseNotions(box, val, change) {
     lire();
   };
 }
-// Pouvoir de classe : question de français ou de maths, au hasard
-function epreuvePouvoir(titre) {
-  return Math.random() < .5 ? epreuveFr(titre) : epreuveMath(pick(["+", "−", "×", "÷"]), titre);
+// Action spéciale (pouvoir, défi, sceau, PNJ, observer…) : une question sur une notion de la matière, en maths ou en français, au hasard
+function epreuveSpeciale(titre, danger) {
+  const maths = notionsActives("maths").filter(n => n !== "calcul");
+  if (maths.length && Math.random() < .5) { let n = choisirNotion("maths"); if (n === "calcul") n = pick(maths); return epreuveNotion(titre, "maths", n, danger); }
+  return epreuveFr(titre);
 }
+const epreuvePouvoir = titre => epreuveSpeciale(titre);
 // Après un moment sans réponse, un bouton 💡 propose un indice ; un 2e indice suit plus tard
 function aideProgressive(box, indices, fini, action) {
   const delai = (PREF.indices ?? 30) * 1000;
@@ -11072,7 +11157,18 @@ async function fouiller(h, o) {
 }
 async function interagir(h, o) {
   if (o.type === "coffreDore" && S.enemies.some(e => e.boss && e.pv > 0)) { toast("Le boss garde son coffre. Battez-le d'abord!"); return; }
-  await faireAction(async () => { await anim(h, "lunge", o); return epreuveMath("+", `${esc(h.nom)} interagit : ${OBJ[o.type].nom}`); }, async () => {
+  await faireAction(async () => { await anim(h, "lunge", o); return epreuveMath("+", `${esc(h.nom)} interagit : ${OBJ[o.type].nom}`); }, () => viderObjet(h, o));
+}
+// Pouvoir du voleur sur un objet : fouiller et ouvrir en une seule action (question de la matière)
+async function pickpocketObjet(h, o, p) {
+  if (o.type === "coffreDore" && S.enemies.some(e => e.boss && e.pv > 0)) { toast("Le boss garde son coffre. Battez-le d'abord!"); return; }
+  await faireAction(async () => { await anim(h, "lunge", o); return epreuveSpeciale(`${esc(h.nom)} : ${p.nom}`); }, async () => {
+    h.mana -= p.cout; o.decouvert = true; bruit("magie"); log(`${esc(h.nom)} utilise <b>${p.nom}</b> : ${OBJ[o.type].nom}.`);
+    await viderObjet(h, o);
+  });
+}
+async function viderObjet(h, o) {
+  {
     o.vide = true;
     bruit("tresor"); etincelles(o, "#ffe08a", 14);
     await anim(o, "open");
@@ -11084,7 +11180,7 @@ async function interagir(h, o) {
       drawTerrain(); bruit("porte"); log("Clac! Les grilles s'ouvrent."); toast("Les grilles s'ouvrent…", 3500);
     }
     else if (ct === "tresor") { S.fini = "victoire"; log("Le coffre du boss est ouvert. Victoire!"); }
-  });
+  }
 }
 async function ouvrirPorte(h, k) {
   await faireAction(() => epreuveMath("+", `${esc(h.nom)} déverrouille la porte`), async () => {
@@ -11114,6 +11210,12 @@ function ciblesMode() {
   if (p.cible === "door") return Object.entries(S.portes).filter(([, d]) => d.verrou).map(([k]) => { const [x, y] = k.split(",").map(Number); return { x, y, k }; }).filter(d => dist(h, d) <= 1);
   if (p.cible === "tile") { const r = []; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (libre(x, y)) r.push({ x, y }); return r; }
   return [];
+}
+// Boutons de pouvoirs (mana) proposés directement dans le menu d'une cible : question de la matière
+function boutonsPouvoirs(h, ids, cible) {
+  return C[h.cls].p.filter(p => ids.includes(p.id) && !(p.id === "force" && h.force)).map(p => ({
+    txt: `✨ ${p.nom} <small>(${p.cout} mana · ${p.desc})</small>`, op: "📘", off: !(h.actions > 0 && h.mana >= p.cout),
+    fn: () => executerPouvoir(h, p, p.cible === "self" || p.cible === "zone" ? null : cible) }));
 }
 async function executerPouvoir(h, p, cible) {
   S.mode = null;
@@ -11261,15 +11363,17 @@ function menuExplorer(h, x, y, debut = [], titre) {
   const ok = h.actions > 0;
   menu(x, y, ind ? INDICE_TITRES[ind.action] || "Quelque chose attire le regard…" : titre || "Explorer cet endroit", "Que fait l'équipe?", [
     ...debut,
-    ...Object.entries(EXPLO).map(([k, a]) => ({ txt: a.nom, op: a.op, off: !ok, fn: () => explorer(h, x, y, k) })),
+    ...Object.entries(EXPLO).map(([k, a]) => ({ txt: a.nom, op: ind ? "📘" : a.op, off: !ok, fn: () => explorer(h, x, y, k) })),
     { txt: "Autre idée…", op: "?", off: !ok, fn: () => autreIdee(h, x, y) },
   ]);
 }
 async function explorer(h, x, y, action) {
   const a = EXPLO[action], ici = h.x === x && h.y === y;
+  // Sur un indice visible (secret, sceau…), c'est une action spéciale : question de la matière. Ailleurs, un calcul.
+  const special = S.secrets.some(sc => sc.x === x && sc.y === y && !sc.trouve && !sc.cache && sc.action !== "entrer");
   await faireAction(async () => {
     await anim(h, ici ? "search" : "lunge", { x, y });
-    return epreuveMath(a.op, `${esc(h.nom)} ${a.verbe} ici`);
+    return special ? epreuveSpeciale(`${esc(h.nom)} ${a.verbe} ici`) : epreuveMath(a.op, `${esc(h.nom)} ${a.verbe} ici`);
   }, async () => {
     const sec = secretIci(x, y, action);
     if (sec) await reveler(sec, h);
@@ -11281,7 +11385,7 @@ async function autreIdee(h, x, y) {
   const r = await new Promise(resolve => {
     ouvrir(`<h2>Autre idée</h2><p class="sub">L'équipe propose une action. Écris-la si tu veux, puis choisis l'épreuve.</p>
       <input id="idee" class="field" maxlength="90" placeholder="Ex. : on renverse le tonneau pour bloquer la porte" autocomplete="off">
-      <div class="row">${["+", "−", "×", "÷"].map(o => `<button class="btn" type="button" data-op="${o}">${o}</button>`).join("")}<button class="btn" type="button" data-op="fr">Français</button></div>
+      <div class="row">${["+", "−", "×", "÷"].map(o => `<button class="btn" type="button" data-op="${o}">${o}</button>`).join("")}<button class="btn" type="button" data-op="fr">Français</button><button class="btn" type="button" data-op="notion">Notion en cours</button></div>
       <div class="row"><button class="btn" type="button" data-op="annuler">Annuler</button></div>`);
     modal.onclick = e => {
       const b = e.target.closest("[data-op]"); if (!b) return;
@@ -11291,7 +11395,7 @@ async function autreIdee(h, x, y) {
   });
   if (!r) return;
   const titre = `${esc(h.nom)} tente sa chance`;
-  await faireAction(async () => { await anim(h, h.x === x && h.y === y ? "search" : "lunge", { x, y }); return r.op === "fr" ? epreuveFr(titre) : epreuveMath(r.op, titre); }, async () => {
+  await faireAction(async () => { await anim(h, h.x === x && h.y === y ? "search" : "lunge", { x, y }); return r.op === "fr" ? epreuveFr(titre) : r.op === "notion" ? epreuveSpeciale(titre) : epreuveMath(r.op, titre); }, async () => {
     log(`Idée de l'équipe${r.idee ? " : « " + esc(r.idee) + " »" : ""}. Réussite!`);
     const sec = secretIci(x, y);
     if (sec && sec.action !== "entrer") { await reveler(sec, h); return; }
@@ -11438,7 +11542,7 @@ function parler(p, h = S.phase === "heros" ? heros() : null) {
         const c = choix.find(x => x.i === Number(b.dataset.c));
         taire();
         if (c.test) {
-          const ok = await epreuveFr(`${esc(p.nom)} : « ${esc(c.txt)} »`);
+          const ok = await epreuveSpeciale(`${esc(p.nom)} : « ${esc(c.txt)} »`);
           if (!ok) { (p.rate ||= {})[c.i] = S.round; ouvrir(`${tete}<p class="fr-q dialogue">${esc(p.nom)} ne semble pas convaincu… Réessayez à la prochaine manche.</p><div class="row"><button class="btn gold" id="nx" type="button">Fermer</button></div>`); document.getElementById("nx").onclick = fin; return; }
         }
         if (c.effet !== "rien") p.dits.push(c.i);
@@ -11589,7 +11693,7 @@ function clicCase(x, y) {
     S.attente = { x, y }; renderHL(); drawPath(chemin(reachCache, h, x, y)); bruit("pas", { sol: solIci(x, y) }); return;
   }
   if (hh === h) return menuExplorer(h, x, y, [...C[h.cls].p.map((p, j) => ({ txt: `✨ ${p.nom} <small>(${p.cout ? p.cout + " mana" : "sans mana"} · ${p.desc})</small>`, off: !(h.actions > 0 && h.mana >= p.cout), fn: () => lancerPouvoir(j) })),
-    { txt: `👁️ Observer les alentours <small>(1 action · question de français · trouve pièges et secrets)</small>`, off: !(h.actions > 0), fn: () => observer(h) },
+    { txt: `👁️ Observer les alentours <small>(1 action · question de la matière · trouve pièges et secrets)</small>`, off: !(h.actions > 0), fn: () => observer(h) },
     { txt: `🎒 Donner ou lancer un objet <small>(1 action · d12 si le coéquipier est loin)</small>`, off: !(h.actions > 0 && Object.keys(sacDe(h)).length && vivants().length > 1), fn: () => passerObjet(h) }], "Pouvoirs et actions");
   if (hh && hh !== h && dist(h, hh) <= 1 && hh.pv < st(hh).pv && (hh.pv <= 0 || hh.joue || h.actions < S.nbActions)) {
     // Soigner un coéquipier : il faut une potion de vie dans l'inventaire, et ça coûte 1 action
@@ -11607,6 +11711,7 @@ function clicCase(x, y) {
     const ok = aPortee(h, e) && h.actions > 0;
     menu(x, y, e.nom, `${e.pv} PV sur ${e.pvMax}${e.poison ? " · empoisonné" : ""}`, [
       { txt: ok ? "Attaquer" + (sournois(h, e) ? ` ${sournois(h, e)} ×2` : "") + (allieCombo(h, e) ? ` 🤝 combo +1` : "") : (C[h.cls].portee > 1 ? "Hors de portée ou caché" : "Approche-toi pour attaquer"), op: "×", off: !ok, fn: () => attaquer(h, e) },
+      ...boutonsPouvoirs(h, [...(aPortee(h, e) ? ["poison", "camo", "fleches", "force"] : []), "lynx"], e),
     ]);
     return;
   }
@@ -11614,9 +11719,11 @@ function clicCase(x, y) {
     const near = dist(h, o) <= 1 && h.actions > 0;
     const d = OBJ[o.type];
     if (o.vide) return menu(x, y, d.nom, "Il n'y a plus rien ici.", []);
+    const pp = C[h.cls].p.find(p => p.id === "pickpocket");
+    const magie = pp && near ? [{ txt: `✨ Pickpocket : tout ouvrir d'un coup <small>(${pp.cout} mana · question de la matière)</small>`, op: "📘", off: h.mana < pp.cout, fn: () => pickpocketObjet(h, o, pp) }] : [];
     menu(x, y, o.decouvert ? d.nom : "Objet mystérieux", o.decouvert ? d.texte : "Qu'est-ce qui se cache ici?",
-      o.decouvert ? [{ txt: near ? "Interagir" : "Approche-toi pour interagir", op: "+", off: !near, fn: () => interagir(h, o) }]
-        : [{ txt: near ? "Fouiller" : "Approche-toi pour fouiller", op: "−", off: !near, fn: () => fouiller(h, o) }]);
+      [...(o.decouvert ? [{ txt: near ? "Interagir" : "Approche-toi pour interagir", op: "+", off: !near, fn: () => interagir(h, o) }]
+        : [{ txt: near ? "Fouiller" : "Approche-toi pour fouiller", op: "−", off: !near, fn: () => fouiller(h, o) }]), ...magie]);
     return;
   }
   if (p && p.verrou && p.par === "sceau") {
@@ -11630,7 +11737,8 @@ function clicCase(x, y) {
   if (p && p.verrou) {
     const near = dist(h, { x, y }) <= 1 && h.actions > 0;
     menu(x, y, p.par === "cle" ? "Porte cadenassée" : p.par === "boss" ? "Porte gardée" : "Grille fermée", p.par === "cle" ? "Une serrure en bronze." : p.par === "boss" ? "Elle ne s'ouvrira pas tant que le boss sera debout." : "Une lourde grille. Elle doit s'ouvrir ailleurs…",
-      p.par === "cle" ? [{ txt: S.inv.cle ? (near ? "Ouvrir avec la clé" : "Approche-toi de la porte") : "Il faut une clé", op: "+", off: !S.inv.cle || !near, fn: () => ouvrirPorte(h, key(x, y)) }] : []);
+      [...(p.par === "cle" ? [{ txt: S.inv.cle ? (near ? "Ouvrir avec la clé" : "Approche-toi de la porte") : "Il faut une clé", op: "+", off: !S.inv.cle || !near, fn: () => ouvrirPorte(h, key(x, y)) }] : []),
+        ...(near && p.par !== "boss" ? boutonsPouvoirs(h, ["pickpocket"], { x, y, k: key(x, y) }) : [])]);
     return;
   }
   const tl = toileAt(x, y);
@@ -11649,7 +11757,8 @@ function clicCase(x, y) {
     const libre = praticable(c.x, c.y) && !heroAt(c.x, c.y) && !enemyAt(c.x, c.y) && !objAt(c.x, c.y) && !pnjAt(c.x, c.y);
     const facile = (ob.type === "caisse" && h.race === "geant") || (ob.type !== "caisse" && h.race === "oiseau");
     const txt = !near ? "Approche-toi d'abord" : !libre ? "L'autre côté est bloqué" : facile ? (ob.type === "caisse" ? "💪 Pousser sans effort (demi-géant)" : "🪽 Voler par-dessus (homme-oiseau)") : O.verbe;
-    return menu(x, y, O.nom, O.texte, [{ txt, op: facile ? undefined : O.op, off: !near || !libre, fn: () => franchir(h, ob, c, facile) }]);
+    return menu(x, y, O.nom, O.texte, [{ txt, op: facile ? undefined : O.op, off: !near || !libre, fn: () => franchir(h, ob, c, facile) },
+      ...(libre ? boutonsPouvoirs(h, ["tp"], c).map(b => ({ ...b, txt: b.txt.replace("Téléportation", "Téléportation de l'autre côté") })) : [])]);
   }
   const pg = S.deco.find(d => d.type === "piegeVu" && d.x === x && d.y === y);
   if (pg) {
@@ -11659,7 +11768,9 @@ function clicCase(x, y) {
   const tm = S.deco.find(d => d.type === "torche" && d.x === x && d.y === y);
   if (tm && dist(h, tm) <= 1 && !aObjet("Torche")) return menu(x, y, "Torche murale", "Elle brûle encore. Elle pourrait servir…", [
     { txt: "Prendre la torche", off: h.actions <= 0, fn: () => { h.actions--; ajouterObjet(h, "sp:Torche"); S.deco = S.deco.filter(d => d !== tm); toast("Nouvel objet : Torche"); log(`${esc(h.nom)} prend une torche.`); bruit("tresor"); render(); } }]);
-  if (dist(h, { x, y }) <= 1) menuExplorer(h, x, y);
+  if (dist(h, { x, y }) <= 1) return menuExplorer(h, x, y);
+  const tp = C[h.cls].p.find(p => p.cible === "tile");
+  if (tp && libre(x, y)) menu(x, y, "Trop loin pour marcher", "La magie peut t'y emmener…", boutonsPouvoirs(h, [tp.id], { x, y }));
 }
 async function franchir(h, ob, c, facile) {
   const O = OBSTACLES[ob.type];
@@ -11686,7 +11797,7 @@ async function desamorcer(h, pg, voleur) {
 }
 // Observer : une question de français; réussie, elle révèle les pièges et les secrets proches
 async function observer(h) {
-  await faireAction(() => epreuveFr(`${esc(h.nom)} observe les alentours`), async () => {
+  await faireAction(() => epreuveSpeciale(`${esc(h.nom)} observe les alentours`), async () => {
     const R = 3 + ((RACES[h.race] || {}).vue ? 1 : 0) + ((h.attr || {}).ruse || 0);
     let n = 0;
     for (const d of S.deco) if (d.type === "piege" && dist(h, d) <= R) { d.type = "piegeVu"; n++; }
@@ -12390,7 +12501,7 @@ document.getElementById("btn-reg").onclick = () => {
     <div class="reg-onglet" data-o="regles">
     <div class="reg">
       <label>Actions par tour <select id="r-act">${opt(S.nbActions, [[2, "2 actions"], [3, "3 actions"]])}</select></label>
-      <label>Additions et soustractions <select id="r-niv">${opt(S.niveau, Object.entries(NIVEAUX))}</select></label>
+      <p class="sub" style="margin:0">Les calculs des actions suivent la difficulté choisie par l'équipe (🟢 dés de 12, 🟡 2 chiffres sur 2, 🔴 3 chiffres sur 2).</p><label hidden>Additions et soustractions <select id="r-niv">${opt(S.niveau, Object.entries(NIVEAUX))}</select></label>
       <label>Indices pendant les questions <select id="r-ind">${opt(String(PREF.indices ?? 30), [["20", "Après 20 secondes"], ["30", "Après 30 secondes"], ["45", "Après 45 secondes"], ["0", "Jamais"]])}</select></label>
       <label>Événements surprises <select id="r-evt">${opt(PREF_EVT(), [["0", "Aucun"], ["3", "Toutes les 3 manches"], ["4", "Toutes les 4 manches"], ["5", "Toutes les 5 manches"], ["m10", "Toutes les 10 minutes"], ["m15", "Toutes les 15 minutes"]])}</select></label>
       <div style="grid-column:1/-1"><b class="reg-t" style="display:block;margin:0 0 4px">Notions travaillées (toutes les quêtes)</b><div class="notions" id="r-notions"></div><p class="sub" style="margin:4px 0 0">Les quêtes de l'année suivent les notions de leur mois (ta planification). Une quête qui a ses propres notions (créateur de quêtes) garde les siennes.${QUETE.notions ? " <b>Cette quête a ses propres notions.</b>" : ""}</p>

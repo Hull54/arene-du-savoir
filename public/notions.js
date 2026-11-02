@@ -728,6 +728,13 @@ const NOTIONS = {
   maths: {
     calcul: "Calcul (+ − × ÷)",
     numeration: "Numération (position, premiers, carrés, exposants)",
+    temps: "Mesure du temps et durée",
+    fracsens: "Sens des fractions et fractions sur la droite numérique",
+    multpos: "Multiplication posée (3 chiffres × 2 chiffres)",
+    solides: "Solides (prismes, pyramides, développements)",
+    aire: "Aire et volume",
+    entiers: "Nombres entiers (négatifs) sur la droite numérique",
+    transfo: "Translation, frise et dallage",
     arrondi: "Arrondir (approximation)",
     divis: "Divisibilité, division avec reste, facteurs",
     pemdas: "Priorité des opérations et terme manquant",
@@ -781,16 +788,17 @@ const NOTIONS = {
 const NOTIONS_DEFAUT = { maths: ["calcul"], fr: ["vocab", "conj"] };
 // La planification de l'année : les notions de chaque mois
 const MOIS_NOTIONS = {
-  septembre: { nom: "Septembre", maths: ["numeration", "calcul"], fr: ["manip", "phrase", "variables", "c_pres", "vocab"] },
-  octobre: { nom: "Octobre", maths: ["arrondi", "divis", "pemdas", "moyenne"], fr: ["gn", "c_imp", "vocab"] },
+  // Maths : suite des sections des Irréductibles 5e (Superplanification A et B), au rythme de la classe (novembre = sections 7 à 10)
+  septembre: { nom: "Septembre", maths: ["numeration", "angles", "temps"], fr: ["manip", "phrase", "variables", "c_pres", "vocab"] },
+  octobre: { nom: "Octobre", maths: ["droites", "triangles", "fracsens", "arrondi", "multpos"], fr: ["gn", "c_imp", "vocab"] },
   novembre: { nom: "Novembre", maths: ["equiv", "reduc", "decrep", "cercle", "longueur"], fr: ["inv", "enrichie", "accverbe", "c_fut"] },
-  decembre: { nom: "Décembre", maths: ["droites", "angles", "triangles", "cartesien"], fr: ["ponct", "c_ps"] },
-  janvier: { nom: "Janvier", maths: ["compfrac", "divis", "decimaux"], fr: ["sens", "c_cond"] },
-  fevrier: { nom: "Février", maths: ["decimaux", "opdec", "multfrac"], fr: ["types", "c_impe"] },
-  mars: { nom: "Mars", maths: ["stats", "moyenne"], fr: ["pp", "c_pc"] },
-  avril: { nom: "Avril", maths: ["mesures"], fr: ["compl", "c_pqp"] },
-  mai: { nom: "Mai", maths: ["proba"], fr: ["pp", "ppa", "c_comp"] },
-  juin: { nom: "Juin (révision)", maths: ["calcul", "equiv", "decimaux", "angles", "stats", "mesures", "proba"], fr: ["gn", "accverbe", "compl", "ppa", "c_pc", "c_fut"] },
+  decembre: { nom: "Décembre", maths: ["compfrac", "numeration", "divis"], fr: ["ponct", "c_ps"] },
+  janvier: { nom: "Janvier", maths: ["decimaux", "opdec", "solides", "stats"], fr: ["sens", "c_cond"] },
+  fevrier: { nom: "Février", maths: ["numeration", "pourcent", "aire", "solides", "entiers"], fr: ["types", "c_impe"] },
+  mars: { nom: "Mars", maths: ["moyenne", "stats", "pemdas", "opdec", "addfrac"], fr: ["pp", "c_pc"] },
+  avril: { nom: "Avril", maths: ["mesures", "cartesien", "addfrac", "proba"], fr: ["compl", "c_pqp"] },
+  mai: { nom: "Mai", maths: ["pemdas", "divis", "multfrac", "opdec", "transfo", "proba"], fr: ["pp", "ppa", "c_comp"] },
+  juin: { nom: "Juin (révision)", maths: ["multpos", "equiv", "decimaux", "opdec", "aire", "stats", "mesures", "proba"], fr: ["gn", "accverbe", "compl", "ppa", "c_pc", "c_fut"] },
 };
 const QUETE_MOIS = { "rentree-academie": "septembre", "octobre-ferme": "octobre", "halloween-vladislav": "octobre", "novembre-lugubre": "novembre", "decembre-noel": "decembre",
   "janvier-yeti": "janvier", "fevrier-valentin": "fevrier", "mars-sorciers": "mars", "avril-paques": "avril", "mai-cite": "mai", "juin-depart": "juin" };
@@ -1527,7 +1535,82 @@ function genLongueur() {
     qc("Quelle unité utiliser pour mesurer l'épaisseur d'un crayon?", "le millimètre (mm)", ["le kilomètre (km)", "le mètre (m)", "le décimètre (dm)"], "C'est très petit : on mesure en millimètres."),
     qc("Quelle unité utiliser pour mesurer la longueur de la cour d'école?", "le mètre (m)", ["le millimètre (mm)", "le centimètre (cm)", "le kilomètre (km)"], "Une cour fait quelques dizaines de mètres.")]);
 }
-const GEN_MATHS = { decrep: genDecRep, cercle: genCercle, longueur: genLongueur, numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
+// ---------- Planification des Irréductibles : notions ajoutées ----------
+const hm = x => `${Math.floor(x / 60)} h ${String(x % 60).padStart(2, "0")}`;
+function genTemps() {
+  const t = ri(0, 4);
+  if (t === 0) { const h = ri(1, 4), m = pk([10, 15, 20, 30, 45]), tot = h * 60 + m; return qc(`${h} h ${m} min = ? minutes`, tot, [h * 100 + m, h * 60, tot + 60, h + m], `1 h = 60 min. ${h} × 60 = ${h * 60}, plus ${m} = ${tot} minutes.`); }
+  if (t === 1) { const d = ri(8, 14) * 60 + pk([0, 15, 30, 45]), du = ri(1, 3) * 60 + pk([15, 20, 40, 50]), f = d + du; return qc(`Le film commence à ${hm(d)} et finit à ${hm(f)}. Combien de temps dure-t-il?`, `${Math.floor(du / 60)} h ${du % 60} min`, [`${Math.floor(du / 60) + 1} h ${du % 60} min`, `${Math.floor(du / 60)} h ${(du % 60 + 30) % 60 || 10} min`, `${Math.floor(f / 60) - Math.floor(d / 60)} h ${Math.abs(f % 60 - d % 60) + 10} min`], `De ${hm(d)} à ${hm(f)} : on compte les heures entières, puis les minutes qui restent.`); }
+  if (t === 2) { const m = ri(2, 9); return qc(`${m} minutes = ? secondes`, m * 60, [m * 100, m * 10, m * 60 + 60, m * 30], `1 min = 60 s, donc ${m} × 60 = ${m * 60} s.`); }
+  if (t === 3) { const j = ri(2, 5); return qc(`${j} jours = ? heures`, j * 24, [j * 12, j * 60, j * 24 + 24, j * 10], `1 jour = 24 h, donc ${j} × 24 = ${j * 24} h.`); }
+  return pk([qc("Combien y a-t-il de jours dans une semaine?", "7", ["5", "10", "12"], "1 semaine = 7 jours."),
+    qc("Combien y a-t-il de mois dans une année?", "12", ["10", "52", "365"], "1 an = 12 mois."),
+    qc("Combien y a-t-il de semaines dans une année (environ)?", "52", ["12", "48", "365"], "1 an ≈ 52 semaines."),
+    qc("Un siècle, c'est combien d'années?", "100", ["10", "1 000", "50"], "Une décennie = 10 ans, un siècle = 100 ans, un millénaire = 1 000 ans."),
+    qc("Une demi-heure, c'est combien de minutes?", "30", ["50", "15", "45"], "La moitié de 60 minutes = 30 minutes."),
+    qc("Un quart d'heure, c'est combien de minutes?", "15", ["25", "4", "45"], "60 ÷ 4 = 15 minutes.")]);
+}
+function svgBarreFrac(a, b) { const w = 300 / b; return svgBox(320, 60, Array.from({ length: b }, (_, i) => `<rect x="${10 + i * w}" y="10" width="${w}" height="40" fill="${i < a ? "#6c4cf5" : "#fff"}" stroke="#222" stroke-width="2"/>`).join("")); }
+function svgDroiteFrac(a, b) {
+  const x0 = 20, L = 280, X = i => x0 + i * L / b;
+  return svgBox(320, 70, `<line x1="${x0}" y1="30" x2="${x0 + L}" y2="30" stroke="#222" stroke-width="2"/>` + Array.from({ length: b + 1 }, (_, i) => `<line x1="${X(i)}" y1="${i % b ? 22 : 16}" x2="${X(i)}" y2="${i % b ? 38 : 44}" stroke="#222" stroke-width="2"/>`).join("")
+    + `<text x="${x0}" y="62" font-size="14" text-anchor="middle">0</text><text x="${x0 + L}" y="62" font-size="14" text-anchor="middle">1</text><circle cx="${X(a)}" cy="30" r="7" fill="#d33"/>`);
+}
+function genFracSens() {
+  const t = ri(0, 2), b = ri(3, 10), a = ri(1, b - 1);
+  if (t === 0) return qcm("Quelle fraction de la bande est coloriée?", `${a}/${b}`, [`${b - a}/${b}`, `${a}/${b - a}`, `${b}/${a}`, `${a}/${b + 1}`], `La bande a ${b} parts égales (dénominateur) et ${a} ${a > 1 ? "sont coloriées" : "est coloriée"} (numérateur).`).slice(0, 4).concat([svgBarreFrac(a, b)]);
+  if (t === 1) return qcm("Quelle fraction indique le point rouge?", `${a}/${b}`, [`${a + 1}/${b}`, `${a}/${b + 1}`, `${b - a}/${b}`, `${a - 1 || a + 2}/${b}`], `Entre 0 et 1, il y a ${b} bonds égaux : chaque bond vaut 1/${b}. Le point est au bond ${a}.`).slice(0, 4).concat([svgDroiteFrac(a, b)]);
+  return pk([qc(`Dans la fraction ${a}/${b}, que nous dit le dénominateur (${b})?`, "En combien de parts égales le tout est partagé", ["Combien de parts on prend", "La grandeur du tout", "Le nombre de touts"], "Le dénominateur (en bas) dit en combien de parts égales on partage le tout."),
+    qc(`Dans la fraction ${a}/${b}, que nous dit le numérateur (${a})?`, "Combien de parts on considère", ["En combien de parts on partage", "La grandeur d'une part", "Combien il reste de parts"], "Le numérateur (en haut) compte les parts qu'on considère."),
+    qc(`Quelle fraction est égale à 1 entier?`, `${b}/${b}`, [`1/${b}`, `${b}/1`, `${a}/${b}`], "Quand on prend toutes les parts, on a le tout : numérateur = dénominateur."),
+    qc(`Pour qu'une fraction soit juste, les parts doivent être…`, "égales", ["de couleurs différentes", "toutes coloriées", "plus nombreuses que 10"], "Une fraction partage un tout en parts égales.")]);
+}
+function genMultPos() {
+  const a = ri(102, 489), b = ri(12, 49), u = b % 10 || 1, B = u === b % 10 ? b : b + 1, d = Math.floor(B / 10), p1 = a * u, p2 = a * d * 10;
+  if (Math.random() < .3) { const ea = Math.round(a / 100) * 100, eb = Math.round(B / 10) * 10; return qc(`Environ combien font ${a} × ${B}? (arrondis d'abord)`, nb(ea * eb), [nb(ea * eb * 10), nb(ea * eb / 10), nb(ea + eb), nb((ea + 100) * eb)], `${a} ≈ ${ea} et ${B} ≈ ${eb}. ${ea} × ${eb} = ${nb(ea * eb)}.`); }
+  return qc(`${a} × ${B} = ? (calcul posé)`, nb(p1 + p2), [nb(p1 + a * d), nb(p1 + p2 + 100), nb(p2 + a * d), nb(p1 + p2 - 10)], `${a} × ${u} = ${nb(p1)} ; ${a} × ${d * 10} = ${nb(p2)} (n'oublie pas le zéro!) ; ${nb(p1)} + ${nb(p2)} = ${nb(p1 + p2)}.`);
+}
+const SOLIDES = [["un cube", 6, 8, 12], ["un prisme à base rectangulaire", 6, 8, 12], ["un prisme à base triangulaire", 5, 6, 9], ["un prisme à base pentagonale", 7, 10, 15], ["un prisme à base hexagonale", 8, 12, 18],
+  ["une pyramide à base carrée", 5, 5, 8], ["une pyramide à base triangulaire", 4, 4, 6], ["une pyramide à base pentagonale", 6, 6, 10], ["une pyramide à base hexagonale", 7, 7, 12]];
+function genSolides() {
+  if (Math.random() < .65) { const [n, f, s, a] = pk(SOLIDES), k = ri(0, 2), quoi = ["faces", "sommets", "arêtes"][k], v = [f, s, a][k]; return qc(`Combien ${quoi === "arêtes" ? "d'" : "de "}${quoi} a ${n}?`, v, [f, s, a, v + 1, v - 1, v + 2], `${n[0].toUpperCase() + n.slice(1)} : ${f} faces, ${s} sommets et ${a} arêtes.`); }
+  return pk([qc("Quel solide a deux bases identiques et parallèles reliées par des rectangles?", "un prisme", ["une pyramide", "un cône", "une sphère"], "Un prisme a 2 bases pareilles ; ses autres faces sont des rectangles."),
+    qc("Quel solide a une seule base et des faces triangulaires qui se rejoignent en un sommet?", "une pyramide", ["un prisme", "un cube", "un cylindre"], "Les faces latérales d'une pyramide sont des triangles qui se touchent au sommet."),
+    qc("Un développement de cube est formé de combien de carrés?", "6", ["4", "8", "12"], "Le cube a 6 faces carrées : son développement a 6 carrés."),
+    qc("Une arête, c'est…", "le segment où deux faces se rencontrent", ["un coin du solide", "une face plane", "le dessous du solide"], "Arête = rencontre de 2 faces. Sommet = point où les arêtes se rencontrent."),
+    qc("Lequel de ces solides n'est PAS un polyèdre?", "le cylindre", ["le cube", "la pyramide", "le prisme"], "Un polyèdre n'a que des faces planes. Le cylindre a une surface courbe."),
+    qc("Quel est le nom du développement qui forme une pyramide à base carrée?", "1 carré et 4 triangles", ["2 carrés et 4 rectangles", "6 carrés", "1 triangle et 3 carrés"], "La base est un carré, les 4 faces latérales sont des triangles.")]);
+}
+function svgGrilleRect(L, l) { const c = 22; return svgBox(L * c + 20, l * c + 20, Array.from({ length: L * l }, (_, i) => `<rect x="${10 + (i % L) * c}" y="${10 + Math.floor(i / L) * c}" width="${c}" height="${c}" fill="#cfe8ff" stroke="#3a6ea5"/>`).join("")); }
+function genAire() {
+  const t = ri(0, 3), L = ri(3, 9), l = ri(2, 6);
+  if (t === 0) return qc("Quelle est l'aire de ce rectangle? (1 carré = 1 cm²)", `${L * l} cm²`, [`${2 * (L + l)} cm²`, `${L + l} cm²`, `${L * l + L} cm²`, `${L * l - l} cm²`], `${l} rangées de ${L} carrés : ${l} × ${L} = ${L * l} cm².`).slice(0, 4).concat([svgGrilleRect(L, l)]);
+  if (t === 1) return qc(`Un rectangle mesure ${L} m sur ${l} m. Quelle est son aire?`, `${L * l} m²`, [`${2 * (L + l)} m²`, `${L + l} m²`, `${L * l} m`, `${L * l + l} m²`], `Aire = longueur × largeur = ${L} × ${l} = ${L * l} m². Attention : ${2 * (L + l)} m serait le périmètre.`);
+  if (t === 2) { const h = ri(2, 5); return qc(`Une boîte est remplie de cubes de 1 cm³ : ${L} cubes de long, ${l} de large et ${h} de haut. Quel est son volume?`, `${L * l * h} cm³`, [`${L * l} cm³`, `${L + l + h} cm³`, `${L * l * h + L * l} cm³`], `${L} × ${l} = ${L * l} cubes par étage, × ${h} étages = ${L * l * h} cm³.`); }
+  return pk([qc("Quelle unité sert à mesurer une aire?", "le centimètre carré (cm²)", ["le centimètre (cm)", "le centimètre cube (cm³)", "le litre (L)"], "L'aire couvre une surface : on la mesure en unités carrées."),
+    qc("Quelle unité sert à mesurer un volume?", "le centimètre cube (cm³)", ["le centimètre carré (cm²)", "le mètre (m)", "le kilogramme (kg)"], "Le volume, c'est la place occupée : on le mesure en unités cubes."),
+    qc("L'aire d'une surface, c'est…", "la grandeur de la surface", ["le tour de la figure", "la place dans une boîte", "la masse d'un objet"], "Le tour de la figure, c'est le périmètre."),
+    qc("Quelle unité choisir pour l'aire du plancher de la classe?", "le mètre carré (m²)", ["le centimètre carré (cm²)", "le kilomètre carré (km²)", "le mètre (m)"], "Un plancher de classe fait quelques dizaines de mètres carrés.")]);
+}
+function svgDroiteEntiers(v) { const X = i => 160 + i * 14; return svgBox(320, 60, `<line x1="10" y1="25" x2="310" y2="25" stroke="#222" stroke-width="2"/>` + Array.from({ length: 21 }, (_, i) => i - 10).map(i => `<line x1="${X(i)}" y1="${i % 5 ? 20 : 15}" x2="${X(i)}" y2="${i % 5 ? 30 : 35}" stroke="#222" stroke-width="2"/>${i % 5 ? "" : `<text x="${X(i)}" y="52" font-size="13" text-anchor="middle">${i < 0 ? "−" + -i : i}</text>`}`).join("") + `<circle cx="${X(v)}" cy="25" r="6" fill="#d33"/>`); }
+function genEntiers() {
+  const t = ri(0, 3), f = x => x < 0 ? "−" + -x : String(x);
+  if (t === 0) { const v = pk([-9, -8, -7, -6, -4, -3, -2, -1, 1, 2, 3, 4, 6, 7, 8, 9]); return qc("Quel nombre indique le point rouge?", f(v), [f(-v), f(v + 1), f(v - 1)], "À gauche de 0, les nombres sont négatifs ; plus on va à gauche, plus le nombre est petit.").slice(0, 4).concat([svgDroiteEntiers(v)]); }
+  if (t === 1) { const l = mel([-ri(1, 9), -ri(10, 20), ri(0, 9), ri(10, 20)]); const m = Math.min(...l); return qc(`Quel est le plus petit nombre? ${l.map(f).join(" ; ")}`, f(m), l.filter(x => x !== m).map(f), "Les nombres négatifs sont plus petits que 0. −20 est plus petit que −3 : il est plus loin à gauche."); }
+  if (t === 2) { const a = -ri(2, 9), b = ri(2, 9); return qc(`Il fait ${f(a)} °C le matin et ${b} °C l'après-midi. De combien de degrés la température a-t-elle monté?`, `${b - a} °C`, [f(b + a) + " °C", `${b} °C`, `${b - a + 1} °C`, `${-a} °C`], `De ${f(a)} à 0 : ${-a} degrés, puis de 0 à ${b} : ${b} degrés. ${-a} + ${b} = ${b - a}.`); }
+  const l = [-ri(5, 9), -ri(1, 4), 0, ri(1, 9)], ok = [...l].sort((x, y) => x - y), j = x => x.map(f).join(" ; ");
+  return qc("Quel est l'ordre croissant?", j(ok), [j([ok[1], ok[0], ok[2], ok[3]]), j([...ok].reverse()), j([ok[2], ok[1], ok[0], ok[3]])], "Ordre croissant : du plus petit au plus grand. Le plus petit est le négatif le plus loin de 0.");
+}
+function genTransfo() {
+  if (Math.random() < .35) { const x = ri(1, 5), y = ri(1, 5), dx = ri(1, 4), dy = ri(1, 4), dr = Math.random() < .5; return qc(`Le point A est à (${x}, ${y}). On fait une translation de ${dx} case${dx > 1 ? "s" : ""} vers la droite et ${dy} vers le haut. Où arrive A?`, `(${x + dx}, ${y + dy})`, [`(${x + dy}, ${y + dx})`, `(${x + dx - 1}, ${y + dy})`, `(${x + dx}, ${y + dy + 1})`, `(${x + dx + dy}, ${y})`], `Vers la droite : on ajoute au 1er nombre (${x} + ${dx}). Vers le haut : on ajoute au 2e (${y} + ${dy}).`); }
+  return pk([qc("Une translation, c'est…", "faire glisser une figure sans la tourner ni la retourner", ["faire tourner une figure", "retourner une figure comme dans un miroir", "agrandir une figure"], "La flèche de translation dit dans quelle direction et de combien on glisse."),
+    qc("Après une translation, la figure…", "garde la même forme et la même grandeur", ["devient plus grande", "est à l'envers", "change de forme"], "Une translation déplace seulement la figure."),
+    qc("Une frise, c'est…", "un motif qui se répète en bande", ["un dessin qui couvre toute une surface", "une figure à 4 côtés", "un motif qui ne se répète pas"], "Dans une frise, le motif se répète par translation, en ligne."),
+    qc("Un dallage, c'est…", "des figures qui couvrent une surface sans trou ni chevauchement", ["un motif en une seule ligne", "des figures qui se chevauchent", "un seul grand carré"], "Comme les tuiles d'un plancher."),
+    qc("Quelle figure ne peut PAS former un dallage toute seule?", "le cercle", ["le carré", "le triangle équilatéral", "l'hexagone régulier"], "Des cercles laissent toujours des trous entre eux."),
+    qc("Laquelle de ces figures peut former un dallage toute seule?", "l'hexagone régulier", ["le cercle", "le pentagone régulier", "l'octogone régulier"], "Comme les alvéoles d'une ruche!")]);
+}
+const GEN_MATHS = { temps: genTemps, fracsens: genFracSens, multpos: genMultPos, solides: genSolides, aire: genAire, entiers: genEntiers, transfo: genTransfo, decrep: genDecRep, cercle: genCercle, longueur: genLongueur, numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
   compfrac: genCompFrac, addfrac: genAddFrac, pourcent: genPourcent, droites: genDroites, angles: genAngles, triangles: genTriangles, cartesien: genCartesien,
   decimaux: genDecimaux, opdec: genOpDec, multfrac: genMultFrac, stats: genStats, mesures: genMesures, proba: genProba };
 // Une question pour la notion choisie : [question, choix, bonne réponse, explication, dessin?]
