@@ -2424,6 +2424,7 @@ const server = http.createServer((req, res) => {
   if (file === '/prof') file = '/prof.html';
   if (file === '/guide') file = '/guide.html';
   if (file === '/planif') file = '/planif.html';
+  if (file === '/resultats') file = '/resultats.html';
   if (file === '/ping') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
   const full = path.join(PUBLIC, path.normalize(file));
   if (!full.startsWith(PUBLIC)) { res.writeHead(403); return res.end(); }

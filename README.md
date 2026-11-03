@@ -173,6 +173,17 @@ Les Boss viennent des cartes du système d'émulation de la classe (un par mois)
 - **🖨️ Bilans à imprimer** : une fiche par élève sur toute la séance (pas seulement la manche) : nombre de questions, réussite par notion, points forts, notions à revoir, pièces d'or gagnées et une ligne pour un commentaire.
 - **Révision ciblée** (automatique) : pendant la séance, le jeu note les notions que chaque élève rate. Ces notions reviennent plus souvent dans ses questions (jusqu'à 4 fois plus), et moins souvent celles qu'il réussit bien.
 - **📥 Exporter les résultats** : un fichier qui s'ouvre dans Excel (une ligne par élève, une colonne par notion).
+- **📚 Exporter l'historique des séances** : toutes les séances gardées dans ce navigateur, une ligne par séance, élève et notion. Même format que l'export « 📥 Exporter pour la page Résultats » de Classe et Donjon.
+
+## Page Résultats (`/resultats`) : Arène + Classe et Donjon
+
+Réunit les exports des deux jeux pour obtenir la réussite **par notion** de chaque élève.
+
+1. Dépose les fichiers .csv (Arène : bouton 📚 de la page prof ; Donjon : Réglages > Bilan de l'enseignant > 📥 Exporter pour la page Résultats). Redéposer un export plus récent remplace les lignes, sans doublons.
+2. **Qui est qui?** : écris l'élève derrière chaque nom de héros du Donjon (retenu pour la suite).
+3. Filtre par période, jeu et matière. Vue **toute la classe** (élève × notion) ou **un élève** (Arène, Donjon et les deux côte à côte). Sous le minimum de réponses (5 par défaut), le % est grisé. Impression et export Excel.
+
+Tout reste dans le navigateur de l'enseignant : rien n'est envoyé au serveur.
 
 ## En classe : codes, badges, attitude
 
