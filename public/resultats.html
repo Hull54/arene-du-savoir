@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Résultats par notion</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --fond: #141b26; --carte: #1d2636; --ligne: #2c384d; --texte: #fff; --doux: #cfd6e6; --or: #ffd54a;
+          --bon: #2f8f4e; --moyen: #b8860b; --faible: #b03a3a; --vide: #3a4459; }
+  body { margin: 0; background: var(--fond); color: var(--texte); font-family: "Lexend", system-ui, sans-serif; }
+  main { max-width: 1300px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { margin: 0 0 4px; font-size: 24px; color: var(--or); }
+  h2 { font-size: 17px; margin: 0 0 8px; color: var(--or); }
+  p, .doux { color: var(--doux); font-size: 14px; line-height: 1.45; }
+  p { margin: 4px 0 12px; }
+  .box { background: var(--carte); border-radius: 12px; padding: 14px; margin: 12px 0; }
+  .barre { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button, select, input { font: 600 14px "Lexend", system-ui; }
+  button { padding: 7px 12px; border-radius: 9px; border: 0; background: var(--or); color: #222; cursor: pointer; }
+  .sec { background: #33405a; color: #fff; }
+  select, input[type=date], input[type=number], input[type=text] { background: #0f1520; color: #fff; border: 1px solid var(--ligne); border-radius: 8px; padding: 6px 8px; }
+  label { font-size: 13px; color: var(--doux); display: inline-flex; gap: 6px; align-items: center; }
+  #depot { border: 2px dashed var(--ligne); border-radius: 12px; padding: 18px; text-align: center; color: var(--doux); cursor: pointer; }
+  #depot.survol { border-color: var(--or); color: #fff; }
+  .defile { overflow: auto; max-height: 75vh; }
+  table { border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 5px 7px; border-bottom: 1px solid var(--ligne); text-align: left; }
+  thead th { position: sticky; top: 0; background: var(--carte); z-index: 1; }
+  th.notion { writing-mode: vertical-rl; transform: rotate(180deg); max-height: 240px; font-weight: 600; white-space: nowrap; vertical-align: bottom; }
+  th.mat { text-align: center; font-size: 12px; color: var(--or); }
+  td.eleve, th.eleve { position: sticky; left: 0; background: var(--carte); font-weight: 600; white-space: nowrap; }
+  td.pc { text-align: center; min-width: 44px; border-radius: 4px; }
+  .bon { background: var(--bon); } .moyen { background: var(--moyen); } .faible { background: var(--faible); }
+  .peu { color: #8d97ad; }
+  small { color: #9aa4b8; font-size: 11px; }
+  .legende span { display: inline-block; padding: 2px 8px; border-radius: 4px; margin-right: 4px; font-size: 12px; }
+  .fiche td { min-width: 70px; }
+  .cache { display: none; }
+  #fichiers li { font-size: 13px; color: var(--doux); }
+  .jum { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px 14px; }
+  .jum div { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+  .jum span { flex: 0 0 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .jum input { flex: 1; min-width: 0; }
+  @media print {
+    :root { --fond: #fff; --carte: #fff; --texte: #000; --doux: #333; --or: #000; --ligne: #bbb; }
+    .noprint { display: none !important; }
+    .defile { max-height: none; overflow: visible; }
+    td.pc { -webkit-print-color-adjust: exact; print-color-adjust: exact; color: #fff; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>📊 Résultats par notion</h1>
+  <p>Réunit les exports de l'<b>Arène</b> (page prof : « 📚 Exporter l'historique des séances ») et de <b>Classe et Donjon</b> (Bilan de l'enseignant : « 📥 Exporter pour la page Résultats »). Les fichiers restent dans ce navigateur : rien n'est envoyé sur Internet.</p>
+
+  <div class="box noprint">
+    <h2>1. Dépose tes fichiers</h2>
+    <div id="depot">Glisse ici un ou plusieurs fichiers .csv, ou clique pour les choisir.<br><small>Si tu redéposes un export plus récent, ses lignes remplacent les anciennes (pas de doublons).</small></div>
+    <input type="file" id="choix" accept=".csv,text/csv" multiple class="cache">
+    <ul id="fichiers"></ul>
+    <div class="barre"><button class="sec" id="vider">🗑️ Tout effacer</button></div>
+  </div>
+
+  <div class="box noprint" id="boxJum">
+    <h2>2. Qui est qui?</h2>
+    <p>Dans le Donjon, les élèves jouent avec un nom de héros. Écris à côté de chaque nom l'élève qu'il représente (une seule fois : c'est retenu). Laisse vide si c'est déjà le bon prénom.</p>
+    <div class="jum" id="jum"></div>
+    <datalist id="listeEleves"></datalist>
+  </div>
+
+  <div class="box noprint">
+    <h2>3. Ce que tu veux voir</h2>
+    <div class="barre">
+      <label>Du <input type="date" id="du"></label>
+      <label>au <input type="date" id="au"></label>
+      <label>Jeu <select id="jeu"><option value="">Les deux</option><option>Arène</option><option>Donjon</option></select></label>
+      <label>Matière <select id="matiere"><option value="">Toutes</option></select></label>
+      <label title="En dessous, le % est affiché en gris : trop peu de réponses pour s'y fier">Minimum de réponses <input type="number" id="min" min="1" max="50" value="5" style="width:60px"></label>
+      <label>Vue <select id="vue"><option value="classe">Toute la classe</option><option value="eleve">Un élève</option></select></label>
+      <label id="lblEleve" class="cache">Élève <select id="eleve"></select></label>
+    </div>
+    <div class="barre" style="margin-top:10px">
+      <button id="imprimer">🖨️ Imprimer</button>
+      <button class="sec" id="exporter">📥 Exporter ce tableau (Excel)</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="legende doux" style="margin-bottom:8px"><span class="bon">80 % et +</span><span class="moyen">60 à 79 %</span><span class="faible">moins de 60 %</span><span class="peu" style="background:var(--vide)">trop peu de réponses</span></div>
+    <div id="titreVue"></div>
+    <div class="defile" id="vueZone"><p>Dépose d'abord un fichier.</p></div>
+  </div>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const lire = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch { return d; } };
+const ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+let lignes = lire('resultats-lignes', []);        // [{jeu, date, source, eleve, matiere, notion, bonnes, total}]
+let fichiers = lire('resultats-fichiers', []);    // noms des fichiers déposés
+let jumelage = lire('resultats-jumelage', {});    // "Jeu|nom" -> élève
+
+// ---------- Lecture des CSV (séparateur ; , ou tabulation, guillemets à la Excel) ----------
+function parseCSV(txt) {
+  txt = txt.replace(/^﻿/, '');
+  const prem = txt.split(/\r?\n/)[0];
+  const sep = [';', '\t', ','].sort((a, b) => prem.split(b).length - prem.split(a).length)[0];
+  const rows = []; let row = [], cell = '', q = false;
+  for (let i = 0; i < txt.length; i++) {
+    const c = txt[i];
+    if (q) { if (c === '"') { if (txt[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === sep) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && txt[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+const COLS = { jeu: 'jeu', date: 'date', source: 'source', eleve: 'eleve', matiere: 'matiere', notion: 'notion', bonnes: 'bonnes', total: 'total' };
+function importer(nom, txt) {
+  const rows = parseCSV(txt);
+  if (!rows.length) return 'fichier vide';
+  const ent = rows[0].map(norm), idx = {};
+  for (const k of Object.keys(COLS)) idx[k] = ent.indexOf(COLS[k]);
+  if (idx.eleve < 0 || idx.notion < 0 || idx.bonnes < 0 || idx.total < 0)
+    return "ce n'est pas un export pour la page Résultats (colonnes Élève, Notion, Bonnes, Total introuvables)";
+  const neuves = rows.slice(1).map(r => ({
+    jeu: (r[idx.jeu] || '').trim() || 'Autre', date: (r[idx.date] || '').trim().slice(0, 10), source: (r[idx.source] || '').trim(),
+    eleve: (r[idx.eleve] || '').trim(), matiere: (r[idx.matiere] || '').trim() || 'Autre', notion: (r[idx.notion] || '').trim(),
+    bonnes: +r[idx.bonnes] || 0, total: +r[idx.total] || 0,
+  })).filter(l => l.eleve && l.notion && l.total > 0);
+  // une même séance (ou quête) d'un même élève sur une même notion : la ligne la plus récente remplace l'ancienne
+  const cle = l => [l.jeu, l.date, l.source, l.eleve, l.notion].join('|');
+  const m = new Map(lignes.map(l => [cle(l), l]));
+  for (const l of neuves) m.set(cle(l), l);
+  lignes = [...m.values()];
+  if (!fichiers.includes(nom)) fichiers.push(nom);
+  return `${neuves.length} lignes`;
+}
+async function deposer(liste) {
+  const msgs = [];
+  for (const f of liste) { try { msgs.push(`${f.name} : ${importer(f.name, await f.text())}`); } catch (e) { msgs.push(`${f.name} : illisible`); } }
+  if (!ecrire('resultats-lignes', lignes)) msgs.push('⚠️ Trop de données pour les garder dans ce navigateur : elles seront à redéposer la prochaine fois.');
+  ecrire('resultats-fichiers', fichiers);
+  majTout(msgs);
+}
+$('depot').onclick = () => $('choix').click();
+$('choix').onchange = e => { deposer([...e.target.files]); e.target.value = ''; };
+$('depot').ondragover = e => { e.preventDefault(); $('depot').classList.add('survol'); };
+$('depot').ondragleave = () => $('depot').classList.remove('survol');
+$('depot').ondrop = e => { e.preventDefault(); $('depot').classList.remove('survol'); deposer([...e.dataTransfer.files]); };
+$('vider').onclick = () => {
+  if (!confirm('Effacer toutes les données déposées? (Les noms jumelés sont gardés.)')) return;
+  lignes = []; fichiers = []; ecrire('resultats-lignes', lignes); ecrire('resultats-fichiers', fichiers); majTout();
+};
+
+// ---------- Jumelage des noms ----------
+const eleveDe = l => (jumelage[l.jeu + '|' + l.eleve] || '').trim() || l.eleve;
+function majJumelage() {
+  // les prénoms de l'Arène servent de liste d'élèves ; on jumelle surtout les héros du Donjon
+  const arene = [...new Set(lignes.filter(l => l.jeu === 'Arène').map(l => l.eleve))].sort((a, b) => a.localeCompare(b, 'fr'));
+  const autres = [...new Set(lignes.filter(l => l.jeu !== 'Arène').map(l => l.jeu + '|' + l.eleve))].sort((a, b) => a.localeCompare(b, 'fr'));
+  $('listeEleves').innerHTML = [...new Set([...arene, ...Object.values(jumelage).filter(Boolean)])].map(n => `<option value="${esc(n)}">`).join('');
+  $('boxJum').classList.toggle('cache', !autres.length);
+  $('jum').innerHTML = autres.map(k => {
+    const [jeu, nom] = [k.slice(0, k.indexOf('|')), k.slice(k.indexOf('|') + 1)];
+    return `<div><span title="${esc(jeu)}">${jeu === 'Donjon' ? '🐉' : '🎮'} ${esc(nom)}</span>→<input type="text" list="listeEleves" data-k="${esc(k)}" value="${esc(jumelage[k] || '')}" placeholder="${esc(nom)}"></div>`;
+  }).join('');
+  $('jum').querySelectorAll('input').forEach(i => i.onchange = () => { jumelage[i.dataset.k] = i.value.trim(); ecrire('resultats-jumelage', jumelage); majFiltres(); afficher(); });
+}
+
+// ---------- Filtres ----------
+function majFiltres() {
+  const mats = [...new Set(lignes.map(l => l.matiere))].sort((a, b) => a.localeCompare(b, 'fr'));
+  const mSel = $('matiere').value;
+  $('matiere').innerHTML = '<option value="">Toutes</option>' + mats.map(m => `<option${m === mSel ? ' selected' : ''}>${esc(m)}</option>`).join('');
+  const els = [...new Set(lignes.map(eleveDe))].sort((a, b) => a.localeCompare(b, 'fr'));
+  const eSel = $('eleve').value;
+  $('eleve').innerHTML = els.map(e => `<option${e === eSel ? ' selected' : ''}>${esc(e)}</option>`).join('');
+}
+for (const id of ['du', 'au', 'jeu', 'matiere', 'min', 'vue', 'eleve']) $(id).oninput = () => { $('lblEleve').classList.toggle('cache', $('vue').value !== 'eleve'); afficher(); };
+
+function filtrees() {
+  const du = $('du').value, au = $('au').value, jeu = $('jeu').value, mat = $('matiere').value;
+  return lignes.filter(l => (!du || !l.date || l.date >= du) && (!au || !l.date || l.date <= au) && (!jeu || l.jeu === jeu) && (!mat || l.matiere === mat));
+}
+const pct = s => s.n ? Math.round(s.b / s.n * 100) : null;
+const classeDe = p => p >= 80 ? 'bon' : p >= 60 ? 'moyen' : 'faible';
+function cellule(s, min) {
+  if (!s || !s.n) return '<td class="pc"></td>';
+  const p = pct(s);
+  if (s.n < min) return `<td class="pc peu" title="${s.b} / ${s.n} : trop peu de réponses">${p} %<br><small>${s.n}</small></td>`;
+  return `<td class="pc ${classeDe(p)}" title="${s.b} bonnes sur ${s.n}">${p} %<br><small>${s.n}</small></td>`;
+}
+const ajoute = (o, k, l) => { const s = o[k] || (o[k] = { b: 0, n: 0 }); s.b += l.bonnes; s.n += l.total; return s; };
+
+// ---------- Vues ----------
+let tableauExport = [];
+function afficher() {
+  const L = filtrees(), min = Math.max(1, +$('min').value || 1);
+  if (!lignes.length) { $('titreVue').innerHTML = ''; $('vueZone').innerHTML = "<p>Dépose d'abord un fichier.</p>"; tableauExport = []; return; }
+  if (!L.length) { $('titreVue').innerHTML = ''; $('vueZone').innerHTML = '<p>Aucune réponse avec ces filtres.</p>'; tableauExport = []; return; }
+  const periode = ($('du').value || $('au').value) ? ` · du ${$('du').value || 'début'} au ${$('au').value || "aujourd'hui"}` : '';
+  const jeu = $('jeu').value || 'Arène + Donjon';
+  // notions regroupées par matière
+  const parMat = {};
+  for (const l of L) (parMat[l.matiere] = parMat[l.matiere] || new Set()).add(l.notion);
+  const mats = Object.keys(parMat).sort((a, b) => a.localeCompare(b, 'fr'));
+  const notions = mats.flatMap(m => [...parMat[m]].sort((a, b) => a.localeCompare(b, 'fr')).map(n => ({ m, n })));
+
+  if ($('vue').value === 'eleve') {
+    const el = $('eleve').value;
+    const Le = L.filter(l => eleveDe(l) === el);
+    const a = {}, d = {}, t = {};
+    for (const l of Le) { const k = l.matiere + '|' + l.notion; ajoute(t, k, l); ajoute(l.jeu === 'Arène' ? a : d, k, l); }
+    $('titreVue').innerHTML = `<h2>${esc(el)}</h2><p>${esc(jeu)}${esc(periode)} · ${Le.reduce((s, l) => s + l.total, 0)} réponses</p>`;
+    tableauExport = [['Élève', 'Matière', 'Notion', 'Arène bonnes', 'Arène total', 'Arène %', 'Donjon bonnes', 'Donjon total', 'Donjon %', 'Total bonnes', 'Total', '%']];
+    let h = '<table class="fiche"><thead><tr><th>Notion</th><th>Arène</th><th>Donjon</th><th>Les deux</th></tr></thead><tbody>';
+    let matPrec = '';
+    for (const { m, n } of notions) {
+      const k = m + '|' + n; if (!t[k]) continue;
+      if (m !== matPrec) { h += `<tr><th colspan="4" class="mat" style="text-align:left">${esc(m)}</th></tr>`; matPrec = m; }
+      h += `<tr><td>${esc(n)}</td>${cellule(a[k], min)}${cellule(d[k], min)}${cellule(t[k], min)}</tr>`;
+      const v = s => s ? [s.b, s.n, pct(s)] : ['', '', ''];
+      tableauExport.push([el, m, n, ...v(a[k]), ...v(d[k]), ...v(t[k])]);
+    }
+    $('vueZone').innerHTML = h + '</tbody></table>';
+    return;
+  }
+
+  const par = {}, tot = {};
+  for (const l of L) { const e = eleveDe(l); ajoute(par[e] = par[e] || {}, l.matiere + '|' + l.notion, l); ajoute(tot, e, l); }
+  const eleves = Object.keys(par).sort((a, b) => a.localeCompare(b, 'fr'));
+  $('titreVue').innerHTML = `<h2>Toute la classe</h2><p>${esc(jeu)}${esc(periode)} · ${eleves.length} élèves · ${notions.length} notions. Chaque case : % de réussite et nombre de réponses.</p>`;
+  let h = '<table><thead><tr><th class="eleve"></th>' + mats.map(m => `<th class="mat" colspan="${parMat[m].size}">${esc(m)}</th>`).join('') + '<th></th></tr>';
+  h += '<tr><th class="eleve">Élève</th>' + notions.map(({ n }) => `<th class="notion" title="${esc(n)}">${esc(n)}</th>`).join('') + '<th class="notion">Tout</th></tr></thead><tbody>';
+  const groupe = {};
+  for (const e of eleves) {
+    h += `<tr><td class="eleve">${esc(e)}</td>` + notions.map(({ m, n }) => { const s = par[e][m + '|' + n]; if (s) { const g = groupe[m + '|' + n] || (groupe[m + '|' + n] = { b: 0, n: 0 }); g.b += s.b; g.n += s.n; } return cellule(s, min); }).join('') + cellule(tot[e], min) + '</tr>';
+  }
+  const tg = Object.values(tot).reduce((g, s) => ({ b: g.b + s.b, n: g.n + s.n }), { b: 0, n: 0 });
+  h += '<tr><td class="eleve">Groupe</td>' + notions.map(({ m, n }) => cellule(groupe[m + '|' + n], min)).join('') + cellule(tg, min) + '</tr>';
+  $('vueZone').innerHTML = h + '</tbody></table>';
+  tableauExport = [['Élève', ...notions.map(({ m, n }) => `${m} : ${n} (%)`), 'Tout (%)', 'Réponses']];
+  for (const e of eleves) tableauExport.push([e, ...notions.map(({ m, n }) => { const s = par[e][m + '|' + n]; return s ? pct(s) : ''; }), pct(tot[e]), tot[e].n]);
+}
+
+$('imprimer').onclick = () => window.print();
+$('exporter').onclick = () => {
+  if (!tableauExport.length) return;
+  const cell = v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const csv = '﻿' + tableauExport.map(l => l.map(cell).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `resultats-${$('vue').value === 'eleve' ? $('eleve').value : 'classe'}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+};
+
+function majTout(msgs) {
+  $('fichiers').innerHTML = (msgs || fichiers).map(f => `<li>${esc(f)}</li>`).join('');
+  majJumelage(); majFiltres(); afficher();
+}
+majTout();
+</script>
+</body>
+</html>

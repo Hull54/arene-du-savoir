@@ -171,6 +171,8 @@
       <table id="stats"></table>
       <button class="sec" id="export" style="margin-top:8px">📥 Exporter les résultats (Excel)</button>
       <button class="sec" id="bilans" style="margin-top:8px">🖨️ Bilans à imprimer (un par élève)</button>
+      <button class="sec" id="exportHisto" style="margin-top:8px" title="Toutes les séances gardées dans ce navigateur, une ligne par élève et par notion. À déposer dans la page Résultats.">📚 Exporter l'historique des séances</button>
+      <a href="/resultats" target="_blank" style="display:block;font-size:13px;margin-top:4px">📊 Page Résultats (Arène + Classe et Donjon)</a>
       <details style="margin-top:8px"><summary>📊 Google Sheet des bilans</summary>
         <p style="font-size:13px;margin:6px 0">Colle l'URL /exec de ton script. Les totaux de chaque élève par type de question y sont envoyés tout seuls, pendant la séance.</p>
         <input id="sheetUrl" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;box-sizing:border-box">
@@ -602,6 +604,26 @@ $('bilans').onclick = () => {
 };
 // Historique des séances (dans ce navigateur) : pour comparer les progrès d'une séance à l'autre
 function lireHisto() { try { const h = JSON.parse(localStorage.getItem('arene-historique') || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } }
+// ----- Export commun (même format que Classe et Donjon) : une ligne par séance, élève et notion. Lu par la page /resultats -----
+function matiereDe(notion) {
+  const x = last && (last.subjects || []).find(n => n.s === notion);
+  if (x && x.m) return x.m;
+  if (Object.values(PL.NOTIONS.maths).includes(notion) || /^Tables/.test(notion)) return 'Mathématiques';
+  if (Object.values(PL.NOTIONS.fr).includes(notion) || notion === 'Dictée') return 'Français';
+  return 'Autre';
+}
+$('exportHisto').onclick = () => {
+  const cell = v => /[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v;
+  const lignes = [['Jeu', 'Date', 'Source', 'Élève', 'Matière', 'Notion', 'Bonnes', 'Total']];
+  for (const e of lireHisto()) for (const [eleve, notions] of Object.entries(e.mem)) for (const [notion, s] of Object.entries(notions))
+    if (s.ok + s.ko) lignes.push(['Arène', e.d, `Séance du ${e.d}`, eleve, matiereDe(notion), notion, s.ok, s.ok + s.ko]);
+  if (lignes.length < 2) return alert("Aucune séance gardée dans ce navigateur pour l'instant.");
+  const csv = '\ufeff' + lignes.map(l => l.map(cell).join(';')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `arene-historique-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+};
 // ----- Envoi des totaux de la journée au Google Sheet de l'enseignant (même script que Classe et Donjon) -----
 let sheetUrl = ''; try { sheetUrl = String(localStorage.getItem('arene-sheet') || ''); } catch {}
 let sheetDernier = '';
