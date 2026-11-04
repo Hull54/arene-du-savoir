@@ -217,7 +217,8 @@ function village() {
   A.obj('well', 21, 6, 1.4, 1.2);
   A.obj('stall', 43, 14, 2, 1); A.obj('barrels', 34.5, 19, 1, 1);
   A.tallGrass(5); A.portal('.'); A.scatterBarrels(5, '.dp');
-  A.scatter('oak', 14, '.', 1, 0.8, 1);
+  A.scatter('oak', 10, '.', 1, 0.8, 1); A.scatter('oakorange', 5, '.', 1, 0.8, 1);
+  A.scatter('souche', 7, '.', 0.9, 0.6, 1); A.scatter('buche', 3, '.', 2.2, 0.7, 1);
   A.scatter('palm', 5, 's', 0.8, 0.6, 1);
   A.scatter('rock', 4, '.s', 1.1, 0.8, 1);
   A.scatterBushes(10, '.');
@@ -324,9 +325,22 @@ function donjon() {
   A.fill(23, 21, 6, 1, 't');
   for (const [x, y] of [[20, 14.5], [31, 14.5], [20, 20.5], [31, 20.5]]) A.obj('dpillar', x, y, 1, 1);
   for (const [x, y] of [[23, 3.5], [28, 3.5], [23, 7], [28, 7], [23, 28], [28, 28], [23, 31], [28, 31]]) A.obj('dpillar', x, y, 1, 1);
-  A.obj('crate', 4, 15, 1, 1); A.obj('crate', 11, 21, 1, 1); A.obj('barrels', 47, 3, 1, 1); A.obj('crate', 40, 9, 1, 1);
+  // chaque salle a son histoire : armurerie et camp gobelin sur plancher, prison, crypte, bibliothèque, forge
+  for (const k of [2, 5]) { const [x, y, w, h] = rooms[k]; for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (A.get(i, j) === 'f') A.set(i, j, 'w'); }
+  A.obj('ratelier', 39.5, 2.4, 2.4, 0.6); A.obj('ratelier', 44.5, 2.4, 2.4, 0.6); A.obj('barrels', 47, 3, 1, 1); A.obj('crate', 40, 9, 1, 1); A.obj('table', 43, 6, 2.4, 0.9);   // armurerie
+  for (const x of [5, 8]) A.fill(x, 14, 1, 2, 'k');                                                    // prison : trois cellules
+  for (const x of [2.4, 5.6, 8.6]) A.obj('barreaux', x, 16.1, 1.4, 0.3);
+  A.obj('bed', 2.4, 14.1, 0.8, 1.3); A.obj('crate', 11, 21, 1, 1); A.obj('crate', 4, 21, 1, 1);
+  for (const [x, y] of [[40.4, 14.5], [46.4, 14.5]]) A.obj('tente', x, y, 2.6, 1);                      // camp gobelin
+  A.obj('brazier', 41.6, 20.6, 0.8, 0.8); A.obj('crate', 48.2, 21, 1, 1); A.obj('souche', 39.6, 21.4, 0.9, 0.6);
+  for (const x of [21, 30.2]) A.obj('brazier', x, 2.6, 0.8, 0.8);                                        // crypte
+  A.obj('tomb', 25.3, 2.4, 1.4, 1);
+  for (const x of [21.5, 23, 28, 29.5]) A.obj('shelf', x, 26.2, 1.4, 0.9);                               // bibliothèque oubliée
+  A.obj('fourneau', 39.2, 26.4, 2.4, 1); A.obj('ratelier', 46, 26.3, 2.4, 0.6); A.obj('crate', 48.4, 32.4, 1, 1);   // forge près de la lave
+  for (const [x, y] of [[18.6, 13.6], [33, 13.6], [18.6, 21.8], [33, 21.8]]) A.obj('brazier', x, y, 0.8, 0.8);     // grande salle
+  A.obj('banniere', 23.6, 13.1, 0.8, 0.5); A.obj('banniere', 27.6, 13.1, 0.8, 0.5);
   A.portal('f'); A.scatterBarrels(6, 'f');
-  A.obj('tomb', 6, 32, 1.4, 1); A.obj('tomb', 47.5, 15, 1.4, 1);
+  A.obj('tomb', 6, 32, 1.4, 1);
   for (const [x, y] of [[3, 3], [48, 3], [3, 32], [48, 32], [44, 22]]) A.chest(x, y);
   for (const [x, y] of [[12, 9], [21, 9], [40, 15], [12, 24], [30, 33]]) A.spot(x, y);
   return fin(A, 'donjon', 'Donjon Oublié', 'donjon', 'Salles et couloirs sombres, fosses, lave et coffres dans les coins');
@@ -409,7 +423,7 @@ function marais() {
   A.chest(30, 5); A.chest(4, 4); A.chest(47, 32);
   A.tallGrass(6); A.portal('.'); A.scatterBarrels(4, '.d');
   A.scatter('deadtree', 10, '.', 0.6, 0.6, 1);
-  A.scatter('willow', 5, '.', 1, 0.8, 1);
+  A.scatter('willow', 5, '.', 1, 0.8, 1); A.scatter('souche', 5, '.', 0.9, 0.6, 1); A.scatter('buche', 3, '.', 2.2, 0.7, 1);
   A.scatterBushes(12, '.m');
   for (const [x, y] of [[22, 9], [10, 27], [33, 30], [47, 11], [26, 23]]) A.spot(x, y);
   return fin(A, 'marais', 'Marais Gluant', 'marais', 'Boue qui ralentit, passerelles et cabane de la sorcière');

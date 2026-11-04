@@ -530,11 +530,11 @@ function spriteFor(o, TH = THEMES.village) {
   const w = Math.round(o.w / PX), h = Math.round(o.h / PX);
   let P, ax, ay;   // ax, ay : où se trouve le coin haut-gauche du rectangle de collision dans le dessin
   const kind = o.kind;
-  if (kind === 'oak' || kind === 'willow') {
+  if (kind === 'oak' || kind === 'willow' || kind === 'oakorange') {
     P = new Painter(30, 34); ax = 15 - w / 2; ay = 34 - h - 1;
     P.rect(13, 20, 4, 11, '#5a3a20'); P.rect(13, 20, 1, 11, '#7a5030'); P.rect(16, 21, 1, 10, '#3e2614'); P.px(12, 30, '#5a3a20'); P.px(17, 30, '#5a3a20');
     if (TH.rustique) { P.rect(10, 30, 3, 1, '#5a3a20'); P.px(9, 31, '#4a2e18'); P.rect(17, 30, 3, 1, '#4a2e18'); P.px(20, 31, '#4a2e18'); P.px(14, 31, '#5a3a20'); P.px(11, 29, '#7a5030'); }
-    const pal = kind === 'oak' ? TH.arbres : TH.arbres.map(c => shade(c, 1.12));
+    const pal = kind === 'oakorange' ? ['#e08a2a', '#f0a03a', '#ffc860', '#a85a1a'] : kind === 'oak' ? TH.arbres : TH.arbres.map(c => shade(c, 1.12));
     const blobs = [[15, 5, 6], [9, 9, 6], [21, 9, 6], [15, 11, 7], [8, 15, 5], [22, 15, 5], [12, 18, 5], [18, 18, 5]];
     blobs.forEach(([x, y, r], i) => leafBlob(P, x, y, r, pal, i % 2));
     if (kind === 'willow') for (let i = 0; i < 7; i++) { P.rect(5 + i * 3, 19, 1, 5 + (i % 3) * 2, pal[3]); P.px(5 + i * 3, 19, pal[1]); }
@@ -918,6 +918,24 @@ function spriteFor(o, TH = THEMES.village) {
     P = new Painter(w + 2, h + 14); ax = 1; ay = 12;
     P.rect(1, 6, w, h + 8, '#3a3640'); P.rect(1, 6, w, 2, '#5a5664'); P.rect(4, 11, 8, 5, '#ff8a1e'); P.rect(5, 12, 6, 3, '#ffd25a');
     P.ellipse(w - 8, 5, 6, 3, '#2a2630'); P.ellipse(w - 8, 4, 5, 2, '#c8963e'); P.rect(w - 2, 0, 2, 6, '#3a3640');
+  } else if (kind === 'souche') {   // souche coupée : cernes du bois
+    P = new Painter(w + 4, h + 8); ax = 2; ay = 6;
+    const cx = 2 + Math.floor(w / 2);
+    P.rect(4, 5, w - 4, h + 1, '#6a4426'); P.rect(4, 5, 2, h + 1, '#8a5a32'); P.px(3, h + 5, '#6a4426'); P.px(w, h + 5, '#4a2e18');
+    P.ellipse(cx, 5, Math.floor(w / 2) - 2, 4, '#e8d0a0'); P.ellipse(cx, 5, Math.floor(w / 2) - 4, 2, '#d0b07a'); P.px(cx, 5, '#a07a4a');
+  } else if (kind === 'buche') {   // tronc couché dans l'herbe
+    P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
+    P.rect(4, 2, w - 6, h + 4, '#7a5030'); P.rect(4, 2, w - 6, 2, '#9a6a3a'); P.rect(4, h + 4, w - 6, 2, '#4a2e18');
+    for (let x = 8; x < w - 4; x += 7) P.rect(x, 4, 3, 1, '#5a3a20');
+    P.ellipse(4, Math.floor(h / 2) + 4, 3, Math.floor(h / 2) + 2, '#e8d0a0'); P.px(4, Math.floor(h / 2) + 4, '#a07a4a');
+    P.rect(Math.floor(w / 2), 0, 2, 3, '#4f9a3c'); P.px(Math.floor(w / 2) + 2, 1, '#6cbd48');
+  } else if (kind === 'tente') {   // tente de toile orange (campement)
+    P = new Painter(w + 4, h + 18); ax = 2; ay = 16;
+    const o = '#e07a2a', od = '#b05a1a', ol = '#ff9a4a';
+    for (let j = 0; j < h + 16; j++) { const half = Math.round((w / 2 + 1) * Math.min(1, (j + 4) / (h + 10))); P.rect(2 + Math.floor(w / 2) - half, j, half, 1, ol); P.rect(2 + Math.floor(w / 2), j, half, 1, o); }
+    P.rect(2 + Math.floor(w / 2), 0, 1, h + 16, od);
+    P.rect(2 + Math.floor(w / 2) - 3, h + 8, 6, 8, '#3a2414'); P.rect(2 + Math.floor(w / 2) - 3, h + 8, 6, 1, od);
+    for (let x = 2; x < w + 2; x += 4) P.rect(x, h + 15, 2, 1, od);
   } else if (kind === 'crayon') {   // crayon géant couché
     P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
     P.rect(8, 2, w - 18, h + 4, '#ffd84a'); P.rect(8, 2, w - 18, 2, '#fff0a0'); P.rect(8, h + 3, w - 18, 2, '#e8b83a');
