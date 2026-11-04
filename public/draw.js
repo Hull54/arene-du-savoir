@@ -936,6 +936,31 @@ function spriteFor(o, TH = THEMES.village) {
     P.rect(2 + Math.floor(w / 2), 0, 1, h + 16, od);
     P.rect(2 + Math.floor(w / 2) - 3, h + 8, 6, 8, '#3a2414'); P.rect(2 + Math.floor(w / 2) - 3, h + 8, 6, 1, od);
     for (let x = 2; x < w + 2; x += 4) P.rect(x, h + 15, 2, 1, od);
+  } else if (kind === 'idole') {   // tête d'idole en pierre moussue (temple de la jungle)
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 20;
+    const st = '#8a9a7a', sd = '#5f6e52', sl = '#b0c09a', m = '#4f8a3a';
+    P.rect(2, 2, w - 2, h + 18, st); P.rect(2, 2, 2, h + 18, sl); P.rect(w - 3, 2, 3, h + 18, sd);
+    P.rect(5, 7, 4, 3, '#1b1424'); P.rect(w - 8, 7, 4, 3, '#1b1424'); P.px(6, 8, '#ffd84a'); P.px(w - 7, 8, '#ffd84a');   // yeux
+    P.rect(Math.floor(w / 2) - 1, 10, 3, 5, sd); P.rect(5, 16, w - 9, 3, '#1b1424'); for (let x = 6; x < w - 4; x += 2) P.px(x, 16, '#e8e0c8');
+    for (let i = 0; i < 6; i++) P.rect(2 + (i * 5) % (w - 2), 0 + (i * 3) % 6, 2, 4 + i % 3, m);
+  } else if (kind === 'sarcophage') {   // sarcophage doré du pharaon
+    P = new Painter(w + 2, h + 10); ax = 1; ay = 8;
+    P.rect(1, 2, w, h + 6, '#c8962e'); P.rect(3, 3, w - 4, h + 4, '#e3b341'); P.rect(3, 3, w - 4, 1, '#ffd84a');
+    P.ellipse(8, Math.floor(h / 2) + 5, 4, 3, '#f2d08a'); P.rect(5, Math.floor(h / 2) + 3, 1, 4, '#3f6fb5'); P.rect(11, Math.floor(h / 2) + 3, 1, 4, '#3f6fb5');
+    for (let x = 15; x < w - 3; x += 4) P.rect(x, 4, 2, h + 2, x % 8 === 3 ? '#3f6fb5' : '#c8962e');
+  } else if (kind === 'jarre') {   // jarre de terre cuite
+    P = new Painter(w + 4, h + 12); ax = 2; ay = 10;
+    const c = Math.floor(w / 2) + 2;
+    P.ellipse(c, 10, Math.floor(w / 2) + 1, Math.floor(h / 2) + 5, '#c06a3a'); P.ellipse(c - 2, 8, 2, 3, '#e08a52');
+    P.rect(c - 3, 0, 6, 3, '#a05a2a'); P.rect(c - 4, 2, 8, 1, '#7a3e1c'); P.rect(c - 5, 11, Math.floor(w / 2) * 2 + 2, 1, '#2a1a10');
+  } else if (kind.startsWith('etal')) {   // étal du marché de nuit : auvent de couleur, marchandises, lanterne
+    const pal = { etal: ['#3f6fb5', '#ffd84a'], etal2: ['#2f9a6a', '#f4f0e6'], etal3: ['#8e4ce0', '#ff9a4a'] }[kind] || ['#3f6fb5', '#ffd84a'];
+    P = new Painter(w + 2, h + 16); ax = 1; ay = 15;
+    P.rect(1, 15 + Math.floor(h / 3), w, h - Math.floor(h / 3), '#7a4b25'); P.rect(1, 15 + Math.floor(h / 3), w, 2, '#5a3a1e');
+    for (let i = 0; i < w; i += 4) P.rect(1 + i, 2, 2, 12, pal[0]), P.rect(3 + i, 2, 2, 12, pal[1]);
+    for (let i = 0; i < w; i += 4) P.rect(1 + i, 14, 3, 1, pal[0]);
+    for (let i = 0; i < 6; i++) P.disc(4 + i * 5, 15 + Math.floor(h / 3) + 4, 1, ['#e04a3a', '#ffb347', '#7cc25a', '#ffd84a', '#c96bd8', '#9fd6ff'][i]);
+    P.rect(Math.floor(w / 2), 0, 1, 3, '#2a2630'); P.rect(Math.floor(w / 2) - 2, 3, 5, 4, '#ff8a1e'); P.rect(Math.floor(w / 2) - 1, 4, 3, 2, '#ffd25a');
   } else if (kind === 'crayon') {   // crayon géant couché
     P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
     P.rect(8, 2, w - 18, h + 4, '#ffd84a'); P.rect(8, 2, w - 18, 2, '#fff0a0'); P.rect(8, h + 3, w - 18, 2, '#e8b83a');

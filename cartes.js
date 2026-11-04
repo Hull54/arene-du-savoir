@@ -691,5 +691,117 @@ function taverne() {
   return fin(A, 'taverne', 'Taverne du Sanglier', 'village', 'Combat rapproché : taverne, comptoir et tables rondes, cuisine, cellier et magasin');
 }
 
-const CARTES = [village, cite, chateau, cabanes, taverne, desert, donjon, hiver, colisee, marais, ecole, caverne, classe].map(f => f());
+// ---------- Temple dans la jungle ----------
+// Une enceinte de pierre envahie par la jungle, une rivière, des fosses-pièges et le sanctuaire de l'idole.
+function temple() {
+  const A = atelier('temple', 4242, '.');
+  A.border('T', 2);
+  for (const [x, y, rx, ry] of [[4, 6, 2, 2.5], [13, 32, 2.5, 1.5], [48, 10, 1.8, 3], [47, 31, 2, 1.6], [24, 3, 3, 1.2], [38, 33, 3, 1.2]]) A.blob(x, y, rx, ry, 'T', 0.4, '.');
+  // la rivière et ses deux ponts de lianes
+  A.path([[8.5, 0], [7.5, 9], [9.5, 20], [8, 36]], 2.6, '~');
+  for (const row of [[9, 10], [26, 27]]) for (const y of row) for (let x = 4; x < 14; x++) if (A.get(x, y) === '~') A.set(x, y, 'B');
+  A.blob(4, 22, 1.6, 1.2, 'm', 0.4, '.'); A.blob(13, 15, 1.6, 2, 'm', 0.4, '.');
+  // l'enceinte : quatre portes, cour de dalles envahie d'herbes et de boue
+  A.house(17, 6, 28, 24, '#', 'f', ['n', 's', 'w', 'e'], false);
+  A.fill(17, 24, 1, 2, 'f'); A.fill(44, 10, 1, 2, 'f');                       // brèches dans le mur
+  for (const [x, y, rx, ry] of [[20.5, 9.5, 2, 1.5], [41, 26, 2.2, 1.5], [21, 26.5, 2, 1.2], [41.5, 9.5, 1.8, 1.4]]) A.blob(x, y, rx, ry, '.', 0.5, 'f');
+  for (const [x, y] of [[20.5, 9.5], [41, 26]]) A.blob(x, y, 1.4, 1, 'h', 0.5, '.');
+  A.blob(41.5, 18, 1.4, 2.2, 'm', 0.4, 'f');
+  // fosses-pièges (on peut tirer par-dessus, pas marcher)
+  for (const [x, y, w, h] of [[22, 14, 2, 2], [39, 21, 2, 2], [26, 25, 2, 1], [35, 8, 2, 1], [29, 22, 1, 1], [33, 22, 1, 1]]) A.fill(x, y, w, h, 'v');
+  // le sanctuaire : idoles, piliers, l'autel qui soigne
+  A.house(24, 11, 14, 10, '#', 'f', ['s', 'n'], false);
+  A.fill(30, 13, 2, 7, 't');
+  A.setHeal(31, 15.6, 'autel');
+  A.obj('idole', 25.2, 12.2, 1.2, 0.8); A.obj('idole', 35.6, 12.2, 1.2, 0.8);
+  for (const x of [26.5, 34.5]) for (const y of [15, 18]) A.obj('pillar', x, y, 1, 1);
+  A.chest(25.5, 18.5); A.chest(35.5, 18.5);
+  // ruines de la cour
+  for (const [x, y] of [[20, 18.5], [20, 21], [42, 13.5], [27, 8.4], [36, 27.4], [22.5, 29]]) A.obj('pillarb', x, y, 1, 1);
+  for (const [x, y] of [[29, 6.4], [33, 6.4], [29, 28.4], [33, 28.4]]) A.obj('brazier', x, y, 0.8, 0.8);
+  A.obj('idole', 19, 7.6, 1.2, 0.8); A.obj('idole', 42.4, 27.4, 1.2, 0.8);
+  A.obj('statue', 14.4, 17.2, 1, 1); A.obj('statue', 46.4, 20.2, 1, 1);
+  A.scatter('palm', 9, '.', 0.8, 0.6, 1);
+  A.scatter('oak', 7, '.', 1, 0.8, 1);
+  A.scatter('rock', 4, '.', 1.1, 0.8, 1);
+  A.tallGrass(8, 1.6);
+  A.scatterBushes(7, '.h');
+  A.portal('.'); A.scatterBarrels(4, '.f');
+  for (const [x, y] of [[4, 3], [48, 4], [4, 32], [15, 22], [47, 25], [38, 3]]) A.chest(x, y);
+  for (const [x, y] of [[31, 9], [21, 23], [40, 16], [12, 5], [3, 15], [48, 33], [31, 32]]) A.spot(x, y);
+  return fin(A, 'temple', 'Temple de la Jungle', 'foret', 'Ruines envahies par la jungle, rivière, fosses-pièges et l\'autel de l\'idole qui soigne');
+}
+
+// ---------- Marché de nuit ----------
+// Toujours la nuit : allées d'étals sous les lanternes, un canal et ses ponts, maisons tout autour.
+function marche() {
+  const A = atelier('marche', 6363, 'p');
+  A.border('b', 1);
+  A.house(1, 1, 10, 6, 'b', 'w', ['s']); A.house(14, 1, 8, 5, 'b', 'w', ['s'], false); A.house(30, 1, 8, 5, 'b', 'w', ['s'], false); A.house(41, 1, 10, 6, 'b', 'w', ['s']);
+  A.house(1, 29, 10, 6, 'b', 'w', ['n']); A.house(41, 29, 10, 6, 'b', 'w', ['n']);
+  A.obj('bouteilles', 15.5, 2.1, 3, 0.8); A.obj('crate', 19.5, 2.2, 1, 1); A.chest(15, 3.5);
+  A.obj('shelf', 31.2, 2, 1.4, 0.9); A.obj('barrels', 35.4, 2.2, 1, 1); A.chest(35, 3.5);
+  // le canal et ses trois ponts
+  A.fill(0, 21, COLS, 2, '~'); A.set(0, 21, 'b'); A.set(0, 22, 'b'); A.set(COLS - 1, 21, 'b'); A.set(COLS - 1, 22, 'b');
+  for (const x of [8, 24, 41]) A.fill(x, 21, 3, 2, 'B');
+  A.fill(14, 29, 24, 6, 'f');                                                 // la place du sud
+  // fontaine qui soigne au milieu de la grande place
+  A.setHeal(26, 13.5, 'fontaine');
+  // allées d'étals
+  const k = ['etal', 'etal2', 'etal3']; let n = 0;
+  for (const y of [9, 16.6]) for (const x of [3.5, 7.5, 14, 18, 31.5, 35.5, 42, 46]) A.obj(k[n++ % 3], x, y, 2.4, 1);
+  for (const x of [14.5, 18.5, 31, 35]) A.obj(k[n++ % 3], x, 25.6, 2.4, 1);
+  for (const x of [17, 33]) A.obj(k[n++ % 3], x, 30.2, 2.4, 1);
+  A.obj('tente', 22.6, 31.4, 2.6, 1); A.obj('tente', 27, 31.4, 2.6, 1);
+  // lanternes partout
+  for (const [x, y] of [[6.8, 12.6], [17.4, 12.6], [34.8, 12.6], [45.4, 12.6], [12, 7.4], [40, 7.4], [22, 9], [30, 9], [22, 18], [30, 18], [6.8, 19.6], [45.4, 19.6],
+    [12, 24.6], [40, 24.6], [24, 26.6], [28, 26.6], [15, 33.4], [37, 33.4], [3.2, 26], [48.6, 26]]) A.obj('lamp', x, y, 0.4, 0.4);
+  for (const [x, y] of [[11.8, 10], [39.6, 17.6], [22.4, 24.6], [29.4, 24.4], [5, 25.4], [46.5, 25.4], [20.2, 30.4]]) A.obj('crate', x, y, 1, 1);
+  for (const [x, y] of [[12, 17.4], [39.6, 10], [7, 24.6], [44.5, 24.6], [31.6, 30.4]]) A.obj('barrels', x, y, 1, 1);
+  A.obj('well', 4.4, 13.4, 1.4, 1.2); A.obj('statue', 47, 13.4, 1, 1);
+  for (const [x, y] of [[10, 14], [42, 14], [26, 19], [26, 8], [11, 27], [41, 27], [37.5, 31]]) A.bush(x, y, 0.95, 'sacs');
+  A.portal('p'); A.scatterBarrels(5, 'p');
+  for (const [x, y] of [[24, 3], [27, 3], [2, 19], [49, 19], [26, 33], [13, 31]]) A.chest(x, y);
+  for (const [x, y] of [[16, 12], [36, 19], [20, 27], [33, 27], [48, 8], [3, 8], [26, 29]]) A.spot(x, y);
+  return fin(A, 'marche', 'Marché de Nuit', 'cite', 'Toujours la nuit : allées d\'étals sous les lanternes, canal et ponts, ruelles où se cacher');
+}
+
+// ---------- Pyramide ----------
+// Des couloirs étroits en anneaux autour de la chambre du pharaon ; dehors, le désert et une oasis.
+function pyramide() {
+  const A = atelier('pyramide', 7171, 's');
+  A.border('c', 1);
+  A.fill(10, 3, 32, 26, 'g');                                                 // la masse de la pyramide
+  A.fill(12, 5, 28, 2, 'f'); A.fill(12, 25, 28, 2, 'f'); A.fill(12, 5, 2, 22, 'f'); A.fill(38, 5, 2, 22, 'f');   // anneau extérieur
+  A.fill(17, 10, 18, 2, 'f'); A.fill(17, 20, 18, 2, 'f'); A.fill(17, 10, 2, 12, 'f'); A.fill(33, 10, 2, 12, 'f');  // anneau intérieur
+  A.fill(21, 14, 10, 4, 'f');                                                 // la chambre du pharaon
+  // passages
+  A.fill(25, 25, 2, 4, 'f'); A.fill(10, 20, 2, 2, 'f'); A.fill(40, 8, 2, 2, 'f'); A.fill(30, 2, 2, 3, 'f');   // entrées : sud, ouest, est, nord
+  A.fill(14, 15, 3, 2, 'f'); A.fill(35, 12, 3, 2, 'f'); A.fill(29, 7, 2, 3, 'f'); A.fill(22, 22, 2, 3, 'f');  // anneau extérieur ↔ intérieur
+  A.fill(25, 12, 2, 2, 'f'); A.fill(22, 18, 2, 2, 'f'); A.fill(31, 15, 2, 2, 'f');                       // anneau intérieur ↔ chambre
+  A.fill(19, 7, 3, 2, 'f'); A.fill(31, 22, 3, 3, 'f'); A.fill(14, 22, 3, 2, 'f');                       // alcôves des trésors
+  A.fill(12, 11, 2, 2, 'm'); A.fill(38, 19, 2, 2, 'm'); A.fill(27, 20, 2, 2, 'm');                        // sable qui s'infiltre
+  A.set(21, 14, 'v'); A.set(30, 17, 'v'); A.set(21, 17, 'v'); A.set(30, 14, 'v');                      // fosses de la chambre
+  A.obj('sarcophage', 24.6, 15, 2.8, 1.2);
+  for (const [x, y] of [[23, 14.2], [28.4, 14.2]]) A.obj('jarre', x, y, 0.6, 0.6);
+  for (const [x, y] of [[12.2, 5.2], [39.2, 5.2], [12.2, 26.2], [39.2, 26.2], [17.2, 10.2], [34.2, 21.2]]) A.obj('brazier', x, y, 0.7, 0.7);
+  for (const [x, y] of [[20, 7.2], [32.6, 23.2], [14.4, 22.2]]) A.obj('jarre', x, y, 0.6, 0.6);
+  A.chest(21, 8); A.chest(32, 24); A.chest(15.5, 23); A.chest(26.5, 16.5);
+  // dehors : statues qui gardent l'entrée, l'oasis, un camp
+  A.obj('statue', 22.6, 29.4, 1, 1); A.obj('statue', 28.4, 29.4, 1, 1);
+  A.blob(46, 27, 3.6, 4.5, '.', 0.3); A.blob(46.5, 28, 1.8, 2.2, '~', 0.25);
+  A.setHeal(45.5, 22.6, 'source');
+  A.blob(5, 9, 2.4, 2.4, 'm', 0.4, 's'); A.blob(18, 32, 2.6, 1.4, 'm', 0.4, 's');
+  A.obj('tente', 3.4, 26, 2.6, 1); A.obj('tente', 44.4, 4.6, 2.6, 1);
+  A.scatter('palm', 5, '.', 0.8, 0.6, 0);
+  A.scatter('cactus', 9, 's', 0.6, 0.7, 1);
+  A.scatter('rock', 4, 's', 1.1, 0.8, 1);
+  A.scatterBushes(5, 's.');
+  A.portal('s'); A.scatterBarrels(3, 's');
+  for (const [x, y] of [[3, 3], [47, 14], [3, 33], [36, 33]]) A.chest(x, y);
+  for (const [x, y] of [[13, 18], [39, 15], [26, 6], [18, 13], [33, 17], [6, 19], [45, 10], [10, 33]]) A.spot(x, y);
+  return fin(A, 'pyramide', 'Pyramide du Pharaon', 'desert', 'Couloirs étroits en anneaux, sables qui ralentissent, fosses et la chambre du sarcophage');
+}
+
+const CARTES = [village, cite, chateau, cabanes, taverne, marche, temple, desert, pyramide, donjon, hiver, colisee, marais, ecole, caverne, classe].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };

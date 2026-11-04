@@ -1761,8 +1761,13 @@ function assignTeams() {
 }
 let regles = false;   // l'enseignant affiche les règles du mode sur tous les écrans (jeu en pause)
 let countdown = 0;   // compte à rebours 3-2-1 au début d'une manche
+let hasard = false;   // carte au hasard à chaque nouvelle manche (choisie par l'enseignant)
 function newRound() {
   partis.clear();
+  if (hasard && mode !== 'prof') {
+    setCarte(pick(CARTES.filter(c => c !== carte && c.id !== 'classe')));
+    sendAll({ t: 'carte', map: carte }); addFeed(`🎲 Carte au hasard : ${carte.nom}`);
+  }
   roundT = 0; tempete = null;
   ended = null; paused = false; countdown = 3.5;
   if (eclair) { eclair = null; for (const c of conns) if (c.player) send(c, { t: 'close' }); }
@@ -2186,7 +2191,7 @@ const infoT = setInterval(() => {
   const info = JSON.stringify({
     t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
-    carte: carte.id, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
+    carte: carte.id, hasard, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
     eclairDur, tempete: tempeteOn, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     ctl: ctl ? { total: ctl.qs.length, correction: ctl.correction, dictee: ctl.dictee, eleves: [...ctl.eleves.entries()].map(([nom, e]) => ({ nom, fait: e.i, ok: e.rep.filter(r => r && r.ok).length })) } : null,
@@ -2340,6 +2345,7 @@ function onMessage(conn, msg) {
       break;
     }
     case 'reset': newRound(); break;
+    case 'hasard': hasard = !!m.v; break;
     case 'carte': {
       const c = CARTES.find(c => c.id === m.id);
       if (!c || c === carte) break;

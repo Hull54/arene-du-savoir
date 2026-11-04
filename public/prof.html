@@ -128,6 +128,7 @@
     </div>
     <div class="box">
       <h2>Carte</h2>
+      <label style="display:block;margin-bottom:6px;font-size:13px"><input type="checkbox" id="hasard"> 🎲 Carte au hasard à chaque nouvelle manche</label>
       <div class="cartes" id="cartes"></div>
     </div>
     <div class="box">
@@ -196,7 +197,7 @@ let map = null, world = null, W0 = null, last = null;
 const disp = new Map();
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
-ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); if (notionsOn) send({ t: 'subjects', list: notionsOn }); else choisirMois(moisEnCours()); send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
+ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); if (notionsOn) send({ t: 'subjects', list: notionsOn }); else choisirMois(moisEnCours()); try { if (localStorage.getItem('arene-hasard')) send({ t: 'hasard', v: true }); } catch {} send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
 // coupure : on attend que le serveur réponde de nouveau, puis on recharge la page toute seule
 ws.onclose = () => {
   $('urls').textContent = '📶 Connexion perdue… reconnexion automatique';
@@ -369,6 +370,8 @@ function choisirMois(id) {
 }
 $('mois').onchange = () => { if ($('mois').value) choisirMois($('mois').value); };
 const moisEnCours = () => ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'septembre', 'septembre', 'septembre', 'octobre', 'novembre', 'decembre'][new Date().getMonth()];
+// carte au hasard : gardée dans ce navigateur et renvoyée au jeu à l'ouverture
+$('hasard').onchange = () => { try { localStorage.setItem('arene-hasard', $('hasard').checked ? '1' : ''); } catch {} send({ t: 'hasard', v: $('hasard').checked }); };
 const envoyerPerso = () => { try { localStorage.setItem('arene-perso', JSON.stringify(perso)); } catch {} send({ t: 'perso', qs: perso }); renderPerso(); };
 function renderPerso() {
   const par = {};
@@ -449,6 +452,7 @@ function info(m) {
   if (m.bosses && $('bossSel').options.length !== Object.keys(m.bosses).length) $('bossSel').innerHTML = Object.entries(m.bosses).map(([k, n]) => `<option value="${k}">${BOSS_INFO[k] ? BOSS_INFO[k].ico : ''} ${esc(n)}</option>`).join('');
   if (document.activeElement !== $('bossSel')) $('bossSel').value = m.bossKind;
   // cartes
+  if (document.activeElement !== $('hasard')) $('hasard').checked = !!m.hasard;
   const ck = m.carte + JSON.stringify(m.cartes.map(c => c.id));
   if (ck !== cartesKey) {
     cartesKey = ck;
