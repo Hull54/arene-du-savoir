@@ -835,6 +835,89 @@ function spriteFor(o, TH = THEMES.village) {
     P.rect(8, 16, 18, 12, '#f8f4ec'); P.rect(10, 18, 14, 1, '#9fc6e0'); P.rect(10, 21, 12, 1, '#9fc6e0'); P.rect(14, 14, 16, 10, '#ffffff');   // copies à corriger
     P.rect(30, 22, 10, 3, '#2a2a34'); P.rect(30, 22, 10, 1, '#55525f');                                      // agrafeuse
     P.ellipse(m - 34, 18, 6, 4, '#d0502a'); P.rect(m - 39, 19, 10, 2, '#a83a1e');                              // tuque rouge
+  } else if (kind === 'tronc') {   // tronc géant qui traverse la plateforme, avec le feuillage qui monte
+    P = new Painter(w + 16, h + 34); ax = 8; ay = 32;
+    const b = '#6a4426', bd = '#4a2e18', bl = '#8a5a32';
+    P.ellipse(8 + Math.floor(w / 2), 32 + h - 3, Math.floor(w / 2) + 5, 4, bd);                 // racines
+    P.rect(8 + 2, 14, w - 4, h + 16, b); P.rect(8 + 2, 14, 3, h + 16, bl); P.rect(8 + w - 6, 14, 4, h + 16, bd);
+    for (let y = 18; y < h + 28; y += 5) P.rect(8 + 6 + (y % 3), y, 2, 3, bd);                     // écorce
+    for (const [x, y, r] of [[8 + Math.floor(w / 2), 7, 9], [8, 11, 7], [w + 8, 11, 7]]) leafBlob(P, x, y, r, TH.arbres, r % 2);
+  } else if (kind === 'trone') {   // trône doré au dossier haut, coussin rouge
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 20;
+    P.rect(3, 0, w - 4, h + 14, '#e3b341'); P.rect(5, 2, w - 8, h + 10, '#b02a3a'); P.rect(5, 2, 2, h + 10, '#d84a5a');
+    P.disc(Math.floor(w / 2) + 1, 2, 3, '#ffd84a'); P.px(Math.floor(w / 2) + 1, 2, '#e0405a');
+    P.rect(1, h + 10, w, h + 4, '#c8962e'); P.rect(3, h + 10, w - 4, 4, '#b02a3a'); P.rect(1, h + 10, 2, h + 8, '#e3b341'); P.rect(w - 1, h + 10, 2, h + 8, '#e3b341');
+  } else if (kind === 'banniere') {   // bannière rouge et or accrochée au mur
+    P = new Painter(w + 2, h + 22); ax = 1; ay = 20;
+    P.rect(1, 0, w, 2, '#6a4426'); P.rect(2, 2, w - 2, 18, '#b02a3a'); P.rect(2, 2, 1, 18, '#d84a5a');
+    P.rect(Math.floor(w / 2) - 1, 7, 3, 5, '#ffd84a'); P.px(Math.floor(w / 2), 6, '#ffd84a');
+    for (let x = 2; x < w; x += 4) P.rect(x, 20, 2, 2, '#b02a3a');
+  } else if (kind === 'ratelier') {   // râtelier d'armes : épées et lances
+    P = new Painter(w + 2, h + 18); ax = 1; ay = 16;
+    P.rect(1, 12, w, 3, '#7a4b25'); P.rect(1, h + 14, w, 2, '#5a3a1e');
+    for (let x = 3, i = 0; x < w - 1; x += 5, i++) {
+      P.rect(x, 1, 1, h + 14, i % 2 ? '#6a4426' : '#c8ccd4'); P.px(x, 0, '#e8ecf2');
+      if (!(i % 2)) P.rect(x - 1, 9, 3, 1, '#e3b341'); else { P.rect(x - 1, 0, 3, 2, '#9aa0ab'); }
+    }
+  } else if (kind === 'barreaux') {   // barreaux de la cellule
+    P = new Painter(w + 2, h + 20); ax = 1; ay = 18;
+    P.rect(1, 0, w, 2, '#4a4652'); P.rect(1, h + 16, w, 2, '#4a4652');
+    for (let x = 2; x < w; x += 3) { P.rect(x, 2, 1, h + 14, '#6d6a7a'); P.px(x, 3, '#9a97a8'); }
+  } else if (kind === 'cheval') {   // cheval brun dans sa stalle, vu de côté
+    P = new Painter(w + 4, h + 16); ax = 2; ay = 14;
+    const c = '#8a5a32', cd = '#6a4426', cr = '#2a1a10';
+    P.ellipse(Math.floor(w / 2) + 1, 13, Math.floor(w / 2) - 4, 5, c);                          // corps
+    P.rect(5, 15, 2, h + 1, cd); P.rect(10, 15, 2, h + 1, c); P.rect(w - 9, 15, 2, h + 1, cd); P.rect(w - 4, 15, 2, h + 1, c);
+    P.rect(w - 3, 3, 4, 9, c); P.rect(w - 1, 1, 5, 5, c); P.px(w + 1, 2, cr); P.rect(w - 3, 2, 2, 8, cr);   // cou, tête, crinière
+    P.rect(1, 9, 3, 7, cr); P.rect(4, 9, 2, 2, cr);                                               // queue
+    for (const x of [5, 10, w - 9, w - 4]) P.rect(x, h + 15, 2, 1, cr);
+  } else if (kind === 'foin') {   // botte de foin
+    P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
+    P.rect(1, 1, w, h + 5, '#e8c45a'); P.rect(1, 1, w, 2, '#f6dc86'); P.rect(1, h + 5, w, 1, '#b8922e');
+    for (let x = 3; x < w; x += 3) P.rect(x, 3, 1, h + 2, '#d4ac40');
+    P.rect(1, Math.floor(h / 2) + 2, w, 1, '#8a5a32'); P.rect(1, Math.floor(h / 2) + 5, w, 1, '#8a5a32');
+  } else if (kind === 'mannequin') {   // mannequin d'entraînement en paille
+    P = new Painter(w + 10, h + 22); ax = 5; ay = 20;
+    const x0 = 5 + Math.floor(w / 2);
+    P.rect(x0 - 1, 8, 2, h + 13, '#6a4426'); P.rect(x0 - 7, 10, 14, 2, '#6a4426');
+    P.ellipse(x0, 12, 4, 6, '#e8c45a'); P.disc(x0, 3, 3, '#e8c45a'); P.rect(x0 - 3, 11, 7, 1, '#b02a3a');
+    P.disc(x0, 13, 2, '#f4f0e6'); P.px(x0, 13, '#d33b3b');
+  } else if (kind === 'bar') {   // comptoir de la taverne : bois verni, chopes et bouteilles
+    P = new Painter(w + 2, h + 10); ax = 1; ay = 8;
+    P.rect(1, 3, w, h + 5, '#8a5530'); P.rect(1, 3, w, 2, '#b07a45'); P.rect(2, 5, w - 2, h - 1, '#9b6238');
+    P.rect(1, h + 7, w, 1, '#4a2a16');
+    const n = Math.max(w, h);
+    for (let k = 6; k < n - 4; k += 9) {
+      const [x, y] = w > h ? [k, 1] : [Math.floor(w / 2) - 1, k];
+      if ((k / 9 | 0) % 2) { P.rect(x, y, 3, 5, '#3f9a4a'); P.px(x + 1, y - 1, '#2c7a38'); }
+      else { P.rect(x, y + 1, 4, 4, '#d8c8a8'); P.rect(x, y + 1, 4, 1, '#ffffff'); P.px(x + 4, y + 2, '#d8c8a8'); }
+    }
+  } else if (kind === 'bouteilles') {   // étagère murale pleine de bouteilles
+    P = new Painter(w + 2, h + 16); ax = 1; ay = 14;
+    P.rect(1, 0, w, h + 14, '#6a4426'); P.rect(2, 1, w - 2, h + 12, '#4a2e18');
+    const cols = ['#3f9a4a', '#b02a3a', '#7a4ad8', '#e3b341', '#3f6fb5'];
+    for (const y of [2, 9]) { for (let x = 3, i = y; x < w - 1; x += 3, i++) { P.rect(x, y + 2, 2, 4, cols[i % 5]); P.px(x, y + 1, cols[i % 5]); } P.rect(2, y + 6, w - 2, 1, '#8a5530'); }
+  } else if (kind === 'tabouret2') {   // tabouret de bois
+    P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
+    P.ellipse(Math.floor(w / 2) + 1, 4, Math.floor(w / 2), 3, '#b07a45'); P.ellipse(Math.floor(w / 2) + 1, 3, Math.floor(w / 2) - 2, 1, '#d09a60');
+    P.rect(2, 6, 2, h, '#6a4426'); P.rect(w - 2, 6, 2, h, '#6a4426');
+  } else if (kind === 'tableronde') {   // table ronde de taverne, bougie, chopes, tabourets autour
+    P = new Painter(w + 14, h + 16); ax = 7; ay = 10;
+    const cx = 7 + Math.floor(w / 2), cy = 10 + Math.floor(h / 2);
+    for (const [dx, dy] of [[-w / 2 - 4, 0], [w / 2 + 4, 0], [0, -h / 2 - 6], [0, h / 2 + 3]]) { P.ellipse(Math.round(cx + dx), Math.round(cy + dy), 3, 2, '#9b6238'); P.rect(Math.round(cx + dx) - 1, Math.round(cy + dy) + 2, 2, 2, '#4a2e18'); }
+    P.ellipse(cx, cy, Math.floor(w / 2) + 1, Math.floor(h / 2) + 3, '#8a5530'); P.ellipse(cx, cy - 1, Math.floor(w / 2), Math.floor(h / 2) + 2, '#b07a45');
+    for (let x = -Math.floor(w / 2) + 3; x < w / 2 - 2; x += 5) P.rect(cx + x, cy - Math.floor(h / 2), 1, h + 2, '#9b6238');
+    P.rect(cx - 1, cy - 5, 2, 4, '#f4ecd8'); P.px(cx - 1, cy - 6, '#ffd25a'); P.px(cx, cy - 7, '#ff8a1e');   // bougie
+    P.rect(cx + 5, cy, 3, 3, '#d8c8a8'); P.rect(cx - 8, cy + 1, 3, 3, '#d8c8a8');
+  } else if (kind === 'foyer') {   // grande cheminée de pierre, feu de bûches
+    P = new Painter(w + 2, h + 24); ax = 1; ay = 22;
+    P.rect(1, 0, w, h + 22, '#8a8796'); for (let y = 2; y < h + 20; y += 4) for (let x = (y / 4) % 2 ? 1 : 4; x < w; x += 6) P.rect(x, y, 5, 3, '#a3a0ae');
+    P.rect(5, 10, w - 8, h + 12, '#1b1424'); P.rect(1, 8, w, 2, '#6a4426');
+    P.rect(7, h + 18, w - 12, 3, '#6a4426'); P.ellipse(Math.floor(w / 2) + 1, h + 15, Math.floor(w / 2) - 6, 4, '#ff8a1e'); P.ellipse(Math.floor(w / 2) + 1, h + 15, Math.floor(w / 2) - 9, 2, '#ffd25a');
+  } else if (kind === 'fourneau') {   // fourneau de fonte et marmite
+    P = new Painter(w + 2, h + 14); ax = 1; ay = 12;
+    P.rect(1, 6, w, h + 8, '#3a3640'); P.rect(1, 6, w, 2, '#5a5664'); P.rect(4, 11, 8, 5, '#ff8a1e'); P.rect(5, 12, 6, 3, '#ffd25a');
+    P.ellipse(w - 8, 5, 6, 3, '#2a2630'); P.ellipse(w - 8, 4, 5, 2, '#c8963e'); P.rect(w - 2, 0, 2, 6, '#3a3640');
   } else if (kind === 'crayon') {   // crayon géant couché
     P = new Painter(w + 2, h + 8); ax = 1; ay = 6;
     P.rect(8, 2, w - 18, h + 4, '#ffd84a'); P.rect(8, 2, w - 18, 2, '#fff0a0'); P.rect(8, h + 3, w - 18, 2, '#e8b83a');
@@ -1259,6 +1342,16 @@ function peindreChampignons(g, map, tile, TS) {   // champignons rebondissants (
   }
 }
 let casierCache = null;
+let sacsCache = null;
+function sacsSprite() {   // pile de sacs de grain (cachette de la taverne)
+  if (sacsCache) return sacsCache;
+  const P = new Painter(34, 26), j = ['#c8a26a', '#b08a52', '#dcbc84', '#8a6a3a'];
+  for (const [x, y, r] of [[9, 17, 8], [25, 17, 8], [17, 9, 8]]) {
+    P.ellipse(x, y, r, r - 2, j[1]); P.ellipse(x - 1, y - 1, r - 2, r - 4, j[0]); P.px(x - 3, y - 3, j[2]); P.px(x - 2, y - 3, j[2]);
+    P.rect(x - 2, y - r + 1, 4, 2, j[3]);
+  }
+  return (sacsCache = P.outline().canvas());
+}
 function casierSprite() {   // trois casiers bleus, une porte entrouverte
   if (casierCache) return casierCache;
   const P = new Painter(34, 26);
@@ -1547,6 +1640,13 @@ function buildMapLayers(map) {
         const nu = noise(x / 26, y / 18, 77) + noise(x / 9, y / 9, 78) * 0.3;
         c = nu > 0.92 ? '#ffffff' : nu > 0.84 ? '#e8f4fc' : nu > 0.78 ? '#c8e6f8' : hsh(x >> 1, y >> 1, 79) < y / AH * 0.8 ? '#82c8ee' : '#8fd0f0';
       }
+    } else if (t === 'v' && map.id === 'cabanes') {
+      // ----- loin sous les plateformes : la cime des arbres de la forêt, dans l'ombre -----
+      let k = 1; for (; k <= 6; k++) if (V(x, y - k) !== 'v') break;
+      const cl = cells(x, y, 9, 83), dx = x - cl.px, dy = y - cl.py, pal = TH.arbres;
+      c = cl.d2 - cl.d1 < 1.3 ? '#10261a' : dx + dy < -4 ? pal[2] : dx + dy > 4 ? pal[3] : cl.id < 0.5 ? pal[0] : pal[1];
+      if (cl.id > 0.9 && cl.d1 < 2) c = '#d8a03a';
+      c = shade(c, k <= 1 ? 0.25 : k <= 6 ? 0.45 + k * 0.05 : 0.8);
     } else if (t === 'v') {
       const up = V(x, y - 1) !== 'v', up2 = V(x, y - 3) !== 'v';
       c = up ? OUT : up2 ? '#3a3046' : V(x, y - 6) !== 'v' ? '#241c30' : '#0f0b16';
@@ -1831,6 +1931,7 @@ function buildMapLayers(map) {
   for (const b of map.bushes) {
     if (map.theme === 'biblio') { const s = pileSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2); continue; }
     if (map.theme === 'caverne') { const s = champiSprite(Math.round(b.r / PX)); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2); continue; }
+    if (b.kind === 'sacs') { const s = sacsSprite(); tg.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height / 2 - 4); continue; }
     if (b.kind === 'casier') { const s = casierSprite(); g.drawImage(s, Math.round(b.x / PX) - s.width / 2, Math.round(b.y / PX) - s.height + 6); continue; }
     const r = Math.round(b.r / PX), P = new Painter(r * 2 + 6, r * 2 + 6), c = r + 3;
     const snow = map.theme === 'hiver', dark = map.theme === 'marais';

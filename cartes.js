@@ -3,7 +3,7 @@
 //
 // Tuiles (un caractère chacune) :
 //   sol     .  herbe   h hautes herbes (on s'y cache)   s sable   n neige   d chemin   p pavés   f dalles   w plancher   t tapis   B pont
-//   ciel    e  pont de navire (le vide autour : v, on tire par-dessus)
+//   planches e  (plateformes des cabanes ; le vide autour : v, on tire par-dessus)
 //   caverne o  sol de la grotte   R  rails des wagonnets
 //   école   a  asphalte de la cour   l  linoléum   y  plancher du gymnase   r  trampoline (te propulse)
 //   lent    m  boue / sables mouvants   =  gué (eau peu profonde)   j  Jell-O renversé (colle aux pieds)
@@ -552,97 +552,130 @@ function caverne() {
   return fin(A, 'caverne', 'Mine des Cristaux', 'caverne', 'Mine dans le noir : wagonnets fous sur une grande boucle, lave, géode de cristal, lanternes et champignons lumineux');
 }
 
-// ---------- Bibliothèque ----------
-// Bibliothèque magique et un peu folle : un lac d'encre au milieu, traversé par des crayons géants,
-// une forêt de livres géants debout, un tapis-puzzle de l'alphabet avec des blocs, un observatoire étoilé,
-// des livres ouverts qui transportent ailleurs et un fantôme bibliothécaire qui fait « Chut ! ».
-function bibliotheque() {
-  const A = atelier('bibliotheque', 6464, 'w');
-  A.border('x', 1);
-  // lac d'encre, île du grand livre et ponts-crayons
-  A.blob(26, 18, 9.5, 6.2, '~', 0.18, 'w');
-  A.blob(26, 18, 4, 2.6, 't', 0.08, '~');
-  const pont = (x0, y0, w, h) => { for (let j = y0; j < y0 + h; j++) for (let i = x0; i < x0 + w; i++) if (A.get(i, j) === '~') A.set(i, j, 'B'); };
-  pont(14, 17, 10, 2); pont(28, 17, 10, 2); pont(25, 9, 2, 8); pont(25, 19, 2, 9);
-  A.setHeal(26, 18.2, 'autel'); A.deco('livreouvert', 23.4, 16.6, 5.2, 3.2);
-  // nord-ouest : forêt de livres géants debout (on se faufile entre eux)
-  let k = 0;
-  for (const y of [4, 7.6, 11.2]) for (let x = 3 + (k++ % 2) * 1.3; x < 19; ) {
-    const ep = 0.9 + ((x * 7 + y * 3) % 5) * 0.15;
-    if (((x * 13 + y * 5) | 0) % 4 !== 0) A.obj('grandlivre', x, y, ep, 0.8);
-    x += ep + (((x * 3 + y) | 0) % 3 === 0 ? 1.6 : 0.15);
+// ---------- Cabanes dans les arbres ----------
+// Un village perché : des plateformes de planches autour de troncs géants, reliées par des ponts de corde.
+// Entre les plateformes, la cime des arbres (on tire par-dessus, on ne marche pas dessus).
+function cabanes() {
+  const A = atelier('cabanes', 4242, 'v');
+  A.border('T', 1);
+  const X = [9, 26, 43], Y = [7, 18, 29];
+  const taille = [[5.6, 4], [6.4, 3.8], [5.8, 4.2], [5, 3.6], [7.4, 5], [5.4, 3.8], [5.6, 3.8], [6.4, 3.8], [5.8, 3.8]];
+  Y.forEach((y, j) => X.forEach((x, i) => { const [rx, ry] = taille[j * 3 + i]; A.blob(x, y, rx, ry, 'e', 0.18); }));
+  // ponts de corde (droits, 2 tuiles de large)
+  for (const y of Y) for (let i = 0; i < 2; i++) A.fill(X[i] + 3, y - 1, X[i + 1] - X[i] - 6, 2, 'B');
+  for (const x of X) for (let j = 0; j < 2; j++) A.fill(x - 1, Y[j] + 2, 2, Y[j + 1] - Y[j] - 4, 'B');
+  for (let j = 0; j < ROWS; j++) for (let i = 0; i < COLS; i++) if (A.get(i, j) === 'B' && ![-1, 1].some(d => A.get(i + d, j) === 'B' || A.get(i, j + d) === 'B')) A.set(i, j, 'v');
+  // cabanes en rondins sur quatre plateformes (on peut entrer)
+  A.house(5, 3, 7, 5, 'b', 'e', ['s', 'e'], false); A.obj('bed', 9.6, 4, 1, 1.6); A.chest(5.8, 4.5);
+  A.house(40, 3, 7, 5, 'b', 'e', ['s', 'w'], false); A.obj('table', 41.2, 4.1, 2.4, 0.9); A.chest(45, 4.5);
+  A.house(5, 27, 7, 5, 'b', 'e', ['n', 'e'], false); A.obj('shelf', 5.8, 28, 1.4, 0.9);
+  A.house(40, 27, 7, 5, 'b', 'e', ['n', 'w'], false); A.obj('barrels', 44.8, 28.2, 1, 1); A.chest(41, 29.5);
+  for (const [x, y] of [[4, 6], [4, 7], [4, 20], [4, 27], [4, 28], [4, 29], [4, 30], [40, 32], [41, 32], [42, 32], [43, 32], [44, 32], [45, 32], [46, 32], [41, 33], [42, 33], [43, 33]]) A.set(x, y, 'v');
+  // troncs géants au milieu des autres plateformes, et le grand chêne au centre (la source de soin est à ses pieds)
+  for (const [x, y] of [[25, 5.4], [8, 17.2], [42, 17.2], [25, 28.6]]) A.obj('tronc', x, y, 2, 1.2);
+  A.obj('tronc', 21.6, 15.2, 2, 1.2); A.obj('tronc', 28.4, 15.2, 2, 1.2);
+  A.setHeal(26, 19.4, 'source');
+  // lanternes, caisses, tonneaux : de quoi se cacher et se couvrir
+  for (const [x, y] of [[21, 7.4], [30.4, 7.4], [12.4, 21], [38.6, 21], [21.4, 31], [30.4, 31]]) A.obj('lamp', x, y, 0.4, 0.4);
+  for (const [x, y] of [[29, 4.6], [5.4, 19.4], [45.8, 19.4], [27.6, 31.4], [22.4, 21.6]]) A.obj('crate', x, y, 1, 1);
+  for (const [x, y] of [[23, 7.5], [11.5, 16.6], [40.5, 16.6], [24, 30.8], [30, 21.6], [13, 30.8], [39, 6.4]]) A.bush(x, y, 1.05);
+  A.scatterBarrels(4, 'e');
+  for (const [x, y] of [[26, 9], [10, 19], [42, 19], [26, 31], [13, 6], [38, 30]]) A.chest(x, y);
+  for (const [x, y] of [[8, 9], [44, 9], [8, 28], [43, 30], [28, 7], [28, 30]]) A.spot(x, y);
+  return fin(A, 'cabanes', 'Village des Cabanes perchées', 'foret', 'Plateformes au sommet des arbres, ponts de corde, cabanes en rondins et la source du grand chêne');
+}
+
+// ---------- Château ----------
+// Grande cour pavée dans les remparts : salle du trône, donjon, prison, écurie, caserne et quatre tours.
+// On entre par le pont-levis au sud, au-dessus des douves.
+function chateau() {
+  const A = atelier('chateau', 1515, '.');
+  A.fill(0, 0, COLS, 30, 'T');                                               // forêt autour des remparts
+  A.fill(0, 30, COLS, 2, '~'); A.fill(23, 30, 6, 2, 'B');                    // douves et pont-levis
+  A.fill(1, 1, 50, 29, 'p');
+  for (let i = 1; i <= 50; i++) { A.set(i, 1, '#'); A.set(i, 29, '#'); }
+  for (let j = 1; j <= 29; j++) { A.set(1, j, '#'); A.set(50, j, '#'); }
+  A.fill(23, 29, 6, 1, 'p');                                                 // grande porte
+  A.fill(2, 12, 6, 6, '.'); A.fill(44, 12, 6, 5, '.');                       // petits jardins
+  // quatre tours rondes, chacune avec une petite salle
+  for (const [x, y, dx, dy] of [[4, 4, 1, 1], [47, 4, -1, 1], [4, 26, 1, -1], [47, 26, -1, -1]]) {
+    A.blob(x, y, 3.3, 3.3, '#', 0); A.blob(x, y, 1.9, 1.9, 'f', 0);
+    A.fill(dx > 0 ? x + 1 : x - 3, y, 3, 1, 'f'); A.fill(x, dy > 0 ? y + 1 : y - 3, 1, 3, 'f');
   }
-  // nord-est : grands rayons et coin lecture
-  for (const y of [4.2, 8, 11.8]) for (const [x0, x1] of [[31, 38], [40, 49]]) A.obj('rayon', x0, y - 0.9, x1 - x0, 0.9);
-  // sud-ouest : observatoire, tapis étoilé, globe et télescope
-  A.blob(10, 27, 6.5, 4.6, 'u', 0.12, 'w');
-  A.obj('globe', 9.2, 26.4, 1.6, 1); A.obj('telescope', 13.6, 24.2, 1, 0.8);
-  // sud-est : tapis-puzzle de l'alphabet et blocs géants
-  A.fill(32, 23, 17, 10, 'q');
-  for (const [x, y, l] of [[34, 25, 'A'], [38.5, 27.5, 'B'], [43, 24.5, 'C'], [46, 29.5, 'D'], [35.5, 30.5, 'E'], [41.5, 31, 'Z']]) { A.obj('cube', x, y, 1.6, 1.2); A.objs[A.objs.length - 1].lettre = l; }
-  // livres géants ouverts : ils te transportent à l'autre livre de la même couleur
-  A.portals.push([{ x: 11 * T, y: 9.6 * T }, { x: 40.5 * T, y: 28.5 * T }]);
-  A.portals.push([{ x: 44.5 * T, y: 13.8 * T }, { x: 5.5 * T, y: 23.5 * T }]);
-  // le fantôme bibliothécaire fait le tour du lac d'encre
-  A.fantome = [[15, 10.5], [37, 10.5], [37, 25.5], [15, 25.5]].map(([x, y]) => ({ x: x * T, y: y * T }));
-  // bougies qui flottent dans les airs
-  for (const [x, y] of [[8, 14.5], [20, 14], [33, 14.5], [45, 16.5], [6, 20], [20, 23], [33, 22.5], [47, 20.5], [27, 7], [26, 29.5], [16, 31], [37, 33.5]]) A.deco('bougie', x, y, 0.4, 0.4);
-  A.scatterBushes(6, 'wtqu');
-  for (const [x, y] of [[2, 2], [49, 2], [2, 33], [49, 33], [17, 5.5], [30, 31]]) A.chest(x, y);
+  // salle du trône : tapis rouge jusqu'au trône, piliers, bannières, braseros
+  A.house(17, 1, 18, 10, '#', 'f', ['s'], false);
+  A.fill(25, 3, 2, 8, 't');
+  A.obj('trone', 25.1, 2.2, 1.8, 1);
+  for (const x of [20, 31]) for (const y of [4, 7.5]) A.obj('pillar', x, y, 1, 1);
+  for (const x of [18.4, 32.8]) A.obj('brazier', x, 2.3, 0.8, 0.8);
+  A.obj('banniere', 22.6, 1.9, 0.8, 0.5); A.obj('banniere', 28.6, 1.9, 0.8, 0.5);
+  A.chest(33, 9);
+  // le donjon (la tour maîtresse) : murs épais, coffre, réserves
+  A.house(36, 1, 10, 10, 'k', 'f', ['s', 'w'], false);
+  A.obj('crate', 37.2, 2.2, 1, 1); A.obj('barrels', 43.8, 2.2, 1, 1); A.obj('ratelier', 39.4, 2, 2.4, 0.6); A.chest(43.5, 8);
+  // prison : trois cellules derrière les barreaux
+  A.house(7, 1, 10, 10, 'k', 'f', ['s', 'e'], false);
+  for (const x of [10, 13]) A.fill(x, 2, 1, 3, 'k');
+  for (const x of [8, 11, 14]) A.obj('barreaux', x, 4.6, 0.7, 0.3);           // les portes des cellules restent ouvertes à droite
+  A.obj('bed', 8.1, 2.3, 0.8, 1.4); A.chest(14.5, 2.5); A.obj('crate', 8, 8.6, 1, 1);
+  // caserne : lits et râteliers d'armes
+  A.house(2, 18, 13, 7, 'b', 'w', ['e', 'n'], false);
+  for (const x of [3.4, 5.6, 7.8]) A.obj('bed', x, 19.2, 1, 1.8);
+  A.obj('ratelier', 10.6, 19, 2.4, 0.6); A.obj('table', 10.4, 22.2, 2.4, 0.9);
+  // écurie : stalles, chevaux, foin
+  A.house(36, 18, 14, 8, 'x', 'w', ['w', 'n'], false);
+  for (const x of [40, 44]) A.fill(x, 19, 1, 3, 'x');
+  for (const [x, y] of [[37.4, 19.6], [41.4, 19.6], [45.4, 19.6]]) A.obj('cheval', x, y, 1.8, 0.9);
+  for (const [x, y] of [[46.8, 23.4], [38, 23.6]]) A.obj('foin', x, y, 1.6, 1);
+  // la cour : puits, fontaine de soin, mannequins d'entraînement, étals
+  A.setHeal(26, 19, 'fontaine');
+  A.obj('well', 12.5, 13.5, 1.4, 1.2);
+  for (const [x, y] of [[18, 22.5], [20.4, 22.5], [33, 22.5]]) A.obj('mannequin', x, y, 0.8, 0.6);
+  A.obj('stall', 33.5, 13, 2.2, 1); A.obj('stall', 17, 14, 2.2, 1);
+  for (const [x, y] of [[16, 27.4], [34.5, 27.4], [22, 12.6], [30, 12.6], [22.6, 24.4], [29.4, 24.4]]) A.obj('crate', x, y, 1, 1);
+  for (const [x, y] of [[13.5, 25.6], [38, 13.4]]) A.obj('foin', x, y, 1.6, 1);
+  A.obj('statue', 14, 8.6, 1, 1); A.obj('statue', 37.4, 12.4, 1, 1);
+  for (const [x, y] of [[19, 26.6], [33, 26.6]]) A.obj('lamp', x, y, 0.4, 0.4);
+  A.scatter('oak', 3, '.', 1, 0.8, 1);
+  A.bush(4, 14, 1.1); A.bush(47, 14, 1.1); A.bush(10, 33.6, 1.2); A.bush(42, 33.6, 1.2); A.bush(29.5, 25.6, 1);
+  A.portal('p'); A.scatterBarrels(5, 'p');
+  for (const [x, y] of [[30, 3], [21, 27], [3, 33], [48, 33], [26, 14]]) A.chest(x, y);
+  for (const [x, y] of [[26, 8], [40, 8], [12, 7], [8, 21], [42, 22], [26, 33]]) A.spot(x, y);
+  return fin(A, 'chateau', 'Château de Hautecombe', 'cite', 'Remparts et quatre tours, salle du trône, donjon, prison, écurie, caserne et pont-levis sur les douves');
+}
+
+// ---------- Taverne ----------
+// Combat rapproché : la salle de la taverne (comptoir, tables rondes, foyer), la cuisine, le cellier et le magasin d'à côté.
+function taverne() {
+  const A = atelier('taverne', 2727, 'T');
+  A.fill(2, 2, 48, 32, '.');
+  A.fill(3, 3, 46, 30, 'b'); A.fill(4, 4, 44, 28, 'w');                      // le bâtiment (rondins), plancher de pierre
+  A.fill(4, 22, 26, 1, 'b'); A.fill(30, 4, 1, 28, 'b'); A.fill(31, 14, 17, 1, 'b');   // murs intérieurs
+  for (const [x, y, w, h] of [[14, 22, 3, 1], [30, 9, 1, 3], [30, 17, 1, 3], [38, 14, 3, 1], [24, 32, 3, 1], [3, 12, 1, 3], [48, 22, 1, 3], [30, 26, 1, 2]]) A.fill(x, y, w, h, 'w');   // portes
+  A.fill(24, 33, 3, 1, 'd');
+  // la salle : comptoir en L, tabourets, foyer (il soigne), tables rondes
+  A.obj('bar', 5, 9, 1, 8); A.obj('bar', 5, 16.2, 6, 1);
+  A.obj('barrels', 4.2, 5, 1, 1); A.obj('barrels', 4.2, 7, 1, 1); A.obj('bouteilles', 6.5, 4.1, 3, 0.8);
+  for (const y of [10, 12, 14]) A.obj('tabouret2', 6.9, y, 0.6, 0.5);
+  for (const x of [8, 10]) A.obj('tabouret2', x, 18, 0.6, 0.5);
+  A.obj('foyer', 16, 4, 3, 1); A.setHeal(17.5, 6.6, 'feu');
+  for (const [x, y] of [[13, 10], [21, 9], [26, 12], [14, 17], [21, 16], [26.5, 19]]) A.obj('tableronde', x, y, 1.6, 1);
+  A.chest(28, 5);
+  // la cuisine : fourneau, table, provisions
+  A.obj('fourneau', 33, 4.2, 2.4, 1); A.obj('table', 38, 8, 2.4, 0.9); A.obj('crate', 46, 5, 1, 1); A.obj('barrels', 46, 11, 1, 1); A.obj('bouteilles', 42, 4.1, 3, 0.8);
+  A.chest(32, 12);
+  // le cellier : rangées de tonneaux
+  for (const x of [6, 10, 18, 22]) for (const y of [25, 28.5]) A.obj('barrels', x, y, 1.6, 1);
+  A.obj('crate', 26.5, 24, 1, 1); A.obj('crate', 26.5, 29.5, 1, 1); A.chest(5, 30.5);
+  // le magasin : rayons, comptoir de la marchande
+  for (const y of [17, 21.5, 26]) { A.obj('shelf', 33, y, 1.4, 0.9); A.obj('shelf', 34.4, y, 1.4, 0.9); A.obj('shelf', 40, y, 1.4, 0.9); A.obj('shelf', 41.4, y, 1.4, 0.9); }
+  A.obj('bar', 45.6, 16, 1, 4); A.obj('crate', 46.5, 29.5, 1, 1); A.chest(37.5, 30);
+  for (const [x, y] of [[24.5, 6], [9, 27], [38, 23.6], [44, 10], [10, 6], [28.5, 15]]) A.bush(x, y, 0.95, 'sacs');
+  for (const [x, y] of [[17.5, 13], [9.5, 20]]) A.obj('tableronde', x, y, 1.6, 1);
   A.scatterBarrels(3, 'w');
-  for (const [x, y] of [[8, 10], [44, 10], [8, 28], [44, 26], [26, 16], [20, 18], [33, 18]]) A.spot(x, y);
-  return fin(A, 'bibliotheque', 'Bibliothèque Magique', 'biblio', 'Lac d\'encre et crayons géants, forêt de livres, tapis de l\'alphabet, observatoire et fantôme qui fait « Chut ! »');
+  for (const [x, y] of [[18, 12], [12, 20], [37, 11], [14, 27], [38, 19], [44, 27]]) A.spot(x, y);
+  return fin(A, 'taverne', 'Taverne du Sanglier', 'village', 'Combat rapproché : taverne, comptoir et tables rondes, cuisine, cellier et magasin');
 }
 
-// ---------- Bateaux volants ----------
-// Deux galions pirates bord à bord dans les nuages : on monte à l'abordage par les planches,
-// on tire au canon sur l'autre navire (on attaque à côté d'un canon), et le vent pousse tout le monde.
-function ciel() {
-  const A = atelier('ciel', 9191, 'v');
-  // un galion : poupe un peu arrondie, ventre large, proue en pointe ; bastingage tout autour
-  const navire = (x0, y0, L, Hh, versDroite) => {
-    for (let j = 0; j < Hh; j++) for (let i = 0; i < L; i++) {
-      const u = versDroite ? (i + 0.5) / L : 1 - (i + 0.5) / L;
-      const f = u < 0.08 ? 0.8 + u * 2.5 : u > 0.58 ? 1 - ((u - 0.58) / 0.42) ** 1.7 : 1;
-      if (Math.abs(j + 0.5 - Hh / 2) < (Hh / 2) * f + 0.2) A.set(x0 + i, y0 + j, 'e');
-    }
-    for (let j = y0 - 1; j <= y0 + Hh; j++) for (let i = x0 - 1; i <= x0 + L; i++) {
-      if (A.get(i, j) !== 'v') continue;
-      let n = false; for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (A.get(i + di, j + dj) === 'e') n = true;
-      if (n) A.set(i, j, 'x');
-    }
-    const cy = y0 + Hh / 2, proue = versDroite ? x0 + L : x0 - 1, poupe = versDroite ? x0 : x0 + L;
-    A.deco('beaupre', versDroite ? proue + 0.6 : proue - 4.6, cy - 0.5, 4, 1, { dir: versDroite ? 1 : -1 });   // beaupré et figure de proue
-    return { cy, poupe, proue, at: u => versDroite ? x0 + u * L : x0 + L - u * L };
-  };
-  const N = [navire(3, 2, 44, 11, true), navire(5, 23, 44, 11, false)];
-  // planches d'abordage entre les deux navires, et un rocher flottant au milieu
-  A.blob(25.5, 17.8, 4.4, 2.6, '.', 0.3, 'v');
-  for (const x of [15.5, 34]) A.path([[x, 12.5], [x, 23.5]], 1.7, 'B', 'vx');   // passerelles de corde
-  A.path([[25.5, 12.5], [25.5, 15.5]], 1.7, 'B', 'vx'); A.path([[25.5, 20], [25.5, 23.5]], 1.7, 'B', 'vx');
-  A.obj('palm', 22.6, 17.4, 0.8, 0.6); A.obj('palm', 28.2, 18.4, 0.8, 0.6);
-  A.setHeal(25.5, 17.6, 'source');
-  N.forEach((n, k) => {
-    const sud = k === 0, coul = k === 0 ? 'rouge' : 'noir';
-    // cabine du capitaine à la poupe (porte vers la proue), coffre à l'intérieur
-    const cx = k === 0 ? 5 : 41;
-    A.house(cx, k === 0 ? 4 : 25, 6, 6, 'x', 'w', [k === 0 ? 'e' : 'w'], false); A.chest(cx + 2.5, k === 0 ? 6.5 : 27.5);
-    A.obj('barre', n.at(0.22) - 0.5, n.cy - 0.4, 1, 0.8);                                     // gouvernail
-    for (const [u, voile] of [[0.36, 0], [0.55, 1], [0.74, 0]]) { A.obj('mat', n.at(u) - 0.4, n.cy - 0.4, 0.8, 0.8); A.objs[A.objs.length - 1].coul = coul; A.objs[A.objs.length - 1].crane = voile; }
-    A.deco('trappe', n.at(0.46) - 1, n.cy - 3.6, 2, 1.4); A.deco('trappe', n.at(0.64) - 1, n.cy + 2.2, 2, 1.4);
-    A.deco('drapeau', n.poupe + (k === 0 ? -1.4 : 0.4), n.cy - 0.5, 1, 1, { coul });
-    // canons sur le flanc qui fait face à l'autre navire
-    for (const x of [7, 11, 19, 30, 38, 42]) if (A.get(x, sud ? 12 : 23) === 'e' && A.get(x + 1, sud ? 12 : 23) === 'e') A.obj('canon', x, sud ? 11.9 : 23.3, 1, 0.8);
-    for (const [u, dy] of [[0.3, -3.5], [0.86, 2], [0.48, 3.2]]) A.obj('crate', n.at(u) - 0.5, n.cy + dy, 1, 0.9);
-  });
-  A.objs.filter(o => o.kind === 'canon').forEach(o => { o.dir = o.y < 15 * T ? Math.PI / 2 : -Math.PI / 2; });
-  A.scatterBarrels(5, 'e');
-  A.scatterBushes(2, '.');
-  for (const [x, y] of [[44, 7], [8, 28], [25, 17]]) A.chest(x, y);
-  for (const [x, y] of [[20, 5], [30, 30], [40, 9], [12, 27], [25, 16], [35, 4], [16, 31]]) A.spot(x, y);
-  A.vent = true;
-  return fin(A, 'ciel', 'Bateaux Volants', 'ciel', 'Deux galions pirates bord à bord dans les nuages : planches d\'abordage, canons et coups de vent');
-}
-
-const CARTES = [village, cite, desert, donjon, hiver, colisee, marais, ecole, caverne, bibliotheque, ciel, classe].map(f => f());
+const CARTES = [village, cite, chateau, cabanes, taverne, desert, donjon, hiver, colisee, marais, ecole, caverne, classe].map(f => f());
 module.exports = { CARTES, T, WALL, WATER };
