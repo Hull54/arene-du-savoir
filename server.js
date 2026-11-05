@@ -408,6 +408,8 @@ function createPlayer(name, cls, bot = false, look = '') {
   return p;
 }
 
+// Questions rapides : parmi plusieurs questions générées, l'arène garde une des plus courtes et simples (le niveau complet reste dans Classe et Donjon)
+let rapides = true;
 function newQuestion(p, forcee = null) {
   // On choisit d'abord une notion (parmi celles cochées), puis une question de cette notion.
   // Révision ciblée : une notion souvent ratée par cet élève revient plus souvent (jusqu'à 4 fois plus).
@@ -421,7 +423,7 @@ function newQuestion(p, forcee = null) {
   const gen = GENERATEURS[notion];
   p.recent = p.recent || [];
   let q;
-  if (gen && (!list.length || Math.random() < 0.75)) q = gen();
+  if (gen && (!list.length || Math.random() < 0.75)) q = rapides ? GENERATEURS.rapide(gen, p.recentGen = p.recentGen || []) : gen();
   else {
     for (let i = 0; i < 10; i++) {
       q = pick(list);
@@ -2191,7 +2193,7 @@ const infoT = setInterval(() => {
   const info = JSON.stringify({
     t: 'info', subjects: NOTIONS.map(n => ({ ...n, on: subjects.has(n.s) })),
     stats, urls: lanAddresses(), paused,
-    carte: carte.id, hasard, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
+    carte: carte.id, hasard, rapides, cartes: CARTES.map(c => ({ id: c.id, nom: c.nom, desc: c.desc })),
     eclairDur, tempete: tempeteOn, mode, modes: MODES, nbTeams, teams: teamsNow(), timer: timer.dur, te: teamMode() ? teamScores().map(s => s.score) : null,
     bossKind, bosses: Object.fromEntries(Object.entries(BOSSES).map(([k, b]) => [k, (b.mois ? b.mois + ' : ' : '') + b.nom])),
     ctl: ctl ? { total: ctl.qs.length, correction: ctl.correction, dictee: ctl.dictee, eleves: [...ctl.eleves.entries()].map(([nom, e]) => ({ nom, fait: e.i, ok: e.rep.filter(r => r && r.ok).length })) } : null,
@@ -2346,6 +2348,7 @@ function onMessage(conn, msg) {
     }
     case 'reset': newRound(); break;
     case 'hasard': hasard = !!m.v; break;
+    case 'rapides': rapides = !!m.v; break;
     case 'carte': {
       const c = CARTES.find(c => c.id === m.id);
       if (!c || c === carte) break;

@@ -56,3 +56,32 @@ module.exports = {
   ...Object.fromEntries(Object.keys(PLANIF.NOTIONS.fr).map(k => [PLANIF.NOTIONS.fr[k], notionDonjon('fr', k)])),
 };
 Object.defineProperty(module.exports, 'MOIS', { value: MOIS, enumerable: false });
+
+// ---------- Questions rapides (pour l'arène) ----------
+// Les générateurs sont les mêmes que dans Classe et Donjon. Dans l'arène, on en tire plusieurs et on garde
+// une des plus rapides à lire et à résoudre : texte court, petits nombres, peu d'étapes. Le niveau complet reste au Donjon.
+function effort(q) {
+  const txt = [q.question, ...q.choix].join(' ').replace(/(\d)[\s\u00a0](?=\d{3})/g, '$1');
+  const nombres = txt.match(/\d+(?:,\d+)?/g) || [], dansQuestion = (q.question.replace(/(\d)[\s\u00a0](?=\d{3})/g, '$1').match(/\d+/g) || []).length;
+  let e = q.question.length + 0.6 * q.choix.reduce((a, c) => a + String(c).length, 0);
+  for (const n of nombres) e += 6 * Math.max(0, n.replace(',', '').length - 2);   // les grands nombres prennent du temps
+  e += 8 * Math.max(0, dansQuestion - 2);                                         // plusieurs nombres = plusieurs étapes
+  if (q.svg) e += 10;
+  if (/factorisation|dure |durée|moyenne|probabilité/i.test(q.question)) e += 25;
+  return e;
+}
+// recent : les questions déjà posées à cet élève (on ne les redonne pas tout de suite)
+function rapide(gen, recent = [], essais = 10) {
+  const vus = new Set(), l = [];
+  for (let i = 0; i < essais * 2 && l.length < essais; i++) {
+    const q = gen(), cle = q.question + '|' + q.choix[q.reponse];
+    if (vus.has(cle)) continue;
+    vus.add(cle);
+    l.push([effort(q) + (recent.includes(cle) ? 1000 : 0), q, cle]);
+  }
+  l.sort((a, b) => a[0] - b[0]);
+  const choisi = l[Math.floor(Math.random() * Math.min(3, l.length))];
+  recent.push(choisi[2]); if (recent.length > 20) recent.shift();
+  return choisi[1];
+}
+Object.defineProperty(module.exports, 'rapide', { value: rapide, enumerable: false });

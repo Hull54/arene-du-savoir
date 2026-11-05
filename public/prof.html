@@ -133,6 +133,7 @@
     </div>
     <div class="box">
       <h2>Notions des questions</h2>
+      <label style="display:block;margin-bottom:6px;font-size:13px" title="Le jeu tire plusieurs questions de la notion et garde une des plus courtes et simples. Le niveau complet reste dans Classe et Donjon."><input type="checkbox" id="rapides" checked> ⚡ Questions rapides (les plus courtes et simples de chaque notion ; le niveau complet reste dans Classe et Donjon)</label>
       <label class="moisSel" style="display:block;margin-bottom:8px;font-size:13px">Notions d'un mois de la planification : <select id="mois"><option value="">Choisir un mois…</option></select></label>
       <div id="subjects"></div>
     </div>
@@ -197,7 +198,7 @@ let map = null, world = null, W0 = null, last = null;
 const disp = new Map();
 const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host);
 const send = o => ws.readyState === 1 && ws.send(JSON.stringify(o));
-ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); if (notionsOn) send({ t: 'subjects', list: notionsOn }); else choisirMois(moisEnCours()); try { if (localStorage.getItem('arene-hasard')) send({ t: 'hasard', v: true }); } catch {} send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
+ws.onopen = () => { send({ t: 'prof' }); if (codes.length) send({ t: 'codes', list: codes }); if (perso.length) send({ t: 'perso', qs: perso }); if (notionsOn) send({ t: 'subjects', list: notionsOn }); else choisirMois(moisEnCours()); try { if (localStorage.getItem('arene-hasard')) send({ t: 'hasard', v: true }); } catch {} try { if (localStorage.getItem('arene-rapides') === '0') send({ t: 'rapides', v: false }); } catch {} send({ t: 'niveaux', v: niv, ouvert: ouvertOn }); };
 // coupure : on attend que le serveur réponde de nouveau, puis on recharge la page toute seule
 ws.onclose = () => {
   $('urls').textContent = '📶 Connexion perdue… reconnexion automatique';
@@ -371,6 +372,7 @@ function choisirMois(id) {
 $('mois').onchange = () => { if ($('mois').value) choisirMois($('mois').value); };
 const moisEnCours = () => ['janvier', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'septembre', 'septembre', 'septembre', 'octobre', 'novembre', 'decembre'][new Date().getMonth()];
 // carte au hasard : gardée dans ce navigateur et renvoyée au jeu à l'ouverture
+$('rapides').onchange = () => { try { localStorage.setItem('arene-rapides', $('rapides').checked ? '1' : '0'); } catch {} send({ t: 'rapides', v: $('rapides').checked }); };
 $('hasard').onchange = () => { try { localStorage.setItem('arene-hasard', $('hasard').checked ? '1' : ''); } catch {} send({ t: 'hasard', v: $('hasard').checked }); };
 const envoyerPerso = () => { try { localStorage.setItem('arene-perso', JSON.stringify(perso)); } catch {} send({ t: 'perso', qs: perso }); renderPerso(); };
 function renderPerso() {
@@ -453,6 +455,7 @@ function info(m) {
   if (document.activeElement !== $('bossSel')) $('bossSel').value = m.bossKind;
   // cartes
   if (document.activeElement !== $('hasard')) $('hasard').checked = !!m.hasard;
+  if (document.activeElement !== $('rapides') && m.rapides !== undefined) $('rapides').checked = !!m.rapides;
   const ck = m.carte + JSON.stringify(m.cartes.map(c => c.id));
   if (ck !== cartesKey) {
     cartesKey = ck;
