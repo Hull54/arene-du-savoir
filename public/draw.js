@@ -8,7 +8,7 @@ const CLS = {
   voleur:   { nom: ['Voleuse', 'Voleur'],     ico: '🗡️', color: '#d64545', desc: 'Rapide, corps à corps. Dégâts doublés en frappant dans le dos !', pow: '👤 Ombre : invisible 4 s, prochaine attaque +50 %', dash: '🌀 Roulade : esquive, invincible un instant' },
   mage:     { nom: ['Mage', 'Mage'],          ico: '🔮', color: '#8e4ce0', desc: 'Fragile mais puissant. Lance des boules de feu.', pow: '💥 Explosion : dégâts tout autour', dash: '✨ Téléportation : 3 cases plus loin' },
   druide:   { nom: ['Druidesse', 'Druide'],   ico: '🌿', color: '#5aa832', desc: 'Soigne son équipe. Lance des graines magiques.', pow: '🌿 Cercle de soin : soigne toi et tes coéquipiers proches', dash: '🍃 Bond : saute et laisse des racines qui ralentissent' },
-  tonnerre: { nom: ['Gardienne du Tonnerre', 'Gardien du Tonnerre'], secret: true, ico: '🔨', color: '#3a9ad8', desc: 'Classe secrète du prof. Grand marteau de près, éclair lancé de loin.', pow: '⚡ Dictée foudroyante : un éclair saute sur 3 ennemis', dash: '🤸 Saut périlleux : bond par-dessus les attaques' },
+  tonnerre: { nom: ['Gardienne du Tonnerre', 'Gardien du Tonnerre'], secret: true, ico: '🔨', color: '#3a9ad8', desc: 'Classe secrète du prof. Grand marteau de près, éclair lancé de loin.', pow: '⚡ Dictée foudroyante : un éclair saute sur 4 ennemis', dash: '🤸 Saut périlleux : bond par-dessus les attaques' },
   archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail', dash: '🦘 Saut arrière : recule en tirant' },
 };
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
