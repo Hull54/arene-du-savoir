@@ -12,7 +12,7 @@ const CLS = {
   archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail', dash: '🦘 Saut arrière : recule en tirant' },
 };
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
-const OURS = ['#a0703f', '#8a5a32', '#6e4526', '#4a2e1a'];   // fourrure de l'homme-ours (race secrète du prof)
+const OURS = ['#8a5e36', '#6e4a2a', '#5a3a20', '#3e2a1a'];   // fourrure de l'homme-ours (race secrète du prof)
 const ORC_SKIN = ['#9cc47a', '#7fa85c', '#648c46', '#4a6a34'];   // peau des orcs (selon la teinte choisie)
 const HAIR = ['#2a1c14', '#7a4422', '#e8b84a', '#c2482e'];
 const nomClasse = (c, look) => CLS[c].nom[look && look[0] === 'f' ? 0 : 1];
@@ -275,8 +275,14 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
 
   if (runes) {   // carrure massive : mantelet de fourrure sur les épaules, ceinture large
     const fur = race === 4 ? shade(s, 0.85) : '#6e4a2c', furD = shade(fur, 0.7), furL = shade(fur, 1.25);
-    if (side) { P.rect(4, 8, 8, 3, fur); P.rect(4, 8, 8, 1, furL); P.rect(4, 10, 8, 1, furD); }
-    else { P.rect(0, 8, 16, 3, fur); P.rect(0, 8, 16, 1, furL); P.rect(0, 10, 16, 1, furD); for (let x = 1; x < 16; x += 3) P.px(x, 11, furD); }
+    const pl = steel, plH = shade(steel, 1.4), plD = shade(steel, 0.6), cuir = '#6a3a22';
+    if (side) { P.rect(4, 8, 8, 3, fur); P.rect(4, 10, 8, 1, furD); P.rect(6, 7, 5, 3, pl); P.rect(6, 7, 5, 1, plH); P.rect(6, 9, 5, 1, plD); P.px(8, 8, '#d9a93a'); }
+    else {
+      P.rect(0, 9, 16, 2, fur); P.rect(0, 10, 16, 1, furD); for (let x = 0; x < 16; x += 2) P.px(x, 8, x % 4 ? furL : fur); for (let x = 1; x < 16; x += 3) P.px(x, 11, furD);   // fourrure hirsute aux épaules
+      P.rect(10, 7, 6, 4, pl); P.rect(10, 7, 6, 1, plH); P.rect(15, 8, 1, 3, plD); P.rect(10, 10, 6, 1, plD); P.px(12, 8, '#d9a93a'); P.px(14, 9, '#d9a93a');   // épaulière de métal
+      if (!up) for (let i = 0; i < 5; i++) { P.px(4 + i, 11 + i, cuir); P.px(5 + i, 11 + i, shade(cuir, 0.75)); }   // sangle de cuir en travers
+    }
+    if (race === 4 && !side && !up) { P.px(2, 16, '#f4efe0'); P.px(3, 16, '#f4efe0'); }   // griffes
     P.rect(bx - 1, 14, bw + 2, 1, '#3a2614'); if (!up) P.rect(side ? 7 : 7, 14, 2, 1, '#7fe0ff');
   }
   // ===== tête =====
@@ -405,14 +411,30 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
       else { P.rect(3, 6, 1, 7, b); P.rect(12, 6, 1, 7, bD); P.px(3, 13, '#d9a93a'); P.px(12, 13, '#d9a93a'); if (down) { P.px(5, 8, '#e88a8a'); P.px(10, 8, '#e88a8a'); } }
     }
   }
-  if (race === 4) {   // homme-ours : oreilles rondes, museau clair, truffe noire, fourrure sur les joues
-    const mu = '#e0c09a', ear = '#d89a8a';
-    if (side) { P.rect(5, 0, 3, 3, s); P.px(6, 1, ear); if (!up) { P.rect(10, 6, 3, 3, mu); P.px(12, 6, E); P.px(12, 7, E); P.px(10, 9, sD); } }
-    else {
-      P.rect(3, 0, 3, 3, s); P.rect(10, 0, 3, 3, s); P.px(3, 0, sH); P.px(10, 0, sH);
-      if (!up) { P.px(4, 1, ear); P.px(11, 1, ear); }
-      P.px(3, 7, sD); P.px(12, 7, sD); P.px(3, 8, s); P.px(12, 8, sD);
-      if (down) { P.rect(6, 7, 4, 2, mu); P.rect(7, 7, 2, 1, E); P.px(7, 8, shade(mu, 0.7)); P.px(8, 8, shade(mu, 0.7)); }
+  if (race === 4) {   // homme-ours féroce : tête massive, long museau, crocs, yeux jaunes, fourrure hirsute
+    const mu = shade(s, 1.35), muD = shade(s, 1.1), oeil = '#ffcf3a', gueule = '#4a1414', croc = '#f4efe0', poil = shade(s, 0.6);
+    if (up) {   // de dos : nuque large et hirsute, petites oreilles
+      for (const [y, x0, x1] of [[1, 4, 11], [2, 3, 12], [3, 3, 12], [4, 3, 12], [5, 3, 12], [6, 3, 12], [7, 3, 12], [8, 3, 12], [9, 4, 11]]) { P.rect(x0, y, x1 - x0 + 1, 1, s); P.px(x1, y, sD); }
+      P.rect(5, 1, 6, 1, sH); for (let x = 4; x < 12; x += 2) P.px(x, 9, poil);
+      P.px(4, 0, s); P.px(5, 0, s); P.px(10, 0, s); P.px(11, 0, s); P.px(2, 4, poil); P.px(13, 4, poil); P.px(2, 6, poil); P.px(13, 6, poil);
+      for (const [x, y] of [[5, 3], [8, 4], [10, 6], [6, 7]]) P.px(x, y, sD);
+    } else if (side) {   // de profil : le museau avance
+      for (const [y, x0, x1] of [[0, 5, 9], [1, 4, 10], [2, 3, 11], [3, 3, 11], [4, 3, 11], [5, 3, 11], [6, 3, 11], [7, 4, 11], [8, 4, 10], [9, 5, 9]]) P.rect(x0, y, x1 - x0 + 1, 1, s); P.rect(5, 1, 4, 1, sH); P.rect(4, 6, 1, 2, sD); P.px(3, 3, poil); P.px(3, 5, poil); P.px(3, 7, poil); P.px(4, 9, poil); P.px(6, 9, poil);
+      P.px(5, 0, s); P.px(6, 0, sD);   // oreille petite, vers l'arrière
+      P.rect(10, 4, 4, 3, mu); P.rect(10, 4, 4, 1, sH); P.px(14, 4, E); P.px(14, 5, E);   // museau et truffe
+      P.rect(11, 7, 3, 1, gueule); P.px(12, 7, croc); P.px(13, 8, croc); P.rect(10, 8, 3, 1, muD);   // gueule ouverte, crocs
+      P.px(9, 3, E); P.px(10, 3, E); P.px(9, 4, oeil); P.px(8, 4, E);   // sourcil froncé et œil jaune
+      P.px(7, 5, sD); P.px(8, 6, sD);
+    } else {   // de face : tête arrondie, ombrée à droite, long museau qui avance
+      for (const [y, x0, x1] of [[0, 5, 10], [1, 4, 11], [2, 3, 12], [3, 3, 12], [4, 3, 12], [5, 3, 12], [6, 3, 12], [7, 3, 12], [8, 4, 11], [9, 5, 10]]) { P.rect(x0, y, x1 - x0 + 1, 1, s); P.px(x1, y, sD); if (x1 > 11) P.px(x1 - 1, y, sD); }
+      P.rect(5, 1, 5, 1, sH); P.px(4, 2, sH);
+      P.rect(3, 0, 2, 2, s); P.px(3, 0, sD); P.rect(11, 0, 2, 2, sD); P.px(12, 0, shade(s, 0.55));   // petites oreilles rondes, sombres
+      for (const y of [4, 6, 8]) { P.px(2, y, poil); P.px(13, y, poil); }   // joues hirsutes
+      P.rect(4, 4, 3, 1, E); P.rect(9, 4, 3, 1, E); P.px(6, 5, E); P.px(9, 5, E);   // sourcils lourds, froncés en V
+      P.px(5, 5, oeil); P.px(10, 5, oeil);
+      P.rect(6, 6, 4, 3, mu); P.px(9, 7, muD); P.px(9, 8, muD); P.rect(7, 6, 2, 2, E); P.px(7, 6, '#6a6a7a');   // museau clair, grosse truffe luisante
+      P.rect(6, 9, 4, 1, gueule); P.px(6, 9, croc); P.px(9, 9, croc);   // gueule ouverte et crocs
+      P.rect(5, 10, 6, 1, poil); P.px(4, 9, poil); P.px(11, 9, poil);   // collier de poils sous la mâchoire
     }
   }
   if (race === 3 && !up) {   // petites défenses
