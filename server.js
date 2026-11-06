@@ -69,7 +69,7 @@ const CLASSES = {
   mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 430, dmg: 22, cd: 0.65, r: 10, life: 1.3 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
   druide:   { nom: 'Druide',   hp: 115, speed: 165, atk: { type: 'proj', speed: 460, dmg: 16, cd: 0.5, r: 8, life: 1.25 }, power: { nom: 'Cercle de soin', cd: 10, radius: 170, soin: 40 }, dash: { nom: 'Bond', cd: 3, dist: 140, dur: 0.24, racines: 70, rdur: 3 } },
   // Gardien du Tonnerre : classe secrète de l'enseignant (seulement sur un appareil où la page prof a été ouverte)
-  tonnerre: { nom: 'Gardien du Tonnerre', secret: true, hp: 140, speed: 168, atk: { type: 'hybride', range: 66, arc: 1.7, dmg: 22, cd: 0.5, loin: { speed: 520, dmg: 16, cd: 0.5, r: 9, life: 1.1 } }, power: { nom: 'Dictée foudroyante', cd: 9, portee: 420, saut: 230, dmg: [30, 24, 18] }, dash: { nom: 'Saut périlleux', cd: 3, dist: 175, dur: 0.42 } },
+  tonnerre: { nom: 'Gardien du Tonnerre', secret: true, hp: 125, speed: 162, atk: { type: 'hybride', range: 62, arc: 1.6, dmg: 20, cd: 0.55, loin: { speed: 480, dmg: 12, cd: 0.55, r: 8, life: 1.0 } }, power: { nom: 'Dictée foudroyante', cd: 10, portee: 340, saut: 200, dmg: [22, 16, 12] }, dash: { nom: 'Saut périlleux', cd: 3.5, dist: 150, dur: 0.42 } },   // équilibré : moins fort de près que le guerrier, moins fort de loin que l'archer et le mage
   archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.0 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 
@@ -109,9 +109,9 @@ const RACES = {
   1: { nom: 'Elfe', bonus: 'Agile : 5 % plus rapide', vitesse: 1.05 },
   2: { nom: 'Nain', bonus: 'Robuste : +10 points de vie', pv: 10 },
   3: { nom: 'Orc', bonus: 'Fort : 5 % de dégâts en plus', degats: 1.05 },
-  4: { nom: 'Homme-ours', bonus: 'Force de l\'ours : +15 points de vie ; touche E : Rugissement', pv: 15, secret: true },   // race secrète de l'enseignant
+  4: { nom: 'Homme-ours', bonus: 'Robuste : +10 points de vie ; touche E : Rugissement (comme le loup)', pv: 10, secret: true },   // race secrète de l'enseignant
 };
-const RUGISSEMENT = { radius: 170, push: 80, stun: 0.8 };   // l'homme-ours rugit (touche E) à la place du familier
+const RUGISSEMENT = { radius: 140, push: 90, stun: 0 };   // aussi fort que le hurlement du loup   // l'homme-ours rugit (touche E) à la place du familier
 const raceDe = p => RACES[+p.look[7]] || RACES[0];
 const BARREL = { r: 20, radius: 120, dmg: 30, back: 30 };   // tonneaux explosifs
 const OBJETS_CACHES = ['potion', 'potion', 'vitesse', 'force', 'equip', 'piege', 'fumee'];
@@ -848,8 +848,7 @@ function superPower(p) {
     fx.push({ k: 'boom', x, y, r: 160, t: 0.5, d: 0.5 }); fx.push({ k: 'boom', x, y, r: 90, t: 0.35, d: 0.35 });
     zone(p, x, y, 160, 55);
   } else if (p.cls === 'tonnerre') {
-    foudre(p, [40, 35, 30, 25, 20, 15], 520, 300);
-    for (let i = 0; i < 12; i++) shoot(p, p.angle + i / 12 * Math.PI * 2, CLASSES.tonnerre.atk.loin, 4);
+    foudre(p, [40, 32, 26, 20], 420, 240);
   } else if (p.cls === 'archer') {
     for (let i = 0; i < 16; i++) shoot(p, p.angle + i / 16 * Math.PI * 2, CLASSES.archer.atk, 6);
   } else if (p.cls === 'druide') {
@@ -895,7 +894,7 @@ function rugir(p) {
     if (!canHit(p, o)) continue;
     const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy);
     if (d > G.radius + R || d < 1) continue;
-    o.stun = Math.max(o.stun || 0, G.stun);
+    if (G.stun) o.stun = Math.max(o.stun || 0, G.stun);
     for (let s = G.push; s > 0; s -= 10) { const nx = o.x + dx / d * s, ny = o.y + dy / d * s; if (!blocked(nx, ny, R)) { o.x = nx; o.y = ny; break; } }
   }
 }

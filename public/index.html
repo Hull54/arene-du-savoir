@@ -302,7 +302,7 @@ const ATK_ICO = { tonnerre: '🔨', guerrier: '⚔️', voleur: '🗡️', mage:
 const RACES = [['🧑 Humain', 'Polyvalent : pouvoir rechargé 10 % plus vite'], ['🧝 Elfe', 'Agile : 5 % plus rapide, oreilles pointues'], ['🧔 Nain', 'Robuste : +10 points de vie, belle barbe'], ['👹 Orc', 'Fort : 5 % de dégâts en plus, peau verte']];
 // Personnage secret de l'enseignant : seulement dans un navigateur où la page prof a été ouverte
 let MAITRE = false; try { MAITRE = localStorage.getItem('arene-maitre') === '1'; } catch {}
-if (MAITRE) RACES.push(['🐻 Homme-ours', 'Force de l\'ours : +15 points de vie. Touche E : Rugissement (les ennemis proches reculent, figés un instant)']);
+if (MAITRE) RACES.push(['🐻 Homme-ours', 'Robuste : +10 points de vie. Touche E : Rugissement (les ennemis proches reculent, comme le hurlement du loup)']);
 const info0 = [null, 'Ronron : +25 points de vie', 'Hurlement : repousse les ennemis proches', 'Petite boule de feu', 'Œil perçant : révèle les joueurs cachés', 'Flaque gluante : ralentit les ennemis'];
 // ----- Écran de sélection -----
 let chosen = null;
