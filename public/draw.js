@@ -8,9 +8,11 @@ const CLS = {
   voleur:   { nom: ['Voleuse', 'Voleur'],     ico: '🗡️', color: '#d64545', desc: 'Rapide, corps à corps. Dégâts doublés en frappant dans le dos !', pow: '👤 Ombre : invisible 4 s, prochaine attaque +50 %', dash: '🌀 Roulade : esquive, invincible un instant' },
   mage:     { nom: ['Mage', 'Mage'],          ico: '🔮', color: '#8e4ce0', desc: 'Fragile mais puissant. Lance des boules de feu.', pow: '💥 Explosion : dégâts tout autour', dash: '✨ Téléportation : 3 cases plus loin' },
   druide:   { nom: ['Druidesse', 'Druide'],   ico: '🌿', color: '#5aa832', desc: 'Soigne son équipe. Lance des graines magiques.', pow: '🌿 Cercle de soin : soigne toi et tes coéquipiers proches', dash: '🍃 Bond : saute et laisse des racines qui ralentissent' },
+  tonnerre: { nom: ['Gardienne du Tonnerre', 'Gardien du Tonnerre'], secret: true, ico: '🔨', color: '#3a9ad8', desc: 'Classe secrète du prof. Grand marteau de près, rune de tonnerre lancée de loin.', pow: '⚡ Dictée foudroyante : un éclair saute sur 3 ennemis', dash: '🤸 Saut périlleux : bond par-dessus les attaques' },
   archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail', dash: '🦘 Saut arrière : recule en tirant' },
 };
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
+const OURS = ['#a0703f', '#8a5a32', '#6e4526', '#4a2e1a'];   // fourrure de l'homme-ours (race secrète du prof)
 const ORC_SKIN = ['#9cc47a', '#7fa85c', '#648c46', '#4a6a34'];   // peau des orcs (selon la teinte choisie)
 const HAIR = ['#2a1c14', '#7a4422', '#e8b84a', '#c2482e'];
 const nomClasse = (c, look) => CLS[c].nom[look && look[0] === 'f' ? 0 : 1];
@@ -20,7 +22,7 @@ const OUTFIT = [null, '#d33b3b', '#3a6fd8', '#2f9e55', '#8e4ce0', '#e89a2a', '#e
 const OUTFIT_NOMS = ['Classique', 'Rouge', 'Bleu', 'Vert', 'Violet', 'Orange', 'Rose', 'Noire', 'Dorée', 'Blanche'];
 const ACCESSOIRES = ['Aucun', 'Cape', 'Lunettes', 'Écharpe', '👑 Couronne', '🪽 Ailes'];
 const FAMILIERS = ['Aucun', '🐱 Chat', '🐺 Loup', '🐲 Dragon', '🦉 Hibou', '🟢 Slime'];
-const PET_ICO = [null, '😺', '🐺', '🔥', '🦉', '🟢'];
+const PET_ICO = [null, '😺', '🐺', '🔥', '🦉', '🟢', '🐻'];
 // Équipement : niveaux bronze, argent, or
 const TIER_C = [null, '#cd7f32', '#dfe5ee', '#f2c94c'];
 const TIER_NOMS = ['', 'bronze', 'argent', 'or'];
@@ -145,8 +147,8 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   const P = new Painter(24, 30); P.ox = 4; P.oy = 8;
   const fem = look[0] === 'f', out = tenue || OUTFIT[+look[3] || 0],   // en équipe : vêtements de la couleur de l'équipe
     acc = +look[4] || 0, G = gearOf(gearCode);
-  const race = +look[7] || 0;   // 0 humain, 1 elfe, 2 nain, 3 orc
-  const s = (race === 3 ? ORC_SKIN : SKIN)[+look[1]] || SKIN[0], sD = shade(s, 0.78), sH = shade(s, 1.12);
+  const race = +look[7] || 0;   // 0 humain, 1 elfe, 2 nain, 3 orc, 4 homme-ours
+  const s = (race === 4 ? OURS : race === 3 ? ORC_SKIN : SKIN)[+look[1]] || SKIN[0], sD = shade(s, 0.78), sH = shade(s, 1.12);
   const h = HAIR[+look[2]] || HAIR[0], hD = shade(h, 0.68), hH = shade(h, 1.4);
   const E = '#1b1424', line = '#2a1d2e';
   // trois tons par matière : clair (haut, gauche), moyen, sombre (bas, droite)
@@ -159,14 +161,18 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
     mage:     { main: '#3a2f6a', acc: '#d9a93a', cloth: '#2c2452', pants: '#2c2452' },
     archer:   { main: '#4a6a2e', acc: '#6b4a2a', cloth: '#3a5424', pants: '#4a3a2a' },
     druide:   { main: '#4a7a34', acc: '#8a6a3a', cloth: '#335a24', pants: '#3a2a1a' },
+    tonnerre: { main: '#4a5a7a', acc: '#1f6fb5', cloth: '#2a3450', pants: '#2a3044' },
   }[cls];
+  // Gardien du Tonnerre : dessiné à partir du guerrier, armure bleu nuit, mantelet de fourrure, grand marteau, sans casque
+  const runes = cls === 'tonnerre';
+  if (runes) cls = 'guerrier';
   const leaf = '#5aa832', leafD = '#3a7a24', leafL = '#9ad84a';
   // bâton de druide : bois tordu, feuilles et graine lumineuse (x, y = haut du manche)
   const staffD = (x, y, len) => { P.rect(x, y, 1, len, wood); P.px(x, y + 4, woodH); P.px(x, y + 9, woodH); P.px(x - 1, y - 1, wood); P.px(x - 1, y - 2, wood); P.px(x, y - 3, wood); P.px(x + 1, y - 2, wood);
     P.px(x, y - 2, leafL); P.px(x - 2, y - 2, leaf); P.px(x + 2, y - 1, leaf); P.px(x + 1, y - 4, leafD); P.px(x - 1, y + 1, leaf); };
-  if (out) { if (cls === 'guerrier') K.acc = out; else if (cls === 'voleur') K.acc = out; else { K.main = shade(out, 0.75); K.cloth = shade(out, 0.55); } }
-  const steel = G.casque ? TIER_C[G.casque] : '#8f98a6';
-  const blade = G.epee ? shade(TIER_C[G.epee], 1.1) : '#d8dee8', bladeD = shade(blade, 0.65);
+  if (out && !runes) { if (cls === 'guerrier') K.acc = out; else if (cls === 'voleur') K.acc = out; else { K.main = shade(out, 0.75); K.cloth = shade(out, 0.55); } }
+  const steel = G.casque ? TIER_C[G.casque] : runes ? '#5a6e94' : '#8f98a6';
+  const blade = G.epee ? shade(TIER_C[G.epee], 1.1) : runes ? '#7fe0ff' : '#d8dee8', bladeD = shade(blade, 0.65);
   const crystal = G.epee ? TIER_C[G.epee] : cls === 'mage' ? '#7fe0ff' : '#c9a0ff';
   const wood = '#5a3a20', woodH = '#7a5030', gold = '#d9a93a', leather = '#5a3a24';
   const bootC = G.bottes ? TIER_C[G.bottes] : '#3a2a22';
@@ -182,7 +188,8 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   }
   if (acc === 1 && !up) { if (side) { P.rect(1, 10, 4, 9, capeC); P.rect(1, 18, 4, 1, shade(capeC, 0.65)); P.rect(2, 11, 1, 6, shade(capeC, 1.2)); } else P.rect(3, 10, 10, 9, shade(capeC, 0.7)); }
   if (up) {
-    if (cls === 'guerrier') { P.rect(13, 1, 1, 13, blade); P.rect(12, 14, 3, 1, gold); }
+    if (runes) { P.rect(13, 2, 1, 13, wood); P.rect(11, -1, 5, 4, steel); P.rect(11, -1, 5, 1, shade(steel, 1.3)); P.px(13, 0, '#7fe0ff'); }
+    else if (cls === 'guerrier') { P.rect(13, 1, 1, 13, blade); P.rect(12, 14, 3, 1, gold); }
     if (cls === 'mage') { P.rect(13, 0, 1, 18, wood); P.rect(12, -3, 3, 3, crystal); }
     if (cls === 'druide') staffD(13, 1, 17);
   }
@@ -215,7 +222,7 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
     P.rect(bx - 1, 17, bw + 2, 1, gold);
     if (!up) { P.rect(side ? 8 : 7, 10, side ? 1 : 2, 7, gold); P.rect(bx, 13, bw, 1, leather); P.px(side ? 8 : 7, 13, gold); }
   } else if (cls === 'guerrier') {
-    box(bx, 10, bw, 5, '#8f98a6');                                  // plastron
+    box(bx, 10, bw, 5, runes ? K.main : '#8f98a6');                                  // plastron
     if (!up) { P.rect(side ? 7 : 6, 11, side ? 3 : 4, 5, K.acc); P.rect(side ? 7 : 6, 11, 1, 5, shade(K.acc, 1.25)); P.rect(side ? 9 : 9, 11, 1, 5, shade(K.acc, 0.7)); }   // tabard
     else { P.rect(5, 10, 6, 6, K.acc); P.rect(5, 10, 6, 1, shade(K.acc, 1.25)); }
     P.rect(bx, 14, bw, 1, leather); P.px(side ? 8 : 7, 14, gold); if (!side) P.px(8, 14, gold);
@@ -246,7 +253,7 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   if (acc === 1 && up) { box(4, 10, 8, 9, capeC); P.rect(6, 11, 1, 7, shade(capeC, 0.8)); P.rect(9, 11, 1, 7, shade(capeC, 0.8)); }
 
   // ===== bras et épaulières =====
-  const armC = cls === 'guerrier' ? '#8f98a6' : cls === 'mage' ? K.main : cls === 'voleur' ? K.main : K.cloth;
+  const armC = runes ? K.main : cls === 'guerrier' ? '#8f98a6' : cls === 'mage' ? K.main : cls === 'voleur' ? K.main : K.cloth;
   // balancement des bras à la marche (sw), bras d'arme levé à l'attaque
   const sw = frame === 1 ? 1 : frame === 2 ? -1 : 0, atk = frame >= 3, suite = frame === 4;   // 3 : le coup, 4 : la fin du geste
   const hL = sw + (atk && cls !== 'mage' && cls !== 'druide' ? 1 : 0), hR = atk ? -2 : -sw;   // décalage vertical des mains (vue de face/dos)
@@ -266,6 +273,12 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
     if (cls === 'archer') { P.rect(2, 13 + hL, 2, 2, leather); P.rect(12, 13 + hR, 2, 2, leather); }   // brassards
   }
 
+  if (runes) {   // carrure massive : mantelet de fourrure sur les épaules, ceinture large
+    const fur = race === 4 ? shade(s, 0.85) : '#6e4a2c', furD = shade(fur, 0.7), furL = shade(fur, 1.25);
+    if (side) { P.rect(4, 8, 8, 3, fur); P.rect(4, 8, 8, 1, furL); P.rect(4, 10, 8, 1, furD); }
+    else { P.rect(0, 8, 16, 3, fur); P.rect(0, 8, 16, 1, furL); P.rect(0, 10, 16, 1, furD); for (let x = 1; x < 16; x += 3) P.px(x, 11, furD); }
+    P.rect(bx - 1, 14, bw + 2, 1, '#3a2614'); if (!up) P.rect(side ? 7 : 7, 14, 2, 1, '#7fe0ff');
+  }
   // ===== tête =====
   const faceDark = cls === 'voleur' || cls === 'archer';   // visage dans l'ombre de la capuche
   if (side) {
@@ -290,7 +303,11 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   }
 
   // ===== cheveux, casques, capuches, chapeaux =====
-  if (cls === 'guerrier') {
+  if (cls === 'guerrier' && runes) {
+    if (race !== 4) {   // pas de casque : les cheveux
+      if (up) P.rect(4, 1, 8, 7, h); else if (side) { P.rect(5, 1, 7, 3, h); P.rect(5, 4, 2, fem ? 8 : 4, h); } else { P.rect(4, 1, 8, 2, h); P.rect(3, 3, 1, fem ? 9 : 3, h); P.rect(12, 3, 1, fem ? 9 : 3, hD); }
+    }
+  } else if (cls === 'guerrier') {
     const [hi, m, lo] = T3(steel);
     if (fem) { if (down) { P.rect(3, 6, 1, 7, h); P.rect(12, 6, 1, 7, hD); } else if (up) P.rect(4, 8, 8, 4, h); else P.rect(4, 6, 2, 7, h); }
     // casque ouvert à nasal : le visage (et la race) reste visible
@@ -388,6 +405,16 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
       else { P.rect(3, 6, 1, 7, b); P.rect(12, 6, 1, 7, bD); P.px(3, 13, '#d9a93a'); P.px(12, 13, '#d9a93a'); if (down) { P.px(5, 8, '#e88a8a'); P.px(10, 8, '#e88a8a'); } }
     }
   }
+  if (race === 4) {   // homme-ours : oreilles rondes, museau clair, truffe noire, fourrure sur les joues
+    const mu = '#e0c09a', ear = '#d89a8a';
+    if (side) { P.rect(5, 0, 3, 3, s); P.px(6, 1, ear); if (!up) { P.rect(10, 6, 3, 3, mu); P.px(12, 6, E); P.px(12, 7, E); P.px(10, 9, sD); } }
+    else {
+      P.rect(3, 0, 3, 3, s); P.rect(10, 0, 3, 3, s); P.px(3, 0, sH); P.px(10, 0, sH);
+      if (!up) { P.px(4, 1, ear); P.px(11, 1, ear); }
+      P.px(3, 7, sD); P.px(12, 7, sD); P.px(3, 8, s); P.px(12, 8, sD);
+      if (down) { P.rect(6, 7, 4, 2, mu); P.rect(7, 7, 2, 1, E); P.px(7, 8, shade(mu, 0.7)); P.px(8, 8, shade(mu, 0.7)); }
+    }
+  }
   if (race === 3 && !up) {   // petites défenses
     const ivoire = '#f4efe0';
     if (side) P.px(11, 8, ivoire);
@@ -396,6 +423,16 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
 
   // ===== armes devant =====
   const oy0 = P.oy, ox0 = P.ox;
+  if (runes) {   // le grand marteau du tonnerre (pas de bouclier : il le tient à deux mains)
+    const tete = (x, y, w, h) => { P.rect(x, y, w, h, steel); P.rect(x, y, w, 1, shade(steel, 1.35)); P.rect(x, y + h - 1, w, 1, shade(steel, 0.6)); P.px(x + (w >> 1), y + (h >> 1), '#7fe0ff'); P.px(x + (w >> 1), y + (h >> 1) - 1, '#bff4ff'); };
+    if (atk && down) { if (suite) { line2(P, 12, 12, 15, 19, wood); tete(13, 19, 6, 4); } else { line2(P, 12, 12, 17, 16, wood); tete(16, 14, 5, 6); } }
+    else if (atk && up) { if (suite) { line2(P, 12, 9, 10, 2, wood); tete(7, -2, 6, 4); } else { line2(P, 12, 10, 16, 3, wood); tete(14, -1, 5, 5); } }
+    else if (atk) { if (suite) { line2(P, 11, 13, 16, 18, wood); tete(15, 17, 5, 5); } else { P.rect(11, 13, 7, 1, wood); tete(17, 10, 4, 7); } }
+    else if (down) { P.oy = oy0 + hR; P.rect(14, 2, 1, 15, wood); P.px(14, 8, woodH); tete(12, -2, 5, 5); }
+    else if (side) { P.ox = ox0 + sw; P.rect(10, 3, 1, 13, wood); P.px(10, 9, woodH); tete(8, -1, 5, 5); }
+    P.ox = ox0; P.oy = oy0;
+    cls = 'marteau';   // les armes du guerrier ne sont pas dessinées
+  }
   if (atk) {   // geste d'attaque : coup d'épée, coup de dague, sort lancé, arc tendu
     if (down) {
       if (cls === 'guerrier' && suite) {   // l'épée a fini sa course, plus bas
@@ -508,6 +545,7 @@ function dirFromAngle(a) {
 // atk : 0 rien, 1 le coup, 2 la fin du geste
 function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0, atk = 0, tenue = null) {
   const d = dirFromAngle(angle);
+  if (cls === 'tonnerre') S *= 1.15;   // le Gardien du Tonnerre est un peu plus grand que les autres héros
   const frame = atk ? 2 + atk : walk ? 1 + (Math.floor(walk) % 2) : 0;
   const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame, gear, tenue);
   g.save();
@@ -2978,6 +3016,18 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; sq(f.x + Math.cos(a) * (14 + (1 - t) * 20), f.y + Math.sin(a) * (8 + (1 - t) * 10), 2, i % 2 ? '#c8ced8' : '#ffe36b'); }
     } else if (f.k === 'bark') {
       for (const m of [1, 0.7]) { const r = f.r * (1.1 - t) * m; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 2, '#fff6c0'); } }
+    } else if (f.k === 'foudre') {   // Dictée foudroyante : éclair en zigzag d'une cible à l'autre
+      ctx.lineCap = 'round';
+      for (const [w, c] of [[9, 'rgba(127,224,255,0.35)'], [4, '#bff4ff'], [2, '#ffffff']]) {
+        ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath();
+        f.pts.forEach(([x, y], i) => {
+          if (!i) return ctx.moveTo(x, y);
+          const [x0, y0] = f.pts[i - 1];
+          for (let k = 1; k <= 6; k++) { const u = k / 6, j = k < 6 ? Math.sin(now * 60 + k * 7 + i) * 12 : 0; ctx.lineTo(x0 + (x - x0) * u + j, y0 + (y - y0) * u - j); }
+        });
+        ctx.stroke();
+      }
+      for (const [x, y] of f.pts.slice(1)) for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + now * 8; sq(x + Math.cos(a) * 16, y + Math.sin(a) * 10, 2, i % 2 ? '#7fe0ff' : '#ffffff'); }
     } else if (f.k === 'owl') {
       const r = f.r * (1 - t);
       for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 2, i % 2 ? '#f2c94c' : '#ffffff'); }
@@ -3003,6 +3053,9 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     } else if (c === 'druide') {   // graine magique et feuilles
       sq(x - 4, y - 4, 3, '#3a7a24'); sq(x - 3, y - 3, 2, '#9ad84a'); sq(x - 2, y - 3, 1, '#e8ffb0');
       sq(x - Math.cos(a) * 12 - 2, y - Math.sin(a) * 12 + Math.sin(now * 20) * 3, 2, '#5aa832'); sq(x - Math.cos(a) * 22, y - Math.sin(a) * 22 - Math.sin(now * 20) * 3, 1, '#9ad84a');
+    } else if (c === 'tonnerre') {   // rune de tonnerre lancée par le marteau
+      sq(x - 6, y - 6, 4, '#1f6fb5'); sq(x - 4, y - 4, 3, '#7fe0ff'); sq(x - 2, y - 3, 1, '#ffffff'); sq(x - 1, y - 5, 1, '#ffffff');
+      sq(x - Math.cos(a) * 14, y - Math.sin(a) * 14, 2, '#7fe0ff'); sq(x - Math.cos(a) * 24, y - Math.sin(a) * 24, 1, '#bff4ff');
     } else if (c === 'pet') {
       sq(x - 4, y - 4, 3, '#ff8a1e'); sq(x - 2, y - 2, 1, '#ffe27a'); sq(x - Math.cos(a) * 10, y - Math.sin(a) * 10, 2, '#ffb347');
     } else if (c === 'ombre') {   // boule d'ombre qui ralentit
@@ -3158,7 +3211,10 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     if (p.sj && !d.sj0) d.sj0 = now; else if (!p.sj && d.sj0 && now - d.sj0 > 0.45) d.sj0 = 0;
     const saut = d.sj0 ? Math.sin(Math.min(1, (now - d.sj0) / 0.42) * Math.PI) * 40 : 0;
     const ta = d.at0 ? now - d.at0 : 9, phase = ta < 0.1 ? 1 : ta < 0.25 ? 2 : 0, el = phase ? Math.sin(Math.min(1, ta / 0.2) * Math.PI) * 4 : 0;
+    const salto = saut && p.c === 'tonnerre';   // saut périlleux : le héros fait un tour complet en l'air
+    if (salto) { const cx = d.x, cy = d.y - saut; ctx.save(); ctx.translate(cx, cy); ctx.rotate((Math.cos(p.a) < 0 ? -1 : 1) * Math.min(1, (now - d.sj0) / 0.42) * Math.PI * 2); ctx.translate(-cx, -cy); }
     drawHeroSprite(ctx, d.x + Math.cos(p.a) * el, d.y + breathe + Math.sin(p.a) * el * 0.6 - saut, p.c, p.l || 'm00', p.a, d.ph, heroScale, p.g, phase, tcol);
+    if (salto) ctx.restore();
     if (zom) { ctx.filter = 'none'; const S = heroScale; sq(d.x - 4 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); sq(d.x + 2 * S, d.y + breathe + 22 - 22 * S, 1, '#ff3a3a'); }
     if (p.c === 'mage') {
       const dd = dirFromAngle(p.a), S = heroScale, gx = d.x + (dd === 'down' ? 6 * S : dd === 'up' ? 5 * S : dd === 'right' ? 2 * S : -2 * S), gy = d.y + breathe + 22 - (dd === 'up' ? 22 : 21) * S;

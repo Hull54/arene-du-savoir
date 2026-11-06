@@ -294,12 +294,15 @@
 <script src="mouvement.js"></script>
 <script>
 
-const POW_ICO = { guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️', druide: '🌿' };
-const DASH_ICO = { guerrier: '💨', voleur: '🌀', mage: '✨', archer: '🦘', druide: '🍃' };
-const ATK_ICO = { guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹', druide: '🌰' };
+const POW_ICO = { tonnerre: '⚡', guerrier: '🛡️', voleur: '👤', mage: '💥', archer: '🌧️', druide: '🌿' };
+const DASH_ICO = { tonnerre: '🤸', guerrier: '💨', voleur: '🌀', mage: '✨', archer: '🦘', druide: '🍃' };
+const ATK_ICO = { tonnerre: '🔨', guerrier: '⚔️', voleur: '🗡️', mage: '🔥', archer: '🏹', druide: '🌰' };
 
 // pouvoirs des familiers (affichés avant d'entrer ; le serveur a les mêmes)
 const RACES = [['🧑 Humain', 'Polyvalent : pouvoir rechargé 10 % plus vite'], ['🧝 Elfe', 'Agile : 5 % plus rapide, oreilles pointues'], ['🧔 Nain', 'Robuste : +10 points de vie, belle barbe'], ['👹 Orc', 'Fort : 5 % de dégâts en plus, peau verte']];
+// Personnage secret de l'enseignant : seulement dans un navigateur où la page prof a été ouverte
+let MAITRE = false; try { MAITRE = localStorage.getItem('arene-maitre') === '1'; } catch {}
+if (MAITRE) RACES.push(['🐻 Homme-ours', 'Force de l\'ours : +15 points de vie. Touche E : Rugissement (les ennemis proches reculent, figés un instant)']);
 const info0 = [null, 'Ronron : +25 points de vie', 'Hurlement : repousse les ennemis proches', 'Petite boule de feu', 'Œil perçant : révèle les joueurs cachés', 'Flaque gluante : ralentit les ennemis'];
 // ----- Écran de sélection -----
 let chosen = null;
@@ -308,7 +311,7 @@ let look = 'f0000000';
 try {
   let l = localStorage.getItem('arene-look') || '';
   if (/^[fm][0-3][0-3]$/.test(l)) l += '00000'; else if (l.length === 6) l += '00'; else if (l.length === 7) l += '0';
-  if (/^[fm][0-3][0-3][0-9][0-5][0-5][0-5][0-3]$/.test(l)) look = l;
+  if (new RegExp(`^[fm][0-3][0-3][0-9][0-5][0-5][0-5][0-${MAITRE ? 4 : 3}]$`).test(l)) look = l;
 } catch {}
 // ----- Pièces d'or et boutique (gardées dans ce navigateur, pour chaque prénom) -----
 const BOUTIQUE = [
@@ -342,6 +345,7 @@ FAMILIERS.forEach((n, i) => { const b = document.createElement('button'); b.text
 for (let i = 0; i < 6; i++) { const b = document.createElement('b'); b.onclick = () => setLook(6, i); $('petcols').appendChild(b); }
 const cards = {};
 for (const [k, c] of Object.entries(CLS)) {
+  if (c.secret && !MAITRE) continue;
   const d = document.createElement('div');
   d.className = 'cls panel';
   d.innerHTML = `<canvas width="96" height="120"></canvas><b></b><small>${c.desc}</small>`;
@@ -361,6 +365,9 @@ function renderLook() {
   $('raceInfo').textContent = RACES[+look[7] || 0][1];
   $('petcols').style.display = +look[5] ? '' : 'none';
   if (+look[5]) [...$('petcols').querySelectorAll('b')].forEach((b, i) => { b.style.background = PET_COULEURS[+look[5]][i]; b.classList.toggle('on', i === +look[6]); b.style.display = possede(6, i) ? '' : 'none'; });
+  const ours = +look[7] === 4;   // l'homme-ours rugit (touche E) au lieu d'avoir un familier
+  document.querySelector('.lrow[data-s="5"]').style.display = ours ? 'none' : '';
+  if (ours && +look[5]) { look = look.slice(0, 5) + '0' + look.slice(6); $('petcols').style.display = 'none'; }
   $('petInfo').textContent = +look[5] && info0[+look[5]] ? `${FAMILIERS[+look[5]]} · touche E : ${info0[+look[5]]}` : '';
   for (const [k, d] of Object.entries(cards)) d.querySelector('b').textContent = nomClasse(k, look);
 }
@@ -482,7 +489,7 @@ function connect(name, cls, code = '', solo = false) {
   SOLO = solo; dernier = [name, cls, code, solo];
   myCls = cls;
   ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + (solo ? '/maison' : ''));
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, code: code || undefined, fiche: code ? lireFiche(code) || undefined : undefined, reglages: solo ? lireReglages() || undefined : undefined }));
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'join', name, cls, look, maitre: MAITRE || undefined, code: code || undefined, fiche: code ? lireFiche(code) || undefined : undefined, reglages: solo ? lireReglages() || undefined : undefined }));
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
     vuServeur = Date.now();
@@ -821,7 +828,7 @@ addEventListener('keyup', e => { if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = 0;
 const cv = $('c'), ctx = cv.getContext('2d');
 cv.addEventListener('mousemove', e => { mouse = { x: e.clientX, y: e.clientY }; mouseAim = true; lastMouse = performance.now(); });
 cv.addEventListener('mousedown', e => { Son.unlock(); if (e.button === 2) sendMsg({ t: 'pow' }); else { attackSound(); sendMsg({ t: 'atk' }); } });
-function petPow() { if (me && me.alive && me.pet && me.cdF <= 0.05) Son.play(['', 'miaou', 'ouaf', 'feu', 'hibou', 'slime'][me.pet]); sendMsg({ t: 'pet' }); }
+function petPow() { if (me && me.alive && me.pet && me.cdF <= 0.05) Son.play(['', 'miaou', 'ouaf', 'feu', 'hibou', 'slime', 'ouaf'][me.pet]); sendMsg({ t: 'pet' }); }
 function dashSound() { if (me && me.alive && me.cdD <= 0.05) Son.play(myCls === 'mage' ? 'tp' : 'dash'); }
 function attackSound() { if (me && me.alive && me.cdA <= 0.05) { Son.play(myCls === 'mage' ? 'feu' : myCls === 'archer' || myCls === 'druide' ? 'tir' : 'atk'); const d = disp.get(myId); if (d) d.at0 = performance.now() / 1000; } }   // le geste part tout de suite, sans attendre le serveur
 cv.addEventListener('contextmenu', e => e.preventDefault());

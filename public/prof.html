@@ -188,6 +188,8 @@
 <script src="notions.js"></script>
 <script src="banques.js"></script>
 <script>
+// ce navigateur est celui de l'enseignant : le Gardien du Tonnerre et l'homme-ours y sont débloqués dans l'arène
+try { localStorage.setItem('arene-maitre', '1'); } catch {}
 const $ = id => document.getElementById(id);
 // outils utilisés dès le chargement (fiches, questions perso, codes) : déclarés en premier
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
