@@ -301,9 +301,9 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
       P.rect(2, 10, 2, 5, s); P.rect(12, 10, 2, 5, sD); P.px(2, 15, '#f4efe0'); P.px(3, 15, '#f4efe0'); P.px(12, 15, '#f4efe0'); P.px(13, 15, '#f4efe0');   // bras poilus et griffes
       P.rect(0, 4, 6, 7, pl); P.rect(0, 4, 6, 1, plH); P.rect(0, 6, 6, 1, plD); P.rect(0, 8, 6, 1, plD); P.px(1, 5, or); P.px(4, 5, or); P.rect(1, 3, 4, 1, pl);   // épaulière
       poilu(11, 4, 7);
-      const br = '#2a1810', brH = '#a87a4a';   // bretelles croisées : cuir sombre bordé de clair, bien visibles sur la fourrure
-      for (let i = 0; i < 5; i++) { P.px(4 + i, 10 + i, brH); P.px(5 + i, 10 + i, br); P.px(11 - i, 10 + i, brH); P.px(10 - i, 10 + i, br); }
-      P.rect(7, 12, 2, 1, or);   // boucle au croisement
+      const br = K.pants, brH = shade(K.pants, 1.6), brD = shade(K.pants, 0.7);   // bretelles croisées, larges, de la couleur du pantalon
+      for (let i = 0; i < 6; i++) { P.px(3 + i, 10 + i, brH); P.px(4 + i, 10 + i, br); P.px(5 + i, 10 + i, brD); P.px(12 - i, 10 + i, brH); P.px(11 - i, 10 + i, br); P.px(10 - i, 10 + i, brD); }
+      P.rect(7, 12, 2, 2, or); P.px(7, 12, '#ffe27a');   // boucle au croisement
       P.rect(4, 15, 8, 1, '#3a2614'); P.px(7, 15, or);   // ceinture du pantalon
     } else if (B === 2) {   // armure lourde : grosses épaulières de métal, plastron, rune au centre
       plaque(0, 5, 5); plaque(11, 5, 5);
