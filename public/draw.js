@@ -8,7 +8,7 @@ const CLS = {
   voleur:   { nom: ['Voleuse', 'Voleur'],     ico: '🗡️', color: '#d64545', desc: 'Rapide, corps à corps. Dégâts doublés en frappant dans le dos !', pow: '👤 Ombre : invisible 4 s, prochaine attaque +50 %', dash: '🌀 Roulade : esquive, invincible un instant' },
   mage:     { nom: ['Mage', 'Mage'],          ico: '🔮', color: '#8e4ce0', desc: 'Fragile mais puissant. Lance des boules de feu.', pow: '💥 Explosion : dégâts tout autour', dash: '✨ Téléportation : 3 cases plus loin' },
   druide:   { nom: ['Druidesse', 'Druide'],   ico: '🌿', color: '#5aa832', desc: 'Soigne son équipe. Lance des graines magiques.', pow: '🌿 Cercle de soin : soigne toi et tes coéquipiers proches', dash: '🍃 Bond : saute et laisse des racines qui ralentissent' },
-  tonnerre: { nom: ['Gardienne du Tonnerre', 'Gardien du Tonnerre'], secret: true, ico: '🔨', color: '#3a9ad8', desc: 'Classe secrète du prof. Grand marteau de près, rune de tonnerre lancée de loin.', pow: '⚡ Dictée foudroyante : un éclair saute sur 3 ennemis', dash: '🤸 Saut périlleux : bond par-dessus les attaques' },
+  tonnerre: { nom: ['Gardienne du Tonnerre', 'Gardien du Tonnerre'], secret: true, ico: '🔨', color: '#3a9ad8', desc: 'Classe secrète du prof. Grand marteau de près, éclair lancé de loin.', pow: '⚡ Dictée foudroyante : un éclair saute sur 3 ennemis', dash: '🤸 Saut périlleux : bond par-dessus les attaques' },
   archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail', dash: '🦘 Saut arrière : recule en tirant' },
 };
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
@@ -3053,9 +3053,15 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
     } else if (c === 'druide') {   // graine magique et feuilles
       sq(x - 4, y - 4, 3, '#3a7a24'); sq(x - 3, y - 3, 2, '#9ad84a'); sq(x - 2, y - 3, 1, '#e8ffb0');
       sq(x - Math.cos(a) * 12 - 2, y - Math.sin(a) * 12 + Math.sin(now * 20) * 3, 2, '#5aa832'); sq(x - Math.cos(a) * 22, y - Math.sin(a) * 22 - Math.sin(now * 20) * 3, 1, '#9ad84a');
-    } else if (c === 'tonnerre') {   // rune de tonnerre lancée par le marteau
-      sq(x - 6, y - 6, 4, '#1f6fb5'); sq(x - 4, y - 4, 3, '#7fe0ff'); sq(x - 2, y - 3, 1, '#ffffff'); sq(x - 1, y - 5, 1, '#ffffff');
-      sq(x - Math.cos(a) * 14, y - Math.sin(a) * 14, 2, '#7fe0ff'); sq(x - Math.cos(a) * 24, y - Math.sin(a) * 24, 1, '#bff4ff');
+    } else if (c === 'tonnerre') {   // éclair lancé par le marteau : un trait de foudre en zigzag qui crépite
+      const ca = Math.cos(a), sa = Math.sin(a), nx = -sa, ny = ca;
+      ctx.lineCap = 'round';
+      for (const [w, col] of [[14, 'rgba(127,224,255,0.35)'], [5, '#bff4ff'], [2.5, '#ffffff']]) {
+        ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x + ca * 10, y + sa * 10);
+        for (let k = 1; k <= 5; k++) { const j = (k % 2 ? 1 : -1) * (7 + Math.sin(now * 50 + k) * 4); ctx.lineTo(x + ca * (12 - k * 14) + nx * j, y + sa * (12 - k * 14) + ny * j); }
+        ctx.stroke();
+      }
+      sq(x - 3, y - 3, 3, '#ffffff');
     } else if (c === 'pet') {
       sq(x - 4, y - 4, 3, '#ff8a1e'); sq(x - 2, y - 2, 1, '#ffe27a'); sq(x - Math.cos(a) * 10, y - Math.sin(a) * 10, 2, '#ffb347');
     } else if (c === 'ombre') {   // boule d'ombre qui ralentit

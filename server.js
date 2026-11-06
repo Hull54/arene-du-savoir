@@ -737,7 +737,7 @@ function attack(p) {
   p.stealth = 0;
   if (carte.vent && tirCanon(p)) return;
   if (a.type === 'proj') return shoot(p, p.angle, a, a.dmg * (sword(p) - 1));
-  if (a.type === 'hybride' && !procheDevant(p, a)) return shoot(p, p.angle, a.loin, a.loin.dmg * (sword(p) - 1));   // personne à portée d'épée : le marteau lance une rune de tonnerre
+  if (a.type === 'hybride' && !procheDevant(p, a)) return shoot(p, p.angle, a.loin, a.loin.dmg * (sword(p) - 1));   // personne à portée d'épée : le marteau lance un éclair
   fx.push({ k: 'slash', x: p.x, y: p.y, a: p.angle, r: a.range + R, arc: a.arc, t: 0.18, d: 0.18 });
   const base = a.dmg * sword(p);
   if (boss && boss.hp > 0) {
