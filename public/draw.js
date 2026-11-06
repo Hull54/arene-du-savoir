@@ -166,6 +166,7 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   // Gardien du Tonnerre : dessiné à partir du guerrier, armure bleu nuit, mantelet de fourrure, grand marteau, sans casque
   const runes = cls === 'tonnerre';
   if (runes) cls = 'guerrier';
+  const BODY = runes && race === 4 ? 7 : 2;   // 7 : homme-ours torse nu, une épaulière, bretelles croisées ; 2 : armure lourde
   const leaf = '#5aa832', leafD = '#3a7a24', leafL = '#9ad84a';
   // bâton de druide : bois tordu, feuilles et graine lumineuse (x, y = haut du manche)
   const staffD = (x, y, len) => { P.rect(x, y, 1, len, wood); P.px(x, y + 4, woodH); P.px(x, y + 9, woodH); P.px(x - 1, y - 1, wood); P.px(x - 1, y - 2, wood); P.px(x, y - 3, wood); P.px(x + 1, y - 2, wood);
@@ -207,8 +208,16 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
     const f = frame === 0 ? [6, 8] : frame === 1 ? [5, 9] : [9, 5];
     P.rect(f[1], 15, 2, 2, shade(K.pants, 0.75)); P.rect(f[1], 17, 3, 2, shade(bootC, 0.75));
     P.rect(f[0], 15, 2, 2, K.pants); P.rect(f[0], 17, 3, 2, bootC); P.px(f[0], 17, shade(bootC, 1.4));
+    if (runes && race === 4) { P.rect(f[1] - 1, 15, 1, 4, shade(K.pants, 0.6)); P.rect(f[0] + 2, 15, 1, 2, shade(K.pants, 0.85)); }   // jambes plus larges
   } else {
-    for (const [x, d] of [[5, lA], [9, lB]]) {
+    const large = runes && race === 4;   // l'homme-ours a des jambes plus larges
+    for (const [x, d] of large ? [[4, lA], [9, lB]] : [[5, lA], [9, lB]]) {
+      if (large) {   // jambes larges et grosses pattes griffues
+        const pat = BODY >= 7 ? shade(s, 0.7) : bootC, px0 = x === 4 ? 3 : 9;
+        P.rect(x, 15 + d, 3, 2, K.pants); P.rect(px0, 17 + d, 4, 2, pat); P.rect(px0, 17 + d, 4, 1, shade(pat, 1.3));
+        P.px(px0, 18 + d, '#d8d0c0'); P.px(px0 + 2, 18 + d, '#d8d0c0'); P.px(px0 + 3, 18 + d, shade(pat, 0.6));   // griffes
+        continue;
+      }
       P.rect(x, 15 + d, 2, 2, K.pants); P.px(x + 1, 15 + d, shade(K.pants, 0.7));
       P.rect(x, 17 + d, 2, 2, bootC); P.px(x, 17 + d, shade(bootC, 1.45)); P.px(x + 1, 18 + d, shade(bootC, 0.6));
       if (cls === 'guerrier') P.px(x, 16 + d, steel);   // genouillère
@@ -273,17 +282,34 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
     if (cls === 'archer') { P.rect(2, 13 + hL, 2, 2, leather); P.rect(12, 13 + hR, 2, 2, leather); }   // brassards
   }
 
-  if (runes) {   // carrure massive : mantelet de fourrure sur les épaules, ceinture large
-    const fur = race === 4 ? shade(s, 0.85) : '#6e4a2c', furD = shade(fur, 0.7), furL = shade(fur, 1.25);
-    const pl = steel, plH = shade(steel, 1.4), plD = shade(steel, 0.6), cuir = '#6a3a22';
-    if (side) { P.rect(4, 8, 8, 3, fur); P.rect(4, 10, 8, 1, furD); P.rect(6, 7, 5, 3, pl); P.rect(6, 7, 5, 1, plH); P.rect(6, 9, 5, 1, plD); P.px(8, 8, '#d9a93a'); }
-    else {
-      P.rect(0, 9, 16, 2, fur); P.rect(0, 10, 16, 1, furD); for (let x = 0; x < 16; x += 2) P.px(x, 8, x % 4 ? furL : fur); for (let x = 1; x < 16; x += 3) P.px(x, 11, furD);   // fourrure hirsute aux épaules
-      P.rect(10, 7, 6, 4, pl); P.rect(10, 7, 6, 1, plH); P.rect(15, 8, 1, 3, plD); P.rect(10, 10, 6, 1, plD); P.px(12, 8, '#d9a93a'); P.px(14, 9, '#d9a93a');   // épaulière de métal
-      if (!up) for (let i = 0; i < 5; i++) { P.px(4 + i, 11 + i, cuir); P.px(5 + i, 11 + i, shade(cuir, 0.75)); }   // sangle de cuir en travers
+  if (runes) {   // carrure massive : épaules hautes (la tête est enfoncée entre elles), ceinture large
+    const B = BODY;
+    const fur = race === 4 ? shade(s, 0.68) : '#6e4a2c', furD = shade(fur, 0.7), furL = shade(fur, 1.25);
+    const poilD = shade(s, 0.75), pl = steel, plH = shade(steel, 1.4), plD = shade(steel, 0.6), cuir = '#6a3a22', or = '#d9a93a', cyan = '#7fe0ff', ivoire = '#f4efe0';
+    const bosse = (x0, w, y0, c, cH, cD) => { P.rect(x0, y0, w, 11 - y0, c); P.rect(x0 + 1, y0 - 1, w - 2, 1, c); P.rect(x0, y0, w, 1, cH); P.rect(x0, 10, w, 1, cD); };
+    const poilu = (x0, w, y0) => { bosse(x0, w, y0, fur, furL, furD); for (let x = x0; x < x0 + w; x += 2) P.px(x, y0 - 1, fur); P.px(x0 - 1, y0 + 2, furD); P.px(x0 + w, y0 + 2, furD); };
+    const plaque = (x0, w, y0) => { bosse(x0, w, y0, pl, plH, plD); P.px(x0 + 1, y0 + 1, or); P.px(x0 + w - 2, y0 + 1, or); P.rect(x0, y0 + 3, w, 1, plD); };
+    if (side) {
+      if (B === 7) { P.rect(5, 10, 5, 5, s); P.rect(6, 11, 3, 3, shade(s, 1.12)); for (let i = 0; i < 5; i++) P.px(5 + i, 10 + i, cuir); P.rect(5, 15, 5, 1, '#3a2614'); plaque(5, 7, 5); }
+      else plaque(5, 7, 5);
+    } else if (up) {
+      if (B === 7) { P.rect(3, 9, 10, 6, s); P.rect(7, 10, 1, 4, sD); for (let i = 0; i < 5; i++) { P.px(4 + i, 10 + i, cuir); P.px(11 - i, 10 + i, cuir); } P.rect(3, 15, 10, 1, '#3a2614'); plaque(11, 5, 4); poilu(0, 5, 6); }
+      else { plaque(0, 5, 5); plaque(11, 5, 5); }
+    } else if (B === 7) {   // torse nu et poilu, bretelles croisées, une seule épaulière très haute
+      P.rect(4, 10, 8, 5, s); P.rect(6, 11, 4, 3, shade(s, 1.14)); P.px(7, 12, sD); P.px(8, 12, sD); P.rect(11, 10, 1, 5, sD);   // poitrail et ventre plus clairs
+      for (const [x, y] of [[5, 11], [10, 12], [6, 14], [9, 14]]) P.px(x, y, poilD);
+      P.rect(2, 10, 2, 5, s); P.rect(12, 10, 2, 5, sD); P.px(2, 15, '#f4efe0'); P.px(3, 15, '#f4efe0'); P.px(12, 15, '#f4efe0'); P.px(13, 15, '#f4efe0');   // bras poilus et griffes
+      P.rect(0, 4, 6, 7, pl); P.rect(0, 4, 6, 1, plH); P.rect(0, 6, 6, 1, plD); P.rect(0, 8, 6, 1, plD); P.px(1, 5, or); P.px(4, 5, or); P.rect(1, 3, 4, 1, pl);   // épaulière
+      poilu(11, 4, 7);
+      const br = '#2a1810', brH = '#a87a4a';   // bretelles croisées : cuir sombre bordé de clair, bien visibles sur la fourrure
+      for (let i = 0; i < 5; i++) { P.px(4 + i, 10 + i, brH); P.px(5 + i, 10 + i, br); P.px(11 - i, 10 + i, brH); P.px(10 - i, 10 + i, br); }
+      P.rect(7, 12, 2, 1, or);   // boucle au croisement
+      P.rect(4, 15, 8, 1, '#3a2614'); P.px(7, 15, or);   // ceinture du pantalon
+    } else if (B === 2) {   // armure lourde : grosses épaulières de métal, plastron, rune au centre
+      plaque(0, 5, 5); plaque(11, 5, 5);
+      P.rect(4, 10, 8, 4, pl); P.rect(4, 10, 8, 1, plH); P.rect(11, 11, 1, 3, plD); P.px(7, 11, cyan); P.px(8, 11, cyan); P.px(7, 12, cyan); P.px(8, 12, cyan);
+      P.rect(4, 14, 8, 1, '#3a2614'); P.px(7, 14, or); P.px(8, 14, or);
     }
-    if (race === 4 && !side && !up) { P.px(2, 16, '#f4efe0'); P.px(3, 16, '#f4efe0'); }   // griffes
-    P.rect(bx - 1, 14, bw + 2, 1, '#3a2614'); if (!up) P.rect(side ? 7 : 7, 14, 2, 1, '#7fe0ff');
   }
   // ===== tête =====
   const faceDark = cls === 'voleur' || cls === 'archer';   // visage dans l'ombre de la capuche
@@ -435,6 +461,9 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
       P.rect(6, 6, 4, 3, mu); P.px(9, 7, muD); P.px(9, 8, muD); P.rect(7, 6, 2, 2, E); P.px(7, 6, '#6a6a7a');   // museau clair, grosse truffe luisante
       P.rect(6, 9, 4, 1, gueule); P.px(6, 9, croc); P.px(9, 9, croc);   // gueule ouverte et crocs
       P.rect(5, 10, 6, 1, poil); P.px(4, 9, poil); P.px(11, 9, poil);   // collier de poils sous la mâchoire
+      const cyan = '#7fe0ff';   // peintures de guerre : runes bleues qui luisent sur le front et les joues
+      P.px(6, 2, cyan); P.px(7, 3, cyan); P.px(8, 3, cyan); P.px(9, 2, cyan);
+      P.px(4, 6, cyan); P.px(4, 7, cyan); P.px(11, 6, cyan); P.px(11, 7, cyan);
     }
   }
   if (race === 3 && !up) {   // petites défenses
