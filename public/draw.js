@@ -179,7 +179,8 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   const bootC = G.bottes ? TIER_C[G.bottes] : '#3a2a22';
   const capeC = out ? shade(out, 0.8) : '#6a1f24', scarf = out || '#8e2a2a';
   const lA = frame === 1 ? -1 : 0, lB = frame === 2 ? -1 : 0;
-  const side = dir === 'side', up = dir === 'up', down = dir === 'down';
+  const diag = dir === 'diag' || dir === 'diagup';   // pose en diagonale (de trois quarts), construite à partir de la face ou du dos
+  const side = dir === 'side', up = dir === 'up' || dir === 'diagup', down = dir === 'down' || dir === 'diag';
 
   // ===== derrière le corps =====
   if (acc === 5) {   // ailes blanches, plumes claires et ombrées
@@ -585,7 +586,22 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   }
   P.ox = 0; P.oy = 0;
   if (race === 2) trapu(P);
+  if (diag) troisQuarts(P);
   return (heroCache[key] = P.outline().canvas());
+}
+// Pose en diagonale : la tête glisse d'un pixel vers le côté où il regarde et le côté éloigné du corps se resserre
+function troisQuarts(P) {
+  const W = P.w, g = P.g, tete = 18;   // rangées 0 à 17 : la tête (et le chapeau)
+  const pousse = (y, x1, n) => { for (let x = x1; x >= n; x--) g[y * W + x] = g[y * W + x - n]; for (let x = 0; x < n; x++) g[y * W + x] = null; };
+  for (let y = 0; y < tete; y++) { pousse(y, 10, 1); pousse(y, W - 1, 1); }   // côté éloigné du visage plus étroit, puis toute la tête vers l'avant
+  for (let y = tete; y < P.h; y++) pousse(y, 8, 2);                         // côté éloigné du corps resserré
+}
+// 8 directions : face, dos, côtés et diagonales
+function dir8(a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  if (Math.abs(c) > 0.38 && Math.abs(s) > 0.38) return { d: s > 0 ? 'diag' : 'diagup', g: c < 0 };
+  const d = dirFromAngle(a);
+  return { d: d === 'left' || d === 'right' ? 'side' : d, g: d === 'left' };
 }
 function dirFromAngle(a) {
   const c = Math.cos(a), s = Math.sin(a);
@@ -595,14 +611,14 @@ function dirFromAngle(a) {
 // Dessine un héros : (x, y) = centre du joueur dans le monde ; S = taille d'un pixel d'art
 // atk : 0 rien, 1 le coup, 2 la fin du geste
 function drawHeroSprite(g, x, y, cls, look, angle, walk, S = PX, gear = 0, atk = 0, tenue = null) {
-  const d = dirFromAngle(angle);
+  const D8 = dir8(angle);
   if (cls === 'tonnerre') S *= 1.15;   // le Gardien du Tonnerre est un peu plus grand que les autres héros
   const frame = atk ? 2 + atk : walk ? 1 + (Math.floor(walk) % 2) : 0;
-  const spr = heroSprite(cls, look, d === 'left' || d === 'right' ? 'side' : d, frame, gear, tenue);
+  const spr = heroSprite(cls, look, D8.d, frame, gear, tenue);
   g.save();
   g.imageSmoothingEnabled = false;
   g.translate(Math.round(x), Math.round(y + 22));
-  if (d === 'left') g.scale(-1, 1);
+  if (D8.g) g.scale(-1, 1);
   g.drawImage(spr, -12 * S, -27 * S, 24 * S, 30 * S);
   g.restore();
 }
