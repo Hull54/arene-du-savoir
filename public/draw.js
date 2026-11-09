@@ -8,7 +8,7 @@ const CLS = {
   voleur:   { nom: ['Voleuse', 'Voleur'],     ico: '🗡️', color: '#d64545', desc: 'Rapide, corps à corps. Dégâts doublés en frappant dans le dos !', pow: '👤 Ombre : invisible 4 s, prochaine attaque +50 %', dash: '🌀 Roulade : esquive, invincible un instant' },
   mage:     { nom: ['Mage', 'Mage'],          ico: '🔮', color: '#8e4ce0', desc: 'Fragile mais puissant. Lance des boules de feu.', pow: '💥 Explosion : dégâts tout autour', dash: '✨ Téléportation : 3 cases plus loin' },
   druide:   { nom: ['Druidesse', 'Druide'],   ico: '🌿', color: '#5aa832', desc: 'Soigne son équipe. Lance des graines magiques.', pow: '🌿 Cercle de soin : soigne toi et tes coéquipiers proches', dash: '🍃 Bond : saute et laisse des racines qui ralentissent' },
-  tonnerre: { nom: ['Gardienne du Tonnerre', 'Gardien du Tonnerre'], secret: true, ico: '🔨', color: '#3a9ad8', desc: 'Classe secrète du prof. Grand marteau de près, éclair lancé de loin.', pow: '⚡ Dictée foudroyante : un éclair saute sur 4 ennemis', dash: '🤸 Saut périlleux : bond par-dessus les attaques' },
+  tonnerre: { nom: ['Gardienne du Tonnerre', 'Gardien du Tonnerre'], secret: true, ico: '🔨', color: '#3a9ad8', desc: 'Classe secrète du prof, dieu du tonnerre. Marteau de près, éclair lancé de loin, cape rouge.', pow: '⚡ Dictée foudroyante : la foudre tombe sur ta cible (ou devant toi), puis saute sur 2 ennemis', dash: '🤸 Saut du tonnerre : salto invincible, onde de choc en retombant' },
   archer:   { nom: ['Archère', 'Archer'],     ico: '🏹', color: '#2f9e55', desc: 'Rapide. Tire des flèches de loin.', pow: '🌧️ Pluie de flèches : 7 flèches en éventail', dash: '🦘 Saut arrière : recule en tirant' },
 };
 const SKIN = ['#f7d3b0', '#dca274', '#a8693d', '#6b3f22'];
@@ -188,9 +188,11 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
     const wing = (x0, dirx) => { for (let j = 0; j < 7; j++) { const len = 6 - Math.abs(j - 2); for (let i = 0; i < len; i++) P.px(x0 + dirx * i, 8 + j, j > 3 ? wd : i === len - 1 ? wl : wc); } };
     if (side) wing(4, -1); else { wing(2, -1); wing(13, 1); }
   }
+  const capeR = '#b8262a';   // cape rouge du dieu du tonnerre
+  if (runes && !up) { if (side) { P.rect(1, 9, 4, 11, capeR); P.rect(1, 19, 4, 1, shade(capeR, 0.6)); P.rect(2, 10, 1, 8, shade(capeR, 1.25)); } else { P.rect(1, 9, 14, 11, shade(capeR, 0.7)); P.rect(1, 19, 14, 1, shade(capeR, 0.5)); } }
   if (acc === 1 && !up) { if (side) { P.rect(1, 10, 4, 9, capeC); P.rect(1, 18, 4, 1, shade(capeC, 0.65)); P.rect(2, 11, 1, 6, shade(capeC, 1.2)); } else P.rect(3, 10, 10, 9, shade(capeC, 0.7)); }
   if (up) {
-    if (runes) { P.rect(13, 2, 1, 13, wood); P.rect(11, -1, 5, 4, steel); P.rect(11, -1, 5, 1, shade(steel, 1.3)); P.px(13, 0, '#7fe0ff'); }
+    if (runes) { P.rect(13, 6, 1, 8, '#3a2614'); P.rect(10, 1, 7, 5, steel); P.rect(10, 1, 7, 1, shade(steel, 1.3)); P.px(13, 3, '#7fe0ff'); }
     else if (cls === 'guerrier') { P.rect(13, 1, 1, 13, blade); P.rect(12, 14, 3, 1, gold); }
     if (cls === 'mage') { P.rect(13, 0, 1, 18, wood); P.rect(12, -3, 3, 3, crystal); }
     if (cls === 'druide') staffD(13, 1, 17);
@@ -260,6 +262,7 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
     if (side) { P.rect(5, 9, 6, 2, scarf); P.rect(3, 10, 2, 4, shade(scarf, 0.75)); P.px(5, 9, shade(scarf, 1.3)); }
     else { P.rect(4, 9, 8, 2, scarf); P.rect(4, 9, 8, 1, shade(scarf, 1.3)); if (down) P.rect(9, 11, 2, 4, shade(scarf, 0.75)); else P.rect(5, 11, 2, 4, shade(scarf, 0.75)); }
   }
+  if (runes && up) { P.rect(2, 9, 12, 11, capeR); P.rect(2, 9, 12, 1, shade(capeR, 1.3)); for (const x of [5, 8, 11]) P.rect(x, 11, 1, 8, shade(capeR, 0.75)); P.rect(2, 19, 12, 1, shade(capeR, 0.6)); }
   if (acc === 1 && up) { box(4, 10, 8, 9, capeC); P.rect(6, 11, 1, 7, shade(capeC, 0.8)); P.rect(9, 11, 1, 7, shade(capeC, 0.8)); }
 
   // ===== bras et épaulières =====
@@ -337,8 +340,11 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
 
   // ===== cheveux, casques, capuches, chapeaux =====
   if (cls === 'guerrier' && runes) {
-    if (race !== 4) {   // pas de casque : les cheveux
-      if (up) P.rect(4, 1, 8, 7, h); else if (side) { P.rect(5, 1, 7, 3, h); P.rect(5, 4, 2, fem ? 8 : 4, h); } else { P.rect(4, 1, 8, 2, h); P.rect(3, 3, 1, fem ? 9 : 3, h); P.rect(12, 3, 1, fem ? 9 : 3, hD); }
+    if (race !== 4) {   // cheveux longs et casque ailé du dieu du tonnerre
+      if (up) P.rect(4, 1, 8, 9, h); else if (side) { P.rect(5, 1, 7, 3, h); P.rect(5, 4, 2, 7, h); } else { P.rect(4, 1, 8, 2, h); P.rect(3, 3, 1, 8, h); P.rect(12, 3, 1, 8, hD); if (!fem && down) { P.rect(5, 8, 6, 2, h); P.rect(6, 10, 4, 1, hD); } }
+      const [hi, m, lo] = T3(steel), aile = '#f4f2ea', aileD = '#c9c6d6';
+      if (side) { P.rect(5, 0, 7, 2, m); P.rect(5, 0, 7, 1, hi); P.px(5, -1, aile); P.px(4, -2, aile); P.px(3, -3, aileD); P.px(4, -1, aileD); }
+      else { P.rect(4, 0, 8, 2, m); P.rect(4, 0, 8, 1, hi); P.rect(4, 2, 8, 1, lo); P.px(3, 0, aile); P.px(2, -1, aile); P.px(1, -2, aileD); P.px(12, 0, aile); P.px(13, -1, aile); P.px(14, -2, aileD); }
     }
   } else if (cls === 'guerrier') {
     const [hi, m, lo] = T3(steel);
@@ -476,12 +482,14 @@ function heroSprite(cls, look, dir, frame, gearCode = 0, tenue = null) {
   // ===== armes devant =====
   const oy0 = P.oy, ox0 = P.ox;
   if (runes) {   // le grand marteau du tonnerre (pas de bouclier : il le tient à deux mains)
-    const tete = (x, y, w, h) => { P.rect(x, y, w, h, steel); P.rect(x, y, w, 1, shade(steel, 1.35)); P.rect(x, y + h - 1, w, 1, shade(steel, 0.6)); P.px(x + (w >> 1), y + (h >> 1), '#7fe0ff'); P.px(x + (w >> 1), y + (h >> 1) - 1, '#bff4ff'); };
-    if (atk && down) { if (suite) { line2(P, 12, 12, 15, 19, wood); tete(13, 19, 6, 4); } else { line2(P, 12, 12, 17, 16, wood); tete(16, 14, 5, 6); } }
-    else if (atk && up) { if (suite) { line2(P, 12, 9, 10, 2, wood); tete(7, -2, 6, 4); } else { line2(P, 12, 10, 16, 3, wood); tete(14, -1, 5, 5); } }
-    else if (atk) { if (suite) { line2(P, 11, 13, 16, 18, wood); tete(15, 17, 5, 5); } else { P.rect(11, 13, 7, 1, wood); tete(17, 10, 4, 7); } }
-    else if (down) { P.oy = oy0 + hR; P.rect(14, 2, 1, 15, wood); P.px(14, 8, woodH); tete(12, -2, 5, 5); }
-    else if (side) { P.ox = ox0 + sw; P.rect(10, 3, 1, 13, wood); P.px(10, 9, woodH); tete(8, -1, 5, 5); }
+    // marteau du tonnerre : manche court gainé de cuir, lanière au bout, grosse tête carrée gravée d'une rune
+    const tete = (x, y, w, h) => { P.rect(x, y, w, h, steel); P.rect(x, y, w, 1, shade(steel, 1.4)); P.rect(x, y, 1, h, shade(steel, 1.2)); P.rect(x + w - 1, y + 1, 1, h - 1, shade(steel, 0.6)); P.rect(x + 1, y + h - 1, w - 1, 1, shade(steel, 0.6)); P.px(x + (w >> 1), y + (h >> 1), '#7fe0ff'); P.px(x + (w >> 1) - 1, y + (h >> 1), '#bff4ff'); };
+    const manche = '#5a3a20', cuirM = '#3a2614';
+    if (atk && down) { if (suite) { line2(P, 12, 13, 14, 18, cuirM); tete(11, 18, 7, 5); } else { line2(P, 12, 13, 16, 16, cuirM); tete(15, 14, 6, 6); } }
+    else if (atk && up) { if (suite) { line2(P, 12, 9, 11, 4, cuirM); tete(8, -1, 7, 5); } else { line2(P, 12, 10, 15, 6, cuirM); tete(14, 1, 6, 6); } }
+    else if (atk) { if (suite) { line2(P, 11, 13, 15, 17, cuirM); tete(14, 16, 6, 6); } else { P.rect(11, 13, 5, 1, cuirM); tete(16, 10, 5, 7); } }
+    else if (down) { P.oy = oy0 + hR; P.rect(14, 13, 1, 4, cuirM); P.px(15, 12, cuirM); tete(11, 16, 7, 5); }   // le marteau pend au bout du bras
+    else if (side) { P.ox = ox0 + sw; P.rect(10, 13, 1, 4, cuirM); tete(8, 16, 6, 5); }
     P.ox = ox0; P.oy = oy0;
     cls = 'marteau';   // les armes du guerrier ne sont pas dessinées
   }
@@ -3083,6 +3091,11 @@ function drawWorld(ctx, world, map, mine, disp, heroScale = PX, teams = null) {
       for (let i = 0; i < 10; i++) { const a = i / 10 * Math.PI * 2; sq(f.x + Math.cos(a) * (14 + (1 - t) * 20), f.y + Math.sin(a) * (8 + (1 - t) * 10), 2, i % 2 ? '#c8ced8' : '#ffe36b'); }
     } else if (f.k === 'bark') {
       for (const m of [1, 0.7]) { const r = f.r * (1.1 - t) * m; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * 0.6, 2, '#fff6c0'); } }
+    } else if (f.k === 'impact') {   // la foudre frappe le sol : éclair blanc, anneau bleu, étincelles
+      const r = f.r * (1.15 - t * 0.7);
+      ctx.globalAlpha = Math.min(1, t * 2.2); ctx.fillStyle = 'rgba(191,244,255,0.35)'; ctx.beginPath(); ctx.ellipse(f.x, f.y + 10, r, r * 0.55, 0, 0, 7); ctx.fill();
+      for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; sq(f.x + Math.cos(a) * r, f.y + 10 + Math.sin(a) * r * 0.55, 3, i % 2 ? '#7fe0ff' : '#ffffff'); }
+      for (let i = 0; i < 6; i++) { const a = i * 1.1 + now * 9; sq(f.x + Math.cos(a) * r * 0.5, f.y - (1 - t) * 40 + Math.sin(a) * 10, 2, '#ffffff'); }
     } else if (f.k === 'foudre') {   // Dictée foudroyante : éclair en zigzag d'une cible à l'autre
       ctx.lineCap = 'round';
       for (const [w, c] of [[9, 'rgba(127,224,255,0.35)'], [4, '#bff4ff'], [2, '#ffffff']]) {

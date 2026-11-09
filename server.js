@@ -69,7 +69,7 @@ const CLASSES = {
   mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 430, dmg: 22, cd: 0.65, r: 10, life: 1.3 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
   druide:   { nom: 'Druide',   hp: 115, speed: 165, atk: { type: 'proj', speed: 460, dmg: 16, cd: 0.5, r: 8, life: 1.25 }, power: { nom: 'Cercle de soin', cd: 10, radius: 170, soin: 40 }, dash: { nom: 'Bond', cd: 3, dist: 140, dur: 0.24, racines: 70, rdur: 3 } },
   // Gardien du Tonnerre : classe secrète de l'enseignant (seulement sur un appareil où la page prof a été ouverte)
-  tonnerre: { nom: 'Gardien du Tonnerre', secret: true, hp: 140, speed: 168, atk: { type: 'hybride', range: 66, arc: 1.6, dmg: 22, cd: 0.55, loin: { speed: 520, dmg: 15, cd: 0.55, r: 8, life: 1.0 } }, power: { nom: 'Dictée foudroyante', cd: 9, portee: 380, saut: 220, dmg: [26, 20, 15, 10] }, dash: { nom: 'Saut périlleux', cd: 3, dist: 160, dur: 0.42 } },   // polyvalent : presque aussi fort que le guerrier de près, presque aussi fort que l'archer de loin
+  tonnerre: { nom: 'Gardien du Tonnerre', secret: true, hp: 140, speed: 168, atk: { type: 'hybride', range: 66, arc: 1.6, dmg: 22, cd: 0.55, loin: { speed: 520, dmg: 15, cd: 0.55, r: 8, life: 1.0 } }, power: { nom: 'Dictée foudroyante', cd: 9, portee: 420, saut: 220, dmg: [26, 18, 12] }, dash: { nom: 'Saut du tonnerre', cd: 3.5, dist: 160, dur: 0.42 } },   // polyvalent : presque aussi fort que le guerrier de près, presque aussi fort que l'archer de loin
   archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.0 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 
@@ -802,27 +802,45 @@ function power(p) {
 }
 
 // Dictée foudroyante : un éclair frappe l'ennemi le plus proche devant, puis saute d'ennemi en ennemi
-function foudre(p, dmgs, portee, saut) {
+// La foudre tombe du ciel : sur l'ennemi visé (ou le plus proche), sinon sur le sol devant le Gardien.
+// L'impact touche tout ce qui est autour, puis l'éclair saute d'ennemi en ennemi. Le pouvoir ne tombe jamais dans le vide.
+function foudre(p, dmgs, portee, saut, rImpact = 80) {
   const cibles = [];
-  for (const o of players.values()) if (canHit(p, o) && !o.hidden) cibles.push({ x: o.x, y: o.y, hit: d => damage(o, d, p) });
+  for (const o of players.values()) if (canHit(p, o) && !o.hidden) cibles.push({ x: o.x, y: o.y, o, hit: d => damage(o, d, p) });
   if (boss && boss.hp > 0) cibles.push({ x: boss.x, y: boss.y, hit: d => hitBoss(d, p) });
   for (const m of minions) cibles.push({ x: m.x, y: m.y, hit: d => hitMinions(x => x === m, d, p) });
-  const pts = [[Math.round(p.x), Math.round(p.y - 20)]], pris = new Set();
-  let x = p.x, y = p.y;
-  for (let i = 0; i < dmgs.length; i++) {
-    let best = null, bd = Infinity;
-    for (const c of cibles) {
-      if (pris.has(c)) continue;
-      const d = Math.hypot(c.x - x, c.y - y);
-      if (d > (i ? saut : portee) || (i === 0 && angDiff(Math.atan2(c.y - y, c.x - x), p.angle) > 1.1)) continue;
-      if (d < bd) { bd = d; best = c; }
-    }
+  const dist = c => Math.hypot(c.x - p.x, c.y - p.y);
+  const devant = cibles.filter(c => dist(c) < portee && angDiff(Math.atan2(c.y - p.y, c.x - p.x), p.angle) < 1.2).sort((a, b) => dist(a) - dist(b));
+  const proches = cibles.filter(c => dist(c) < portee * 0.75).sort((a, b) => dist(a) - dist(b));
+  const vise = devant[0] || proches[0];
+  let ix, iy;
+  if (vise) { ix = vise.x; iy = vise.y; }
+  else { let d = 220; while (d > 40 && WALL.has(tileAt(p.x + Math.cos(p.angle) * d, p.y + Math.sin(p.angle) * d))) d -= 20; ix = p.x + Math.cos(p.angle) * d; iy = p.y + Math.sin(p.angle) * d; }
+  zone(p, ix, iy, rImpact, dmgs[0]);
+  fx.push({ k: 'foudre', pts: [[Math.round(ix + 30), Math.round(iy - 420)], [Math.round(ix), Math.round(iy - 10)]], t: 0.45, d: 0.45 });
+  fx.push({ k: 'impact', x: ix, y: iy, r: rImpact, t: 0.4, d: 0.4 });
+  const pris = new Set(cibles.filter(c => Math.hypot(c.x - ix, c.y - iy) < rImpact + R));
+  const pts = [[Math.round(ix), Math.round(iy - 20)]];
+  let x = ix, y = iy;
+  for (let i = 1; i < dmgs.length; i++) {
+    let best = null, bd = saut;
+    for (const c of cibles) { if (pris.has(c)) continue; const d = Math.hypot(c.x - x, c.y - y); if (d < bd) { bd = d; best = c; } }
     if (!best) break;
-    pris.add(best); best.hit(dmgs[i]); x = best.x; y = best.y;
-    pts.push([Math.round(x), Math.round(y - 20)]);
+    pris.add(best); best.hit(dmgs[i]); x = best.x; y = best.y; pts.push([Math.round(x), Math.round(y - 20)]);
   }
-  if (pts.length === 1) pts.push([Math.round(p.x + Math.cos(p.angle) * 200), Math.round(p.y - 20 + Math.sin(p.angle) * 200)]);   // dans le vide
-  fx.push({ k: 'foudre', pts, t: 0.45, d: 0.45 });
+  if (pts.length > 1) fx.push({ k: 'foudre', pts, t: 0.45, d: 0.45 });
+}
+// Saut du tonnerre : en retombant, le marteau frappe le sol (onde de choc qui blesse et repousse)
+function ondeDeChoc(p) {
+  const r = 100;
+  zone(p, p.x, p.y, r, 12);
+  for (const o of players.values()) {
+    if (!canHit(p, o)) continue;
+    const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy);
+    if (d > r + R || d < 1) continue;
+    for (let k = 60; k > 0; k -= 10) { const nx = o.x + dx / d * k, ny = o.y + dy / d * k; if (!blocked(nx, ny, R)) { o.x = nx; o.y = ny; break; } }
+  }
+  fx.push({ k: 'bark', x: p.x, y: p.y + 10, r, t: 0.4, d: 0.4 }); fx.push({ k: 'foudre', pts: [[Math.round(p.x - 10), Math.round(p.y - 300)], [Math.round(p.x), Math.round(p.y)]], t: 0.3, d: 0.3 });
 }
 
 // ---------- Super-pouvoir (R) : gagné avec 3 bonnes réponses de suite ----------
@@ -848,7 +866,12 @@ function superPower(p) {
     fx.push({ k: 'boom', x, y, r: 160, t: 0.5, d: 0.5 }); fx.push({ k: 'boom', x, y, r: 90, t: 0.35, d: 0.35 });
     zone(p, x, y, 160, 55);
   } else if (p.cls === 'tonnerre') {
-    foudre(p, [40, 32, 26, 20], 420, 240);
+    // Orage de tonnerre : six éclairs tombent autour du Gardien
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * Math.PI * 2 + Math.random() * 0.5, d = 90 + Math.random() * 170, x = p.x + Math.cos(a) * d, y = p.y + Math.sin(a) * d;
+      zone(p, x, y, 80, 25);
+      fx.push({ k: 'foudre', pts: [[Math.round(x + 25), Math.round(y - 420)], [Math.round(x), Math.round(y - 10)]], t: 0.5, d: 0.5 }); fx.push({ k: 'impact', x, y, r: 80, t: 0.4, d: 0.4 });
+    }
   } else if (p.cls === 'archer') {
     for (let i = 0; i < 16; i++) shoot(p, p.angle + i / 16 * Math.PI * 2, CLASSES.archer.atk, 6);
   } else if (p.cls === 'druide') {
@@ -974,7 +997,7 @@ function dashStep(p, dt) {
     }
     if (boss && boss.hp > 0 && !D.hit.has('boss') && Math.hypot(boss.x - p.x, boss.y - p.y) < boss.r + R + 6) { D.hit.add('boss'); hitBoss(d.dmg, p); }
   }
-  if ((D.t -= dt) <= 0 || (bx && by)) { p.dash = null; if (p.cls !== 'archer') fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.3, d: 0.3 }); }
+  if ((D.t -= dt) <= 0 || (bx && by)) { if (D.salto) ondeDeChoc(p); p.dash = null; if (p.cls !== 'archer') fx.push({ k: 'dust', x: p.x, y: p.y + 18, t: 0.3, d: 0.3 }); }
 }
 
 // ---------- Ballons géants (École) ----------
