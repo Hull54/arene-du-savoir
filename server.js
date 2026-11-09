@@ -64,12 +64,12 @@ const SPAWN_PROTECT = 2.5;
 const WRONG_DELAY = 3;
 
 const CLASSES = {
-  guerrier: { nom: 'Guerrier', hp: 170, speed: 160, atk: { type: 'melee', range: 72, arc: 1.8, dmg: 26, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 3 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
+  guerrier: { nom: 'Guerrier', hp: 155, speed: 160, atk: { type: 'melee', range: 68, arc: 1.5, dmg: 22, cd: 0.55 }, power: { nom: 'Bouclier', cd: 10, dur: 2.5 }, dash: { nom: 'Charge', cd: 3, dist: 160, dur: 0.26, dmg: 12, push: 80 } },
   voleur:   { nom: 'Voleur',   hp: 105, speed: 200, atk: { type: 'melee', range: 55, arc: 1.2, dmg: 18, cd: 0.35, backstab: 2 }, power: { nom: 'Ombre', cd: 9, dur: 4 }, dash: { nom: 'Roulade', cd: 2, dist: 140, dur: 0.24 } },
   mage:     { nom: 'Mage',     hp: 90,  speed: 160, atk: { type: 'proj', speed: 430, dmg: 22, cd: 0.65, r: 10, life: 1.3 }, power: { nom: 'Explosion', cd: 9, radius: 140, dmg: 38 }, dash: { nom: 'Téléportation', cd: 3, dist: 150 } },
   druide:   { nom: 'Druide',   hp: 115, speed: 165, atk: { type: 'proj', speed: 460, dmg: 16, cd: 0.5, r: 8, life: 1.25 }, power: { nom: 'Cercle de soin', cd: 10, radius: 170, soin: 40 }, dash: { nom: 'Bond', cd: 3, dist: 140, dur: 0.24, racines: 70, rdur: 3 } },
   // Gardien du Tonnerre : classe secrète de l'enseignant (seulement sur un appareil où la page prof a été ouverte)
-  tonnerre: { nom: 'Gardien du Tonnerre', secret: true, hp: 125, speed: 162, atk: { type: 'hybride', range: 62, arc: 1.6, dmg: 20, cd: 0.55, loin: { speed: 480, dmg: 12, cd: 0.55, r: 8, life: 1.0 } }, power: { nom: 'Dictée foudroyante', cd: 10, portee: 340, saut: 200, dmg: [22, 16, 12, 9] }, dash: { nom: 'Saut périlleux', cd: 3.5, dist: 150, dur: 0.42 } },   // équilibré : moins fort de près que le guerrier, moins fort de loin que l'archer et le mage
+  tonnerre: { nom: 'Gardien du Tonnerre', secret: true, hp: 140, speed: 168, atk: { type: 'hybride', range: 66, arc: 1.6, dmg: 22, cd: 0.55, loin: { speed: 520, dmg: 15, cd: 0.55, r: 8, life: 1.0 } }, power: { nom: 'Dictée foudroyante', cd: 9, portee: 380, saut: 220, dmg: [26, 20, 15, 10] }, dash: { nom: 'Saut périlleux', cd: 3, dist: 160, dur: 0.42 } },   // polyvalent : presque aussi fort que le guerrier de près, presque aussi fort que l'archer de loin
   archer:   { nom: 'Archer',   hp: 100, speed: 175, atk: { type: 'proj', speed: 600, dmg: 15, cd: 0.4, r: 6, life: 1.0 }, power: { nom: 'Pluie de flèches', cd: 8, count: 7, spread: 0.9, dmg: 10 }, dash: { nom: 'Saut arrière', cd: 3, dist: 130, dur: 0.22 } },
 };
 

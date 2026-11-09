@@ -4,7 +4,7 @@ const PX = 3;
 const OUT = '#1b1424';   // couleur des contours
 
 const CLS = {
-  guerrier: { nom: ['Guerrière', 'Guerrier'], ico: '⚔️', color: '#3a6fd8', desc: 'Très résistant. Épée et bouclier, au corps à corps.', pow: '🛡️ Bouclier : réduit les dégâts pendant 3 s', dash: '💨 Charge : fonce et bouscule' },
+  guerrier: { nom: ['Guerrière', 'Guerrier'], ico: '⚔️', color: '#3a6fd8', desc: 'Très résistant. Épée et bouclier, au corps à corps.', pow: '🛡️ Bouclier : réduit les dégâts pendant 2,5 s', dash: '💨 Charge : fonce et bouscule' },
   voleur:   { nom: ['Voleuse', 'Voleur'],     ico: '🗡️', color: '#d64545', desc: 'Rapide, corps à corps. Dégâts doublés en frappant dans le dos !', pow: '👤 Ombre : invisible 4 s, prochaine attaque +50 %', dash: '🌀 Roulade : esquive, invincible un instant' },
   mage:     { nom: ['Mage', 'Mage'],          ico: '🔮', color: '#8e4ce0', desc: 'Fragile mais puissant. Lance des boules de feu.', pow: '💥 Explosion : dégâts tout autour', dash: '✨ Téléportation : 3 cases plus loin' },
   druide:   { nom: ['Druidesse', 'Druide'],   ico: '🌿', color: '#5aa832', desc: 'Soigne son équipe. Lance des graines magiques.', pow: '🌿 Cercle de soin : soigne toi et tes coéquipiers proches', dash: '🍃 Bond : saute et laisse des racines qui ralentissent' },
