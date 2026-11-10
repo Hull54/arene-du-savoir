@@ -847,6 +847,12 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 .eq-slot img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 3px solid var(--rim); flex: none; }
 .eq-slot small { display: block; font-size: .75rem; opacity: .8; }
 .eq-slot.sel { border-color: var(--gold); background: rgba(227,171,69,.25); }
+.eq-nom { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 0 0 4px; border-bottom: 2px solid rgba(0,0,0,.12); font-size: 1.1rem; }
+.eq-nom input { font: inherit; font-weight: 700; letter-spacing: .05em; color: inherit; text-align: center; width: 9.5em; background: transparent; border: 2px dashed transparent; border-radius: 8px; padding: 2px 4px; }
+.eq-nom input:hover { border-color: rgba(0,0,0,.25); } .eq-nom input:focus { border-color: var(--gold); background: #fff8e6; outline: none; }
+.eq-nom::after { content: "✏️"; font-size: .8rem; opacity: .6; }
+.eq-slot.vide { justify-content: center; border: 2px dashed rgba(0,0,0,.25); background: transparent; color: var(--muted); }
+.eq-slot.vide b { font-size: 1.3rem; } .eqs.choix .eq-slot.vide { border-color: var(--gold); color: var(--ink); background: rgba(227,171,69,.12); }
 .fiche-fam .seg { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px; }
 /* ---------- menus structurés : boutons égaux, alignés, sur une seule ligne ---------- */
 .btn { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
@@ -9177,7 +9183,9 @@ function restaurerPartie(p) {
   S.grid = p.grid.map(r => r.split(""));
   for (const ph of p.heroes) { const h = S.heroes.find(x => x.cls === ph.cls); if (h) Object.assign(h, ph); }
   // une partie à 2 ou 3 héros reste à 2 ou 3 héros
-  if (p.heroes.length >= 2) S.heroes = S.heroes.filter(h => p.heroes.some(ph => ph.cls === h.cls));
+  // … sauf si l'enseignant a changé la composition de l'équipe (menu Équipes) : on suit alors la fiche
+  const compo = FICHE && FICHE.id === EQUIPE && (FICHE.classes || []).filter(k => C[k]).length >= 2;
+  if (p.heroes.length >= 2 && !compo) S.heroes = S.heroes.filter(h => p.heroes.some(ph => ph.cls === h.cls));
   S.enemies = p.enemies.filter(pe => E[pe.type]).map(pe => { const d = E[pe.type]; return { ...pe, nom: d.nom, pvMax: pvMonstre(d.pv, S.heroes.length), deg: d.deg, boss: !!d.boss, bouge: false }; });
   S.nextId = S.enemies.length + 100;
   p.objets.forEach((po, i) => { if (S.objets[i]) Object.assign(S.objets[i], po); });
@@ -13471,6 +13479,25 @@ document.getElementById("m-pins").addEventListener("pointerdown", e => {
 document.getElementById("m-fiches").onclick = () => ouvrirEquipes();
 // Tableau de toutes les équipes : on voit les élèves, on ouvre les fiches, on échange deux élèves de place
 const CLES_ELEVE = ["heros", "stats", "badges", "titres", "attr", "familiers"];
+// Renommer une équipe : sa fiche, ses parties sauvegardées et sa progression dans la campagne prennent le nouveau nom
+async function renommerEquipe(ancien, neuf) {
+  try {
+    const parties = (await Stock.toutesParties()).filter(p => codeEquipe(p.equipe) === ancien);
+    let f = await Stock.equipe(ancien);
+    if (!f) { f = ficheVide(ancien); completerDepuisParties(f, parties); }
+    f = clone(f); f.id = neuf;
+    if (!(await Stock.sauverEquipe(f))) return false;
+    for (const p of parties) { const { id, ...reste } = p; if (!(await Stock.sauverPartie(p.quete, neuf, { ...reste, equipe: neuf }))) return false; }
+    await Stock.supprimerEquipe(ancien);
+    const c = campagne(), r = x => x === ancien ? neuf : x;
+    c.equipes = c.equipes.map(r); c.retirees = (c.retirees || []).map(r);
+    for (const k of ["prog", "vus"]) if (c[k] && c[k][ancien] !== undefined) { c[k][neuf] = c[k][ancien]; delete c[k][ancien]; }
+    if (VUE === ancien) VUE = neuf;
+    await Stock.sauverMonde(MONDE);
+    if (EQUIPE === ancien) { EQUIPE = neuf; if (S) S.repCle = (QUETE ? QUETE.id : "") + "|" + neuf; await chargerFiche(); if (S && S.phase !== "edit") { appliquerFiches(); render(); } }
+    return true;
+  } catch (err) { signaler(err); return false; }
+}
 async function ouvrirEquipes() {
   const camp = campagne();
   let fiches = [];
@@ -13485,22 +13512,35 @@ async function ouvrirEquipes() {
   if (!fiches.length && !aTest) return toast("Aucune équipe pour l'instant : elle se crée en lançant une quête.", 4000);
   const classesDe = f => { const c = (f.classes || []).filter(k => C[k]); return c.length >= 2 ? Object.keys(C).filter(k => c.includes(k)) : Object.keys(C); };
   let sel = null;
-  ouvrir(`<h2>👥 Équipes</h2><p class="sub">Touche un élève, puis une autre place : les deux élèves échangent leur place et gardent leur fiche. ✏️ Fiches : noms, portraits, races, attributs et familiers. 🗑 : supprimer une équipe.</p>
+  ouvrir(`<h2>👥 Équipes</h2><p class="sub">Touche un élève, puis une place : une place libre (＋) le déplace seul, un autre élève échange les deux places. Chaque élève garde sa fiche. Touche le nom d'une équipe pour le changer. ✏️ Fiches : noms, portraits, races, attributs et familiers.</p>
     <div class="eqs" id="eqs"></div>${aTest ? `<label class="check" style="justify-content:center"><input type="checkbox" id="eqs-test"${voirTest ? " checked" : ""}> Afficher l'équipe TEST</label>` : ""}<div class="row"><button class="btn" type="button" id="eqs-res">📥 Résultats des élèves (Excel)</button><button class="btn gold" type="button" id="eqs-ok">Fermer</button></div><p class="sub" id="eqs-msg" style="text-align:center"></p>`);
   const ct = document.getElementById("eqs-test");
   if (ct) ct.onchange = () => { try { localStorage.setItem("donjon-voir-test", ct.checked ? "1" : "0"); } catch {} modal.classList.remove("large"); modal.onclick = null; fermer(); ouvrirEquipes(); };
   modal.classList.add("large");
   const dessiner = () => {
-    document.getElementById("eqs").innerHTML = fiches.map((f, i) => `<div class="eq-col"><div class="eq-tete"><b>🚩 ${esc(f.id)}</b><button class="btn" type="button" data-fi="${i}">✏️ Fiches</button><button class="btn" type="button" data-sup="${i}" title="Supprimer l'équipe" aria-label="Supprimer l'équipe ${esc(f.id)}">🗑 Supprimer</button></div>`
+    document.getElementById("eqs").innerHTML = fiches.map((f, i) => `<div class="eq-col"><div class="eq-tete"><label class="eq-nom" title="Touche pour renommer l'équipe">🚩 <input data-ren="${i}" value="${esc(f.id)}" maxlength="12" autocomplete="off" aria-label="Nom de l'équipe ${esc(f.id)}"></label><button class="btn" type="button" data-fi="${i}">✏️ Fiches</button><button class="btn" type="button" data-sup="${i}" title="Supprimer l'équipe" aria-label="Supprimer l'équipe ${esc(f.id)}">🗑 Supprimer</button></div>`
       + classesDe(f).map(c => {
         const h = (f.heros || {})[c] || {}, niv = 1 + (((f.stats || {})[c] || {}).quetes || 0), t = (f.familiers || {})[c];
         const on = sel && sel.i === i && sel.c === c;
         return `<button type="button" class="eq-slot${on ? " sel" : ""}" data-i="${i}" data-c="${c}" style="--rim:${h.couleur || C[c].rim}"><img src="${MONIMG[portraitDe(c, h)] || IMG[c]}" alt=""><span><b>${esc(h.nom || C[c].nom)}</b><small>${C[c].nom} · Niv. ${niv}${t && FAM[t] ? " · " + FAM[t].ic + " " + FAM[t].nom : ""}</small></span></button>`;
-      }).join("") + `</div>`).join("");
+      }).join("") + Object.keys(C).filter(c => !classesDe(f).includes(c)).map(c => `<button type="button" class="eq-slot vide" data-i="${i}" data-c="${c}" data-vide="1" title="Place libre : ${C[c].nom}"><b>＋</b><span>Place libre<small>${C[c].nom}</small></span></button>`).join("") + `</div>`).join("");
+    document.getElementById("eqs").classList.toggle("choix", !!sel);
   };
   dessiner();
   return new Promise(resolve => {
-    const fin = () => { modal.classList.remove("large"); modal.onclick = null; fermer(); resolve(); };
+    const fin = () => { modal.classList.remove("large"); modal.onclick = null; modal.onchange = null; modal.oninput = null; fermer(); resolve(); };
+    modal.oninput = e => { const inp = e.target.closest("[data-ren]"); if (inp) { const c = codeEquipe(inp.value); if (inp.value !== c) inp.value = c; } };
+    modal.onchange = async e => {
+      const inp = e.target.closest("[data-ren]"); if (!inp) return;
+      const f = fiches[Number(inp.dataset.ren)], neuf = codeEquipe(inp.value);
+      if (!neuf || neuf === f.id) { inp.value = f.id; return; }
+      if (neuf === "TEST" || neuf === "CLASSE" || fiches.some(x => x.id === neuf) || (await Stock.equipe(neuf))) { inp.value = f.id; return toast(`Le nom ${neuf} est déjà pris. Choisis-en un autre.`, 4000); }
+      inp.disabled = true;
+      const ok = await renommerEquipe(f.id, neuf);
+      if (!ok) { inp.disabled = false; inp.value = f.id; return toast("Le changement de nom n'a pas fonctionné.", 4000); }
+      toast(`L'équipe ${f.id} s'appelle maintenant ${neuf}. Ses héros, ses parties et sa progression suivent.`, 4500);
+      fin(); ouvrirEquipes();
+    };
     modal.onclick = async e => {
       if (e.target.closest("#eqs-ok")) return fin();
       if (e.target.closest("#eqs-res")) { const m = document.getElementById("eqs-msg"); m.textContent = "Préparation du fichier…"; m.textContent = MSG_RESULTATS[await exporterResultats()] || MSG_RESULTATS.erreur; return; }
@@ -13521,6 +13561,23 @@ async function ouvrirEquipes() {
       }
       const b = e.target.closest(".eq-slot"); if (!b) return;
       const cible = { i: Number(b.dataset.i), c: b.dataset.c };
+      if (b.dataset.vide) {
+        if (!sel) return toast("Touche d'abord l'élève à déplacer, puis cette place libre.", 3500);
+        const A = fiches[sel.i], B = fiches[cible.i], ca = sel.c, cb = cible.c;
+        const resteA = classesDe(A).filter(c => c !== ca);
+        if (A !== B && resteA.length < 2) return toast(`L'équipe ${A.id} doit garder au moins 2 héros. Échange plutôt deux élèves.`, 4500);
+        const nom = ((A.heros || {})[ca] || {}).nom || C[ca].nom;
+        for (const k of CLES_ELEVE) { A[k] = A[k] || {}; B[k] = B[k] || {}; const v = A[k][ca]; delete A[k][ca]; delete B[k][cb]; if (v !== undefined) B[k][cb] = v; }
+        if (ca !== cb) delete B.familiers[cb];
+        const ordre = l => Object.keys(C).filter(c => l.includes(c));
+        if (A === B) A.classes = ordre([...resteA, cb]);
+        else { A.classes = ordre(resteA); B.classes = ordre([...classesDe(B), cb]); }
+        await Stock.sauverEquipe(A); if (B !== A) await Stock.sauverEquipe(B);
+        if (A.id === EQUIPE || B.id === EQUIPE) { await chargerFiche(); if (S && S.phase !== "edit") { appliquerFiches(); render(); } }
+        sel = null; dessiner(); bruit("coche");
+        toast(A === B ? `${nom} devient ${C[cb].nom} dans l'équipe ${A.id}.` : `${nom} passe dans l'équipe ${B.id}${ca !== cb ? ` (comme ${C[cb].nom})` : ""}. ${A.id} a maintenant ${resteA.length} héros, ${B.id} en a ${B.classes.length}.`, 4500);
+        return;
+      }
       if (!sel || (sel.i === cible.i && sel.c === cible.c)) { sel = sel ? null : cible; dessiner(); return; }
       const A = fiches[sel.i], B = fiches[cible.i], ca = sel.c, cb = cible.c;
       for (const k of CLES_ELEVE) {
