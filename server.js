@@ -2512,6 +2512,7 @@ const server = http.createServer((req, res) => {
   if (file === '/') file = '/index.html';
   if (file === '/prof') file = '/prof.html';
   if (file === '/guide') file = '/guide.html';
+  if (file === '/donjon' || file === '/donjon/') file = '/donjon/index.html';   // Classe et Donjon (page statique)
   if (file === '/planif') file = '/planif.html';
   if (file === '/resultats') file = '/resultats.html';
   if (file === '/ping') { res.writeHead(200, { 'Content-Type': 'text/plain' }); return res.end('ok'); }
