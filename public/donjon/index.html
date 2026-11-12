@@ -734,6 +734,10 @@ html.rm .ind-eclat, html.rm .ind-poussiere, html.rm .ind-braise, html.rm .ind-ru
 .indice-q { min-height: 0; margin: 6px 0; text-align: center; }
 .indice-q p { margin: 4px 0; padding: 6px 10px; font-size: 1.1rem; font-weight: 700; color: #123f75; background: #dcebfb; border: 2px solid #2f6db3; border-radius: 10px; }
 .indice-q .ind-btn { font-size: .95rem; padding: 6px 12px; animation: ind-appel 1.6s ease-in-out 2; }
+/* Épreuve de calcul : la place de l'indice est réservée d'avance, pour que l'ardoise ne bouge jamais pendant qu'on écrit */
+.indice-q.fixe { height: 64px; box-sizing: border-box; overflow-y: auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; margin: 4px 0; }
+.indice-q.fixe p { margin: 0; padding: 3px 10px; font-size: 1rem; }
+.indice-q.fixe .ind-btn { margin: 0; }
 @keyframes ind-appel { 50% { box-shadow: 0 0 0 4px rgba(255,214,120,.45); } }
 .choices button.barre { opacity: .35; text-decoration: line-through; }
 
@@ -11102,7 +11106,7 @@ function epreuveMath(op, titre, danger) {
     const des = DIFF === "facile";
     const diceHtml = des ? (op === "÷" ? `<div class="dice"><span class="x">Diviseur</span><div class="die" id="d2">${D12}<b>?</b></div></div>` : `<div class="dice"><div class="die" id="d1">${D12}<b>?</b></div><span class="x">${op}</span><div class="die" id="d2">${D12}<b>?</b></div></div>`) : "";
     ouvrir(`<h2>${titre}</h2><p class="sub">Épreuve : ${opNom}</p>${diceHtml}<div class="big" id="q">&nbsp;</div>
-      <div class="ans" id="ans" aria-live="polite"></div><div class="indice-q" id="iq" aria-live="polite"></div>
+      <div class="ans" id="ans" aria-live="polite"></div><div class="indice-q fixe" id="iq" aria-live="polite"></div>
       <div class="calc-zone">${!des ? `<div class="ardoise"><canvas id="ardoise" aria-label="Ardoise pour calculer"></canvas><button type="button" class="btn" id="ard-eff">Effacer l'ardoise</button></div>` : ""}
       <div class="pad" id="pad">${[7, 8, 9, 4, 5, 6, 1, 2, 3].map(n => `<button type="button" data-k="${n}">${n}</button>`).join("")}
       <button type="button" class="del" data-k="del">Effacer</button><button type="button" data-k="0">0</button><button type="button" class="ok" data-k="ok" aria-label="Valider">✓</button></div></div>`, danger);
