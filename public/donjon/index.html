@@ -121,6 +121,15 @@ body.editing .board { cursor: crosshair; }
 .float { position: absolute; left: 0; top: 0; width: var(--cell); text-align: center; font-family: var(--body); font-weight: 700; font-size: calc(var(--cell)*.4);
   pointer-events: none; text-shadow: 0 2px 0 #000, 0 0 8px #000; animation: rise 1.1s ease-out forwards; z-index: 30; }
 @keyframes rise { from { opacity: 1; translate: 0 0; } to { opacity: 0; translate: 0 calc(var(--cell) * -.8); } }
+.arme { position: absolute; left: 0; top: 0; z-index: 60; pointer-events: none; transform-origin: 50% 50%; }
+.arme svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.arme.fleche { width: calc(var(--cell)*1.05); height: calc(var(--cell)*.24); margin: calc(var(--cell)*-.12) 0 0 calc(var(--cell)*-.52); filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
+.arme.orbe { width: calc(var(--cell)*.6); height: calc(var(--cell)*.6); margin: calc(var(--cell)*-.3) 0 0 calc(var(--cell)*-.3); border-radius: 50%; background: radial-gradient(circle at 42% 38%, #fffbe0 0 14%, #ffd34d 28%, #ff8a1c 50%, #e23b12 66%, rgba(200,40,0,0) 74%); filter: drop-shadow(0 0 12px #ff7a1a) drop-shadow(0 0 4px #ffcf5a); }
+.arme.etincelle { width: calc(var(--cell)*.26); height: calc(var(--cell)*.26); margin: calc(var(--cell)*-.13) 0 0 calc(var(--cell)*-.13); border-radius: 50%; background: radial-gradient(circle, #ffe27a 0 30%, #ff7a1a 60%, rgba(255,80,0,0) 72%); }
+.arme.onde { width: calc(var(--cell)*1.3); height: calc(var(--cell)*1.3); margin: calc(var(--cell)*-.65) 0 0 calc(var(--cell)*-.65); border-radius: 50%; background: radial-gradient(circle, rgba(255,240,180,.95) 0 20%, rgba(255,150,30,.85) 40%, rgba(220,50,10,.6) 60%, rgba(120,20,0,0) 72%); }
+.arme.trace { width: calc(var(--cell)*1.5); height: calc(var(--cell)*1.5); margin: calc(var(--cell)*-.75) 0 0 calc(var(--cell)*-.75); border-radius: 50%; border-top: calc(var(--cell)*.14) solid #fffaf0; box-sizing: border-box; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 3px #ffe9a8); }
+.arme.epee { width: calc(var(--cell)*.32); height: calc(var(--cell)*1.3); margin: calc(var(--cell)*-1.3) 0 0 calc(var(--cell)*-.16); transform-origin: 50% 100%; filter: drop-shadow(0 0 4px rgba(255,255,255,.7)) drop-shadow(0 3px 3px rgba(0,0,0,.5)); }
+.arme.dague { width: calc(var(--cell)*.22); height: calc(var(--cell)*.78); margin: calc(var(--cell)*-.78) 0 0 calc(var(--cell)*-.11); transform-origin: 50% 100%; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
 .proj { position: absolute; left: 0; top: 0; width: calc(var(--cell)*.24); height: calc(var(--cell)*.24); margin: calc(var(--cell)*-.12) 0 0 calc(var(--cell)*-.12); border-radius: 50%; z-index: 25; pointer-events: none; }
 
 .menu { position: absolute; z-index: 40; background: var(--panel); border: 1px solid var(--gold); border-radius: 12px; padding: 10px; display: grid; gap: 8px; min-width: 210px; max-width: 280px;
@@ -9779,10 +9788,57 @@ function projectile(from, to, color) {
   const a = `translate(${(from.x + .5) * CELL}px, ${(from.y + .5) * CELL}px)`, b = `translate(${(to.x + .5) * CELL}px, ${(to.y + .5) * CELL}px)`;
   return p.animate([{ transform: a + " scale(.6)" }, { transform: b + " scale(1.2)" }], { duration: 120 + dist(from, to) * 60, easing: "ease-in" }).finished.then(() => p.remove(), () => p.remove());
 }
+// Chaque classe attaque avec son arme : flèche (archer), boule de feu (mage), slash d'épée (guerrier), deux dagues (voleur)
+const ARMES_SVG = {
+  fleche: `<svg viewBox="0 0 80 18"><path d="M6 9h58" stroke="#6b4423" stroke-width="3" stroke-linecap="round"/><path d="M62 3l16 6-16 6z" fill="#c9ced6" stroke="#3a3f47" stroke-width="1.5"/><path d="M2 3l10 6-10 6M8 3l10 6-10 6" fill="none" stroke="#e8d9b0" stroke-width="2.5"/></svg>`,
+  epee: `<svg viewBox="0 0 26 104"><path d="M13 2l6 10v58h-12V12z" fill="#e9eef4" stroke="#57606b" stroke-width="1.5"/><path d="M13 8v60" stroke="#aab4bf" stroke-width="1.5"/><rect x="1" y="70" width="24" height="6" rx="2" fill="#b8892f" stroke="#5a3e12" stroke-width="1.2"/><rect x="10" y="76" width="6" height="20" rx="2" fill="#6b3f1f"/><circle cx="13" cy="99" r="4" fill="#d8a83b" stroke="#5a3e12" stroke-width="1.2"/></svg>`,
+  dague: `<svg viewBox="0 0 16 56"><path d="M8 1l5 8v26H3V9z" fill="#dfe5ec" stroke="#4b525b" stroke-width="1.3"/><rect x="0" y="35" width="16" height="4" rx="1.5" fill="#3d3f46"/><rect x="5.5" y="39" width="5" height="14" rx="2" fill="#2a2320"/></svg>`,
+};
+function armeEl(cls, html) { const a = document.createElement("div"); a.className = "arme " + cls; if (html) a.innerHTML = html; ents.appendChild(a); return a; }
+const centre = c => [(c.x + .5) * CELL, (c.y + .5) * CELL];
+async function animArme(h, e) {
+  if (RM.matches) return C[h.cls].portee > 1 ? projectile(h, e, C[h.cls].proj) : entaille(e);
+  const [x1, y1] = centre(h), [x2, y2] = centre(e), ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI, dur = 140 + dist(h, e) * 55;
+  const fin = (el, a) => a.finished.then(() => el.remove(), () => el.remove());
+  if (h.cls === "archer") {
+    const f = armeEl("fleche", ARMES_SVG.fleche);
+    await fin(f, f.animate([{ transform: `translate(${x1}px,${y1}px) rotate(${ang}deg) scale(.8)` }, { transform: `translate(${x2}px,${y2}px) rotate(${ang}deg) scale(1)` }], { duration: dur, easing: "cubic-bezier(.3,.1,.9,.6)" }));
+    entaille(e); return;
+  }
+  if (h.cls === "mage") {
+    const o = armeEl("orbe");
+    for (let i = 1; i <= 4; i++) setTimeout(() => {
+      const t = i / 5, s = armeEl("etincelle"), px = x1 + (x2 - x1) * t, py = y1 + (y2 - y1) * t;
+      fin(s, s.animate([{ transform: `translate(${px}px,${py}px) scale(1)`, opacity: .9 }, { transform: `translate(${px + (Math.random() - .5) * CELL * .4}px,${py + CELL * .25}px) scale(.2)`, opacity: 0 }], { duration: 420, easing: "ease-out" }));
+    }, dur * i / 5);
+    await fin(o, o.animate([{ transform: `translate(${x1}px,${y1}px) scale(.4)` }, { transform: `translate(${(x1 + x2) / 2}px,${(y1 + y2) / 2 - CELL * .3}px) scale(1)`, offset: .5 }, { transform: `translate(${x2}px,${y2}px) scale(1.15)` }], { duration: dur * 1.2, easing: "ease-in" }));
+    const w = armeEl("onde");
+    fin(w, w.animate([{ transform: `translate(${x2}px,${y2}px) scale(.2)`, opacity: 1 }, { transform: `translate(${x2}px,${y2}px) scale(1.25)`, opacity: 0 }], { duration: 380, easing: "ease-out" }));
+    return;
+  }
+  if (h.cls === "guerrier") {
+    // grand slash : l'épée balaie la case de l'ennemi en laissant un croissant de lumière, puis le plateau tremble un peu
+    const s = armeEl("epee", ARMES_SVG.epee), rad = ang * Math.PI / 180, bx = x2 - Math.cos(rad) * CELL * .6, by = y2 - Math.sin(rad) * CELL * .6;
+    const a0 = ang + 90 - 70, a1 = ang + 90 + 70, tr = armeEl("trace");
+    fin(tr, tr.animate([{ transform: `translate(${x2}px,${y2}px) rotate(${ang - 30}deg) scale(.6)`, opacity: 0 }, { transform: `translate(${x2}px,${y2}px) rotate(${ang}deg) scale(.9)`, opacity: 0, offset: .3 },
+      { transform: `translate(${x2}px,${y2}px) rotate(${ang + 40}deg) scale(1)`, opacity: 1, offset: .55 }, { transform: `translate(${x2}px,${y2}px) rotate(${ang + 70}deg) scale(1.1)`, opacity: 0 }], { duration: 520, easing: "ease-out" }));
+    await fin(s, s.animate([{ transform: `translate(${bx}px,${by}px) rotate(${a0 - 20}deg)`, opacity: 0 }, { transform: `translate(${bx}px,${by}px) rotate(${a0}deg)`, opacity: 1, offset: .25 },
+      { transform: `translate(${bx}px,${by}px) rotate(${a1}deg)`, opacity: 1, offset: .75 }, { transform: `translate(${bx}px,${by}px) rotate(${a1 + 8}deg)`, opacity: 0 }], { duration: 440, easing: "cubic-bezier(.5,0,.4,1)" }));
+    entaille(e); ents.animate([{ translate: "0 0" }, { translate: "3px -2px" }, { translate: "-3px 2px" }, { translate: "0 0" }], { duration: 180 });
+    return;
+  }
+  // voleur (et toute autre classe au corps à corps) : deux coups de dague rapides, en croix
+  for (const [k, dec] of [[-1, -35], [1, 35]]) {
+    const d = armeEl("dague", ARMES_SVG.dague), px = x2 + k * CELL * .18, py = y2 + CELL * .3;
+    await fin(d, d.animate([{ transform: `translate(${px}px,${py}px) rotate(${dec}deg) translateY(30%)`, opacity: 0 }, { transform: `translate(${px}px,${py}px) rotate(${dec}deg) translateY(-25%)`, opacity: 1, offset: .5 },
+      { transform: `translate(${px}px,${py}px) rotate(${dec}deg) translateY(10%)`, opacity: 0 }], { duration: 230, easing: "ease-out" }));
+    entaille(e);
+  }
+}
 async function frapper(h, e) {
   S.frappeur = h;
-  if (C[h.cls].portee > 1) { await anim(h, "tir", e); bruit(h.cls === "mage" ? "magie" : "fleche"); await projectile(h, e, C[h.cls].proj); }
-  else { bruit("epee"); await anim(h, "lunge", e); entaille(e); }
+  if (C[h.cls].portee > 1) { anim(h, "tir", e); await new Promise(r => setTimeout(r, 200)); bruit(h.cls === "mage" ? "magie" : "fleche"); await animArme(h, e); }
+  else { bruit("epee"); anim(h, "lunge", e); await animArme(h, e); }
 }
 
 // ---------- sons, musique, ambiance et météo (tout est généré : aucun fichier à charger) ----------
