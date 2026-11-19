@@ -728,6 +728,13 @@ const NOTIONS = {
   maths: {
     calcul: "Calcul (+ − × ÷)",
     numeration: "Numération (position, premiers, carrés, exposants)",
+    temps: "Mesure du temps et durée",
+    fracsens: "Sens des fractions et fractions sur la droite numérique",
+    multpos: "Multiplication posée (3 chiffres × 2 chiffres)",
+    solides: "Solides (prismes, pyramides, développements)",
+    aire: "Aire et volume",
+    entiers: "Nombres entiers (négatifs) sur la droite numérique",
+    transfo: "Translation, frise et dallage",
     arrondi: "Arrondir (approximation)",
     divis: "Divisibilité, division avec reste, facteurs",
     pemdas: "Priorité des opérations et terme manquant",
@@ -742,6 +749,9 @@ const NOTIONS = {
     triangles: "Triangles",
     cartesien: "Plan cartésien",
     decimaux: "Nombres décimaux (lire, comparer, arrondir)",
+    decrep: "Nombres décimaux : représentation, comparaison et ordre",
+    cercle: "Le cercle (centre, rayon, diamètre, circonférence)",
+    longueur: "Mesures de longueur (mm, cm, dm, m, km)",
     opdec: "Opérations sur les nombres décimaux",
     multfrac: "Multiplication de fractions",
     stats: "Diagrammes (bandes, ligne brisée, circulaire)",
@@ -751,7 +761,9 @@ const NOTIONS = {
   fr: {
     vocab: "Homophones et vocabulaire",
     variables: "Classes de mots variables",
+    manip: "Manipulations syntaxiques",
     phrase: "Phrase de base et constituants",
+    enrichie: "Phrase de base enrichie",
     gn: "Groupe du nom et accords dans le GN",
     inv: "Classes de mots invariables",
     accverbe: "Accord du verbe avec le sujet",
@@ -776,16 +788,17 @@ const NOTIONS = {
 const NOTIONS_DEFAUT = { maths: ["calcul"], fr: ["vocab", "conj"] };
 // La planification de l'année : les notions de chaque mois
 const MOIS_NOTIONS = {
-  septembre: { nom: "Septembre", maths: ["numeration", "calcul"], fr: ["variables", "phrase", "c_pres", "vocab"] },
-  octobre: { nom: "Octobre", maths: ["arrondi", "divis", "pemdas", "moyenne"], fr: ["gn", "c_imp", "vocab"] },
-  novembre: { nom: "Novembre", maths: ["equiv", "reduc", "compfrac", "addfrac", "pourcent"], fr: ["inv", "accverbe", "c_fut"] },
-  decembre: { nom: "Décembre", maths: ["droites", "angles", "triangles", "cartesien"], fr: ["ponct", "c_ps"] },
-  janvier: { nom: "Janvier", maths: ["compfrac", "divis", "decimaux"], fr: ["sens", "c_cond"] },
-  fevrier: { nom: "Février", maths: ["decimaux", "opdec", "multfrac"], fr: ["types", "c_impe"] },
-  mars: { nom: "Mars", maths: ["stats", "moyenne"], fr: ["pp", "c_pc"] },
-  avril: { nom: "Avril", maths: ["mesures"], fr: ["compl", "c_pqp"] },
-  mai: { nom: "Mai", maths: ["proba"], fr: ["pp", "ppa", "c_comp"] },
-  juin: { nom: "Juin (révision)", maths: ["calcul", "equiv", "decimaux", "angles", "stats", "mesures", "proba"], fr: ["gn", "accverbe", "compl", "ppa", "c_pc", "c_fut"] },
+  // Maths : suite des sections des Irréductibles 5e (Superplanification A et B), au rythme de la classe (novembre = sections 7 à 10)
+  septembre: { nom: "Septembre", maths: ["numeration", "angles", "temps"], fr: ["manip", "phrase", "variables", "c_pres", "vocab"] },
+  octobre: { nom: "Octobre", maths: ["droites", "triangles", "fracsens", "arrondi", "multpos"], fr: ["gn", "c_imp", "vocab"] },
+  novembre: { nom: "Novembre", maths: ["equiv", "reduc", "decrep", "cercle", "longueur"], fr: ["inv", "enrichie", "accverbe", "c_fut"] },
+  decembre: { nom: "Décembre", maths: ["compfrac", "numeration", "divis"], fr: ["ponct", "c_ps"] },
+  janvier: { nom: "Janvier", maths: ["decimaux", "opdec", "solides", "stats"], fr: ["sens", "c_cond"] },
+  fevrier: { nom: "Février", maths: ["numeration", "pourcent", "aire", "solides", "entiers"], fr: ["types", "c_impe"] },
+  mars: { nom: "Mars", maths: ["moyenne", "stats", "pemdas", "opdec", "addfrac"], fr: ["pp", "c_pc"] },
+  avril: { nom: "Avril", maths: ["mesures", "cartesien", "addfrac", "proba"], fr: ["compl", "c_pqp"] },
+  mai: { nom: "Mai", maths: ["pemdas", "divis", "multfrac", "opdec", "transfo", "proba"], fr: ["pp", "ppa", "c_comp"] },
+  juin: { nom: "Juin (révision)", maths: ["multpos", "equiv", "decimaux", "opdec", "aire", "stats", "mesures", "proba"], fr: ["gn", "accverbe", "compl", "ppa", "c_pc", "c_fut"] },
 };
 const QUETE_MOIS = { "rentree-academie": "septembre", "octobre-ferme": "octobre", "halloween-vladislav": "octobre", "novembre-lugubre": "novembre", "decembre-noel": "decembre",
   "janvier-yeti": "janvier", "fevrier-valentin": "fevrier", "mars-sorciers": "mars", "avril-paques": "avril", "mai-cite": "mai", "juin-depart": "juin" };
@@ -864,7 +877,7 @@ function genDivis() {
 }
 function genPemdas() {
   const t = ri(0, 5), a = ri(2, 12), b = ri(2, 9), c = ri(2, 9);
-  if (t === 0) return qc(`Combien vaut ${a} + ${b} × ${c}?`, a + b * c, [(a + b) * c, a * b + c, a + b + c], `On fait la multiplication d'abord : ${b} × ${c} = ${b * c}, puis ${a} + ${b * c} = ${a + b * c}.`);
+  if (t === 0) return qc(`Combien vaut ${a} + ${b} × ${c}?`, a + b * c, [(a + b) * c, a * b + c, a + b + c, a + b * c + 1, a + b * c - 1], `On fait la multiplication d'abord : ${b} × ${c} = ${b * c}, puis ${a} + ${b * c} = ${a + b * c}.`);
   if (t === 1) return qc(`Combien vaut (${a} + ${b}) × ${c}?`, (a + b) * c, [a + b * c, a * b + c, a + b + c], `Les parenthèses d'abord : ${a} + ${b} = ${a + b}, puis × ${c} = ${(a + b) * c}.`);
   if (t === 2) { const x = b * c + ri(1, 9); return qc(`Combien vaut ${x} − ${b} × ${c}?`, x - b * c, [(x - b) * c, x - b - c, x - b * c + 2], `La multiplication d'abord : ${b} × ${c} = ${b * c}, puis ${x} − ${b * c} = ${x - b * c}.`); }
   if (t === 3) { const q = ri(2, 9), d = b * q; return qc(`Combien vaut ${a} + ${d} ÷ ${b}?`, a + q, [(a + d) % b ? a + q + 2 : (a + d) / b, a + d + b, a + q - 1, a * q], `La division d'abord : ${d} ÷ ${b} = ${q}, puis ${a} + ${q} = ${a + q}.`); }
@@ -1006,8 +1019,8 @@ function genCartesien() {
 }
 // ---------- Janvier et février : nombres décimaux ----------
 const PDEC = ["dixièmes", "centièmes", "millièmes"];
-function genDecimaux() {
-  const t = ri(0, 4);
+function genDecimaux(t) {
+  if (t === undefined) t = ri(0, 4);
   if (t === 0) {
     const e = ri(1, 99), d = String(ri(100, 999)), p = ri(0, 2), n = `${e},${d}`, c = d[p];
     return qc(`Dans ${n}, quel chiffre est à la position des ${PDEC[p]}?`, c, mel([...new Set((String(e) + d).split(""))]).concat(["0", "5", "9"]), "Après la virgule : dixièmes, centièmes, millièmes.");
@@ -1137,10 +1150,26 @@ function genProba() {
 const VB1 = ["parler", "chanter", "jouer", "danser", "regarder", "marcher", "écouter", "sauter", "gagner", "trouver", "chercher", "explorer", "aider", "dessiner"];
 const VB2 = ["finir", "choisir", "grandir", "réussir", "remplir", "bâtir", "obéir", "réfléchir", "agir", "applaudir", "nourrir"];
 const SUJ = [["Je"], ["Tu"], ["Le chevalier", "La magicienne", "Il", "Elle", "Mon ami"], ["Nous", "Mon frère et moi"], ["Vous", "Ton amie et toi"], ["Les gobelins", "Ils", "Elles", "Les archères"]];
-const IRR = {
-  être: { present: "suis es est sommes êtes sont", imparfait: "étais étais était étions étiez étaient", futur: "serai seras sera serons serez seront", cond: "serais serais serait serions seriez seraient", ps: "fus fus fut fûmes fûtes furent" },
-  avoir: { present: "ai as a avons avez ont", imparfait: "avais avais avait avions aviez avaient", futur: "aurai auras aura aurons aurez auront", cond: "aurais aurais aurait aurions auriez auraient", ps: "eus eus eut eûmes eûtes eurent" },
-  aller: { present: "vais vas va allons allez vont", imparfait: "allais allais allait allions alliez allaient", futur: "irai iras ira irons irez iront", cond: "irais irais irait irions iriez iraient", ps: "allai allas alla allâmes allâtes allèrent" },
+// Verbes par bloc du document d'étude (5e) : Bloc 1 avoir, être, aimer, aller; Bloc 2 partir, venir, tenir, devoir;
+// Bloc 3 pouvoir, vouloir, savoir, voir; Bloc 4 faire, mettre, prendre, rendre, dire. (aimer suit le 1er groupe)
+// pres = présent; fut = radical du futur et du conditionnel; ps = passé simple; impe = impératif (tu, nous, vous); ppr = participe présent; pp = participe passé
+const BLOCS = {
+  avoir: { bloc: 1, pres: "ai as a avons avez ont", fut: "aur", ps: "eus eus eut eûmes eûtes eurent", impe: "aie ayons ayez", ppr: "ayant", pp: "eu" },
+  être: { bloc: 1, pres: "suis es est sommes êtes sont", imp: "ét", fut: "ser", ps: "fus fus fut fûmes fûtes furent", impe: "sois soyons soyez", ppr: "étant", pp: "été" },
+  aller: { bloc: 1, pres: "vais vas va allons allez vont", fut: "ir", ps: "allai allas alla allâmes allâtes allèrent", impe: "va allons allez", ppr: "allant", pp: "allé", etre: true },
+  partir: { bloc: 2, pres: "pars pars part partons partez partent", fut: "partir", ps: "partis partis partit partîmes partîtes partirent", impe: "pars partons partez", ppr: "partant", pp: "parti", etre: true },
+  venir: { bloc: 2, pres: "viens viens vient venons venez viennent", fut: "viendr", ps: "vins vins vint vînmes vîntes vinrent", impe: "viens venons venez", ppr: "venant", pp: "venu", etre: true },
+  tenir: { bloc: 2, pres: "tiens tiens tient tenons tenez tiennent", fut: "tiendr", ps: "tins tins tint tînmes tîntes tinrent", impe: "tiens tenons tenez", ppr: "tenant", pp: "tenu" },
+  devoir: { bloc: 2, pres: "dois dois doit devons devez doivent", fut: "devr", ps: "dus dus dut dûmes dûtes durent", impe: "dois devons devez", ppr: "devant", pp: "dû" },
+  pouvoir: { bloc: 3, pres: "peux peux peut pouvons pouvez peuvent", fut: "pourr", ps: "pus pus put pûmes pûtes purent", impe: null, ppr: "pouvant", pp: "pu" },
+  vouloir: { bloc: 3, pres: "veux veux veut voulons voulez veulent", fut: "voudr", ps: "voulus voulus voulut voulûmes voulûtes voulurent", impe: "veuille veuillons veuillez", ppr: "voulant", pp: "voulu" },
+  savoir: { bloc: 3, pres: "sais sais sait savons savez savent", fut: "saur", ps: "sus sus sut sûmes sûtes surent", impe: "sache sachons sachez", ppr: "sachant", pp: "su" },
+  voir: { bloc: 3, pres: "vois vois voit voyons voyez voient", fut: "verr", ps: "vis vis vit vîmes vîtes virent", impe: "vois voyons voyez", ppr: "voyant", pp: "vu" },
+  faire: { bloc: 4, pres: "fais fais fait faisons faites font", fut: "fer", ps: "fis fis fit fîmes fîtes firent", impe: "fais faisons faites", ppr: "faisant", pp: "fait" },
+  mettre: { bloc: 4, pres: "mets mets met mettons mettez mettent", fut: "mettr", ps: "mis mis mit mîmes mîtes mirent", impe: "mets mettons mettez", ppr: "mettant", pp: "mis" },
+  prendre: { bloc: 4, pres: "prends prends prend prenons prenez prennent", fut: "prendr", ps: "pris pris prit prîmes prîtes prirent", impe: "prends prenons prenez", ppr: "prenant", pp: "pris" },
+  rendre: { bloc: 4, pres: "rends rends rend rendons rendez rendent", fut: "rendr", ps: "rendis rendis rendit rendîmes rendîtes rendirent", impe: "rends rendons rendez", ppr: "rendant", pp: "rendu" },
+  dire: { bloc: 4, pres: "dis dis dit disons dites disent", fut: "dir", ps: "dis dis dit dîmes dîtes dirent", impe: "dis disons dites", ppr: "disant", pp: "dit" },
 };
 const TERMS = {
   1: { present: "e es e ons ez ent", imparfait: "ais ais ait ions iez aient", ps: "ai as a âmes âtes èrent" },
@@ -1149,36 +1178,71 @@ const TERMS = {
 const AUX = { pc: "present", pqp: "imparfait", fa: "futur", cp: "cond" };
 const NOM_TEMPS = { present: "au présent", imparfait: "à l'imparfait", futur: "au futur simple", ps: "au passé simple", cond: "au conditionnel présent", pc: "au passé composé", pqp: "au plus-que-parfait", fa: "au futur antérieur", cp: "au conditionnel passé" };
 const AIDE_TEMPS = {
-  present: "Au présent : -e, -es, -e, -ons, -ez, -ent (1er groupe) et -is, -is, -it, -issons, -issez, -issent (2e groupe).",
-  imparfait: "À l'imparfait : -ais, -ais, -ait, -ions, -iez, -aient.",
-  futur: "Au futur simple, on garde l'infinitif et on ajoute -ai, -as, -a, -ons, -ez, -ont.",
-  cond: "Au conditionnel présent, on garde l'infinitif et on ajoute les terminaisons de l'imparfait : -ais, -ais, -ait, -ions, -iez, -aient.",
-  ps: "Au passé simple : -ai, -as, -a, -âmes, -âtes, -èrent (1er groupe) et -is, -is, -it, -îmes, -îtes, -irent (2e groupe).",
-  pc: "Passé composé = auxiliaire avoir au présent + participe passé (-é pour le 1er groupe, -i pour le 2e).",
-  pqp: "Plus-que-parfait = auxiliaire avoir à l'imparfait + participe passé.",
-  fa: "Futur antérieur = auxiliaire avoir au futur simple + participe passé.",
-  cp: "Conditionnel passé = auxiliaire avoir au conditionnel présent + participe passé.",
+  present: "Au présent : -e, -es, -e, -ons, -ez, -ent (1er groupe) et -s, -s, -t, -ons, -ez, -ent (2e groupe : fini-s, finiss-ons).",
+  imparfait: "À l'imparfait : -ais, -ais, -ait, -ions, -iez, -aient (le 2e groupe double le s : finissais).",
+  futur: "Au futur simple : -rai, -ras, -ra, -rons, -rez, -ront.",
+  cond: "Au conditionnel présent : -rais, -rais, -rait, -rions, -riez, -raient.",
+  ps: "Au passé simple : -a / -èrent (1er groupe) et -it / -irent (2e groupe). Le 3e groupe : -it, -ut ou -int.",
+  pc: "Passé composé = auxiliaire avoir ou être au présent + participe passé.",
+  pqp: "Plus-que-parfait = auxiliaire avoir ou être à l'imparfait + participe passé.",
+  fa: "Futur antérieur = auxiliaire avoir ou être au futur simple + participe passé.",
+  cp: "Conditionnel passé = auxiliaire avoir ou être au conditionnel présent + participe passé.",
 };
-const ppDe = (inf, g) => inf.slice(0, -2) + (g === 1 ? "é" : "i");
+const L6 = s => s.split(" ");
 function formeSimple(inf, g, t, p) {
-  if (IRR[inf]) return IRR[inf][t].split(" ")[p];
-  if (t === "futur") return inf + "ai as a ons ez ont".split(" ")[p];
-  if (t === "cond") return inf + "ais ais ait ions iez aient".split(" ")[p];
-  return inf.slice(0, -2) + TERMS[g][t].split(" ")[p];
+  const b = BLOCS[inf];
+  if (b) {
+    if (t === "present") return L6(b.pres)[p];
+    if (t === "imparfait") return (b.imp || L6(b.pres)[3].slice(0, -3)) + L6("ais ais ait ions iez aient")[p];
+    if (t === "futur") return b.fut + L6("ai as a ons ez ont")[p];
+    if (t === "cond") return b.fut + L6("ais ais ait ions iez aient")[p];
+    if (t === "ps") return L6(b.ps)[p];
+  }
+  if (t === "futur") return inf + L6("ai as a ons ez ont")[p];
+  if (t === "cond") return inf + L6("ais ais ait ions iez aient")[p];
+  return inf.slice(0, -2) + L6(TERMS[g][t])[p];
 }
-function forme(inf, g, t, p) { return AUX[t] ? formeSimple("avoir", 0, AUX[t], p) + " " + ppDe(inf, g) : formeSimple(inf, g, t, p); }
+const ppDe = (inf, g) => BLOCS[inf] ? BLOCS[inf].pp : inf.slice(0, -2) + (g === 1 ? "é" : "i");
+const avecEtre = inf => !!(BLOCS[inf] && BLOCS[inf].etre);
+// gn : genre et nombre du sujet (ex. « fp »), pour accorder le participe passé avec être
+function forme(inf, g, t, p, gn) {
+  if (!AUX[t]) return formeSimple(inf, g, t, p);
+  const aux = avecEtre(inf) ? "être" : "avoir", pp = ppDe(inf, g);
+  return formeSimple(aux, 0, AUX[t], p) + " " + (aux === "être" && gn ? pp + (gn[0] === "f" ? "e" : "") + (gn[1] === "p" ? "s" : "") : pp);
+}
 const VOIS = { present: ["imparfait", "ps"], imparfait: ["cond", "present"], futur: ["cond", "present"], cond: ["futur", "imparfait"], ps: ["present", "imparfait"], pc: ["pqp", "fa"], pqp: ["pc", "cp"], fa: ["cp", "pc"], cp: ["fa", "pqp"] };
+// Sujets à la 3e personne, avec leur genre et leur nombre
+const SUJ3 = { 2: [["Le chevalier", "ms"], ["La magicienne", "fs"], ["Il", "ms"], ["Elle", "fs"], ["On", "ms"]], 5: [["Les gobelins", "mp"], ["Les archères", "fp"], ["Ils", "mp"], ["Elles", "fp"]] };
 function questionTemps(temps) {
   if (temps === "impe") return questionImperatif();
-  const irr = !AUX[temps] && Math.random() < .25, inf = irr ? pk(Object.keys(IRR)) : Math.random() < .55 ? pk(VB1) : pk(VB2), g = irr ? 0 : VB1.includes(inf) ? 1 : 2;
-  const p = ri(0, 5), bon = forme(inf, g, temps, p), sujet = pk(SUJ[p]);
-  const leurres = [...VOIS[temps].map(t => forme(inf, g, t, p)), ...mel([0, 1, 2, 3, 4, 5].filter(q => q !== p)).map(q => forme(inf, g, temps, q))];
-  if (AUX[temps] && g) leurres.splice(1, 0, formeSimple("avoir", 0, AUX[temps], p) + " " + (g === 1 ? inf : ppDe(inf, g) + "t"));
+  const bloc = Math.random() < .6, inf = bloc ? pk(Object.keys(BLOCS)) : Math.random() < .6 ? pk(VB1.concat(["aimer"])) : pk(VB2), g = BLOCS[inf] ? 0 : VB2.includes(inf) ? 2 : 1;
+  // Passé simple et temps composés (sauf le passé composé) : 3e personne seulement, comme au programme de 5e
+  const troisieme = temps === "ps" || temps === "pqp" || temps === "fa" || temps === "cp" || (AUX[temps] && avecEtre(inf));
+  const p = troisieme ? pk([2, 5]) : ri(0, 5);
+  let sujet, gn = null;
+  if (p === 2 || p === 5) [sujet, gn] = pk(SUJ3[p]); else sujet = pk(SUJ[p]);
+  const bon = forme(inf, g, temps, p, gn);
+  const leurres = VOIS[temps].map(t => forme(inf, g, t, p, gn));
+  if (AUX[temps]) {
+    const aux = formeSimple(avecEtre(inf) ? "être" : "avoir", 0, AUX[temps], p), pp = ppDe(inf, g);
+    if (avecEtre(inf)) leurres.unshift(aux + " " + pk([pp, pp + "e", pp + "s", pp + "es"].filter(x => aux + " " + x !== bon)), formeSimple("avoir", 0, AUX[temps], p) + " " + pp);
+    else leurres.unshift(aux + " " + (BLOCS[inf] ? L6(BLOCS[inf].ps)[2] : g === 1 ? inf : pp + "t"));
+  }
+  leurres.push(...mel([0, 1, 2, 3, 4, 5].filter(q => q !== p)).map(q => forme(inf, g, temps, q, gn)));
   const s = sujet === "Je" && /^[aeéèêiouh]/i.test(bon) ? "J'" : sujet + " ";
-  const table = irr ? IRR[inf][temps].split(" ").map((x, i) => ["je", "tu", "il", "nous", "vous", "ils"][i] + " " + x).join(", ").replace(/^je ([aeéi])/, "j'$1") : "";
-  return qc(`Conjugue « ${inf} » ${NOM_TEMPS[temps]} : ${s}___`, bon, leurres, irr ? `« ${inf} » est un verbe irrégulier, il faut le connaître par cœur : ${table}.` : AIDE_TEMPS[temps]);
+  let expl = AIDE_TEMPS[temps];
+  if (BLOCS[inf] && !AUX[temps]) expl = `« ${inf} » (bloc ${BLOCS[inf].bloc}) ${NOM_TEMPS[temps]} : ` + (temps === "ps" ? `il ${formeSimple(inf, 0, "ps", 2)}, ils ${formeSimple(inf, 0, "ps", 5)}` : [0, 1, 2, 3, 4, 5].map(q => ["je", "tu", "il", "nous", "vous", "ils"][q] + " " + formeSimple(inf, 0, temps, q)).join(", ").replace(/^je ([aeéi])/, "j'$1")) + ".";
+  else if (AUX[temps]) expl += avecEtre(inf) ? ` « ${inf} » se conjugue avec être : le participe passé s'accorde avec le sujet (${bon.split(" ")[1]}).` : ` Participe passé de « ${inf} » : ${ppDe(inf, g)}.`;
+  return qc(`Conjugue « ${inf} » ${NOM_TEMPS[temps]} : ${s}___`, bon, leurres, expl);
 }
 function questionImperatif() {
+  const bloc = Math.random() < .6;
+  if (bloc) {
+    const inf = pk(Object.keys(BLOCS).filter(v => BLOCS[v].impe)), b = BLOCS[inf];
+    if (Math.random() < .35) return qc(`Quel est le participe présent de « ${inf} »?`, b.ppr, [b.pp, L6(b.pres)[5], L6(b.pres)[3].replace(/ons$/, "ant") === b.ppr ? inf.replace(/(er|ir|re|oir)$/, "ant") : L6(b.pres)[3].replace(/ons$/, "ant"), formeSimple(inf, 0, "imparfait", 2)], "Le participe présent se termine par -ant. Il ne change jamais.");
+    const k = ri(0, 2), f = L6(b.impe), bon = f[k], qui = ["2e personne du singulier (tu)", "1re personne du pluriel (nous)", "2e personne du pluriel (vous)"][k];
+    return qc(`Impératif présent de « ${inf} », ${qui} : ___!`, bon, [L6(b.pres)[[1, 3, 4][k]], ...f.filter(x => x !== bon), formeSimple(inf, 0, "futur", [1, 3, 4][k])], `Impératif de « ${inf} » : ${f.join(", ")}. Pas de sujet à l'impératif.`);
+  }
   const inf = Math.random() < .6 ? pk(VB1) : pk(VB2), g = VB1.includes(inf) ? 1 : 2, r = inf.slice(0, -2);
   if (Math.random() < .35) { const bon = r + (g === 1 ? "ant" : "issant"); return qc(`Quel est le participe présent de « ${inf} »?`, bon, [r + (g === 1 ? "é" : "i"), g === 1 ? r + "ent" : r + "ant", r + (g === 1 ? "er" : "issent"), r + (g === 1 ? "ont" : "isant")], "Le participe présent se termine par -ant (en chantant, en finissant). Il ne change jamais."); }
   const k = ri(0, 2), f = (g === 1 ? ["e", "ons", "ez"] : ["is", "issons", "issez"]), bon = r + f[k], qui = ["2e personne du singulier (tu)", "1re personne du pluriel (nous)", "2e personne du pluriel (vous)"][k];
@@ -1211,6 +1275,19 @@ function questionPPA() {
   const S = s[0].toUpperCase() + s.slice(1);
   return qc(`${S} a ___ (${inf}) ${g.un} ${g.n}.`, pp, formesPP(pp), `Le complément direct « ${g.un} ${g.n} » est placé APRÈS le verbe : le participe passé avec avoir ne s'accorde pas.`);
 }
+const ACC_REGLES = [
+  ["Avec le sujet « on », le verbe se met à…", ["la 3e personne du singulier", "la 1re personne du pluriel", "la 3e personne du pluriel", "l'infinitif"], 0, "« On est beaucoup à parler d'environnement. »"],
+  ["Complète : « On ___ (aller) au château ce soir. »", ["va", "allons", "vont", "vas"], 0, "Avec « on », le verbe est à la 3e personne du singulier."],
+  ["Complète : « Le groupe se ___ (réunir) le samedi. »", ["réunit", "réunissent", "réunis", "réunissons"], 0, "« groupe » est un nom collectif : 3e personne du singulier."],
+  ["Complète : « La foule ___ (applaudir) les chevaliers. »", ["applaudit", "applaudissent", "applaudis", "applaudissons"], 0, "« foule » est un nom collectif : le verbe est au singulier."],
+  ["Complète : « L'équipe ___ (gagner) souvent. »", ["gagne", "gagnent", "gagnes", "gagnons"], 0, "« équipe » est un nom collectif : 3e personne du singulier."],
+  ["Complète : « Tu nous ___ (téléphoner) demain. » (futur)", ["téléphoneras", "téléphonerons", "téléphonera", "téléphonerez"], 0, "« nous » est un pronom complément (écran). Le sujet est « tu » : C'est tu qui…"],
+  ["Complète : « Les dragons le ___ (regarder). »", ["regardent", "regarde", "regardes", "regardez"], 0, "« le » est un pronom écran. Le sujet est « Les dragons »."],
+  ["Complète : « Il doit savoir ___ ce verbe. »", ["conjuguer", "conjugué", "conjugue", "conjuguez"], 0, "Quand deux verbes se suivent, le 2e se met à l'infinitif."],
+  ["Complète : « Nous allons ___ le trésor. »", ["chercher", "cherché", "cherchons", "cherchez"], 0, "Deux verbes qui se suivent : le 2e est à l'infinitif."],
+  ["Complète : « Il a ___ le trésor. »", ["trouvé", "trouver", "trouve", "trouvez"], 0, "Attention : après « avoir » ou « être », la règle de l'infinitif ne s'applique pas. C'est un participe passé."],
+  ["Comment trouve-t-on le sujet pour accorder le verbe?", ["On l'encadre par « C'est… qui »", "On l'encadre par « ne… pas »", "On cherche le premier mot", "On cherche le mot avant le verbe"], 0, "C'est… qui encadre le sujet."],
+];
 function questionAccVerbe() {
   const t = ri(0, 4), trans = ["regarder", "écouter", "aider", "chercher", "dessiner", "choisir", "nourrir", "applaudir", "remplir"];
   const inf = t === 4 ? pk(trans) : Math.random() < .6 ? pk(VB1) : pk(VB2), g = VB1.includes(inf) ? 1 : 2, f = p => formeSimple(inf, g, "present", p);
@@ -1223,10 +1300,62 @@ function questionAccVerbe() {
   return choix(`${s} les ___ (${inf}) en silence. (présent)`, 2, `« les » n'est pas le sujet : c'est un pronom complément. Le sujet est « ${s} » (singulier).`);
 }
 
+// Pluriel et féminin dans le GN (règles du document d'étude)
+const PLUR = [["un radis", "des radis", ["des radiss", "des radix"], "Les noms en -s, -x, -z ne changent pas au pluriel."], ["une noix", "des noix", ["des noixs", "des noixes"], "Les noms en -s, -x, -z ne changent pas au pluriel."], ["un nez", "des nez", ["des nezs", "des nezes"], "Les noms en -s, -x, -z ne changent pas au pluriel."],
+  ["un bateau", "des bateaux", ["des bateaus", "des bateau"], "Les noms en -au et -eu prennent un x."], ["un cheveu", "des cheveux", ["des cheveus", "des cheveu"], "Les noms en -au et -eu prennent un x."], ["un pneu", "des pneus", ["des pneux", "des pneu"], "Exception : pneus, bleus, landaus et sarraus prennent un s."],
+  ["un cristal", "des cristaux", ["des cristals", "des cristaus"], "Les noms en -al font -aux."], ["un cheval", "des chevaux", ["des chevals", "des chevaus"], "Les noms en -al font -aux."], ["un festival", "des festivals", ["des festivaux", "des festivaus"], "Exception : bals, carnavals, festivals, chacals, récitals prennent un s."], ["un carnaval", "des carnavals", ["des carnavaux", "des carnavaus"], "Exception : bals, carnavals, festivals… prennent un s."],
+  ["un chandail", "des chandails", ["des chandaux", "des chandailx"], "Les noms en -ail prennent un s."], ["un travail", "des travaux", ["des travails", "des travailx"], "Exceptions : bail → baux, corail → coraux, travail → travaux, vitrail → vitraux."], ["un vitrail", "des vitraux", ["des vitrails", "des vitrailx"], "Exceptions : travail → travaux, vitrail → vitraux…"],
+  ["un bambou", "des bambous", ["des bamboux", "des bambou"], "Les noms en -ou prennent un s."], ["un caillou", "des cailloux", ["des caillous", "des caillou"], "Exceptions en -oux : bijoux, cailloux, choux, genoux, hiboux, joujoux, poux."], ["un hibou", "des hiboux", ["des hibous", "des hibou"], "Exceptions en -oux : bijoux, cailloux, choux, genoux, hiboux, joujoux, poux."], ["un genou", "des genoux", ["des genous", "des genou"], "Exceptions en -oux : bijoux, cailloux, choux, genoux…"], ["un trou", "des trous", ["des troux", "des trou"], "Les noms en -ou prennent un s (sauf les 7 exceptions en -oux)."]];
+const FEM = [["un boulanger", "une boulangère", ["une boulangerre", "une boulangeuse"], "Les noms en -er font -ère ou -ière."], ["un droitier", "une droitière", ["une droitiere", "une droitièrre"], "Les noms en -er font -ère ou -ière."], ["un comédien", "une comédienne", ["une comédiene", "une comédientte"], "Les noms en -en et -on doublent la consonne finale : -enne, -onne."],
+  ["un baron", "une baronne", ["une barone", "une baronnesse"], "Les noms en -on doublent la consonne : -onne."], ["un acteur", "une actrice", ["une acteuse", "une acteure"], "Les noms en -teur font souvent -trice."], ["un nageur", "une nageuse", ["une nagetrice", "une nageure"], "Les noms en -eur font -euse."], ["un enseignant", "une enseignante", ["une enseignent", "une enseignantte"], "En général, on ajoute un e."],
+  ["dernier", "dernière", ["derniere", "dernièrre"], "Les adjectifs en -ier font -ière."], ["ancien", "ancienne", ["anciene", "ancienn"], "Les adjectifs en -en, -on, -et, -ot doublent la consonne finale."], ["créateur", "créatrice", ["créateuse", "créatrisse"], "Les adjectifs en -teur font -trice (ou -euse)."], ["craintif", "craintive", ["craintife", "craintiffe"], "Les adjectifs en -if font -ive."], ["heureux", "heureuse", ["heureuxe", "heureusse"], "Les adjectifs en -eux font -euse."], ["vieil", "vieille", ["vieile", "vieil"], "Les adjectifs en -eil doublent la consonne et prennent un e."], ["muet", "muette", ["muete", "muètte"], "Les adjectifs en -et doublent la consonne : -ette."], ["rapide", "rapide", ["rapidee", "rapidte"], "Un adjectif qui finit déjà par un e muet ne change pas au féminin."]];
+function questionAccordGN() {
+  const t = ri(0, 3);
+  if (t === 0) { const [a, b, l, e] = pk(PLUR); return qc(`Quel est le pluriel de « ${a} »?`, b, l.concat([b.replace(/x$/, "s").replace(/aux$/, "als")]), e); }
+  if (t === 1) { const [a, b, l, e] = pk(FEM); return qc(`Quel est le féminin de « ${a} »?`, b, l.concat([a.replace(/^un /, "une ")]), e); }
+  if (t === 2) return pk([qc("Complète : « Des robes ___ »", "jaunes", ["jaune", "jaunent", "jaunies"], "L'adjectif de couleur en un seul mot s'accorde."), qc("Complète : « Des robes jaune ___ »", "clair", ["claires", "clairs", "claire"], "Une couleur exprimée par deux mots (jaune clair) ne s'accorde pas."), qc("Complète : « Des chandails ___ »", "orange", ["oranges", "orangés", "orangent"], "« orange » est aussi un fruit : la couleur qui représente un objet ne s'accorde pas."), qc("Complète : « Des yeux ___ »", "marron", ["marrons", "marronnes", "marronne"], "« marron » est un objet (le fruit) : il ne s'accorde pas.")]);
+  return pk([qc("Comment écrit-on 80?", "quatre-vingts", ["quatre-vingt", "quatres-vingts", "quatre vingt"], "Vingt prend un s quand il est multiplié et termine le nombre."), qc("Comment écrit-on 300?", "trois-cents", ["trois-cent", "troi-cents", "trois cent"], "Cent prend un s quand il est multiplié et termine le nombre."), qc("Comment écrit-on 82?", "quatre-vingt-deux", ["quatre-vingts-deux", "quatres-vingt-deux", "quatre-vingt-deuxs"], "Vingt ne prend pas de s s'il ne termine pas le nombre."), qc("Comment écrit-on 230?", "deux-cent-trente", ["deux-cents-trente", "deux-cent-trentes", "deuxs-cent-trente"], "Cent ne prend pas de s s'il ne termine pas le nombre.")]);
+}
+
 // ---------- Banques de questions écrites ----------
 const BANQUE_FR = {
+  manip: [
+    ["Quelle manipulation consiste à supprimer un mot pour voir s'il est obligatoire?", ["L'effacement", "Le déplacement", "Le remplacement", "L'encadrement"], 0, "L'effacement : on enlève un mot ou un groupe pour voir s'il est obligatoire ou facultatif."],
+    ["Quelle manipulation consiste à changer la place d'un groupe dans la phrase?", ["Le déplacement", "L'effacement", "L'ajout", "Le remplacement"], 0, "Le déplacement : on change la place d'un élément pour voir s'il est obligatoire ou facultatif."],
+    ["Remplacer « Gérard » par « Il », c'est quelle manipulation?", ["Le remplacement", "L'ajout", "L'encadrement", "Le déplacement"], 0, "Le remplacement : on change un mot par un autre ou par un équivalent (nom → pronom)."],
+    ["Ajouter « très » devant un mot pour voir si c'est un adjectif, c'est…", ["l'ajout (l'addition)", "l'effacement", "le déplacement", "l'encadrement"], 0, "L'ajout sert à identifier la classe d'un mot : on peut ajouter « très » devant un adjectif."],
+    ["Avec quelle manipulation trouve-t-on le sujet?", ["L'encadrement par « C'est… qui »", "L'effacement", "Le déplacement", "L'ajout de « très »"], 0, "« C'est Gérard qui marche » : l'encadrement par C'est… qui montre le sujet."],
+    ["Avec quelle manipulation trouve-t-on le verbe conjugué?", ["L'encadrement par « ne… pas »", "L'encadrement par « C'est… qui »", "Le déplacement", "L'ajout de « très »"], 0, "« Gérard ne marche pas » : le verbe se laisse encadrer par ne… pas."],
+    ["Quel constituant peut être effacé ET déplacé?", ["Le complément de phrase", "Le sujet", "Le prédicat", "Le verbe"], 0, "Le complément de phrase est facultatif et mobile. Le sujet et le prédicat ne s'effacent pas et ne se déplacent pas."],
+    ["Le sujet peut-il être effacé?", ["Non", "Oui", "Seulement s'il est court", "Seulement au début"], 0, "Le sujet est obligatoire : on ne peut pas l'effacer ni le déplacer."],
+    ["Dans « Gérard marche au parc », quel groupe peut-on déplacer?", ["au parc", "Gérard", "marche", "Gérard marche"], 0, "« Au parc, Gérard marche. » : c'est le complément de phrase."],
+    ["Quelle manipulation ne fonctionne PAS avec le complément de phrase?", ["L'encadrement", "L'effacement", "Le déplacement", "Le remplacement"], 0, "Le complément de phrase s'efface, se déplace, se remplace et accepte l'ajout, mais ne s'encadre pas."],
+    ["Quelle phrase montre l'encadrement du sujet?", ["C'est le dragon qui garde le trésor.", "Le dragon ne garde pas le trésor.", "Il garde le trésor.", "Le trésor, le dragon le garde."], 0, "C'est… qui encadre le sujet « le dragon »."],
+    ["Quel mot ne peut pas être effacé dans un GN?", ["Le nom (noyau)", "L'adjectif", "Le complément du nom", "Aucun"], 0, "Le nom est le noyau du GN : on ne peut pas l'effacer."],
+    ["Quelle classe de mots peut être encadrée par « ne… pas »?", ["Le verbe", "Le nom", "L'adjectif", "Le déterminant"], 0, "Seul le verbe conjugué se laisse encadrer par ne… pas."],
+    ["Quel mot peut être précédé de « très »?", ["Un adjectif", "Un nom", "Un verbe", "Un déterminant"], 0, "On peut ajouter « très » devant un adjectif : très gros."],
+  ],
+  enrichie: [
+    ["Une phrase de base enrichie est toujours…", ["déclarative et affirmative", "interrogative et négative", "impérative", "exclamative"], 0, "Comme la phrase de base, elle est déclarative et affirmative, mais elle contient plus de détails."],
+    ["Quelle est la différence entre une phrase de base et une phrase de base enrichie?", ["L'enrichie contient des mots qui précisent et donnent plus d'informations.", "L'enrichie n'a pas de sujet.", "L'enrichie est toujours une question.", "Il n'y a aucune différence."], 0, "On ajoute des adjectifs, des adverbes, des compléments du nom…"],
+    ["Quelle phrase est une phrase de base enrichie de « La maison est lugubre. »?", ["La petite maison très abîmée est excessivement lugubre.", "La maison est-elle lugubre?", "La maison n'est pas lugubre.", "Quelle maison lugubre!"], 0, "Elle reste déclarative et affirmative, avec plus de détails."],
+    ["Dans « La petite maison très abîmée aux fenêtres brisées est lugubre. », quel est le sujet?", ["La petite maison très abîmée aux fenêtres brisées", "La petite maison", "aux fenêtres brisées", "est lugubre"], 0, "Le sujet est tout le GN enrichi : C'est… qui le prouve."],
+    ["Dans « Au bout de la clairière lointaine, la maison est lugubre. », quel est le complément de phrase?", ["Au bout de la clairière lointaine", "la maison", "est lugubre", "lointaine"], 0, "Il peut être déplacé ou effacé."],
+    ["Dans « Le vieux dragon dort profondément dans sa grotte humide. », quel est le prédicat?", ["dort profondément", "Le vieux dragon", "dans sa grotte humide", "humide"], 0, "Le prédicat contient le verbe et ce qui le complète. « dans sa grotte humide » est un complément de phrase."],
+    ["Quel mot enrichit le GN « le chevalier »?", ["courageux", "court", "rapidement", "et"], 0, "Un adjectif comme « courageux » ajoute une précision au nom."],
+    ["Quel mot enrichit le verbe dans « Le loup hurle. »?", ["fort", "le", "loup", "et"], 0, "« Le loup hurle fort » : l'adverbe précise le verbe."],
+    ["Laquelle n'est PAS une phrase de base enrichie?", ["Le grand dragon ne dort pas.", "Le grand dragon dort paisiblement.", "Le grand dragon rouge dort.", "Ce soir, le grand dragon dort."], 0, "Elle est négative : une phrase de base (enrichie ou non) est affirmative."],
+    ["Quelle phrase contient un complément du nom?", ["Les fenêtres de la tour sont brisées.", "Les fenêtres sont brisées.", "Hier, les fenêtres ont été brisées.", "Les fenêtres sont très brisées."], 0, "« de la tour » complète le nom « fenêtres »."],
+  ],
   ponct: [
     ["Quelle phrase est une phrase complexe?", ["Le dragon dort et le chevalier attend.", "Le dragon dort dans sa grotte.", "Le petit dragon vert.", "Demain matin, le dragon dormira."], 0, "Une phrase complexe contient deux verbes conjugués (deux phrases réunies)."],
+    ["Quel mot peut servir de coordonnant pour former une phrase complexe?", ["parce que", "très", "dans", "rapidement"], 0, "Phrase de base + coordonnant (mais, et, car, parce que…) + phrase de base = phrase complexe."],
+    ["Où va la virgule? « La potion est amère mais elle te guérira. »", ["Avant « mais »", "Après « mais »", "Après « potion »", "Il n'en faut pas"], 0, "On met une virgule avant les conjonctions « mais » et « car »."],
+    ["Où va la virgule? « Tout d'abord j'aimerais vous parler des dragons. »", ["Après « Tout d'abord »", "Après « j'aimerais »", "Après « parler »", "Il n'en faut pas"], 0, "On met une virgule après un marqueur de relation (tout d'abord, cependant, en effet, premièrement…)."],
+    ["Quelle phrase est bien ponctuée?", ["Le chevalier boit tous les matins une potion.", "Le chevalier boit une potion, tous les matins.", "Le chevalier, boit une potion tous les matins.", "Le chevalier boit, une potion tous les matins."], 0, "Un complément de phrase à la fin de la phrase ne prend pas de virgule."],
+    ["Quelle phrase est bien ponctuée?", ["Le mage prépare, chaque soir, une potion magique.", "Le mage prépare chaque soir, une potion magique.", "Le mage, prépare chaque soir une potion magique.", "Le mage prépare, chaque soir une potion magique."], 0, "Un complément de phrase au milieu de la phrase est encadré par deux virgules."],
+    ["« Allons manger, Grand-maman! » Que change la virgule?", ["On invite Grand-maman à manger avec nous.", "On va manger Grand-maman.", "Rien du tout.", "On pose une question."], 0, "La virgule marque une petite pause et change le sens de la phrase!"],
+    ["En lecture, que signifie une virgule?", ["Une demi-pause", "Une longue pause", "La fin de la phrase", "Une question"], 0, "La virgule sépare des mots ou des groupes de mots et signifie une demi-pause."],
     ["Combien de verbes conjugués y a-t-il dans une phrase complexe?", ["Au moins deux", "Un seul", "Aucun", "Toujours trois"], 0, "Chaque verbe conjugué forme une phrase à l'intérieur de la phrase complexe."],
     ["Dans « Le loup hurle, la lune brille. », qu'est-ce qui relie les deux phrases?", ["Une virgule", "Le mot « et »", "Un point", "Le mot « mais »"], 0, "Ici, les deux phrases sont juxtaposées : elles sont séparées par une virgule."],
     ["Quel mot peut relier deux phrases pour former une phrase complexe?", ["mais", "très", "le", "rapide"], 0, "« mais » est une conjonction : elle peut relier deux phrases."],
@@ -1234,16 +1363,13 @@ const BANQUE_FR = {
     ["Quelle phrase est bien ponctuée?", ["J'ai acheté des pommes, des poires et des bananes.", "J'ai acheté des pommes des poires, et des bananes.", "J'ai acheté, des pommes, des poires, et des bananes.", "J'ai acheté des pommes des poires et des bananes."], 0, "Dans une énumération, on met une virgule entre les éléments, sauf devant le dernier « et »."],
     ["Dans une énumération, on ne met habituellement pas de virgule…", ["devant « et »", "après le premier mot", "entre deux noms", "entre deux adjectifs"], 0, "« des pommes, des poires et des bananes » : pas de virgule devant « et »."],
     ["Quel signe annonce les paroles d'un personnage?", ["Le deux-points (:)", "Le point (.)", "La virgule (,)", "Le point d'exclamation (!)"], 0, "Le deux-points annonce qu'un personnage va parler."],
-    ["Dans un dialogue, quel signe indique qu'un nouveau personnage parle?", ["Le tiret (—)", "La virgule (,)", "Le point-virgule (;)", "Le point (.)"], 0, "Chaque changement d'interlocuteur commence par un tiret, sur une nouvelle ligne."],
+    ["Dans un dialogue, quel signe indique qu'un nouveau personnage parle?", ["Le tiret (-)", "La virgule (,)", "Le point-virgule (;)", "Le point (.)"], 0, "Chaque changement d'interlocuteur commence par un tiret, sur une nouvelle ligne."],
     ["Quels signes ouvrent et ferment un dialogue?", ["Les guillemets « »", "Les parenthèses ( )", "Les crochets [ ]", "Les points de suspension …"], 0, "Le dialogue s'ouvre avec « et se ferme avec »."],
     ["Quelle phrase est bien ponctuée?", ["Le roi demanda : « Qui a pris ma couronne? »", "Le roi demanda « Qui a pris ma couronne? »", "Le roi demanda, qui a pris ma couronne.", "Le roi demanda : qui a pris ma couronne »"], 0, "Deux-points, puis guillemets autour des paroles."],
-    ["Dans « — Où vas-tu? demanda la fée. », que signifie « demanda la fée »?", ["C'est une incise : elle dit qui parle.", "C'est le titre du texte.", "C'est un complément de phrase.", "C'est une erreur."], 0, "L'incise indique qui parle. Le sujet est placé après le verbe."],
     ["Où faut-il une virgule? « Léa range sa chambre et son frère lave la vaisselle. »", ["Il n'en faut pas", "Après « Léa »", "Après « chambre »", "Après « frère »"], 0, "Deux phrases reliées par « et » n'ont habituellement pas besoin de virgule."],
-    ["Quelle phrase complexe est formée avec une subordonnée?", ["Je mange parce que j'ai faim.", "Je mange une pomme rouge.", "Je mange, je bois.", "Je mange et je bois."], 0, "« parce que j'ai faim » dépend de la première phrase : c'est une subordonnée."],
     ["Quel mot ne peut PAS relier deux phrases?", ["avec", "et", "mais", "car"], 0, "« avec » est une préposition : elle introduit un groupe de mots, pas une phrase."],
     ["Quelle phrase contient une virgule bien placée?", ["Pendant l'hiver, les ours dorment.", "Pendant, l'hiver les ours dorment.", "Pendant l'hiver les ours, dorment.", "Les ours, dorment pendant l'hiver."], 0, "On ne sépare jamais le sujet de son verbe par une virgule."],
     ["Laquelle est une phrase complexe?", ["Quand la cloche sonne, les élèves rentrent.", "Les élèves rentrent à l'école.", "Dans la cour, les élèves jouent.", "Les élèves de 5e année."], 0, "Deux verbes conjugués : « sonne » et « rentrent »."],
-    ["À quoi servent les points de suspension (…)?", ["À montrer qu'une phrase n'est pas terminée ou une hésitation", "À poser une question", "À annoncer une énumération", "À fermer un dialogue"], 0, "« Je… je ne sais pas… » : on hésite ou on laisse la phrase en suspens."],
   ],
   sens: [
     ["Quel mot fait partie de la même famille que « terre »?", ["terrain", "tard", "tirer", "tête"], 0, "« terrain », « terrasse », « enterrer » viennent tous de « terre »."],
@@ -1252,7 +1378,24 @@ const BANQUE_FR = {
     ["Quel mot fait partie de la même famille que « lait »?", ["laitier", "laid", "laisser", "lacet"], 0, "Lait, laitier, laitage, allaiter : le radical « lait » se retrouve dans chacun."],
     ["Dans « impossible », que veut dire le préfixe « im- »?", ["Le contraire (pas)", "Encore une fois", "Avant", "Très"], 0, "Im-possible = pas possible."],
     ["Dans « refaire », que veut dire le préfixe « re- »?", ["Encore une fois", "Le contraire", "Petit", "Avant"], 0, "Refaire = faire encore une fois."],
-    ["Quel suffixe veut dire « petit »?", ["-et (comme dans « jardinet »)", "-ment", "-eur", "-able"], 0, "Un jardinet, c'est un petit jardin; un livret, un petit livre."],
+    ["Quel suffixe veut dire « petit » (diminutif)?", ["-ette (comme dans « fillette »)", "-logie", "-able", "-mètre"], 0, "-ette est un diminutif : une fillette, c'est une petite fille."],
+    ["Que veut dire le préfixe « multi- »?", ["Plusieurs", "Deux", "Contre", "Petit"], 0, "Multicolore = de plusieurs couleurs."],
+    ["Que veut dire le préfixe « bi- »?", ["Deux", "Plusieurs", "Petit", "Répétition"], 0, "Une bicyclette a deux roues."],
+    ["Que veut dire le préfixe « micro- »?", ["Petit", "Grand", "Contre", "Deux"], 0, "Un microbe est un tout petit être vivant."],
+    ["Que veut dire le préfixe « anti- »?", ["Contre", "Avant", "Plusieurs", "Petit"], 0, "Un antivol protège contre le vol."],
+    ["Que veut dire le préfixe « para- »?", ["Protection", "Répétition", "Deux", "Petit"], 0, "Un parapluie protège de la pluie."],
+    ["Que veut dire le suffixe « -logie »?", ["Science", "Mesure", "Angle", "Qui écrit"], 0, "La biologie est la science du vivant."],
+    ["Que veut dire le suffixe « -mètre »?", ["Mesure de…", "Science", "Petit", "Qui écrit"], 0, "Un thermomètre mesure la température."],
+    ["Que veut dire le suffixe « -gone »?", ["Angle", "Mesure", "Science", "Petit"], 0, "Un hexagone a six angles."],
+    ["Que veut dire le suffixe « -able »?", ["Que l'on peut", "Contraire", "Petit", "Science"], 0, "Lavable = que l'on peut laver."],
+    ["Que veut dire le suffixe « -graphe »?", ["Qui écrit", "Mesure", "Angle", "Contre"], 0, "Un photographe « écrit » avec la lumière."],
+    ["Comment est formé le mot « imprécision »?", ["Préfixe + mot de base + suffixe", "Seulement un préfixe", "Seulement un suffixe", "C'est un mot composé"], 0, "Im + précis + ion : préfixe ET suffixe."],
+    ["Lequel est un mot composé?", ["arc-en-ciel", "jardinage", "refaire", "antivol"], 0, "Un mot composé réunit plusieurs mots. Les autres sont des mots dérivés."],
+    ["Lequel est un mot dérivé?", ["jardinage", "grand-père", "arc-en-ciel", "tout à coup"], 0, "Jardin + -age : on a ajouté un suffixe à un mot existant."],
+    ["« Légumes » est un mot…", ["générique", "spécifique", "composé", "figuré"], 0, "Un mot générique a un sens général. Carotte, chou et oignon sont des mots spécifiques."],
+    ["Quel mot est spécifique dans l'ensemble « fruits »?", ["fraise", "fruits", "nourriture", "dessert"], 0, "Un mot spécifique est précis dans un ensemble."],
+    ["Quel mot est générique pour « marteau, tournevis, scie »?", ["outils", "clou", "bois", "atelier"], 0, "Le mot générique englobe tous les mots spécifiques."],
+    ["Quel mot fait partie de la même famille que « art »?", ["artistique", "arbre", "arrêt", "armure"], 0, "Art, artiste, artistique : même mot de base."],
     ["Quel est le radical de « chanteuse »?", ["chant", "chanteu", "euse", "anteu"], 0, "Chant-eur, chant-er, chant-euse : le radical est « chant »."],
     ["Quel est un synonyme de « content »?", ["heureux", "triste", "fâché", "fatigué"], 0, "Des synonymes ont presque le même sens."],
     ["Quel est un synonyme de « débuter »?", ["commencer", "terminer", "arrêter", "oublier"], 0, "Débuter = commencer."],
@@ -1277,19 +1420,24 @@ const BANQUE_FR = {
     ["Par quel signe se termine une phrase interrogative?", ["?", ".", "!", ":"], 0, "Le point d'interrogation."],
     ["Quelle phrase est impérative?", ["Fermez la porte, s'il vous plaît.", "Vous fermez la porte.", "Fermez-vous la porte?", "Vous avez fermé la porte!"], 0, "Le verbe est à l'impératif, sans sujet."],
     ["Quelle phrase est interrogative?", ["Est-ce que tu viens avec nous?", "Tu viens avec nous.", "Viens avec nous.", "Comme tu es gentil de venir!"], 0, "« Est-ce que » sert à poser une question."],
-    ["Quelle est la forme de la phrase « Le dragon ne dort pas. »?", ["Négative", "Positive", "Interrogative", "Impérative"], 0, "« ne… pas » : forme négative."],
-    ["Mets à la forme négative : « Je mange des légumes. »", ["Je ne mange pas de légumes.", "Je mange pas des légumes.", "Je ne mange des légumes.", "Je mange ne pas de légumes."], 0, "La négation a deux mots : « ne » avant le verbe et « pas » après."],
-    ["Quelle phrase est à la forme positive?", ["Le magicien a trouvé sa baguette.", "Le magicien n'a rien trouvé.", "Le magicien ne trouve jamais sa baguette.", "Le magicien n'a plus sa baguette."], 0, "Elle ne contient pas de mots de négation."],
+    ["Quelle est la forme de la phrase « Le dragon ne dort pas. »?", ["Négative", "Affirmative", "Interrogative", "Impérative"], 0, "« ne… pas » : forme négative."],
+    ["Mets à la forme négative : « Je mange des légumes. »", ["Je ne mange pas de légumes.", "Je mange pas des légumes.", "Je ne mange des légumes.", "Je mange ne pas de légumes."], 0, "Le marqueur de négation a deux mots (deux adverbes) : « ne » avant le verbe et « pas » après."],
+    ["Quelle phrase est à la forme affirmative?", ["Le magicien a trouvé sa baguette.", "Le magicien n'a rien trouvé.", "Le magicien ne trouve jamais sa baguette.", "Le magicien n'a plus sa baguette."], 0, "Elle ne contient pas de mots de négation."],
     ["Quel groupe de mots marque une négation?", ["ne… jamais", "est-ce que", "s'il vous plaît", "très"], 0, "ne… pas, ne… jamais, ne… plus, ne… rien sont des négations."],
     ["Quelle phrase négative est bien écrite?", ["On n'a pas fini.", "On a pas fini.", "On n'a fini pas.", "On ne a pas fini."], 0, "Devant une voyelle, « ne » devient « n' ». Il ne faut pas l'oublier!"],
     ["Transforme en phrase interrogative : « Tu aimes la musique. »", ["Aimes-tu la musique?", "Aime la musique.", "Comme tu aimes la musique!", "Tu n'aimes pas la musique."], 0, "On peut inverser le sujet et le verbe, avec un trait d'union."],
-    ["« Ne touche pas à ça! » est une phrase…", ["impérative et négative", "déclarative et positive", "interrogative et négative", "exclamative et positive"], 0, "Un ordre (impératif) avec « ne… pas » (négative)."],
+    ["« Ne touche pas à ça! » est une phrase…", ["impérative et négative", "déclarative et affirmative", "interrogative et négative", "exclamative et affirmative"], 0, "Un ordre (impératif) avec « ne… pas » (négative)."],
     ["Une phrase déclarative se termine habituellement par…", ["un point", "un point d'interrogation", "un deux-points", "une virgule"], 0, "Elle donne une information : point."],
     ["Laquelle est une phrase exclamative?", ["Que cette potion est puissante!", "Cette potion est puissante.", "Bois cette potion.", "Est-ce que cette potion est puissante?"], 0, "« Que… ! » exprime une émotion."],
     ["Quelle phrase n'a pas de sujet?", ["Écoute bien.", "Tu écoutes bien.", "Écoutes-tu bien?", "Il écoute bien!"], 0, "À l'impératif, il n'y a pas de sujet exprimé."],
     ["Quel signe de ponctuation termine une phrase impérative?", ["Un point ou un point d'exclamation", "Toujours un point d'interrogation", "Une virgule", "Un deux-points"], 0, "« Range ta chambre. » ou « Range ta chambre! »"],
   ],
   pp: [
+    ["Quelle est la terminaison du participe passé d'un verbe en -er?", ["-é", "-i", "-u", "-er"], 0, "Verbes en -er : -é (aimé, chanté)."],
+    ["Quelles sont les terminaisons du participe passé des verbes en -ir, -oir et -re (la plupart du temps)?", ["-i ou -u", "-é", "-er", "-ant"], 0, "Fini, venu, vu, rendu…"],
+    ["Dans « Les enfants motivés travaillent fort », « motivés » est…", ["un participe passé employé seul (PPS)", "un participe passé avec être (PPE)", "un participe passé avec avoir (PPA)", "un verbe à l'infinitif"], 0, "Sans auxiliaire, le PP joue le rôle d'un adjectif."],
+    ["Dans « Henri est allé au tableau », « allé » est…", ["un participe passé employé avec être (PPE)", "un participe passé employé seul (PPS)", "un participe présent", "un infinitif"], 0, "« est » est l'auxiliaire être."],
+    ["Quelle est la 1re étape pour accorder un participe passé?", ["Repérer le PP et dire s'il est PPS, PPE ou PPA", "Ajouter un s", "Trouver le complément de phrase", "Le mettre à l'infinitif"], 0, "#1 Repérer le PP, #2 repérer son sujet (genre et nombre), #3 ajouter e et s."],
     ["Dans « La porte est fermée », quel mot est un participe passé?", ["fermée", "est", "porte", "La"], 0, "« fermée » vient du verbe « fermer » : c'est un participe passé."],
     ["Quel est le participe passé du verbe « finir »?", ["fini", "finit", "finir", "finis"], 0, "Pour trouver la finale, on met au féminin : finie → fini."],
     ["Quel est le participe passé du verbe « prendre »?", ["pris", "prit", "prendu", "prend"], 0, "Au féminin : prise → on entend le s, donc « pris »."],
@@ -1306,6 +1454,12 @@ const BANQUE_FR = {
     ["Quelle forme termine « Mes cousines sont arrivé__ hier »?", ["-es", "-s", "-e", "rien"], 0, "Avec être, accord avec « Mes cousines » (féminin pluriel) : arrivées."],
   ],
   compl: [
+    ["Quelle question pose-t-on après le verbe pour trouver le CD?", ["Qui? ou Quoi?", "À qui? ou À quoi?", "Où? ou Quand?", "Pourquoi?"], 0, "L'homme mange quoi? une pomme → CD."],
+    ["Quelle question pose-t-on après le verbe pour trouver le CI?", ["À qui? De quoi? (avec une préposition)", "Qui? Quoi?", "Quand?", "Comment?"], 0, "Il parle de quoi? de ses vacances → CI."],
+    ["Par quel pronom remplace-t-on le CI « à son ami » dans « Elle parle à son ami »?", ["lui", "le", "la", "les"], 0, "Elle lui parle. Les pronoms CI : lui, leur."],
+    ["Dans « Il les mange », le mot « les » est…", ["un CD (pronom)", "un CI", "un sujet", "un déterminant"], 0, "Le CD peut être un pronom (le, la, les, l') placé devant le verbe."],
+    ["L'attribut du sujet peut-il être effacé?", ["Non", "Oui", "Seulement s'il est un GN", "Seulement au pluriel"], 0, "L'attribut du sujet ne peut pas être effacé."],
+    ["Dans « Cette femme est une grande artiste », l'attribut du sujet est…", ["un groupe du nom", "un adverbe", "un verbe", "une préposition"], 0, "L'attribut peut être un adjectif, adverbe + adjectif, ou un GN."],
     ["Dans « Le chevalier mange une pomme », quel est le complément direct (CD)?", ["une pomme", "Le chevalier", "mange", "pomme mange"], 0, "Le chevalier mange quoi? Une pomme. On peut le remplacer par « la » : il la mange."],
     ["Dans « Léa parle à son frère », quel est le complément indirect (CI)?", ["à son frère", "Léa", "parle", "son"], 0, "Léa parle à qui? À son frère. Le CI commence par une préposition (à, de…)."],
     ["Un complément direct (CD) se construit…", ["sans préposition", "toujours avec « à »", "toujours avec « de »", "avec une virgule"], 0, "Le CD suit directement le verbe, sans préposition."],
@@ -1324,7 +1478,139 @@ const BANQUE_FR = {
     ["Quelle phrase contient un attribut du sujet?", ["Mon frère devient grand.", "Mon frère mange un gâteau.", "Mon frère parle à sa mère.", "Mon frère court vite."], 0, "« devenir » est attributif : « grand » décrit le sujet."],
   ],
 };
-const GEN_MATHS = { numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
+// Novembre : représentation, comparaison et ordre des décimaux (sans l'arrondi)
+function genDecRep() {
+  if (Math.random() < .25) {
+    const e = ri(0, 9), base = [ri(1, 9), ri(1, 9)], l = [`${e},${base[0]}`, `${e},${base[0]}${base[1]}`, `${e},0${base[1]}`, `${e},${base[1]}`].filter((x, i, a) => a.indexOf(x) === i);
+    if (l.length < 3) return genDecRep();
+    const v = x => parseFloat(x.replace(",", ".")), ok = [...l].sort((a, b) => v(a) - v(b)), j = x => x.join(" ; ");
+    if (new Set(l.map(v)).size < l.length) return genDecRep();
+    return qc("Quel est l'ordre croissant (du plus petit au plus grand)?", j(ok), [j([...ok].reverse()), j([...ok].sort((a, b) => a.length - b.length || v(a) - v(b))), j([ok[1], ok[0], ...ok.slice(2)])], "On compare d'abord les unités, puis les dixièmes, puis les centièmes. Un nombre plus long n'est pas toujours plus grand!");
+  }
+  return genDecimaux(pk([0, 1, 1, 3, 4]));
+}
+function svgCercle2(t) {
+  const c = 90, r = 70, a = ri(0, 359) * Math.PI / 180, P = (ang, rr = r) => [c + rr * Math.cos(ang), c + rr * Math.sin(ang)].map(x => x.toFixed(1));
+  let seg = "";
+  if (t === 0) { const p = P(a); seg = `<line x1="${c}" y1="${c}" x2="${p[0]}" y2="${p[1]}" stroke="#d33" stroke-width="4"/>`; }
+  else if (t === 1) { const p = P(a), q = P(a + Math.PI); seg = `<line x1="${q[0]}" y1="${q[1]}" x2="${p[0]}" y2="${p[1]}" stroke="#d33" stroke-width="4"/>`; }
+  else if (t === 2) { const p = P(a), q = P(a + 1.6); seg = `<line x1="${q[0]}" y1="${q[1]}" x2="${p[0]}" y2="${p[1]}" stroke="#d33" stroke-width="4"/>`; }
+  return svgBox(180, 180, `<circle cx="${c}" cy="${c}" r="${r}" fill="#eef6ff" stroke="${t === 3 ? "#d33" : "#222"}" stroke-width="${t === 3 ? 5 : 3}"/>${seg}<circle cx="${c}" cy="${c}" r="4" fill="#222"/><text x="${c + 7}" y="${c - 7}" font-size="14" font-weight="bold" fill="#222">O</text>`);
+}
+function genCercle() {
+  const t = ri(0, 3), noms = ["Un rayon", "Un diamètre", "Une corde", "La circonférence"];
+  const ex = ["Le rayon va du centre jusqu'au cercle.", "Le diamètre traverse le cercle en passant par le centre : il vaut 2 rayons.", "Une corde relie deux points du cercle sans passer par le centre.", "La circonférence est la ligne courbe qui fait le tour du cercle."];
+  if (t === 0) { const k = ri(0, 3); return qc(k === 3 ? "Comment s'appelle la ligne rouge?" : "Comment s'appelle le segment rouge? (O est le centre)", noms[k], noms, ex[k], svgCercle2(k)); }
+  if (t === 1) { const r = ri(2, 15); return qc(`Le rayon d'un cercle mesure ${r} cm. Combien mesure son diamètre?`, `${r * 2} cm`, [`${r} cm`, `${r % 2 ? r + 1 : r / 2} cm`, `${r * 4} cm`, `${r + 2} cm`], `Le diamètre vaut 2 rayons : 2 × ${r} = ${r * 2} cm.`); }
+  if (t === 2) { const r = ri(2, 15); return qc(`Le diamètre d'un cercle mesure ${r * 2} cm. Combien mesure son rayon?`, `${r} cm`, [`${r * 2} cm`, `${r * 4} cm`, `${r + 2} cm`, `${r - 1} cm`], `Le rayon est la moitié du diamètre : ${r * 2} ÷ 2 = ${r} cm.`); }
+  return pk([
+    qc("Le point au milieu du cercle s'appelle…", "le centre", ["le rayon", "le diamètre", "la corde"], "Tous les points du cercle sont à la même distance du centre."),
+    qc("Le diamètre passe toujours par…", "le centre du cercle", ["le bord seulement", "un seul point du cercle", "l'extérieur du cercle"], "Le diamètre traverse le cercle en passant par le centre."),
+    qc("Combien de rayons faut-il pour faire un diamètre?", "2", ["1", "3", "4"], "Diamètre = 2 × rayon."),
+    qc("Dans un même cercle, tous les rayons…", "ont la même longueur", ["sont de longueurs différentes", "sont plus longs que le diamètre", "passent par deux points du cercle"], "Chaque point du cercle est à la même distance du centre."),
+    qc("Quel est le plus long segment qu'on peut tracer dans un cercle?", "le diamètre", ["le rayon", "une petite corde", "le centre"], "Le diamètre est la plus longue corde du cercle."),
+    qc("La ligne qui fait le tour du cercle s'appelle…", "la circonférence", ["le diamètre", "le rayon", "la surface"], "C'est le contour du cercle.")]);
+}
+const UL = [["mm", 1], ["cm", 10], ["dm", 100], ["m", 1000], ["km", 1000000]];
+function genLongueur() {
+  const t = ri(0, 4);
+  if (t <= 1) {
+    let i = ri(0, 3), j = t === 0 ? i + 1 + (i < 2 && Math.random() < .4 ? 1 : 0) : i; if (t === 1) { j = ri(0, 2); i = j + 1 + (j < 2 && Math.random() < .4 ? 1 : 0); }
+    if (j > 4 || i > 4) return genLongueur();
+    const [u1, f1] = UL[t === 0 ? j : i], [u2, f2] = UL[t === 0 ? i : j], n = ri(2, 9), f = f1 / f2, v = n * f;
+    return qc(`${n} ${u1} = ? ${u2}`, nb(v), [nb(v * 10), decC(v / 10), nb(v * 100), String(n)], `1 ${u1} = ${nb(f)} ${u2}, donc ${n} ${u1} = ${nb(v)} ${u2}.`);
+  }
+  if (t === 2) { const n = ri(11, 99), [u1, u2] = pk([["mm", "cm"], ["cm", "dm"], ["dm", "m"]]); return qc(`${n} ${u1} = ? ${u2}`, decC(n / 10), [String(n * 10), decC(n / 100), String(n)], `10 ${u1} = 1 ${u2}. On divise par 10 : ${decC(n / 10)} ${u2}.`); }
+  if (t === 3) {
+    const vals = mel([[2, "m"], [150, "cm"], [1800, "mm"], [25, "dm"], [3, "m"], [270, "cm"], [9, "dm"], [1200, "mm"]]).slice(0, 4), mm = ([n, u]) => n * UL.find(x => x[0] === u)[1];
+    if (new Set(vals.map(mm)).size < 4) return genLongueur();
+    const m = vals.reduce((a, b) => mm(b) > mm(a) ? b : a), f = ([n, u]) => `${nb(n)} ${u}`;
+    return qc("Quelle longueur est la plus grande?", f(m), vals.filter(x => x !== m).map(f), `On met tout dans la même unité : ${vals.map(x => `${f(x)} = ${nb(mm(x) / 10)} cm`).join(", ")}.`);
+  }
+  return pk([
+    qc("Combien de centimètres y a-t-il dans 1 mètre?", "100", ["10", "1 000", "50"], "1 m = 100 cm."),
+    qc("Combien de millimètres y a-t-il dans 1 centimètre?", "10", ["100", "1", "1 000"], "1 cm = 10 mm."),
+    qc("Combien de mètres y a-t-il dans 1 kilomètre?", "1 000", ["100", "10", "10 000"], "1 km = 1 000 m."),
+    qc("Quelle unité est 10 fois plus grande que le centimètre?", "le décimètre (dm)", ["le millimètre (mm)", "le mètre (m)", "le kilomètre (km)"], "mm → cm → dm → m : chaque unité vaut 10 fois la précédente."),
+    qc("Quelle unité utiliser pour mesurer l'épaisseur d'un crayon?", "le millimètre (mm)", ["le kilomètre (km)", "le mètre (m)", "le décimètre (dm)"], "C'est très petit : on mesure en millimètres."),
+    qc("Quelle unité utiliser pour mesurer la longueur de la cour d'école?", "le mètre (m)", ["le millimètre (mm)", "le centimètre (cm)", "le kilomètre (km)"], "Une cour fait quelques dizaines de mètres.")]);
+}
+// ---------- Planification des Irréductibles : notions ajoutées ----------
+const hm = x => `${Math.floor(x / 60)} h ${String(x % 60).padStart(2, "0")}`;
+function genTemps() {
+  const t = ri(0, 4);
+  if (t === 0) { const h = ri(1, 4), m = pk([10, 15, 20, 30, 45]), tot = h * 60 + m; return qc(`${h} h ${m} min = ? minutes`, tot, [h * 100 + m, h * 60, tot + 60, h + m], `1 h = 60 min. ${h} × 60 = ${h * 60}, plus ${m} = ${tot} minutes.`); }
+  if (t === 1) { const d = ri(8, 14) * 60 + pk([0, 15, 30, 45]), du = ri(1, 3) * 60 + pk([15, 20, 40, 50]), f = d + du; return qc(`Le film commence à ${hm(d)} et finit à ${hm(f)}. Combien de temps dure-t-il?`, `${Math.floor(du / 60)} h ${du % 60} min`, [`${Math.floor(du / 60) + 1} h ${du % 60} min`, `${Math.floor(du / 60)} h ${(du % 60 + 30) % 60 || 10} min`, `${Math.floor(f / 60) - Math.floor(d / 60)} h ${Math.abs(f % 60 - d % 60) + 10} min`], `De ${hm(d)} à ${hm(f)} : on compte les heures entières, puis les minutes qui restent.`); }
+  if (t === 2) { const m = ri(2, 9); return qc(`${m} minutes = ? secondes`, m * 60, [m * 100, m * 10, m * 60 + 60, m * 30], `1 min = 60 s, donc ${m} × 60 = ${m * 60} s.`); }
+  if (t === 3) { const j = ri(2, 5); return qc(`${j} jours = ? heures`, j * 24, [j * 12, j * 60, j * 24 + 24, j * 10], `1 jour = 24 h, donc ${j} × 24 = ${j * 24} h.`); }
+  return pk([qc("Combien y a-t-il de jours dans une semaine?", "7", ["5", "10", "12"], "1 semaine = 7 jours."),
+    qc("Combien y a-t-il de mois dans une année?", "12", ["10", "52", "365"], "1 an = 12 mois."),
+    qc("Combien y a-t-il de semaines dans une année (environ)?", "52", ["12", "48", "365"], "1 an ≈ 52 semaines."),
+    qc("Un siècle, c'est combien d'années?", "100", ["10", "1 000", "50"], "Une décennie = 10 ans, un siècle = 100 ans, un millénaire = 1 000 ans."),
+    qc("Une demi-heure, c'est combien de minutes?", "30", ["50", "15", "45"], "La moitié de 60 minutes = 30 minutes."),
+    qc("Un quart d'heure, c'est combien de minutes?", "15", ["25", "4", "45"], "60 ÷ 4 = 15 minutes.")]);
+}
+function svgBarreFrac(a, b) { const w = 300 / b; return svgBox(320, 60, Array.from({ length: b }, (_, i) => `<rect x="${10 + i * w}" y="10" width="${w}" height="40" fill="${i < a ? "#6c4cf5" : "#fff"}" stroke="#222" stroke-width="2"/>`).join("")); }
+function svgDroiteFrac(a, b) {
+  const x0 = 20, L = 280, X = i => x0 + i * L / b;
+  return svgBox(320, 70, `<line x1="${x0}" y1="30" x2="${x0 + L}" y2="30" stroke="#222" stroke-width="2"/>` + Array.from({ length: b + 1 }, (_, i) => `<line x1="${X(i)}" y1="${i % b ? 22 : 16}" x2="${X(i)}" y2="${i % b ? 38 : 44}" stroke="#222" stroke-width="2"/>`).join("")
+    + `<text x="${x0}" y="62" font-size="14" text-anchor="middle">0</text><text x="${x0 + L}" y="62" font-size="14" text-anchor="middle">1</text><circle cx="${X(a)}" cy="30" r="7" fill="#d33"/>`);
+}
+function genFracSens() {
+  const t = ri(0, 2), b = ri(3, 10), a = ri(1, b - 1);
+  if (t === 0) return qcm("Quelle fraction de la bande est coloriée?", `${a}/${b}`, [`${b - a}/${b}`, `${a}/${b - a}`, `${b}/${a}`, `${a}/${b + 1}`], `La bande a ${b} parts égales (dénominateur) et ${a} ${a > 1 ? "sont coloriées" : "est coloriée"} (numérateur).`).slice(0, 4).concat([svgBarreFrac(a, b)]);
+  if (t === 1) return qcm("Quelle fraction indique le point rouge?", `${a}/${b}`, [`${a + 1}/${b}`, `${a}/${b + 1}`, `${b - a}/${b}`, `${a - 1 || a + 2}/${b}`], `Entre 0 et 1, il y a ${b} bonds égaux : chaque bond vaut 1/${b}. Le point est au bond ${a}.`).slice(0, 4).concat([svgDroiteFrac(a, b)]);
+  return pk([qc(`Dans la fraction ${a}/${b}, que nous dit le dénominateur (${b})?`, "En combien de parts égales le tout est partagé", ["Combien de parts on prend", "La grandeur du tout", "Le nombre de touts"], "Le dénominateur (en bas) dit en combien de parts égales on partage le tout."),
+    qc(`Dans la fraction ${a}/${b}, que nous dit le numérateur (${a})?`, "Combien de parts on considère", ["En combien de parts on partage", "La grandeur d'une part", "Combien il reste de parts"], "Le numérateur (en haut) compte les parts qu'on considère."),
+    qc(`Quelle fraction est égale à 1 entier?`, `${b}/${b}`, [`1/${b}`, `${b}/1`, `${a}/${b}`], "Quand on prend toutes les parts, on a le tout : numérateur = dénominateur."),
+    qc(`Pour qu'une fraction soit juste, les parts doivent être…`, "égales", ["de couleurs différentes", "toutes coloriées", "plus nombreuses que 10"], "Une fraction partage un tout en parts égales.")]);
+}
+function genMultPos() {
+  const a = ri(102, 489), b = ri(12, 49), u = b % 10 || 1, B = u === b % 10 ? b : b + 1, d = Math.floor(B / 10), p1 = a * u, p2 = a * d * 10;
+  if (Math.random() < .3) { const ea = Math.round(a / 100) * 100, eb = Math.round(B / 10) * 10; return qc(`Environ combien font ${a} × ${B}? (arrondis d'abord)`, nb(ea * eb), [nb(ea * eb * 10), nb(ea * eb / 10), nb(ea + eb), nb((ea + 100) * eb)], `${a} ≈ ${ea} et ${B} ≈ ${eb}. ${ea} × ${eb} = ${nb(ea * eb)}.`); }
+  return qc(`${a} × ${B} = ? (calcul posé)`, nb(p1 + p2), [nb(p1 + a * d), nb(p1 + p2 + 100), nb(p2 + a * d), nb(p1 + p2 - 10)], `${a} × ${u} = ${nb(p1)} ; ${a} × ${d * 10} = ${nb(p2)} (n'oublie pas le zéro!) ; ${nb(p1)} + ${nb(p2)} = ${nb(p1 + p2)}.`);
+}
+const SOLIDES = [["un cube", 6, 8, 12], ["un prisme à base rectangulaire", 6, 8, 12], ["un prisme à base triangulaire", 5, 6, 9], ["un prisme à base pentagonale", 7, 10, 15], ["un prisme à base hexagonale", 8, 12, 18],
+  ["une pyramide à base carrée", 5, 5, 8], ["une pyramide à base triangulaire", 4, 4, 6], ["une pyramide à base pentagonale", 6, 6, 10], ["une pyramide à base hexagonale", 7, 7, 12]];
+function genSolides() {
+  if (Math.random() < .65) { const [n, f, s, a] = pk(SOLIDES), k = ri(0, 2), quoi = ["faces", "sommets", "arêtes"][k], v = [f, s, a][k]; return qc(`Combien ${quoi === "arêtes" ? "d'" : "de "}${quoi} a ${n}?`, v, [f, s, a, v + 1, v - 1, v + 2], `${n[0].toUpperCase() + n.slice(1)} : ${f} faces, ${s} sommets et ${a} arêtes.`); }
+  return pk([qc("Quel solide a deux bases identiques et parallèles reliées par des rectangles?", "un prisme", ["une pyramide", "un cône", "une sphère"], "Un prisme a 2 bases pareilles ; ses autres faces sont des rectangles."),
+    qc("Quel solide a une seule base et des faces triangulaires qui se rejoignent en un sommet?", "une pyramide", ["un prisme", "un cube", "un cylindre"], "Les faces latérales d'une pyramide sont des triangles qui se touchent au sommet."),
+    qc("Un développement de cube est formé de combien de carrés?", "6", ["4", "8", "12"], "Le cube a 6 faces carrées : son développement a 6 carrés."),
+    qc("Une arête, c'est…", "le segment où deux faces se rencontrent", ["un coin du solide", "une face plane", "le dessous du solide"], "Arête = rencontre de 2 faces. Sommet = point où les arêtes se rencontrent."),
+    qc("Lequel de ces solides n'est PAS un polyèdre?", "le cylindre", ["le cube", "la pyramide", "le prisme"], "Un polyèdre n'a que des faces planes. Le cylindre a une surface courbe."),
+    qc("Quel est le nom du développement qui forme une pyramide à base carrée?", "1 carré et 4 triangles", ["2 carrés et 4 rectangles", "6 carrés", "1 triangle et 3 carrés"], "La base est un carré, les 4 faces latérales sont des triangles.")]);
+}
+function svgGrilleRect(L, l) { const c = 22; return svgBox(L * c + 20, l * c + 20, Array.from({ length: L * l }, (_, i) => `<rect x="${10 + (i % L) * c}" y="${10 + Math.floor(i / L) * c}" width="${c}" height="${c}" fill="#cfe8ff" stroke="#3a6ea5"/>`).join("")); }
+function genAire() {
+  const t = ri(0, 3), L = ri(3, 9), l = ri(2, 6);
+  if (t === 0) return qc("Quelle est l'aire de ce rectangle? (1 carré = 1 cm²)", `${L * l} cm²`, [`${2 * (L + l)} cm²`, `${L + l} cm²`, `${L * l + L} cm²`, `${L * l - l} cm²`], `${l} rangées de ${L} carrés : ${l} × ${L} = ${L * l} cm².`).slice(0, 4).concat([svgGrilleRect(L, l)]);
+  if (t === 1) return qc(`Un rectangle mesure ${L} m sur ${l} m. Quelle est son aire?`, `${L * l} m²`, [`${2 * (L + l)} m²`, `${L + l} m²`, `${L * l} m`, `${L * l + l} m²`], `Aire = longueur × largeur = ${L} × ${l} = ${L * l} m². Attention : ${2 * (L + l)} m serait le périmètre.`);
+  if (t === 2) { const h = ri(2, 5); return qc(`Une boîte est remplie de cubes de 1 cm³ : ${L} cubes de long, ${l} de large et ${h} de haut. Quel est son volume?`, `${L * l * h} cm³`, [`${L * l} cm³`, `${L + l + h} cm³`, `${L * l * h + L * l} cm³`], `${L} × ${l} = ${L * l} cubes par étage, × ${h} étages = ${L * l * h} cm³.`); }
+  return pk([qc("Quelle unité sert à mesurer une aire?", "le centimètre carré (cm²)", ["le centimètre (cm)", "le centimètre cube (cm³)", "le litre (L)"], "L'aire couvre une surface : on la mesure en unités carrées."),
+    qc("Quelle unité sert à mesurer un volume?", "le centimètre cube (cm³)", ["le centimètre carré (cm²)", "le mètre (m)", "le kilogramme (kg)"], "Le volume, c'est la place occupée : on le mesure en unités cubes."),
+    qc("L'aire d'une surface, c'est…", "la grandeur de la surface", ["le tour de la figure", "la place dans une boîte", "la masse d'un objet"], "Le tour de la figure, c'est le périmètre."),
+    qc("Quelle unité choisir pour l'aire du plancher de la classe?", "le mètre carré (m²)", ["le centimètre carré (cm²)", "le kilomètre carré (km²)", "le mètre (m)"], "Un plancher de classe fait quelques dizaines de mètres carrés.")]);
+}
+function svgDroiteEntiers(v) { const X = i => 160 + i * 14; return svgBox(320, 60, `<line x1="10" y1="25" x2="310" y2="25" stroke="#222" stroke-width="2"/>` + Array.from({ length: 21 }, (_, i) => i - 10).map(i => `<line x1="${X(i)}" y1="${i % 5 ? 20 : 15}" x2="${X(i)}" y2="${i % 5 ? 30 : 35}" stroke="#222" stroke-width="2"/>${i % 5 ? "" : `<text x="${X(i)}" y="52" font-size="13" text-anchor="middle">${i < 0 ? "−" + -i : i}</text>`}`).join("") + `<circle cx="${X(v)}" cy="25" r="6" fill="#d33"/>`); }
+function genEntiers() {
+  const t = ri(0, 3), f = x => x < 0 ? "−" + -x : String(x);
+  if (t === 0) { const v = pk([-9, -8, -7, -6, -4, -3, -2, -1, 1, 2, 3, 4, 6, 7, 8, 9]); return qc("Quel nombre indique le point rouge?", f(v), [f(-v), f(v + 1), f(v - 1)], "À gauche de 0, les nombres sont négatifs ; plus on va à gauche, plus le nombre est petit.").slice(0, 4).concat([svgDroiteEntiers(v)]); }
+  if (t === 1) { const l = mel([-ri(1, 9), -ri(10, 20), ri(0, 9), ri(10, 20)]); const m = Math.min(...l); return qc(`Quel est le plus petit nombre? ${l.map(f).join(" ; ")}`, f(m), l.filter(x => x !== m).map(f), "Les nombres négatifs sont plus petits que 0. −20 est plus petit que −3 : il est plus loin à gauche."); }
+  if (t === 2) { const a = -ri(2, 9), b = ri(2, 9); return qc(`Il fait ${f(a)} °C le matin et ${b} °C l'après-midi. De combien de degrés la température a-t-elle monté?`, `${b - a} °C`, [f(b + a) + " °C", `${b} °C`, `${b - a + 1} °C`, `${-a} °C`], `De ${f(a)} à 0 : ${-a} degrés, puis de 0 à ${b} : ${b} degrés. ${-a} + ${b} = ${b - a}.`); }
+  const l = [-ri(5, 9), -ri(1, 4), 0, ri(1, 9)], ok = [...l].sort((x, y) => x - y), j = x => x.map(f).join(" ; ");
+  return qc("Quel est l'ordre croissant?", j(ok), [j([ok[1], ok[0], ok[2], ok[3]]), j([...ok].reverse()), j([ok[2], ok[1], ok[0], ok[3]])], "Ordre croissant : du plus petit au plus grand. Le plus petit est le négatif le plus loin de 0.");
+}
+function genTransfo() {
+  if (Math.random() < .35) { const x = ri(1, 5), y = ri(1, 5), dx = ri(1, 4), dy = ri(1, 4), dr = Math.random() < .5; return qc(`Le point A est à (${x}, ${y}). On fait une translation de ${dx} case${dx > 1 ? "s" : ""} vers la droite et ${dy} vers le haut. Où arrive A?`, `(${x + dx}, ${y + dy})`, [`(${x + dy}, ${y + dx})`, `(${x + dx - 1}, ${y + dy})`, `(${x + dx}, ${y + dy + 1})`, `(${x + dx + dy}, ${y})`], `Vers la droite : on ajoute au 1er nombre (${x} + ${dx}). Vers le haut : on ajoute au 2e (${y} + ${dy}).`); }
+  return pk([qc("Une translation, c'est…", "faire glisser une figure sans la tourner ni la retourner", ["faire tourner une figure", "retourner une figure comme dans un miroir", "agrandir une figure"], "La flèche de translation dit dans quelle direction et de combien on glisse."),
+    qc("Après une translation, la figure…", "garde la même forme et la même grandeur", ["devient plus grande", "est à l'envers", "change de forme"], "Une translation déplace seulement la figure."),
+    qc("Une frise, c'est…", "un motif qui se répète en bande", ["un dessin qui couvre toute une surface", "une figure à 4 côtés", "un motif qui ne se répète pas"], "Dans une frise, le motif se répète par translation, en ligne."),
+    qc("Un dallage, c'est…", "des figures qui couvrent une surface sans trou ni chevauchement", ["un motif en une seule ligne", "des figures qui se chevauchent", "un seul grand carré"], "Comme les tuiles d'un plancher."),
+    qc("Quelle figure ne peut PAS former un dallage toute seule?", "le cercle", ["le carré", "le triangle équilatéral", "l'hexagone régulier"], "Des cercles laissent toujours des trous entre eux."),
+    qc("Laquelle de ces figures peut former un dallage toute seule?", "l'hexagone régulier", ["le cercle", "le pentagone régulier", "l'octogone régulier"], "Comme les alvéoles d'une ruche!")]);
+}
+const GEN_MATHS = { temps: genTemps, fracsens: genFracSens, multpos: genMultPos, solides: genSolides, aire: genAire, entiers: genEntiers, transfo: genTransfo, decrep: genDecRep, cercle: genCercle, longueur: genLongueur, numeration: genNumeration, arrondi: genArrondi, divis: genDivis, pemdas: genPemdas, moyenne: genMoyenne, equiv: questionEquivalentes, reduc: questionReduction,
   compfrac: genCompFrac, addfrac: genAddFrac, pourcent: genPourcent, droites: genDroites, angles: genAngles, triangles: genTriangles, cartesien: genCartesien,
   decimaux: genDecimaux, opdec: genOpDec, multfrac: genMultFrac, stats: genStats, mesures: genMesures, proba: genProba };
 // Une question pour la notion choisie : [question, choix, bonne réponse, explication, dessin?]
@@ -1335,7 +1621,8 @@ function questionNotion(m, n) {
   if (n === "inv") return pk(INVAR);
   if (n === "pp") return Math.random() < .6 ? questionPP() : pk(BANQUE_FR.pp);
   if (n === "ppa") return Math.random() < .3 ? pk(BANQUE_FR.pp.slice(1, 8)) : questionPPA();
-  if (n === "accverbe") return Math.random() < .7 ? questionAccVerbe() : pk(ARENE.accverbe);
+  if (n === "accverbe") { const r = Math.random(); return r < .55 ? questionAccVerbe() : r < .85 ? pk(ACC_REGLES) : pk(ARENE.accverbe); }
+  if (n === "gn") return Math.random() < .45 ? questionAccordGN() : pk(ARENE.gn);
   if (ARENE[n]) return pk(ARENE[n]);
   if (BANQUE_FR[n]) return pk(BANQUE_FR[n]);
   return pk(FR);
